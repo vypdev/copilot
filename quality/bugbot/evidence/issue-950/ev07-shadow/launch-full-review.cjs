@@ -7,10 +7,10 @@ const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const { corpus } = require('./configuration.cjs');
 const plan = require('./configuration.cjs');
-const { requirePinnedRuntime, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
+const { requirePinnedRuntime, qualificationProvenance, selectedPlanProvenance } = require('./implementation.cjs');
 
 function validateCorpusProvenance(directory, result) {
-    requirePinnedDrivers(plan);
+    const provenance = qualificationProvenance(plan);
     const hash = input => createHash('sha256').update(input).digest('hex');
     const root = path.resolve(__dirname, '../../../../..');
     const planFile = process.env.COPILOT_EV07_PLAN ? path.resolve(process.env.COPILOT_EV07_PLAN) : path.join(__dirname, 'plan.json');
@@ -27,6 +27,7 @@ function validateCorpusProvenance(directory, result) {
     assert.equal(start.runner, hash(readFileSync(path.join(__dirname, 'corpus.cjs'))));
     assert.equal(start.runner, plan.inspectedArtifacts?.['corpus.cjs']);
     assert.equal(start.implementation, plan.implementation);
+    assert.deepEqual(start.provenance, provenance);
     assert.equal(start.corpus, corpus.sha256);
     assert.equal(start.gitHubMutationPorts, 0);
     assert.deepEqual(start.configuration, plan.detector);

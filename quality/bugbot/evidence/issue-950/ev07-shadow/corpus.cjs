@@ -6,23 +6,24 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { tmpdir } = require('node:os');
-const { requirePinnedImplementation, requirePinnedRuntime, requirePinnedExecution, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
-require('./load.cjs');
-
-const { runBugbotBenchmarkAgent } = require('../../../../../src/tooling/bugbot_benchmark_runner');
-const { evaluateBugbotBenchmark, loadBugbotBenchmark } = require('../../../../../src/tooling/bugbot_benchmark');
-const { createFindingsQueryPort } = require('../../../../../src/infrastructure/composition/agent_capability_composition_root');
-const { AgentCliClient } = require('../../../../../src/data/repository/agent_cli_client');
-const { AgentExecutionPlanner } = require('../../../../../src/infrastructure/agents/agent_execution_planner');
-const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
+const { qualificationProvenance, requirePinnedRuntime, requirePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
 const root = path.resolve(__dirname, '../../../../..');
 const hash = input => createHash('sha256').update(input).digest('hex');
 
 async function run(destination, preflight = false) {
-    requirePinnedDrivers(plan);
-    const implementation = requirePinnedImplementation();
+    const provenance = qualificationProvenance(plan);
+    const implementation = provenance.implementation;
+    require('./load.cjs');
+
+    const { runBugbotBenchmarkAgent } = require('../../../../../src/tooling/bugbot_benchmark_runner');
+    const { evaluateBugbotBenchmark, loadBugbotBenchmark } = require('../../../../../src/tooling/bugbot_benchmark');
+    const { createFindingsQueryPort } = require('../../../../../src/infrastructure/composition/agent_capability_composition_root');
+    const { AgentCliClient } = require('../../../../../src/data/repository/agent_cli_client');
+    const { AgentExecutionPlanner } = require('../../../../../src/infrastructure/agents/agent_execution_planner');
+    const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
+
     assert.equal(hash(fs.readFileSync(__filename)), plan.inspectedArtifacts?.['corpus.cjs'],
         'corpus runner differs from the preregistered implementation');
     assert(destination, 'usage: node corpus.cjs <new output directory>');
@@ -41,7 +42,7 @@ async function run(destination, preflight = false) {
     const record = row => fs.appendFileSync(ledger, JSON.stringify(row) + '\n', { mode: 0o600 });
     record({ event: 'start', at: new Date().toISOString(), cli, configuration,
         plan: preregistration.sha256, preregistration, runner: hash(fs.readFileSync(__filename)),
-        implementation, corpus: plan.corpus.sha256, gitHubMutationPorts: 0 });
+        implementation, provenance, corpus: plan.corpus.sha256, gitHubMutationPorts: 0 });
     const cwd = fs.mkdtempSync(path.join(tmpdir(), 'copilot-ev07-corpus-'));
     const oldCwd = process.cwd();
     const cancel = new AbortController();

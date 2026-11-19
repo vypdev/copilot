@@ -6,20 +6,7 @@ const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { getOctokit } = require('@actions/github');
-const { requirePinnedImplementation, requirePinnedExecution, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
-require('./load.cjs');
-
-const { Ai } = require('../../../../../src/data/model/ai');
-const { AgentCliClient } = require('../../../../../src/data/repository/agent_cli_client');
-const { AgentExecutionPlanner } = require('../../../../../src/infrastructure/agents/agent_execution_planner');
-const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
-const { composeBugbotReview } = require('../../../../../src/infrastructure/composition/bugbot_review_composition');
-const { createFindingsQueryPort } = require('../../../../../src/infrastructure/composition/agent_capability_composition_root');
-const { readGithubActionAiInputs } = require('../../../../../src/actions/github_action_ai_inputs');
-const { projectBugbotReviewOperationContext } = require('../../../../../src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context');
-const { createInstalledBugbotShadowVerifier } = require('../../../../../src/infrastructure/bugbot/installed_bugbot_shadow_adapter');
-const { createGitHubBugbotCiReader } = require('../../../../../src/infrastructure/bugbot/github_bugbot_ci_reader');
-const { askManagedBugbotShadowTurn } = require('../../../../../src/infrastructure/bugbot/shadow_verification_adapter');
+const { qualificationProvenance, requirePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
 const hash = input => createHash('sha256').update(input).digest('hex');
@@ -37,6 +24,7 @@ function prepareDetector(planner, request, log, selected = plan) {
     const execution = planner.prepare(request);
     try {
         const runtimeProof = requirePinnedExecution(execution, selected.runtime);
+        const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
         const flags = codexInvocation(execution.argv);
         assert.deepEqual(flags, { model: selected.detector.model, modelProvider: selected.detector.modelProvider,
             reasoningEffort: selected.detector.effort, sandbox: 'read-only' });
@@ -90,8 +78,22 @@ function readSubject(id, checkout) {
 }
 
 async function run(checkout, id, repetition, output, preflight = false) {
-    requirePinnedDrivers(plan);
-    const implementation = requirePinnedImplementation();
+    const provenance = qualificationProvenance(plan);
+    const implementation = provenance.implementation;
+    require('./load.cjs');
+
+    const { Ai } = require('../../../../../src/data/model/ai');
+    const { AgentCliClient } = require('../../../../../src/data/repository/agent_cli_client');
+    const { AgentExecutionPlanner } = require('../../../../../src/infrastructure/agents/agent_execution_planner');
+    const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
+    const { composeBugbotReview } = require('../../../../../src/infrastructure/composition/bugbot_review_composition');
+    const { createFindingsQueryPort } = require('../../../../../src/infrastructure/composition/agent_capability_composition_root');
+    const { readGithubActionAiInputs } = require('../../../../../src/actions/github_action_ai_inputs');
+    const { projectBugbotReviewOperationContext } = require('../../../../../src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context');
+    const { createInstalledBugbotShadowVerifier } = require('../../../../../src/infrastructure/bugbot/installed_bugbot_shadow_adapter');
+    const { createGitHubBugbotCiReader } = require('../../../../../src/infrastructure/bugbot/github_bugbot_ci_reader');
+    const { askManagedBugbotShadowTurn } = require('../../../../../src/infrastructure/bugbot/shadow_verification_adapter');
+
     assert(checkout && plan.repositoryCohort.order.includes(id) && [1, 2, 3].includes(repetition) && output);
     checkout = fs.realpathSync(checkout);
     output = path.resolve(output);
@@ -100,7 +102,7 @@ async function run(checkout, id, repetition, output, preflight = false) {
     fs.writeFileSync(output, '', { flag: 'wx', mode: 0o600 });
     const log = row => fs.appendFileSync(output, JSON.stringify(row) + '\n');
     const preregistration = selectedPlanProvenance();
-    log({ event: 'start', subject, repetition, implementation, plan: preregistration.sha256, preregistration, startedAt: new Date().toISOString() });
+    log({ event: 'start', subject, repetition, implementation, provenance, plan: preregistration.sha256, preregistration, startedAt: new Date().toISOString() });
     const repository = { owner: 'vypdev', name: id.startsWith('U') ? 'ha-ui' : 'domus' };
     const number = originalPullNumbers[id] ?? 1;
     const branch = 'feature/reviewed-source';

@@ -4,24 +4,22 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const { readFileSync, lstatSync, realpathSync } = require('node:fs');
-const { devNull } = require('node:os');
 const { isDeepStrictEqual } = require('node:util');
 const path = require('node:path');
 const { implementation } = require('./configuration.cjs');
 
+const { attestSource, attestRuntime, attestDrivers, pinnedGit } = require('../execution-provenance.cjs');
+
 function requirePinnedImplementation(root = path.resolve(__dirname, '../../../../..'), pin = implementation) {
-    assert.match(pin, /^[a-f0-9]{40}$/u, 'invalid implementation pin');
-    const git = (...args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trim();
-    assert.equal(git('rev-parse', '--verify', pin + '^{commit}'), pin,
-        'preregistered implementation commit unavailable');
-    const source = ['src', 'pnpm-lock.yaml', 'tsconfig.json'];
-    assert.equal(git('diff', '--no-ext-diff', '--no-textconv', '--name-only', pin, '--', ...source), '',
-        'application source or lockfile does not match the preregistered implementation');
-    assert.equal(git('diff', '--cached', '--no-ext-diff', '--no-textconv', '--name-only', pin, '--', ...source), '',
-        'staged application source or lockfile differs from the preregistered implementation');
-    assert.equal(git('ls-files', '--others', '--', ...source), '',
-        'untracked application source or lockfile');
-    return pin;
+    return attestSource(root, pin).implementation;
+}
+
+function qualificationProvenance(selected = require('./configuration.cjs')) {
+    const root = path.resolve(__dirname, '../../../../..');
+    const source = attestSource(root, selected.implementation);
+    const drivers = requirePinnedDrivers(selected);
+    const runtime = attestRuntime(root, selected.runtime);
+    return { ...source, drivers, runtime };
 }
 
 function requirePinnedRuntime(cli, runtime = require('./configuration.cjs').runtime) {
@@ -55,16 +53,12 @@ function requirePinnedExecution(execution, runtime = require('./configuration.cj
 }
 
 const qualificationDrivers = Object.freeze(['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs',
-    'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py']);
+    'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py', '../execution-provenance.cjs']);
 
 function requirePinnedDrivers(selected = require('./configuration.cjs')) {
-    for (const file of qualificationDrivers) {
-        const expected = selected.inspectedArtifacts?.[file];
-        assert.match(expected ?? '', /^[a-f0-9]{64}$/u, 'preregistered driver hash unavailable: ' + file);
-        assert.equal(createHash('sha256').update(readFileSync(path.join(__dirname, file))).digest('hex'), expected,
-            'qualification driver differs from the preregistration: ' + file);
-    }
+    const drivers = attestDrivers(__dirname, selected.inspectedArtifacts, qualificationDrivers);
     selectedPlanProvenance(undefined, selected);
+    return drivers;
 }
 
 function selectedPlanProvenance(file, selected = require('./configuration.cjs')) {
@@ -74,13 +68,12 @@ function selectedPlanProvenance(file, selected = require('./configuration.cjs'))
     requireQualificationPolicy(selected);
     assert(!lstatSync(file).isSymbolicLink(), 'preregistered plan must be a committed regular file');
     file = realpathSync(file);
-    const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')));
-    Object.assign(env, { GIT_CONFIG_GLOBAL: devNull, GIT_CONFIG_NOSYSTEM: '1' });
     let directory = path.dirname(file);
-    const git = (...args) => execFileSync('git', ['--no-pager', '--literal-pathspecs', '-C', directory,
-        '-c', 'log.showSignature=false', '-c', 'core.fsmonitor=false', ...args],
-    { env, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1024 * 1024 });
+    while (!require('node:fs').existsSync(path.join(directory, '.git')) && path.dirname(directory) !== directory) {
+        directory = path.dirname(directory);
+    }
     try {
+        const git = pinnedGit(directory);
         const text = (...args) => git(...args).toString('utf8').replace(/\r?\n$/u, '');
         const root = text('rev-parse', '--show-toplevel');
         const relative = path.relative(root, file).split(path.sep).join('/');
@@ -128,7 +121,7 @@ function requireQualificationPolicy(selected) {
 
 function selectedPlanSha256() { return selectedPlanProvenance().sha256; }
 
-module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedExecution, requirePinnedDrivers, selectedPlanSha256, selectedPlanProvenance };
+module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedExecution, requirePinnedDrivers, qualificationProvenance, qualificationDrivers, selectedPlanSha256, selectedPlanProvenance };
 
 if (require.main === module) {
     assert.equal(process.argv[2], '--plan-provenance');

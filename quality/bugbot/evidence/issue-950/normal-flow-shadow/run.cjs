@@ -9,26 +9,33 @@ const path = require('node:path');
 const official = require('../shadow-real-prs/official.json');
 const shadowPlan = require('../shadow-verification/plan.json');
 const root = path.resolve(__dirname, '../../../../..');
-const ts = require(path.join(root, 'node_modules/typescript'));
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
-}).outputText, filename);
-
-const load = file => require(path.join(root, 'src', file));
-const { composeBugbotReview } = load('infrastructure/composition/bugbot_review_composition');
-const { createPinnedBugbotShadowVerifier } = load('infrastructure/bugbot/shadow_verification_adapter');
-const { ask, codexInvocation } = load('infrastructure/bugbot/shadow/session.cjs');
-const { projectBugbotReviewOperationContext } = load('application/usecases/steps/commit/bugbot/bugbot_review_operation_context');
-const { buildAgentTasksFromValues } = load('actions/agent_input_builder');
-const { Ai } = load('data/model/ai');
-const { createFindingsQueryPort } = load('infrastructure/composition/agent_capability_composition_root');
-const { AgentCliClient } = load('data/repository/agent_cli_client');
-const { AgentExecutionPlanner } = load('infrastructure/agents/agent_execution_planner');
-const { resolveBugbotReviewEffort } = load('domain/bugbot/review_configuration');
+const { attestSource, attestRuntime, attestDrivers, pinnedGit } = require('../execution-provenance.cjs');
+const { requirePinnedExecution, requirePinnedRuntime } = require('../ev07-shadow/implementation.cjs');
+const normalFlowDrivers = Object.freeze(['run.cjs', '../execution-provenance.cjs', '../ev07-shadow/load.cjs',
+    '../ev07-shadow/implementation.cjs', '../ev07-shadow/configuration.cjs']);
+let application;
+function loadApplication() {
+    if (application) return application;
+    require('../ev07-shadow/load.cjs');
+    const load = file => require(path.join(root, 'src', file));
+    const { composeBugbotReview } = load('infrastructure/composition/bugbot_review_composition');
+    const { createPinnedBugbotShadowVerifier } = load('infrastructure/bugbot/shadow_verification_adapter');
+    const { ask, codexInvocation } = load('infrastructure/bugbot/shadow/session.cjs');
+    const { projectBugbotReviewOperationContext } = load('application/usecases/steps/commit/bugbot/bugbot_review_operation_context');
+    const { buildAgentTasksFromValues } = load('actions/agent_input_builder');
+    const { Ai } = load('data/model/ai');
+    const { createFindingsQueryPort } = load('infrastructure/composition/agent_capability_composition_root');
+    const { AgentCliClient } = load('data/repository/agent_cli_client');
+    const { AgentExecutionPlanner } = load('infrastructure/agents/agent_execution_planner');
+    const { resolveBugbotReviewEffort } = load('domain/bugbot/review_configuration');
+    application = { composeBugbotReview, createPinnedBugbotShadowVerifier, ask, codexInvocation,
+        projectBugbotReviewOperationContext, buildAgentTasksFromValues, Ai, createFindingsQueryPort,
+        AgentCliClient, AgentExecutionPlanner, resolveBugbotReviewEffort };
+    return application;
+}
 
 const hash = text => createHash('sha256').update(text).digest('hex');
-const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, '-c', 'core.hooksPath=/dev/null', ...args],
-    { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+const git = (cwd, ...args) => pinnedGit(cwd)(...args).toString('utf8');
 const snapshot = (source, value, count = 0) => ({
     value, coverage: { source, status: 'complete', pagesFetched: 1, itemsFetched: count, itemsRetained: count,
         omittedItems: 0, truncatedItems: 0, limitReached: false },
@@ -70,6 +77,7 @@ function selectVerifierProfiles(subject, detector) {
         assert(!subject.compareInheritedVerifier, 'matched comparison requires an experimental verifier');
         return { primary: detector };
     }
+    const { buildAgentTasksFromValues } = loadApplication();
     const { model, effort } = subject.experimentalVerifier;
     assert(typeof model === 'string' && model.trim(), 'experimental verifier model required');
     const { reviewer } = buildAgentTasksFromValues({ 'reviewer-model': model, 'reviewer-effort': effort });
@@ -100,6 +108,19 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
     lab = path.resolve(lab);
     const manifest = fs.readFileSync(manifestPath);
     const frozen = JSON.parse(manifest);
+    const provenance = { ...attestSource(root, frozen.implementation),
+        drivers: attestDrivers(__dirname, frozen.drivers, normalFlowDrivers), runtime: attestRuntime(root, frozen.runtime) };
+    const directRuntime = { executable: frozen.runtime.executable, prefixArgs: frozen.runtime.launcher ? [frozen.runtime.launcher] : [] };
+    const attestDirect = () => requirePinnedExecution({ executable: directRuntime.executable, launcherArgv: directRuntime.prefixArgs,
+        ...(frozen.runtime.launcher && { launcherSha256: hash(fs.readFileSync(frozen.runtime.launcher)) }),
+        runtimeContract: { version: frozen.runtime.codex } }, frozen.runtime);
+    attestDirect();
+    const cli = execFileSync(directRuntime.executable, [...directRuntime.prefixArgs, '--version'], { encoding: 'utf8' }).trim();
+    requirePinnedRuntime(cli, frozen.runtime);
+    provenance.cli = { ...attestDirect(), version: cli };
+    const { composeBugbotReview, createPinnedBugbotShadowVerifier, ask, codexInvocation,
+        projectBugbotReviewOperationContext, buildAgentTasksFromValues, Ai, createFindingsQueryPort,
+        AgentCliClient, AgentExecutionPlanner, resolveBugbotReviewEffort } = loadApplication();
     const { workflowInputs } = frozen;
     assert.equal(frozen.publication, 'dry-run');
     const subject = frozen.subjects.find(item => item.number === Number(number));
@@ -129,7 +150,8 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
         throw new Error('forbidden GitHub mutation');
     } });
     try {
-        git(scratch, 'clone', '-q', '--shared', '--no-checkout', source, checkout);
+        execFileSync('git', ['clone', '-q', '--shared', '--no-checkout', source, checkout],
+            { cwd: scratch, env: require('../execution-provenance.cjs').gitEnvironment() });
         git(checkout, 'remote', 'remove', 'origin');
         git(checkout, 'checkout', '-q', '--detach', subject.head);
         assert.equal(git(checkout, 'remote'), '');
@@ -189,10 +211,16 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
         const standardDetector = createFindingsQueryPort({ cli: new AgentCliClient({
             prepare(request) {
                 const plan = planner.prepare(request);
-                const flags = codexInvocation(plan.argv);
-                attest(flags);
-                log({ event: 'detector-invocation', invocation: flags, capability: plan.capability, atMs: sinceStart() });
-                return plan;
+                try {
+                    const runtimeProof = requirePinnedExecution(plan, frozen.runtime);
+                    const flags = codexInvocation(plan.argv);
+                    attest(flags);
+                    log({ event: 'detector-invocation', invocation: flags, capability: plan.capability, runtimeProof, atMs: sinceStart() });
+                    return plan;
+                } catch (error) {
+                    fs.rmSync(plan.runtimeDirectory, { recursive: true, force: true });
+                    throw error;
+                }
             },
         }, { observe(observation) {
             if (observation.state === 'failed') log({ event: 'detector-provider-failure', observation, atMs: sinceStart() });
@@ -209,8 +237,8 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
         });
         log({ event: 'plan', subject, files: diff.changes.length, comparisonSha256: hash(JSON.stringify(diff)),
             configuration: selected, verifierConfiguration, workflowInputs, reviewEffort, effectiveDepth, subjectsSha256: hash(manifest),
-            cli: execFileSync('codex', ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(),
-            implementation: git(root, 'rev-parse', 'HEAD').trim(), runnerSha256: hash(fs.readFileSync(__filename)) });
+            cli,
+            implementation: provenance.implementation, provenance, runnerSha256: hash(fs.readFileSync(__filename)) });
         let invocation = 0;
         const detector = { async query(request) {
             const turn = ++invocation;
@@ -239,13 +267,16 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
                 && input.headSha === subject.head && input.baseSha === subject.base
                 ? { repo: source, officialDirectory: lab, catalog: official,
                     ...(workflowInputs && { localRuntime: shadowPlan.localRuntime }) } : undefined,
-            transport: turn => ask({ ...turn,
+            transport: turn => {
+                attestDirect();
+                return ask({ ...turn, runtime: directRuntime,
                 onInvocation(flags) {
                     attest(flags, expected);
                     log(label(arm, { event: 'verifier-invocation', id: turn.candidateId, invocation: flags,
                         continuation: Boolean(turn.threadId), atMs: sinceStart() }));
                 },
-            }),
+                });
+            },
         });
         const primaryArm = profiles.experimental ? 'experimental' : 'inherited';
         const adapters = { [primaryArm]: makeAdapter(primaryArm, profiles.primary) };
@@ -294,4 +325,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { selectVerifierProfiles, verifyMatchedCandidate };
+module.exports = { selectVerifierProfiles, verifyMatchedCandidate, normalFlowDrivers };

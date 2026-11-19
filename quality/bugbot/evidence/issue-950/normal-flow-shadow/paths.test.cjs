@@ -3,9 +3,126 @@
 const assert = require('node:assert/strict');
 const { execFileSync, spawnSync } = require('node:child_process');
 const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } = require('node:fs');
+const { createHash } = require('node:crypto');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
+const { attestSource, attestRuntime, attestDrivers, runtimeIdentity } = require('../execution-provenance.cjs');
+
+function sourceFixture(t) {
+    const directory = mkdtempSync(path.join(tmpdir(), 'bugbot-source-proof-'));
+    t.after(() => rmSync(directory, { recursive: true, force: true }));
+    const root = path.join(directory, 'actual'), clean = path.join(directory, 'clean');
+    mkdirSync(path.join(root, 'src'), { recursive: true });
+    const git = (...args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8',
+        env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' } }).trim();
+    git('init', '--quiet', '--template=');
+    writeFileSync(path.join(root, 'src/app.ts'), 'export const value = 1;\n');
+    writeFileSync(path.join(root, 'pnpm-lock.yaml'), 'lockfileVersion: 9\n');
+    writeFileSync(path.join(root, 'tsconfig.json'), '{}\n');
+    git('add', '.');
+    git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '--quiet', '-m', 'Pinned fixture');
+    const pin = git('rev-parse', 'HEAD');
+    execFileSync('git', ['clone', '--quiet', '--template=', root, clean]);
+    return { directory, root, clean, pin, git, file: path.join(root, 'src/app.ts') };
+}
+
+test('clean admission records the actual tree, source inventory and lockfile bytes', t => {
+    const f = sourceFixture(t), proof = attestSource(f.root, f.pin);
+    assert.equal(proof.implementation, f.pin);
+    assert.equal(proof.tree, f.git('rev-parse', f.pin + '^{tree}'));
+    assert.equal(proof.dependencyLockSha256, createHash('sha256').update(readFileSync(path.join(f.root, 'pnpm-lock.yaml'))).digest('hex'));
+    assert.match(proof.sourceSha256, /^[a-f0-9]{64}$/u);
+});
+
+for (const mode of ['dirty', 'staged', 'untracked', 'ignored', 'lockfile', 'compiler', 'assume-unchanged', 'symlink']) {
+    test('physical source admission refuses ' + mode + ' bytes', t => {
+        const f = sourceFixture(t);
+        if (mode === 'staged') {
+            writeFileSync(f.file, 'staged'); f.git('add', 'src'); writeFileSync(f.file, 'export const value = 1;\n');
+        } else if (mode === 'untracked' || mode === 'ignored') {
+            if (mode === 'ignored') { mkdirSync(path.join(f.root, '.git/info')); writeFileSync(path.join(f.root, '.git/info/exclude'), '*.js\n'); }
+            writeFileSync(path.join(f.root, 'src/app.js'), 'untracked runtime shadow');
+        } else if (mode === 'symlink') {
+            rmSync(f.file); require('node:fs').symlinkSync(path.join(f.clean, 'src/app.ts'), f.file);
+        } else {
+            if (mode === 'assume-unchanged') f.git('update-index', '--assume-unchanged', 'src/app.ts');
+            const file = mode === 'lockfile' ? 'pnpm-lock.yaml' : mode === 'compiler' ? 'tsconfig.json' : 'src/app.ts';
+            writeFileSync(path.join(f.root, file), 'changed bytes');
+        }
+        assert.throws(() => attestSource(f.root, f.pin), /does not match|untracked|symlink/u);
+    });
+}
+
+for (const mode of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_CONFIG_COUNT', 'local-core-worktree']) {
+    test('sanitized admission defeats redirection through ' + mode, t => {
+        const f = sourceFixture(t);
+        const env = { ...process.env };
+        writeFileSync(f.file, 'dirty actual source');
+        if (mode === 'GIT_DIR') env.GIT_DIR = path.join(f.clean, '.git');
+        if (mode === 'GIT_WORK_TREE') env.GIT_WORK_TREE = f.clean;
+        if (mode === 'GIT_INDEX_FILE') {
+            writeFileSync(f.file, 'staged dirty source'); f.git('add', 'src'); writeFileSync(f.file, 'export const value = 1;\n');
+            env.GIT_INDEX_FILE = path.join(f.clean, '.git/index');
+        }
+        if (mode === 'GIT_CONFIG_COUNT') Object.assign(env, { GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'core.worktree', GIT_CONFIG_VALUE_0: f.clean });
+        if (mode === 'local-core-worktree') f.git('config', 'core.worktree', f.clean);
+        const child = spawnSync(process.execPath, ['-e',
+            'require(process.argv[1]).attestSource(process.argv[2],process.argv[3])',
+            path.resolve(__dirname, '../execution-provenance.cjs'), f.root, f.pin], { env, encoding: 'utf8' });
+        assert.notEqual(child.status, 0);
+        assert.match(child.stderr, /does not match/u);
+    });
+}
+
+test('local fsmonitor configuration cannot execute during source admission', t => {
+    const f = sourceFixture(t), marker = path.join(f.directory, 'hook-ran'), hook = path.join(f.directory, 'monitor');
+    writeFileSync(hook, '#!/bin/sh\ntouch "' + marker + '"\n', { mode: 0o700 });
+    f.git('config', 'core.fsmonitor', hook);
+    assert.equal(attestSource(f.root, f.pin).implementation, f.pin);
+    assert.equal(existsSync(marker), false);
+});
+
+test('a missing committed source pin cannot admit work', t => {
+    const f = sourceFixture(t);
+    assert.throws(() => attestSource(f.root, 'f'.repeat(40)));
+});
+
+test('driver proof records actual bytes and rejects a modified driver', t => {
+    const f = sourceFixture(t), file = path.join(f.directory, 'driver.cjs');
+    writeFileSync(file, 'original');
+    const expected = { 'driver.cjs': createHash('sha256').update(readFileSync(file)).digest('hex') };
+    assert.deepEqual(attestDrivers(f.directory, expected, ['driver.cjs']), expected);
+    writeFileSync(file, 'changed');
+    assert.throws(() => attestDrivers(f.directory, expected, ['driver.cjs']), /driver differs/u);
+});
+
+test('runtime proof binds Node and TypeScript versions and actual executable bytes', () => {
+    const root = path.resolve(__dirname, '../../../../..'), runtime = runtimeIdentity(root);
+    assert.deepEqual(attestRuntime(root, runtime), runtime);
+    assert.throws(() => attestRuntime(root, { ...runtime, nodeSha256: 'f'.repeat(64) }), /runtime differs/u);
+    assert.throws(() => attestRuntime(root, { ...runtime, typescriptSha256: 'f'.repeat(64) }), /runtime differs/u);
+});
+
+for (const runner of ['normal-flow-shadow/run.cjs', 'ev07-shadow/corpus.cjs', 'ev07-shadow/review.cjs']) {
+    test('the real ' + runner + ' refuses a foreign pin before application imports or model work', t => {
+        const directory = mkdtempSync(path.join(tmpdir(), 'bugbot-before-import-'));
+        t.after(() => rmSync(directory, { recursive: true, force: true }));
+        const marker = path.join(directory, 'application-imported'), preload = path.join(directory, 'preload.cjs');
+        const plan = path.join(directory, 'plan.json');
+        writeFileSync(plan, JSON.stringify({ implementation: 'f'.repeat(40) }));
+        writeFileSync(preload, `const Module=require('node:module'),fs=require('node:fs'),load=Module._load;
+Module._load=function(name,...args){if(name.includes('/src/')||name.endsWith('/typescript')){
+fs.writeFileSync(process.env.IMPORT_MARKER,name);throw Error('unexpected application import');}return load.call(this,name,...args);};`);
+        const child = spawnSync(process.execPath, ['--require', preload, path.resolve(__dirname, '..', runner),
+            directory, '1', path.join(directory, 'result.jsonl'), plan], { encoding: 'utf8',
+            env: { ...process.env, COPILOT_EV07_PLAN: plan, IMPORT_MARKER: marker } });
+        assert.notEqual(child.status, 0);
+        assert.equal(existsSync(marker), false, child.stderr);
+        assert.equal(existsSync(path.join(directory, 'result.jsonl')), false);
+        assert.match(child.stderr, /rev-parse|commit|pin/u);
+    });
+}
 
 test('the actual runner resolves a relative lab before entering its private checkout, without model calls', t => {
     const directory = mkdtempSync(path.join(tmpdir(), 'bugbot-relative-lab-'));
@@ -19,12 +136,19 @@ test('the actual runner resolves a relative lab before entering its private chec
     git('add', '.');
     git('-c', 'user.name=Test', '-c', 'user.email=fixture@example.invalid', 'commit', '--quiet', '-m', 'fixed source');
     const head = git('rev-parse', 'HEAD'), tree = git('rev-parse', 'HEAD^{tree}');
-    writeFileSync(path.join(directory, 'subjects.json'), JSON.stringify({ publication: 'dry-run', effort: 'xhigh',
-        subjects: [{ repository: 'owner/project', number: 1, baseRef: 'master', headRef: 'review', head, base: head,
-            tree, baseTree: tree, model: 'gpt-6-luna' }] }));
+    const manifest = { publication: 'dry-run', effort: 'xhigh', subjects: [{ repository: 'owner/project', number: 1, baseRef: 'master', headRef: 'review', head, base: head,
+            tree, baseTree: tree, model: 'gpt-6-luna' }] };
     const forbidden = path.join(directory, 'model-invoked');
     writeFileSync(path.join(bin, 'codex'), '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "codex-cli fixture"; exit 0; fi\n'
         + 'touch "$MODEL_FORBIDDEN"\nexit 91\n', { mode: 0o700 });
+    const root = path.resolve(__dirname, '../../../../..');
+    const proof = require('../execution-provenance.cjs');
+    const hash = file => createHash('sha256').update(readFileSync(file)).digest('hex');
+    manifest.implementation = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    manifest.runtime = { ...proof.runtimeIdentity(root), executable: path.join(bin, 'codex'),
+        codex: 'codex-cli fixture', codexSha256: hash(path.join(bin, 'codex')) };
+    manifest.drivers = Object.fromEntries(require('./run.cjs').normalFlowDrivers.map(file => [file, hash(path.join(__dirname, file))]));
+    writeFileSync(path.join(directory, 'subjects.json'), JSON.stringify(manifest));
     const run = spawnSync(process.execPath, [path.join(__dirname, 'run.cjs'), 'lab', '1', 'result.jsonl', 'subjects.json'], {
         cwd: directory, encoding: 'utf8', env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH,
             MODEL_FORBIDDEN: forbidden },

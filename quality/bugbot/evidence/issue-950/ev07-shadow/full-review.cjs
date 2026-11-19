@@ -4,14 +4,15 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { requirePassingCorpus } = require('./launch-full-review.cjs');
-const { requirePinnedImplementation, selectedPlanProvenance } = require('./implementation.cjs');
+const { qualificationProvenance, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
 const concurrency = 3;
 
 async function run(campaign) {
     campaign = requirePassingCorpus(campaign);
-    const implementation = requirePinnedImplementation();
+    const provenance = qualificationProvenance(plan);
+    const implementation = provenance.implementation;
     const preregistration = selectedPlanProvenance();
     const output = path.join(campaign, 'full-review');
     const score = path.join(campaign, 'corpus-v3/corpus-score.json');
@@ -31,7 +32,7 @@ async function run(campaign) {
     };
     process.once('SIGINT', cancel);
     process.once('SIGTERM', cancel);
-    record({ event: 'start', at: new Date().toISOString(), planned: slots.length, concurrency, implementation,
+    record({ event: 'start', at: new Date().toISOString(), planned: slots.length, concurrency, implementation, provenance,
         plan: preregistration.sha256, preregistration });
     try {
         async function worker() {
