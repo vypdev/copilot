@@ -1,4 +1,5 @@
 import type { BugbotVerificationAuthority, BugbotVerificationPublication } from '../../../../domain/bugbot/verification_receipt';
+import { guardBugbotMutationPorts } from '../../../policies/bugbot_mutation_cancellation_policy';
 import { canonicalGitObjectId } from '../../../../domain/git_object_id';
 import { projectVerifiedBugbotPublication, type BugbotVerificationProjection } from './bugbot/verify_bugbot_publication_policy';
 import type { BoundPublicationSourceQueryPort } from '../../../ports/publication_freshness_ports';
@@ -67,6 +68,7 @@ export async function runDetectPotentialProblemsWorkflow(
     reviewContext: BugbotReviewOperationContext,
     dependencies: DetectPotentialProblemsWorkflowDependencies,
 ): Promise<Result[]> {
+    let publicationStarted = false;
     const workflowStartedAt = Date.now();
     const telemetry = new BugbotReviewTelemetry(reviewContext);
     const resolvedAgent = reviewContext.analysis.agentConfiguration;
@@ -112,8 +114,11 @@ export async function runDetectPotentialProblemsWorkflow(
         return [result];
     };
     const canceled = () => complete(new Result({
-        id: TASK_ID, success: false, executed: true, payload: { bugbotPublicationBlocked: true },
-        errors: [new ApplicationError('workflow.failed', 'Bugbot verification was canceled. The previous verified result was preserved.')],
+        id: TASK_ID, success: false, executed: true, payload: { bugbotPublicationBlocked: true,
+            ...(publicationStarted ? { bugbotPublicationInterrupted: true } : {}) },
+        errors: [new ApplicationError('workflow.failed', publicationStarted
+            ? 'Bugbot was canceled during publication. Earlier requests may have completed; subsequent operations were stopped. The previous verified result was preserved.'
+            : 'Bugbot verification was canceled. The previous verified result was preserved.')],
     }), 'failed');
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
     try {
@@ -250,6 +255,8 @@ export async function runDetectPotentialProblemsWorkflow(
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         if (reviewContext.signal?.aborted) return await canceled();
+        dependencies = { ...dependencies, scm: guardBugbotMutationPorts(dependencies.scm, reviewContext.signal) };
+        publicationStarted = true;
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
             reviewContext,
             context,
@@ -258,10 +265,12 @@ export async function runDetectPotentialProblemsWorkflow(
             dependencies.scm.resolution,
             catalog,
         ));
+        if (reviewContext.signal?.aborted) return await canceled();
         if (await telemetry.measure('post-publication-freshness', () =>
             hasNewerBugbotRevision(context, dependencies.scm.context, 'after-publication', requiresReceipt))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
+        if (reviewContext.signal?.aborted) return await canceled();
         const presentation = await telemetry.measure('projection', () =>
             reconcileReviewState({
                 operation: reviewContext,
@@ -273,6 +282,7 @@ export async function runDetectPotentialProblemsWorkflow(
                 catalog,
             }));
         if (presentation) telemetry.observeProjection(presentation.projection);
+        if (reviewContext.signal?.aborted) return await canceled();
         logInfo(`Bugbot workflow completed in ${Date.now() - workflowStartedAt}ms.`);
         const finalErrors = presentation?.errors ?? resolutionErrors;
         const hasChanges = prepared.toPublish.length > 0 || prepared.resolvedFindingIds.size > 0;

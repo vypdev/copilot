@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { tmpdir } = require('node:os');
-const { requirePinnedImplementation, requirePinnedRuntime, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
+const { requirePinnedImplementation, requirePinnedRuntime, requirePinnedExecution, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
 require('./load.cjs');
 
 const { runBugbotBenchmarkAgent } = require('../../../../../src/tooling/bugbot_benchmark_runner');
@@ -49,16 +49,17 @@ async function run(destination, preflight = false) {
     process.once('SIGINT', abort);
     process.once('SIGTERM', abort);
     const results = new Map();
-    function prepare(request, calls) {
+    function prepare(request, calls, runtimeProofs) {
         const invocation = planner.prepare(request);
         try {
-            requirePinnedRuntime(invocation.runtimeContract?.version);
+            const proof = requirePinnedExecution(invocation);
             const flags = codexInvocation(invocation.argv);
             assert.equal(flags.model, configuration.model);
             assert.equal(flags.modelProvider, configuration.modelProvider);
             assert.equal(flags.reasoningEffort, configuration.effort);
             assert.equal(flags.sandbox, 'read-only');
             calls.push(flags);
+            runtimeProofs.push(proof);
             return invocation;
         } catch (error) {
             fs.rmSync(invocation.runtimeDirectory, { recursive: true, force: true });
@@ -69,24 +70,24 @@ async function run(destination, preflight = false) {
     try {
         execFileSync('git', ['init', '--quiet', '--template='], { cwd });
         process.chdir(cwd);
-        const flags = [];
+        const flags = [], runtimeProofs = [];
         const canary = createFindingsQueryPort({ cli: { async execute(request) {
-            const admission = prepare(request, flags);
+            const admission = prepare(request, flags, runtimeProofs);
             fs.rmSync(admission.runtimeDirectory, { recursive: true, force: true });
             return 'qualification planner preflight';
         } } });
         await canary.query({ agentId: 'qualification-preflight', configuration, prompt: 'qualification planner preflight' });
         assert.equal(flags.length, 1);
-        record({ event: 'planner-preflight', flags });
+        record({ event: 'planner-preflight', flags, runtimeProofs });
         if (preflight) return;
         async function worker() {
             while (next < corpus.cases.length && !cancel.signal.aborted) {
                 const index = next++;
                 const testCase = corpus.cases[index];
                 const start = performance.now();
-                const calls = [];
+                const calls = [], runtimeProofs = [];
                 const agent = createFindingsQueryPort({ cli: new AgentCliClient({
-                    prepare: request => prepare(request, calls),
+                    prepare: request => prepare(request, calls, runtimeProofs),
                 }) });
                 let outcome;
                 try {
@@ -103,7 +104,7 @@ async function run(destination, preflight = false) {
                     const failure = error.cause?.category ?? error.code ?? error.name;
                     outcome = { status: cancel.signal.aborted ? 'interrupted' : 'failed', failure };
                 }
-                const row = { event: 'case', index, id: testCase.id, wallMs: Math.round(performance.now() - start), calls, ...outcome };
+                const row = { event: 'case', index, id: testCase.id, wallMs: Math.round(performance.now() - start), calls, runtimeProofs, ...outcome };
                 results.set(testCase.id, row);
                 record(row);
             }

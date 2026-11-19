@@ -88,6 +88,19 @@ function staleReviewSnapshot(count: number): BugbotReconciliationSnapshot {
 }
 
 describe('synchronizeBugbotReviewPresentation', () => {
+  it('normalizes the whole generated status card while leaving separate conversation comments alone', async () => {
+    const first = harness();
+    await synchronizeBugbotReviewPresentation({ target: target(), snapshot: snapshot(), plan: plan(), ports: first.ports });
+    const body = first.addComment.mock.calls[0][1];
+    const test = harness();
+    await synchronizeBugbotReviewPresentation({ target: target(), snapshot: snapshot({ conversationComments: [
+      { id: 1, body: body + '\n\nappended, noncanonical text', user: { login: 'bugbot' } },
+      { id: 2, body: 'Human discussion remains a separate comment.', user: { login: 'human' } },
+    ] }), plan: plan(), ports: test.ports });
+    expect(test.updateComment).toHaveBeenCalledTimes(1);
+    expect(test.updateComment.mock.calls[0].slice(0, 3)).toEqual([10, 1, body]);
+  });
+
   it('waits for the shared publication lane before acknowledging a terminal write', async () => {
     const test = harness();
     const publish = jest.fn().mockResolvedValue('updated');

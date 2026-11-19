@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import filesystem from 'node:fs';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -183,6 +184,23 @@ describe('official agent installer boundaries', () => {
         } finally {
             rmSync(installed.root, { recursive: true, force: true });
         }
+    });
+
+    it.each(['ENOSPC', 'EDQUOT', 'EFBIG', 'EROFS'])('classifies local download staging failure %s without exposing its body', code => {
+        execute.mockImplementationOnce(() => Buffer.from('official script fixture'));
+        const originalWrite = filesystem.writeFileSync;
+        const write = jest.spyOn(filesystem, 'writeFileSync').mockImplementation((file, data, options) => {
+            if (/[\\/]install\.(sh|ps1)$/u.test(String(file))) {
+                throw Object.assign(new Error('secret-bearing staging path'), { code });
+            }
+            return originalWrite(file, data, options);
+        });
+        try {
+            expect(() => installOfficialAgentCli('codex')).toThrow(expect.objectContaining({
+                stage: 'download', reason: 'write-failed', message: 'Official agent download failed or exceeded its size limit.',
+            }));
+            expect(execute).toHaveBeenCalledTimes(1);
+        } finally { write.mockRestore(); }
     });
 
     it('reports a private archive write failure without exposing stderr or retrying the script', () => {

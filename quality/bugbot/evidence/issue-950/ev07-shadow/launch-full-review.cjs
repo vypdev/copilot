@@ -45,6 +45,11 @@ function validateCorpusProvenance(directory, result) {
         assert.deepEqual(row.predictions, predictions.predictions[row.id]);
         assert(row.calls?.length > 0);
         row.calls.forEach(call => assert.deepEqual(call, flags));
+        const runtimeProof = { executableSha256: plan.runtime.executableSha256 ?? plan.runtime.codexSha256,
+            ...(plan.runtime.launcherSha256 ? { launcherSha256: plan.runtime.launcherSha256 } : {}) };
+        assert.match(runtimeProof.executableSha256 ?? '', /^[a-f0-9]{64}$/u);
+        assert.equal(row.runtimeProofs?.length, row.calls.length);
+        row.runtimeProofs.forEach(proof => assert.deepEqual(proof, runtimeProof));
     }
     require('./load.cjs');
     const { evaluateBugbotBenchmark } = require(path.join(root, 'src/tooling/bugbot_benchmark'));

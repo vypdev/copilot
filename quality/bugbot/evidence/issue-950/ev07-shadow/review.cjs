@@ -6,7 +6,7 @@ const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { getOctokit } = require('@actions/github');
-const { requirePinnedImplementation, requirePinnedRuntime, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
+const { requirePinnedImplementation, requirePinnedExecution, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
 require('./load.cjs');
 
 const { Ai } = require('../../../../../src/data/model/ai');
@@ -36,11 +36,11 @@ const originalPullNumbers = { X1: 24, P1: 28, J1: 28 };
 function prepareDetector(planner, request, log, selected = plan) {
     const execution = planner.prepare(request);
     try {
-        requirePinnedRuntime(execution.runtimeContract?.version, selected.runtime);
+        const runtimeProof = requirePinnedExecution(execution, selected.runtime);
         const flags = codexInvocation(execution.argv);
         assert.deepEqual(flags, { model: selected.detector.model, modelProvider: selected.detector.modelProvider,
             reasoningEffort: selected.detector.effort, sandbox: 'read-only' });
-        log({ event: 'detector-admitted', flags, runtime: execution.runtimeContract.version });
+        log({ event: 'detector-admitted', flags, runtime: execution.runtimeContract.version, runtimeProof });
         return execution;
     } catch (error) {
         fs.rmSync(execution.runtimeDirectory, { recursive: true, force: true });

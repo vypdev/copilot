@@ -67,7 +67,7 @@ function boundCorpusFixture(t) {
     const { evaluateBugbotBenchmark } = require(path.join(root, 'src/tooling/bugbot_benchmark'));
     const directory = fixture(t);
     const hash = value => createHash('sha256').update(value).digest('hex');
-    const plan = { ...require('./configuration.cjs'), runtime: { codex: 'codex-cli 0.169.1' },
+    const plan = { ...require('./configuration.cjs'), runtime: { codex: 'codex-cli 0.169.1', codexSha256: 'a'.repeat(64) },
         inspectedArtifacts: Object.fromEntries(['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs',
             'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py']
             .map(file => [file, hash(readFileSync(path.join(__dirname, file)))])) };
@@ -81,7 +81,7 @@ function boundCorpusFixture(t) {
         preregistration,
         runner: hash(readFileSync(path.join(__dirname, 'corpus.cjs'))), implementation: plan.implementation,
         corpus: plan.corpus.sha256, gitHubMutationPorts: 0 }, ...corpus.cases.map((item, index) => ({ event: 'case', index,
-        id: item.id, status: 'completed', predictions: predictions.predictions[item.id], calls: [{ model: plan.detector.model,
+        id: item.id, status: 'completed', predictions: predictions.predictions[item.id], runtimeProofs: [{ executableSha256: plan.runtime.codexSha256 }], calls: [{ model: plan.detector.model,
             modelProvider: plan.detector.modelProvider, reasoningEffort: plan.detector.effort, sandbox: 'read-only' }] })),
     { event: 'finish', complete: true, passed: true, githubWriteAttempts: 0, workspaceUnchanged: true }];
     writeFileSync(path.join(directory, 'corpus-v3/predictions.json'), JSON.stringify(predictions));
@@ -92,6 +92,7 @@ function boundCorpusFixture(t) {
 }
 
 for (const mode of ['valid', 'plan', 'implementation', 'runtime', 'runner', 'prediction', 'score', 'duplicate', 'flags', 'uncommitted-plan', 'omitted-positives',
+    'missing-executable-proof', 'foreign-executable-proof', 'foreign-launcher-proof',
     'changed-review-driver', 'missing-loader', 'changed-launcher']) {
     test(`binds independent corpus dispatch to its actual ledger and score: ${mode}`, t => {
         const f = boundCorpusFixture(t);
@@ -106,6 +107,9 @@ for (const mode of ['valid', 'plan', 'implementation', 'runtime', 'runner', 'pre
         }
         if (mode === 'duplicate') f.rows[2] = f.rows[1];
         if (mode === 'flags') f.rows[1].calls[0].model = 'unregistered-model';
+        if (mode === 'missing-executable-proof') delete f.rows[1].runtimeProofs;
+        if (mode === 'foreign-executable-proof') f.rows[1].runtimeProofs[0].executableSha256 = 'f'.repeat(64);
+        if (mode === 'foreign-launcher-proof') f.rows[1].runtimeProofs[0].launcherSha256 = 'f'.repeat(64);
         if (mode === 'uncommitted-plan' || mode === 'omitted-positives') {
             const selected = JSON.parse(readFileSync(f.planFile));
             if (mode === 'omitted-positives') selected.repositoryCohort.order = selected.repositoryCohort.order.filter(id => id.endsWith('1'));

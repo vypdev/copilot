@@ -503,6 +503,42 @@ describe("DetectPotentialProblemsUseCase", () => {
       expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
     });
 
+    it('withholds the completed receipt and later mutations after cancellation during publication', async () => {
+      const controller = new AbortController(), verify = jest.fn().mockResolvedValue(confirmed);
+      const param = pr();
+      param.bugbotReviewSignal = controller.signal;
+      mockCreateReviewWithComments.mockImplementationOnce(async () => { controller.abort(); return undefined; });
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, authority), param);
+      expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
+      expect(result.payload).toMatchObject({ bugbotPublicationBlocked: true, bugbotPublicationInterrupted: true,
+        bugbotTelemetry: { outcome: 'failed' } });
+      expect(result.payload).not.toHaveProperty('bugbotVerificationPublication');
+      expect(mockResolvePullRequestReviewThread).not.toHaveBeenCalled();
+      expect(mockUpdatePullRequestReview).not.toHaveBeenCalled();
+      expect(mockAddComment).not.toHaveBeenCalled();
+    });
+
+    it('stops before projection when cancellation arrives during post-publication freshness', async () => {
+      const controller = new AbortController(), verify = jest.fn().mockResolvedValue(confirmed);
+      const param = pr();
+      param.bugbotReviewSignal = controller.signal;
+      let readsAtCancellation = 0;
+      mockGetPullRequestHeadSha.mockImplementation(async () => {
+        if (mockCreateReviewWithComments.mock.calls.length > 0) {
+          readsAtCancellation = mockListPullRequestReviewComments.mock.calls.length;
+          controller.abort();
+        }
+        return head;
+      });
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, authority), param);
+      expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
+      expect(result.payload).toMatchObject({ bugbotPublicationBlocked: true, bugbotPublicationInterrupted: true });
+      expect(result.payload).not.toHaveProperty('bugbotVerificationPublication');
+      expect(mockListPullRequestReviewComments).toHaveBeenCalledTimes(readsAtCancellation);
+      expect(mockAddComment).not.toHaveBeenCalled();
+      expect(mockUpdatePullRequestReview).not.toHaveBeenCalled();
+    });
+
     it('keeps a replacement with ambiguous diff sides inconclusive before starting verification', async () => {
       mockGetFilesWithDiffLocations.mockResolvedValue([{ path: candidate.file, locations: [
         { line: 5, side: 'LEFT' }, { line: 5, side: 'RIGHT' },

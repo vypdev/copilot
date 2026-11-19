@@ -11,6 +11,8 @@ function createRepository(options: {
   existingReviewBodies?: string[];
   existingReviewHead?: string;
   pendingReview?: boolean;
+  existingAuthor?: string | null;
+  publisherLogin?: string | null;
 }) {
   const listReviewComments = jest.fn(), listReviews = jest.fn();
   const createClient = {
@@ -38,7 +40,7 @@ function createRepository(options: {
         iterator: async function* (method: unknown) {
           yield {
             data: (method === listReviews ? options.existingReviewBodies ?? [] : options.existingBodies ?? [])
-              .map(body => ({ body, ...(method === listReviews ? { commit_id: options.existingReviewHead ?? 'sha',
+              .map(body => ({ body, user: options.existingAuthor === null ? null : { login: options.existingAuthor ?? 'publisher' }, ...(method === listReviews ? { commit_id: options.existingReviewHead ?? 'sha',
                 submitted_at: options.pendingReview ? null : '2026-11-19T00:00:00Z' } : {}) })),
           };
         },
@@ -52,6 +54,7 @@ function createRepository(options: {
       createClient as never,
       graphqlClient as never,
       queryClient as never,
+      options.publisherLogin === null ? undefined : options.publisherLogin ?? 'publisher',
     ),
     createClient,
     graphqlClient,
@@ -59,6 +62,26 @@ function createRepository(options: {
 }
 
 describe("PullRequestReviewCommentCommandRepository", () => {
+  it.each(['human-reviewer', 'another-bot', null])('does not adopt an unowned submitted review: %s', async existingAuthor => {
+    const createReview = jest.fn().mockResolvedValue({ data: { id: 21 } });
+    const { repository } = createRepository({ createReview, existingReviewBodies: ['complete review'], existingAuthor });
+    await repository.createReviewWithComments('owner', 'repo', 7, 'sha', 'complete review', [], 'token');
+    expect(createReview).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not infer publication ownership when publisher identity is unavailable', async () => {
+    const createReview = jest.fn().mockResolvedValue({ data: { id: 21 } });
+    const { repository } = createRepository({ createReview, existingReviewBodies: ['complete review'], publisherLogin: null });
+    await repository.createReviewWithComments('owner', 'repo', 7, 'sha', 'complete review', [], 'token');
+    expect(createReview).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not suppress an inline finding copied by a human', async () => {
+    const createReview = jest.fn().mockResolvedValue({ data: { id: 21 } });
+    const { repository } = createRepository({ createReview, existingBodies: ['inline'], existingAuthor: 'human' });
+    await repository.createReviewWithComments('owner', 'repo', 7, 'sha', '', [{ path: 'src/file.ts', line: 1, body: 'inline' }], 'token');
+    expect(createReview).toHaveBeenCalledWith(expect.objectContaining({ comments: [expect.objectContaining({ body: 'inline' })] }));
+  });
   it('does not repeat an already observed complete body-only review', async () => {
     const createReview = jest.fn();
     const { repository } = createRepository({ createReview, existingReviewBodies: ['complete review'] });

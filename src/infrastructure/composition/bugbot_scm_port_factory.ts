@@ -17,6 +17,7 @@ export interface BugbotScmBinding {
   readonly owner: string;
   readonly repository: string;
   readonly token: string;
+  readonly trustedAuthorLogin?: string;
   readonly shadow?: { readonly workspace?: string };
   readonly verificationAuthority?: BugbotVerificationAuthority;
   readonly reviewCancellation?: BugbotReviewCancellationPort;

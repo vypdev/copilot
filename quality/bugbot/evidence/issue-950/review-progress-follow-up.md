@@ -355,3 +355,79 @@ passed all **13 packaged status scenarios**, the rejected-mutation audit and
 only; rollback cases record zero mutation attempts. Generated-bundle and npm
 package validation passed. This identifies the executable tested locally;
 the subsequent normal hook and exact-head CI are reported in the PR.
+
+
+## Native review of `069a10b1a`
+
+All exact-head CI areas, aggregate, Commit, Verification, Branch Sync and the
+native PR job passed. Review and Approval were neutral. Native analysis
+validated 29/29 partitions in about 100 minutes; no approval was submitted.
+The terminal card named this head and linked its current Commit assessment.
+Commit completed all 112 requirements in four batches and 50/120 assessment
+calls; its 50% estimate and three implementation claims are source judgments,
+not executed acceptance. The production selector accepted the actual 30-comment
+conversation and exact issue/head binding in a read-only replay.
+
+| Report | Evidence and disposition |
+|---|---|
+| [Platform pnpm](https://github.com/vypdev/copilot/pull/951#discussion_r4626616195) | Refuted. The static helper receives `runs-on: ${{ matrix.labels }}`, not expanded per-platform arrays; it returns before its literal-label comparison. The workflow-specific branch already verifies the matrix destination. Exact-head `validate:workflows` passed in CI and locally. No runner or template change. |
+| [Historical base](https://github.com/vypdev/copilot/pull/951#discussion_r4626616202) | Adopted with a distinction the proposed replacement misses: regressions/historical comparisons use the acquired fixed live target; LEFT framed anchors use the actual merge-base tree from the verified diff. Legacy callers retain their fixed comparison fallback. Three candidate-delivery controls preserve those purposes without moving the anchor. |
+| [Corpus executable digest](https://github.com/vypdev/copilot/pull/951#discussion_r4626616213) | Confirmed missing enforcement. Every actual prepared detector invocation now checks the selected executable digest and an optional launcher's separate digest, before model dispatch. A matching version alone does not admit it. Corpus records retain proof per invocation and full-review admission rejects missing or foreign proofs. |
+| [Publication cancellation](https://github.com/vypdev/copilot/pull/951#discussion_r4626616222) | Confirmed. Review-scoped guards stop subsequent semantic finding, resolution and presentation operations after cancellation. An issued request may finish. The workflow reports interrupted publication, retains the previous verified result and withholds a completed receipt. A real workflow control cancels from the publication callback; guarded-port controls also exercise nested and frozen capabilities. No investigation deadline is added. |
+| [Full-review executable digest](https://github.com/vypdev/copilot/pull/951#discussion_r4626616228) | Same runtime provenance correction as the corpus report. The actual private prepared plan supplies its executable and launcher identities; model-free artifact fixtures reject mismatches and missing pins and accept the demonstrably pinned paths. Frozen measured ledgers remain unchanged. |
+| [Spawn timeout](https://github.com/vypdev/copilot/pull/951#discussion_r4626616239) | Refuted. [Node v24.20.0 implements the asynchronous spawn timeout](https://github.com/nodejs/node/blob/v24.20.0/lib/child_process.js). A local zero-model probe with `timeout:100` terminated an otherwise persistent child via SIGTERM after 115 ms. The existing 30-second packaged reproduction timeout is effective; no watchdog or verifier deadline is added. |
+| [Relative canary output](https://github.com/vypdev/copilot/pull/951#discussion_r4626616248) | Confirmed. The original script at this exact head fails its first relative-path event read. Resolve the output path once. The corrected replay delivers the same fixture events through the packaged entrypoint; final absolute and relative controls are reported separately against the rebuilt executable. |
+| [Installer storage failure](https://github.com/vypdev/copilot/pull/951#discussion_r4626616255) | Confirmed. Classify recognized local ENOSPC, EDQUOT, EFBIG and EROFS writes as bounded `write-failed`. The first new controls exposed a second problem: Codex treated that storage failure as a reason to retry another URL, replacing the cause. Storage failures now stop without that retry; network recovery remains its existing separate path. Raw paths and error bodies stay out of diagnostics. |
+| [Status suffix](https://github.com/vypdev/copilot/pull/951#discussion_r4626616266) | Not adopted as a data-preservation defect. The aggregate comment is generated in full, unlike historical review content and the structured last verified section. The old prefix check could retain noncanonical appended content and stale metadata. A controlled current-card plus suffix is normalized; a separate human comment is untouched. The companion SDD makes that ownership explicit. |
+| [Review ownership](https://github.com/vypdev/copilot/pull/951#discussion_r4626616280) | Confirmed. Only submitted same-head reviews from the authenticated publisher can establish prior publication. Human, other-bot, missing-author and missing-publisher cases cannot suppress it. The same ownership rule protects inline duplicate detection. Existing exact-head and historical-header normalization remain required. |
+
+Seven adopted reports correspond to six corrections; three are refuted or
+resolved by the explicit generated-card ownership contract. This follow-up
+uses zero model calls and makes no requests to evaluated PRs. Production
+verification remains disabled. The seven frozen campaign artifacts and owning
+SDD remain immutable; these controls do not change the negative qualification.
+The initial focused run retained four installer failures before stopping the
+misclassified recovery; its corrected focused run passed. The initial runtime
+fixture also incorrectly labeled a valid launcher as a foreign version; that
+fixture failure is retained separately from the corrected admission controls.
+
+Reproduce with `pnpm run test:bugbot-shadow-verification`, the focused
+cancellation/base/publication/installer/composition Jest paths in the catalog,
+and the packaged canary's absolute and relative output forms. The next normal
+hook, rebuilt-package proofs and final-head remote checks are separate evidence.
+
+The final focused run passed **272 cases in 42 suites** (five platform-specific
+skips); all **140** model-free shadow controls passed. The new cancellation
+policy passed an isolated **100%** threshold in statements, branches, functions
+and lines, now enforced by the permanent exhaustive budget. The first isolated
+coverage command retained its failure for unrelated global coverage paths not
+collected by that narrow run; the recheck requires 100% for the policy and does
+not change the repository's full-suite thresholds. Specifications, type checking,
+lint, documentation, workflows and AST-only Graphify validation passed.
+
+The rebuilt Action at SHA-256
+`4e4590483a4d5ce41acbafde17254a2ce982177fd721a72337ba13c5bd07b16c`
+passed all **13 status scenarios with an absolute output**, the same **13 with
+a relative output**, both rejected-mutation audits, and **six rollback/approval
+scenarios**. All providers were loopback-only; rollback attempted zero mutations.
+The original relative invocation failed before the correction. Bundle and npm
+package validation passed. These proofs precede the next normal hook and remote
+checks and do not qualify the deployment profile.
+
+The first normal hook retained **942 passing suites and one failing suite**:
+18,693 cases passed, one failed and 35 were skipped. This was a real regression:
+mutation guards were prepared before the initial cancellation check, touching
+SCM even for an already canceled review. Keep the existing zero-access boundary
+control. Prepare guards only at publication, after the cancellation/freshness
+fences, and recheck cancellation after the post-publication freshness read.
+Rebuild and repeat packaged controls and the full hook before publishing; the
+preceding executable hash identifies the earlier successful package run only.
+
+After that correction, **90 cancellation/workflow cases in three suites**
+passed, including the unchanged native zero-SCM-access control and cancellation
+during post-publication freshness. The final rebuilt Action at SHA-256
+`c5fe206b2027c951b4f22c64d210ea540b6777eee3c7cd754ba944a771f0f0e6`
+again passed 13 absolute-path and 13 relative-path status scenarios, both
+mutation audits and six rollback/approval scenarios on loopback only. The new
+cancellation fence is present in the rebuilt executable. The failed full hook
+is retained; repeat the full normal hook against these corrected bytes.

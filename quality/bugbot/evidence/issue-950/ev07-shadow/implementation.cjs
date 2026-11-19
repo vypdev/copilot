@@ -30,6 +30,30 @@ function requirePinnedRuntime(cli, runtime = require('./configuration.cjs').runt
     return cli;
 }
 
+function requirePinnedExecution(execution, runtime = require('./configuration.cjs').runtime) {
+    requirePinnedRuntime(execution.runtimeContract?.version, runtime);
+    const digest = file => {
+        assert(typeof file === 'string' && path.isAbsolute(file), 'runtime artifact must have an absolute path');
+        assert(lstatSync(file).isFile(), 'runtime artifact must be a regular file');
+        return createHash('sha256').update(readFileSync(file)).digest('hex');
+    };
+    const expected = runtime.executableSha256 ?? runtime.codexSha256;
+    assert.match(expected ?? '', /^[a-f0-9]{64}$/u, 'preregistered executable digest unavailable');
+    const executableSha256 = digest(execution.executable);
+    assert.equal(executableSha256, expected, 'actual executable differs from the preregistered runtime digest');
+    const launcher = execution.launcherArgv ?? [];
+    assert(launcher.length <= 1, 'unsupported qualification launcher');
+    if (launcher.length) {
+        assert.match(runtime.launcherSha256 ?? '', /^[a-f0-9]{64}$/u, 'preregistered launcher digest unavailable');
+        const launcherSha256 = digest(launcher[0]);
+        assert.equal(launcherSha256, runtime.launcherSha256, 'launcher differs from the preregistered runtime digest');
+        assert.equal(execution.launcherSha256, launcherSha256, 'prepared launcher differs from admitted bytes');
+        return { executableSha256, launcherSha256 };
+    }
+    assert(!runtime.launcherSha256 && !execution.launcherSha256, 'declared launcher is missing');
+    return { executableSha256 };
+}
+
 const qualificationDrivers = Object.freeze(['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs',
     'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py']);
 
@@ -104,7 +128,7 @@ function requireQualificationPolicy(selected) {
 
 function selectedPlanSha256() { return selectedPlanProvenance().sha256; }
 
-module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedDrivers, selectedPlanSha256, selectedPlanProvenance };
+module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedExecution, requirePinnedDrivers, selectedPlanSha256, selectedPlanProvenance };
 
 if (require.main === module) {
     assert.equal(process.argv[2], '--plan-provenance');

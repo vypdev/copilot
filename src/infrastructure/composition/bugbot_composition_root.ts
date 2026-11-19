@@ -56,6 +56,7 @@ export function createBugbotCompositionRoot(binding: BugbotScmBinding): BugbotCo
     reviewCommentClient,
     graphqlClient,
     reviewCommentClient,
+    binding.trustedAuthorLogin,
   );
   const threadCommand = new PullRequestReviewThreadRepository(
     graphqlClient,

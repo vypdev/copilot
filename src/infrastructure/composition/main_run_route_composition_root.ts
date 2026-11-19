@@ -419,6 +419,7 @@ export function createMainRunRouteCompositionRoot(
 function bugbotBinding(execution: {
   readonly owner: string;
   readonly repo: string;
+  readonly tokenUser?: string;
   readonly tokens: { readonly token: string };
   readonly ai?: { getBugbotReviewConfiguration(): { readonly shadowVerification?: unknown } };
 }, surface: MainRunCompositionSurface, authority?: BugbotVerificationAuthority, reviewProgress?: BugbotScmBinding['reviewProgress'],
@@ -427,6 +428,7 @@ statusCard?: BugbotScmBinding['statusCard']): BugbotScmBinding {
     owner: execution.owner,
     repository: execution.repo,
     token: execution.tokens.token,
+    ...(execution.tokenUser ? { trustedAuthorLogin: execution.tokenUser } : {}),
     ...(surface === 'github-workflow' ? { reviewCancellation: new NativeBugbotReviewCancellationAdapter() } : {}),
     ...(surface === 'github-workflow' && execution.ai?.getBugbotReviewConfiguration?.().shadowVerification
       ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),

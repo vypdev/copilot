@@ -134,7 +134,9 @@ function download(url: string, destination: string, environment: NodeJS.ProcessE
     } catch (error) {
         rmSync(destination, { force: true });
         throw new OfficialAgentInstallationError('download',
-            'Official agent download failed or exceeded its size limit.', boundedExitCode(error), error);
+            'Official agent download failed or exceeded its size limit.', boundedExitCode(error), error,
+            error && typeof error === 'object' && 'code' in error
+                && ['ENOSPC', 'EDQUOT', 'EFBIG', 'EROFS'].includes(String(error.code)) ? 'write-failed' : undefined);
     }
 }
 
@@ -157,7 +159,8 @@ function downloadInstallerScript(provider: AgentProvider, script: string, enviro
         downloadScript(url, script, environment);
         return;
     } catch (error) {
-        if (provider !== 'codex' || !(error instanceof OfficialAgentInstallationError) || error.stage !== 'download') {
+        if (provider !== 'codex' || !(error instanceof OfficialAgentInstallationError) || error.stage !== 'download'
+            || error.reason === 'write-failed') {
             throw error;
         }
         const recovery = windows ? source.scriptRecovery?.windows : source.scriptRecovery?.unix;

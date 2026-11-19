@@ -103586,6 +103586,47 @@ function bugbotDiagnosticOperatorMessage(diagnostic) {
 
 /***/ }),
 
+/***/ 5462:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.guardBugbotMutationPorts = guardBugbotMutationPorts;
+/** Stop new semantic operations; an already issued request may still finish. */
+function guardBugbotMutationPorts(ports, signal) {
+    if (!signal)
+        return ports;
+    const cancellation = signal;
+    const guarded = new WeakMap();
+    function guard(port) {
+        const existing = guarded.get(port);
+        if (existing)
+            return existing;
+        // Inherit the port rather than proxying it directly: frozen adapters
+        // must still permit wrapped method reads without proxy-invariant errors.
+        const proxy = new Proxy(Object.create(port), { get(_target, key) {
+                const value = Reflect.get(port, key, port);
+                if (typeof value === 'function')
+                    return (...args) => {
+                        cancellation.throwIfAborted();
+                        return Reflect.apply(value, port, args);
+                    };
+                return value && typeof value === 'object' ? guard(value) : value;
+            }, ownKeys: () => Reflect.ownKeys(port), getOwnPropertyDescriptor(_target, key) {
+                const descriptor = Reflect.getOwnPropertyDescriptor(port, key);
+                return descriptor ? { ...descriptor, configurable: true } : undefined;
+            } });
+        guarded.set(port, proxy);
+        return proxy;
+    }
+    return { ...ports, publication: guard(ports.publication), resolution: guard(ports.resolution),
+        reconciliation: { ...ports.reconciliation, presentation: guard(ports.reconciliation.presentation) } };
+}
+
+
+/***/ }),
+
 /***/ 57555:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -130294,7 +130335,9 @@ function pinCandidate(operation, context, finding, historicalResolution = false)
     // The published title is the claim. Description, confidence, detector evidence and proposed fixes stay out.
     const comparisonRelevant = historicalResolution || side === 'LEFT' || /\b(regressions?|regresi[oó]n|previously|used to|no longer|introduc\w*)\b/iu
         .test(hypothesis + '\n' + finding.description);
-    const baseSha = (0, git_object_id_1.canonicalGitObjectId)(pr?.baseSha ?? operation.trigger.before);
+    const baseSha = (0, git_object_id_1.canonicalGitObjectId)(side === 'LEFT'
+        ? context.reviewFramedSource?.identity.mergeBaseSha ?? pr?.baseSha ?? operation.trigger.before
+        : context.reviewFramedSource?.identity.baseSha ?? pr?.baseRefSha ?? pr?.baseSha ?? operation.trigger.before);
     return Object.freeze({
         id: finding.id, hypothesis, anchor,
         repository: Object.freeze({ owner: pr?.baseRepository.owner ?? operation.repository.owner,
@@ -132236,6 +132279,7 @@ exports.DetectPotentialProblemsUseCase = DetectPotentialProblemsUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runDetectPotentialProblemsWorkflow = runDetectPotentialProblemsWorkflow;
+const bugbot_mutation_cancellation_policy_1 = __nccwpck_require__(5462);
 const git_object_id_1 = __nccwpck_require__(88623);
 const verify_bugbot_publication_policy_1 = __nccwpck_require__(41899);
 const bugbot_candidate_trace_1 = __nccwpck_require__(17302);
@@ -132262,6 +132306,7 @@ const bugbot_partition_completion_policy_1 = __nccwpck_require__(57555);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
+    let publicationStarted = false;
     const workflowStartedAt = Date.now();
     const telemetry = new bugbot_review_telemetry_1.BugbotReviewTelemetry(reviewContext);
     const resolvedAgent = reviewContext.analysis.agentConfiguration;
@@ -132308,8 +132353,11 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         return [result];
     };
     const canceled = () => complete(new result_1.Result({
-        id: TASK_ID, success: false, executed: true, payload: { bugbotPublicationBlocked: true },
-        errors: [new application_error_1.ApplicationError('workflow.failed', 'Bugbot verification was canceled. The previous verified result was preserved.')],
+        id: TASK_ID, success: false, executed: true, payload: { bugbotPublicationBlocked: true,
+            ...(publicationStarted ? { bugbotPublicationInterrupted: true } : {}) },
+        errors: [new application_error_1.ApplicationError('workflow.failed', publicationStarted
+                ? 'Bugbot was canceled during publication. Earlier requests may have completed; subsequent operations were stopped. The previous verified result was preserved.'
+                : 'Bugbot verification was canceled. The previous verified result was preserved.')],
     }), 'failed');
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(TASK_ID)} Executing ${TASK_ID}.`);
     try {
@@ -132445,10 +132493,16 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         }
         if (reviewContext.signal?.aborted)
             return await canceled();
+        dependencies = { ...dependencies, scm: (0, bugbot_mutation_cancellation_policy_1.guardBugbotMutationPorts)(dependencies.scm, reviewContext.signal) };
+        publicationStarted = true;
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution, catalog));
+        if (reviewContext.signal?.aborted)
+            return await canceled();
         if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication', requiresReceipt))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
+        if (reviewContext.signal?.aborted)
+            return await canceled();
         const presentation = await telemetry.measure('projection', () => reconcileReviewState({
             operation: reviewContext,
             loadedContext: publicationContext,
@@ -132460,6 +132514,8 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         }));
         if (presentation)
             telemetry.observeProjection(presentation.projection);
+        if (reviewContext.signal?.aborted)
+            return await canceled();
         (0, logging_ports_1.logInfo)(`Bugbot workflow completed in ${Date.now() - workflowStartedAt}ms.`);
         const finalErrors = presentation?.errors ?? resolutionErrors;
         const hasChanges = prepared.toPublish.length > 0 || prepared.resolvedFindingIds.size > 0;
@@ -148784,27 +148840,30 @@ const bugbot_review_presentation_policy_1 = __nccwpck_require__(43799);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 class PullRequestReviewCommentCommandRepository {
-    constructor(createClient, graphqlClient, queryClient) {
+    constructor(createClient, graphqlClient, queryClient, publisherLogin) {
         this.createClient = createClient;
         this.graphqlClient = graphqlClient;
         this.queryClient = queryClient;
+        this.publisherLogin = publisherLogin;
     }
     async listExistingBodies(owner, repository, pullRequestNumber, token, commitSha) {
-        if (!this.queryClient)
+        if (!this.queryClient || !this.publisherLogin?.trim())
             return { comments: new Set(), reviews: new Set() };
+        const owned = (user) => typeof user?.login === 'string'
+            && user.login.toLowerCase() === this.publisherLogin.trim().toLowerCase();
         const client = this.queryClient.getClient(token);
         const bodies = new Set();
         for await (const page of client.paginate.iterator(client.rest.pulls.listReviewComments, { owner, repo: repository, pull_number: pullRequestNumber })) {
             const comments = (0, github_pagination_policy_1.requireArrayPage)(page.data, 'existing pull request review comments');
             for (const comment of comments) {
-                if (typeof comment.body === "string")
+                if (owned(comment.user) && typeof comment.body === "string")
                     bodies.add(comment.body);
             }
         }
         const reviews = new Set();
         for await (const page of client.paginate.iterator(client.rest.pulls.listReviews, { owner, repo: repository, pull_number: pullRequestNumber })) {
             for (const review of (0, github_pagination_policy_1.requireArrayPage)(page.data, 'existing pull request reviews')) {
-                if (review.commit_id === commitSha && typeof review.submitted_at === 'string' && review.submitted_at
+                if (owned(review.user) && review.commit_id === commitSha && typeof review.submitted_at === 'string' && review.submitted_at
                     && typeof review.body === 'string')
                     reviews.add((0, bugbot_review_presentation_policy_1.bugbotReviewHistoricalContent)(review.body));
             }
@@ -159067,7 +159126,8 @@ function download(url, destination, environment, maxBytes) {
     }
     catch (error) {
         (0, node_fs_1.rmSync)(destination, { force: true });
-        throw new OfficialAgentInstallationError('download', 'Official agent download failed or exceeded its size limit.', boundedExitCode(error), error);
+        throw new OfficialAgentInstallationError('download', 'Official agent download failed or exceeded its size limit.', boundedExitCode(error), error, error && typeof error === 'object' && 'code' in error
+            && ['ENOSPC', 'EDQUOT', 'EFBIG', 'EROFS'].includes(String(error.code)) ? 'write-failed' : undefined);
     }
 }
 function downloadScript(url, destination, environment) {
@@ -159090,7 +159150,8 @@ function downloadInstallerScript(provider, script, environment) {
         return;
     }
     catch (error) {
-        if (provider !== 'codex' || !(error instanceof OfficialAgentInstallationError) || error.stage !== 'download') {
+        if (provider !== 'codex' || !(error instanceof OfficialAgentInstallationError) || error.stage !== 'download'
+            || error.reason === 'write-failed') {
             throw error;
         }
         const recovery = windows ? source.scriptRecovery?.windows : source.scriptRecovery?.unix;
@@ -161230,7 +161291,7 @@ function createBugbotCompositionRoot(binding) {
     const graphqlClient = (0, github_project_client_factory_1.createGraphqlTransportClient)();
     const bugbotIssueComments = new bugbot_issue_comment_query_repository_1.BugbotIssueCommentQueryRepository(graphqlClient);
     const reviewQuery = new pull_request_review_comment_query_repository_1.PullRequestReviewCommentQueryRepository(reviewCommentClient);
-    const reviewCommand = new pull_request_review_comment_command_repository_1.PullRequestReviewCommentCommandRepository(reviewCommentClient, graphqlClient, reviewCommentClient);
+    const reviewCommand = new pull_request_review_comment_command_repository_1.PullRequestReviewCommentCommandRepository(reviewCommentClient, graphqlClient, reviewCommentClient, binding.trustedAuthorLogin);
     const threadCommand = new pull_request_review_thread_repository_1.PullRequestReviewThreadRepository(graphqlClient);
     const lifecycle = new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)());
     const changes = new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)());
@@ -162555,6 +162616,7 @@ function bugbotBinding(execution, surface, authority, reviewProgress, statusCard
         owner: execution.owner,
         repository: execution.repo,
         token: execution.tokens.token,
+        ...(execution.tokenUser ? { trustedAuthorLogin: execution.tokenUser } : {}),
         ...(surface === 'github-workflow' ? { reviewCancellation: new native_review_cancellation_adapter_1.NativeBugbotReviewCancellationAdapter() } : {}),
         ...(surface === 'github-workflow' && execution.ai?.getBugbotReviewConfiguration?.().shadowVerification
             ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),

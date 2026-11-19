@@ -8,7 +8,7 @@ const { join, resolve } = require('node:path');
 
 if (process.argv.length !== 4) throw new Error('Expected a packaged GitHub Action and an existing output directory.');
 const bundle = resolve(process.argv[2]);
-const output = process.argv[3];
+const output = resolve(process.argv[3]);
 const project = '/repos/owner/project';
 const site = 'https://github.com/owner/project';
 const reviewPath = '.github/workflows/copilot_pull_request.yml';

@@ -22,6 +22,7 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
     private readonly createClient: GithubClientPort<GithubPullRequestReviewCommentCreateClient>,
     private readonly graphqlClient: GithubClientPort<GithubGraphqlTransportClient>,
     private readonly queryClient?: GithubClientPort<GithubPullRequestReviewCommentQueryClient>,
+    private readonly publisherLogin?: string,
   ) {}
 
   private async listExistingBodies(
@@ -31,23 +32,26 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
     token: string,
     commitSha: string,
   ): Promise<{ comments: Set<string>; reviews: Set<string> }> {
-    if (!this.queryClient) return { comments: new Set(), reviews: new Set() };
+    if (!this.queryClient || !this.publisherLogin?.trim()) return { comments: new Set(), reviews: new Set() };
+    const owned = (user: { login?: unknown } | null | undefined) => typeof user?.login === 'string'
+      && user.login.toLowerCase() === this.publisherLogin!.trim().toLowerCase();
     const client = this.queryClient.getClient(token);
     const bodies = new Set<string>();
     for await (const page of client.paginate.iterator(
       client.rest.pulls.listReviewComments,
       { owner, repo: repository, pull_number: pullRequestNumber },
     )) {
-      const comments = requireArrayPage<{ body?: unknown }>(page.data, 'existing pull request review comments');
+      const comments = requireArrayPage<{ body?: unknown; user?: { login?: unknown } | null }>(page.data, 'existing pull request review comments');
       for (const comment of comments) {
-        if (typeof comment.body === "string") bodies.add(comment.body);
+        if (owned(comment.user) && typeof comment.body === "string") bodies.add(comment.body);
       }
     }
     const reviews = new Set<string>();
     for await (const page of client.paginate.iterator(client.rest.pulls.listReviews,
       { owner, repo: repository, pull_number: pullRequestNumber })) {
-      for (const review of requireArrayPage<{ body?: unknown; commit_id?: unknown; submitted_at?: unknown }>(page.data, 'existing pull request reviews')) {
-        if (review.commit_id === commitSha && typeof review.submitted_at === 'string' && review.submitted_at
+      for (const review of requireArrayPage<{ body?: unknown; commit_id?: unknown; submitted_at?: unknown;
+        user?: { login?: unknown } | null }>(page.data, 'existing pull request reviews')) {
+        if (owned(review.user) && review.commit_id === commitSha && typeof review.submitted_at === 'string' && review.submitted_at
           && typeof review.body === 'string') reviews.add(bugbotReviewHistoricalContent(review.body));
       }
     }

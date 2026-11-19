@@ -25,6 +25,12 @@ controls. Commit the new plan and driver pins before starting that campaign.
 These checks do not change historical ledgers or impose an investigation
 deadline or token limit.
 
+Before dispatch, current runners also compare the actual prepared executable
+and any launcher with the selected runtime's digests. A CLI version string is
+not an executable identity. Each corpus invocation records its admitted runtime
+proof; missing or foreign proofs cannot admit full review. These are evidence
+provenance checks and do not require known token consumption.
+
 ```sh
 pnpm run test:bugbot-shadow-verification
 ```

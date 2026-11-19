@@ -2452,3 +2452,53 @@ projection and the real approval consumer, with zero model calls and no
 requests to evaluated PRs. An authentic synthetic passing corpus is test data,
 not a measured qualification. Preserve the existing source guards and coverage
 budgets, and validate generated workflows and provider bindings together.
+
+### Cancellation and proof ownership at publication — 2026-11-19
+
+The native review of `069a10b1a` is evidence for this additive contract.
+Cancellation during an awaited publication may leave an already issued request
+completed. The application MUST stop starting subsequent finding, resolution
+and presentation operations and MUST NOT emit a completed verification receipt.
+The result identifies interrupted publication separately from cancellation
+before publication; it retains the prior verified result and does not claim to
+undo completed requests. Guard the semantic mutation ports at the review scope,
+including nested comment and status-card ports. Progress diagnostics remain
+available. This introduces no research deadline, token ceiling or turn limit.
+
+Base evidence MUST retain its purpose: a LEFT diff anchor uses the framed
+comparison's merge-base tree when available; a historical/regression comparison
+uses the fixed live target revision acquired for this attempt, with the legacy
+comparison revision only as a compatibility fallback. Freshness checks continue
+to bind both recorded comparison and live target. Do not silently substitute a
+target-tip tree for the LEFT side of a three-dot diff.
+
+Qualification dispatch MUST compare the actual prepared executable bytes with
+the selected committed runtime digest before a model invocation. A direct
+launcher additionally needs its own preregistered digest. A matching version
+string alone is insufficient. Record the admitted runtime proof separately
+from model identity and optional usage telemetry; corpus admission and slot
+records retain that proof. Historical campaign bytes remain immutable and
+replay through their historical source. These checks qualify no new profile.
+
+Only the authenticated publisher's submitted review or inline comment can
+suppress a duplicate publication. Bind that publisher from the existing trusted
+operation identity. Human, different-bot, missing-author and unknown-publisher
+records cannot stand in for a completed publisher operation. Preserve exact
+head and managed-header normalization checks. The aggregate status comment is
+wholly generated; arbitrary appended text is not a separately owned region.
+Historical review content and the structured last verified result retain their
+existing preservation contracts.
+
+Recognized local archive staging failures in the official installer MUST map
+to bounded `write-failed` diagnostics without raw paths, stderr or error bodies.
+Network and unknown failures retain their distinct existing classification.
+The packaged status canary resolves its output directory before creating event
+paths, so relative and absolute inputs exercise the same executable.
+
+Minimum **24 deterministic cases**: five cancellation boundary/continuation
+cases, three base-purpose cases, five runtime/launcher digest cases, four
+publisher-ownership cases, four installer classification cases, two packaged
+path forms and one generated-card ownership case. Reuse actual workflow,
+adapter, Git and packaged entrypoints; no model calls or evaluated-PR writes.
+Update the operator documentation and catalog evidence, run specification,
+architecture and focused checks, and report final-head CI separately.

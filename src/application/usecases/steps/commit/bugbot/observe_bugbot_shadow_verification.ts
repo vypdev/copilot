@@ -165,7 +165,9 @@ function pinCandidate(
     // The published title is the claim. Description, confidence, detector evidence and proposed fixes stay out.
     const comparisonRelevant = historicalResolution || side === 'LEFT' || /\b(regressions?|regresi[oó]n|previously|used to|no longer|introduc\w*)\b/iu
         .test(hypothesis + '\n' + finding.description);
-    const baseSha = canonicalGitObjectId(pr?.baseSha ?? operation.trigger.before);
+    const baseSha = canonicalGitObjectId(side === 'LEFT'
+        ? context.reviewFramedSource?.identity.mergeBaseSha ?? pr?.baseSha ?? operation.trigger.before
+        : context.reviewFramedSource?.identity.baseSha ?? pr?.baseRefSha ?? pr?.baseSha ?? operation.trigger.before);
     return Object.freeze({
         id: finding.id, hypothesis, anchor,
         repository: Object.freeze({ owner: pr?.baseRepository.owner ?? operation.repository.owner,
