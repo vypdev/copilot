@@ -615,3 +615,36 @@ subsequent-attempt and rollback consumer tests must also pass.
 ### Review-head attribution for a synthetic-merge execution
 
 A trusted Bugbot workflow execution on the verified synthetic merge retains that execution SHA in native artifact metadata. Its custom Review check and identical receipt are tied to the actual reviewed PR head, not to the merge commit. The consumer validates both identities in their respective roles. The merge's exact current base/head parents must already be proven; stale or foreign parents cannot authorize it. `PullRequestApprovalRepository` has positive and negative regressions for a genuine merge-run artifact with respectively a head check and an incorrect merge check. This adds no configuration and preserves all current-policy, latest-attempt and rollback fences.
+
+### Producer-trust audit clarification (#980)
+
+The receipt-attribution amendment authenticates data/native context, not the
+producer's executable code independently of its assertions. A matching run,
+artifact, App, SHA and custom check ID does not establish the actual checkout or
+truth of a fabricated clean result. A configured operator producer declaration
+remains a trust prerequisite. Before a future enforced profile, the maintainer
+must establish the exact reviewed workflow/executable revision and acceptable
+producer execution trust; independent evidence beyond candidate-controlled
+contents may be required. This audit does not supply that unavailable evidence,
+add a new attestation service/schema, or change existing approval policy.
+
+The existing fixed exclusions remain material: a fabricated clean current
+receipt cannot authorize approval for edits to build/**, the source workflow or
+action.yml. Test with a current head on every read to distinguish protected-path
+from a later stale-head fence. Preserve the authenticated-data, same-SHA policy,
+latest-attempt, rollback, human-review and last-verified boundaries. The earlier
+broad action-edit approval route remains refuted, not a proven exploit.
+
+The bounded incremental budget is **14 packaged scenarios in one Node test
+wrapper**: three protected edits; foreign receipt run/artifact run/SHA/App; prior
+policy and attempt; ordinary authorized current data; stale/fresh rollback data;
+and human approval/changes-requested. Existing consumer/domain/use-case tests
+are retained rather than counted again. Every packaged case keeps the head fixed
+and records all local fake mutations. Protected and invalid cases have no
+approval POST; the two positive data cases have one each, only to localhost.
+There is no real GitHub write, credential, model call or production-mode change.
+Run the packaged wrapper through the shadow-verification script, the existing
+consumer suites, docs/spec gates and current-head native review. Register the
+audit/fixtures in the capability catalog and preserve unsuccessful attempts.
+The implemented source contract remains unchanged; a stronger architecture or
+public policy needs its official SDD review before implementation.
