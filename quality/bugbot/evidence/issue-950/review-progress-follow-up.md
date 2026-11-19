@@ -300,3 +300,58 @@ passed. The final rebuilt Action at SHA-256
 again passed all 13 status scenarios, the rejected-mutation audit and six
 rollback/approval scenarios. Bundle synchronization passed for these staged
 bytes. The final normal hook and remote checks are linked in the PR report.
+
+
+## Native review of `ea55a971d`
+
+All exact-head CI areas and their aggregate, Commit, Verification, Branch Sync
+and the native PR workflow passed. Review and Approval were neutral, with no
+approval submitted. Native analysis validated **29/29** partitions and the
+[terminal card](https://github.com/vypdev/copilot/pull/951#issuecomment-6865721341)
+links the [Commit assessment](https://github.com/vypdev/copilot/issues/950#issuecomment-6732557685)
+for this same SHA. Commit completed 112 requirements in 4/4 batches with 50/120
+SDD-progress calls; its 57% estimate is a source judgment, not executed acceptance.
+
+| Report | Evidence and disposition |
+|---|---|
+| [Shadow receipt](https://github.com/vypdev/copilot/pull/951#discussion_r4625106021) | Refuted. A receipt's mode binds the effective policy. In shadow, its counts come from observed ordinary publication, while the verifier simulation is separate. The real workflow already rejects minting a clean receipt from an unobserved ordinary finding after a shadow refutation. Consumer controls retain ordinary open findings over an older clean marker, reject simulated publication, and require fresh ordinary evidence for a same-head rollback into shadow. Unconditionally rejecting shadow-mode ordinary receipts would break that rollback contract. |
+| [Runtime fixture argument](https://github.com/vypdev/copilot/pull/951#discussion_r4625106037) | Refuted. The imported local `shadow-verification/broker.cjs` wrapper accepts the lab path and calls the installed broker with `fixtureSource`. The three runtime cases are part of the 115 passing controls on this head. The proposed replacement would pass the wrong type to the local wrapper. No implementation change. |
+| [Private PR credential](https://github.com/vypdev/copilot/pull/951#discussion_r4625106048) | Confirmed for private repositories. The native evidence token has no PR-read grant. A controlled permission-bound read rejects it before dispatch. Use the existing ordinary publication credential for PR identity, retaining the narrower native token for Actions/check/content evidence. [GitHub documents PR read permissions and the public-resource exception](https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request). This was not an observed failure on the public #951: the new workflow is not installed on the default branch yet. No permission expansion or runner change. |
+| [Cursor credential](https://github.com/vypdev/copilot/pull/951#discussion_r4625106057) | Confirmed. Evaluating the actual generated expression with synthetic credentials returns an empty key for enforced/Cursor. Support both shadow and enforced selection, preserve disabled exclusion and ordinary-role inheritance, and synchronize generator and workflows. Installation-template runner defaults remain unchanged; only the necessary verifier credential condition changes. Production remains disabled. |
+| [Uncommitted plan](https://github.com/vypdev/copilot/pull/951#discussion_r4625106062) | Confirmed missing enforcement. Before correction the selected-plan API accepted untracked, outside-Git, modified and staged-only inputs, plus committed weaker criteria and omitted positives. Bind the selected bytes to a regular Git blob and its preregistration commit, retain all fourteen subjects/three repeats and the 174-case corpus, and prohibit weaker published criteria. Corpus, scheduler and slot records carry that provenance and both admission and scoring compare it. Profiles may vary in a newly committed plan. |
+| [Campaign hash](https://github.com/vypdev/copilot/pull/951#discussion_r4625106067) | Same provenance capability as the preceding report. Do not pin all future campaigns to the historical controls JSON. Each new committed plan has its own recorded commit/blob/hash, while the independent published minimum policy stays fixed. The executed campaigns and their selected hashes are preserved. |
+| [Citation control ID](https://github.com/vypdev/copilot/pull/951#discussion_r4625106074) | Confirmed documentation inconsistency. Use `ev950-shadow-C22/citation-range` consistently and retain `ev950-shadow-C22/source-admission` for the other immutable-owner case. No historical records or owning SDD bytes change. |
+| [Heading link](https://github.com/vypdev/copilot/pull/951#discussion_r4625106081) | Refuted by the actual GitHub blob page at this head: the heading's `anchor`, `id` and permalink all contain `eligibility--916`. The proposed single hyphen comes from the repository's MDX documentation validator, a different rendering surface. Keep the [working GitHub link](https://github.com/vypdev/copilot/blob/ea55a971d102b12469ff01cead5bc4d449a14b24/specs/progress-capacity-diagnostics.md#21-acceptance-batch-profile-and-publication-eligibility--916). |
+| [Git path Markdown](https://github.com/vypdev/copilot/pull/951#discussion_r4625106086) | Confirmed Markdown interpretation. The actual publication projection turns a valid filename into a link. Parse the final finding body with CommonMark and render both evidence and location with a delimiter longer than embedded backticks. The path/range text stays literal. The control demonstrates link injection; it does not separately claim a successful external phishing navigation for the reported URL spelling. |
+
+There are **six adopted reports covering five corrections**, and **three
+refutations**. Model-free reproductions initially failed five focused cases
+and admitted nine invalid plan controls. Preserve those observations separately
+from corrected results. Run the active shadow suite and the focused dispatcher,
+workflow, publication-path, marker and approval-consumer tests. The stricter
+plan checks also execute the real launcher/scorer using synthetic Git-backed
+plans and ledgers; their negative results are not model measurements.
+
+This follow-up makes no qualification calls, changes no runner placement,
+merges nothing and activates no production mode. All seven frozen campaign
+files and the Action-owned SDD remain unchanged. A future campaign requires a
+new committed implementation/driver plan; the recorded negative EV-07 decision
+is retained. The next normal hook, packaged checks and exact-head native review
+must be reported separately.
+
+The corrected follow-up passed **344/344 focused Jest cases in seven suites**
+and **132/132 model-free shadow controls**. The latter includes twelve real
+Git plan-admission fixtures, the actual full-review launcher and Python scorer.
+Type checking, lint, workflow, specification and documentation validation all
+passed. The archive check resolved **38 exact historical paths** and retained
+all **27 issue rows**. The owning SDD and seven frozen campaign files still
+match their publication commits byte for byte. These deterministic checks
+make zero model calls and contact no evaluated PR.
+
+The rebuilt Action at SHA-256
+`6bb119a9fb03b7a096fe94d1518fb00f6f0a3ffd145da2747d0bc1b3383d4e38`
+passed all **13 packaged status scenarios**, the rejected-mutation audit and
+**six packaged rollback/approval scenarios**. The status provider is loopback
+only; rollback cases record zero mutation attempts. Generated-bundle and npm
+package validation passed. This identifies the executable tested locally;
+the subsequent normal hook and exact-head CI are reported in the PR.

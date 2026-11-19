@@ -1955,10 +1955,11 @@ repository cannot provide a CI receipt. File evidence uses lossless UTF-8
 paths and the actual number of blob lines. An empty blob has no citable
 line. The evidence broker returns a named gap when a path cannot be decoded.
 
-Refer to the out-of-range citation repair control as `ev950-shadow-C25` to
-distinguish it from the unbound-source and provider-stop control labeled
-`ev950-shadow-C22` in the published analysis SDD. The ordered-closure table
-contains twelve controls.
+Refer to the out-of-range citation repair control as
+`ev950-shadow-C22/citation-range` and to the unbound-source/provider-stop
+control as `ev950-shadow-C22/source-admission`. These aliases disambiguate
+the reused ID in the immutable published analysis SDD without renumbering
+historical results. The ordered-closure table contains twelve controls.
 
 [Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)
 
@@ -2400,3 +2401,54 @@ zero verifier sessions, blocked model execution and zero GitHub writes. These
 controls do not revise the recorded negative EV-07 result or authorize activation.
 
 For current traceability, the immutable owner reused `ev950-shadow-C22` for two distinct titles. References MUST disambiguate them as `ev950-shadow-C22/source-admission` (the line-3172 repository/safety-stop case) and `ev950-shadow-C22/citation-range` (the line-3668 same-session range repair). These aliases do not rewrite historical test results. The owner's retained 36-case baseline is additive to the subsequent 13-case inventory, yielding a minimum of 49 for those two inventories, before later amendments. Executed acceptance still requires the mapped behaviors, not a count alone. The current deterministic shadow suite includes the distinct source, range and continuation controls. Research sessions remain explicitly cancelable and have no time, turn or token acceptance ceiling; absence of an invented timeout is not a defect. Interrupted native-check recovery intentionally preserves the conversation and changes only its exact check, as specified above.
+
+### Ordinary authority, credentials and committed evaluation plans — 2026-11-19
+
+The receipt's mode identifies the effective policy, not the origin of its
+finding counts. Under `shadow` or `disabled`, a fresh authoritative receipt
+MAY attest only the observed ordinary Bugbot projection, including during
+rollback. Shadow refutations, inconclusives, failures and simulations MUST NOT
+replace those counts or supply an authoritative publication. A diagnostic
+`publication: simulated` is ineligible. Under `enforced`, dispositions filter
+the ordinary candidates before observed publication. Existing policy, latest
+attempt and rollout-generation gates remain mandatory in all modes.
+
+For example, an ordinary open finding remains actionable under shadow even
+when the diagnostic verifier refutes it. An older clean marker cannot replace
+that current ordinary finding. A genuinely clean ordinary review can satisfy
+the existing approval policy after a fresh same-head rollback receipt; this
+does not make the shadow verifier an approval authority.
+
+The status dispatcher MUST read private PR identity with its ordinary
+publication credential, which already owns PR access. The separate native
+evidence credential remains limited to its existing Actions, checks and content
+reads. Do not expand that token's workflow permissions to repair this read.
+Forward a Cursor verifier credential when that provider is selected in either
+`shadow` or `enforced`, retaining disabled-mode exclusion and ordinary-role
+inheritance. This routing neither enables enforcement nor changes runner
+placement, including installation-template runner defaults.
+
+Git citation locations MUST render as literal data, including Markdown
+metacharacters and embedded backticks. Formatting does not change their
+validated path, range, candidate or revision.
+
+Before qualification dispatch or scoring, the selected plan MUST match an
+immutable committed regular blob. Record its commit, relative path, blob ID
+and SHA-256 in the corpus, scheduler and each slot, and compare that complete
+provenance at admission and scoring. Untracked, modified or staged-only plans
+fail before model work. A newly committed profile may vary while retaining
+the complete 174-case corpus, all fourteen paired subjects and three
+repetitions, every positive control and the existing score/latency criteria.
+No selected plan can weaken the independently pinned published minimum policy.
+Latency remains a qualification measurement, never an investigation deadline.
+Historical campaigns retain their original bytes and replay from their
+preregistration commits; these stronger checks require a new campaign pin.
+
+Add a minimum **29 deterministic controls**: seventeen committed-plan, gate and
+scorer paths; six credential-routing paths; three Markdown citation paths;
+and three ordinary/shadow approval-consumer paths. Use real Git fixture
+objects, the actual qualification entrypoints, the current publication
+projection and the real approval consumer, with zero model calls and no
+requests to evaluated PRs. An authentic synthetic passing corpus is test data,
+not a measured qualification. Preserve the existing source guards and coverage
+budgets, and validate generated workflows and provider bindings together.

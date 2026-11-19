@@ -44,7 +44,7 @@ export async function createGithubBugbotStatusCardDispatcher(binding: {
     const terminal: BugbotStatusCardTerminalPort = {
         async publish(input) {
             const source = await pullRequests.getBugbotSourceBoundPullRequestIdentity(binding.owner, binding.repository,
-                input.pullRequestNumber, binding.evidenceToken);
+                input.pullRequestNumber, binding.token);
             const base = canonicalGitObjectId(source.baseSha);
             const baseRef = canonicalGitObjectId(source.baseRefSha);
             if (!base || !baseRef || base !== input.baseSha || baseRef !== (input.baseRefSha ?? input.baseSha)

@@ -11,6 +11,16 @@ const read = (directory: string, name: string): {file: string; workflow: any} =>
 };
 
 describe('encapsulated native verification workflow contract', () => {
+    it.each([
+        ['shadow', 'cursor', 'fixture-key'], ['enforced', 'cursor', 'fixture-key'],
+        ['disabled', 'cursor', ''], ['shadow', 'codex', ''], ['enforced', 'opencode', ''],
+    ])('routes the selected verifier credential for %s/%s', (mode, provider, expected) => {
+        const expression = runtimeWorkflow().jobs.copilot.steps.find((step: any) => step.id === 'copilot').env.CURSOR_API_KEY;
+        const vars = { BUGBOT_VERIFICATION_MODE: mode, BUGBOT_VERIFIER_PROVIDER: provider };
+        // Evaluate the generated GitHub boolean expression with synthetic credentials only.
+        const evaluate = new Function('vars', 'secrets', `return (${expression.slice(3, -3)});`);
+        expect(evaluate(vars, { CURSOR_API_KEY: 'fixture-key' })).toBe(expected);
+    });
     it.each(['.github/workflows', 'setup/workflows'].flatMap(directory => ['copilot_issue_comment.yml', 'copilot_pull_request_comment.yml'].map(name => [directory, name])))(
         'keeps %s/%s as one compact call without phase or credential environment leakage', (directory, name) => {
             const { file, workflow } = read(directory, name);
@@ -24,7 +34,7 @@ describe('encapsulated native verification workflow contract', () => {
         'grants the Cursor secret only to selected providers in %s/%s', (directory, name) => {
             const { file, workflow } = read(directory, name);
             const job = Object.values(workflow.jobs)[0] as any;
-            const gate = "${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || (vars.BUGBOT_VERIFICATION_MODE == 'shadow' && vars.BUGBOT_VERIFIER_PROVIDER == 'cursor')) && secrets.CURSOR_API_KEY || '' }}";
+            const gate = "${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || ((vars.BUGBOT_VERIFICATION_MODE == 'shadow' || vars.BUGBOT_VERIFICATION_MODE == 'enforced') && vars.BUGBOT_VERIFIER_PROVIDER == 'cursor')) && secrets.CURSOR_API_KEY || '' }}";
             expect(job.secrets.CURSOR_API_KEY).toBe(gate);
             expect(runtimeWorkflow().jobs.copilot.steps.find((step: any) => step.id === 'copilot').env.CURSOR_API_KEY).toBe(gate);
             job.secrets.CURSOR_API_KEY = '${{ secrets.CURSOR_API_KEY }}';

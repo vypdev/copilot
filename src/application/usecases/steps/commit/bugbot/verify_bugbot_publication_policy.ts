@@ -3,6 +3,7 @@ import { bugbotResolutionCandidateId } from '../../../../../domain/bugbot/findin
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
 import type { BugbotShadowVerificationReport } from './observe_bugbot_shadow_verification';
 import { applyCommentLimit } from './limit_comments';
+import { renderMarkdownCodeSpan } from '../../../../policies/github_comment_publication_policy';
 
 export type BugbotVerificationProjection =
     | { readonly status: 'invalid' }
@@ -14,7 +15,10 @@ export type BugbotVerificationProjection =
 
 function describeCitation(citation: BugbotShadowCitation): string {
     const range = citation.first === citation.last ? String(citation.first) : `${citation.first}–${citation.last}`;
-    if (citation.kind === 'git') return `${citation.path}:${range} (${citation.sha})`;
+    if (citation.kind === 'git') {
+        const location = `${citation.path}:${range}`;
+        return `${renderMarkdownCodeSpan(location)} (${citation.sha})`;
+    }
     if (citation.url) return `${citation.url} (lines ${range})`;
     return `${citation.kind} evidence (${citation.sha})`;
 }

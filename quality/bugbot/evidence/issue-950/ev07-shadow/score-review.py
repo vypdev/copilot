@@ -15,6 +15,11 @@ PLAN_BYTES = PLAN_FILE.read_bytes()
 SELECTED_PLAN = json.loads(PLAN_BYTES)
 PLAN = SELECTED_PLAN["repositoryCohort"]
 PLAN_SHA256 = sha256(PLAN_BYTES).hexdigest()
+try:
+    PREREGISTRATION = json.loads(subprocess.check_output(
+        ["node", str(ROOT / "implementation.cjs"), "--plan-provenance"], text=True))
+except subprocess.CalledProcessError:
+    raise ValueError("selected plan provenance admission failed") from None
 V4 = ROOT.parent / "v4"
 assert sha256((V4 / "manifest.json").read_bytes()).hexdigest() == PLAN["manifestSha256"]
 assert sha256((V4 / "candidates.json").read_bytes()).hexdigest() == PLAN["oracleSha256"]
@@ -45,6 +50,7 @@ def events(file):
 SLOTS = events(REVIEW_ROOT / "slots.jsonl")
 STARTS = [row for row in SLOTS if row["event"] == "start"]
 if (len(STARTS) != 1 or STARTS[0].get("plan") != PLAN_SHA256
+        or STARTS[0].get("preregistration") != PREREGISTRATION
         or STARTS[0].get("implementation") != SELECTED_PLAN["implementation"]):
     raise ValueError("full-review plan provenance mismatch")
 STARTED = {(row["id"], row["repetition"]) for row in SLOTS if row["event"] == "slot-start"}
@@ -122,6 +128,7 @@ def score(id, repetition):
     if records:
         starts = [row for row in records if row["event"] == "start"]
         if (len(starts) != 1 or starts[0].get("plan") != PLAN_SHA256
+                or starts[0].get("preregistration") != PREREGISTRATION
                 or starts[0].get("implementation") != SELECTED_PLAN["implementation"]
                 or starts[0].get("subject") != SUBJECTS[id] or starts[0].get("repetition") != repetition):
             raise ValueError("slot plan provenance mismatch")

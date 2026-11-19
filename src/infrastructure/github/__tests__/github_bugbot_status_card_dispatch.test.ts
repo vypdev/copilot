@@ -72,6 +72,17 @@ it('sends a typed handoff to the default branch and waits for the exact write st
     expect(mockRead.rest.actions.listJobsForWorkflowRun).toHaveBeenCalledWith(expect.objectContaining({ run_id: 42 }));
 });
 
+it('reads a private PR with the publication credential while native evidence retains its narrower token', async () => {
+    mockCurrent.mockImplementation(async (_owner, _repo, _number, token) => {
+        if (token !== binding.token) throw Object.assign(new Error('Pull requests read permission required'), { status: 403 });
+        return { number: 11, baseSha, baseRefSha, headSha, baseRepository: { id: 19 },
+            headRepositoryOwner: 'vypdev', headRepositoryName: 'copilot', state: 'open' };
+    });
+    const dispatcher = await createGithubBugbotStatusCardDispatcher(binding, environment);
+    await expect(dispatcher!.terminal.publish(request)).resolves.toBe('published');
+    expect(mockRead.rest.actions.getWorkflowRun).toHaveBeenCalled();
+});
+
 it('does not acknowledge a successful run when the publishing step was skipped', async () => {
     const dispatcher = await createGithubBugbotStatusCardDispatcher(binding, environment);
     mockRead.rest.actions.listJobsForWorkflowRun.mockResolvedValue({ data: {

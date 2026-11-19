@@ -6,7 +6,7 @@ const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { getOctokit } = require('@actions/github');
-const { requirePinnedImplementation, requirePinnedRuntime, requirePinnedDrivers, selectedPlanSha256 } = require('./implementation.cjs');
+const { requirePinnedImplementation, requirePinnedRuntime, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
 require('./load.cjs');
 
 const { Ai } = require('../../../../../src/data/model/ai');
@@ -99,7 +99,8 @@ async function run(checkout, id, repetition, output, preflight = false) {
     assert.equal(git(checkout, 'status', '--porcelain'), '');
     fs.writeFileSync(output, '', { flag: 'wx', mode: 0o600 });
     const log = row => fs.appendFileSync(output, JSON.stringify(row) + '\n');
-    log({ event: 'start', subject, repetition, implementation, plan: selectedPlanSha256(), startedAt: new Date().toISOString() });
+    const preregistration = selectedPlanProvenance();
+    log({ event: 'start', subject, repetition, implementation, plan: preregistration.sha256, preregistration, startedAt: new Date().toISOString() });
     const repository = { owner: 'vypdev', name: id.startsWith('U') ? 'ha-ui' : 'domus' };
     const number = originalPullNumbers[id] ?? 1;
     const branch = 'feature/reviewed-source';

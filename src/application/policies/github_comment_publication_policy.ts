@@ -1,6 +1,13 @@
 import { createUntrustedContent } from '../../domain/security/untrusted_content';
 import { redactKnownEnvironmentSecrets, redactSecretLikeValues } from '../../utils/secret_redaction';
 
+/** Render a single-line locator as data, including embedded Markdown delimiters. */
+export function renderMarkdownCodeSpan(value: string): string {
+    const delimiter = '`'.repeat(Math.max(0, ...(value.match(/`+/gu) ?? []).map(run => run.length)) + 1);
+    const padding = /`|^\s|\s$/u.test(value) && !/^\s*$/u.test(value) ? ' ' : '';
+    return `${delimiter}${padding}${value}${padding}${delimiter}`;
+}
+
 /**
  * Model output is untrusted too. Keep useful Markdown, but neutralize the
  * GitHub automation surfaces that could create side effects when published.

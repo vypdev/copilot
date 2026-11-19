@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const { corpus } = require('./configuration.cjs');
 const plan = require('./configuration.cjs');
-const { requirePinnedRuntime, requirePinnedDrivers } = require('./implementation.cjs');
+const { requirePinnedRuntime, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
 
 function validateCorpusProvenance(directory, result) {
     requirePinnedDrivers(plan);
@@ -23,6 +23,7 @@ function validateCorpusProvenance(directory, result) {
     assert.equal(starts.length, 1); assert.equal(finishes.length, 1);
     const start = starts[0], finish = finishes[0];
     assert.equal(start.plan, hash(readFileSync(planFile)));
+    assert.deepEqual(start.preregistration, selectedPlanProvenance());
     assert.equal(start.runner, hash(readFileSync(path.join(__dirname, 'corpus.cjs'))));
     assert.equal(start.runner, plan.inspectedArtifacts?.['corpus.cjs']);
     assert.equal(start.implementation, plan.implementation);

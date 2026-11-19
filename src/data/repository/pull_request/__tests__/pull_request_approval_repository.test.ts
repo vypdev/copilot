@@ -915,6 +915,20 @@ describe('issue #950 current-policy Bugbot evidence at the approval consumer', (
     expect(decidePullRequestApproval(await approvalPolicy(), fact).status).toBe('eligible');
   });
 
+  it('keeps ordinary open findings authoritative under shadow despite an older clean marker', async () => {
+    const policy = { ...enforced, mode: 'shadow' } as const;
+    const fact = await evidence(policy, [run(80)], [check(80, { mode: 'shadow', findingStates: { ...states, open: 1 } })]);
+    expect(fact.bugbot?.open).toBe(1);
+    expect(decidePullRequestApproval(await approvalPolicy(), fact).status).not.toBe('eligible');
+  });
+
+  it('does not consume a diagnostic shadow simulation as an authoritative receipt', async () => {
+    const policy = { ...enforced, mode: 'shadow' } as const;
+    const fact = await evidence(policy, [run(80)], [check(80, { mode: 'shadow', publication: 'simulated' })]);
+    expect(fact.bugbot).toBeUndefined();
+    expect(decidePullRequestApproval(await approvalPolicy(), fact).code).toBe('bugbot-missing');
+  });
+
   it.each([head, testedMerge])('binds a verified merge execution to the actual review-head check: %s', async checkHead => {
     const native = { ...run(80), head_sha: testedMerge };
     const fact = await evidence(enforced, [native], [{ ...check(80), head_sha: checkHead }]);
@@ -958,8 +972,8 @@ describe('issue #950 current-policy Bugbot evidence at the approval consumer', (
     expect(decidePullRequestApproval(await approvalPolicy(), fact).code).toBe('bugbot-missing');
   });
 
-  it('requires a fresh authoritative receipt when rolling back on the same head', async () => {
-    const rollback = { ...enforced, mode: 'disabled', generation: 3, policyDigest: '2'.repeat(64) } as const;
+  it.each(['disabled', 'shadow'] as const)('requires fresh ordinary evidence when rolling back to %s on the same head', async mode => {
+    const rollback = { ...enforced, mode, generation: 3, policyDigest: '2'.repeat(64) } as const;
     const stale = await evidence(rollback, [run(80)], [check(80)]);
     expect(decidePullRequestApproval(await approvalPolicy(), stale).code).toBe('bugbot-missing');
 

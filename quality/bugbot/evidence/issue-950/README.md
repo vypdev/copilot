@@ -16,6 +16,15 @@ driver hashes and the actual prepared CLI version before dispatch. A new
 campaign needs its own pinned implementation and driver inventory; reproduce
 frozen campaigns from their preregistration commits.
 
+The selected plan must also match a committed regular Git blob before any
+measured call. Dispatch records its commit, path, blob and SHA-256; the
+full-review scorer checks that same proof in the scheduler and slot ledgers.
+An alternate plan may change the proposed profile without weakening the
+published qualification criteria or omitting paired subjects and positive
+controls. Commit the new plan and driver pins before starting that campaign.
+These checks do not change historical ledgers or impose an investigation
+deadline or token limit.
+
 ```sh
 pnpm run test:bugbot-shadow-verification
 ```

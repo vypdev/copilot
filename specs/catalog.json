@@ -2444,7 +2444,8 @@
         "src/application/errors/bugbot_freshness_error.ts",
         "src/application/policies/pull_request_review_provider_code_policy.ts",
         "src/application/ports/pull_request_review_errors.ts",
-        "src/application/usecases/steps/commit/bugbot/bugbot_review_freshness.ts"
+        "src/application/usecases/steps/commit/bugbot/bugbot_review_freshness.ts",
+        "src/application/usecases/steps/commit/bugbot/verify_bugbot_publication_policy.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/bugbot_shadow_configuration_policy.test.ts",
@@ -2562,7 +2563,9 @@
         "quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs",
         "src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts",
         "src/infrastructure/bugbot/__tests__/native_review_cancellation_adapter.test.ts",
-        "src/infrastructure/bugbot/__tests__/installed_bugbot_official.test.ts"
+        "src/infrastructure/bugbot/__tests__/installed_bugbot_official.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/verify_bugbot_publication_paths.test.ts",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/plan.test.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

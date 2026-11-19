@@ -11,7 +11,7 @@ import type {
   BugbotFinding,
   BugbotFindingResolution,
 } from "../../domain/bugbot/finding";
-import { sanitizeAgentMarkdown } from "./github_comment_publication_policy";
+import { renderMarkdownCodeSpan, sanitizeAgentMarkdown } from "./github_comment_publication_policy";
 import {
   resolveStaticBugbotCatalog,
   type BugbotMessageCatalog,
@@ -153,7 +153,7 @@ export function buildCommentBody(
   const safeTitle = sanitizeAgentMarkdown(finding.title, 500) || catalog.message('bugbot.finding.defaultTitle');
   const safeDescription = sanitizeAgentMarkdown(finding.description, 8_000) || catalog.message('bugbot.finding.defaultDescription');
   const safeSeverity = sanitizeAgentMarkdown(finding.severity, 32);
-  const safeFile = sanitizeAgentMarkdown(finding.file, 500).replace(/`/g, "\\`");
+  const safeFile = sanitizeAgentMarkdown(finding.file, 500);
   const safeSuggestion = sanitizeAgentMarkdown(finding.suggestion, 8_000);
   const safeEvidence = sanitizeAgentMarkdown(finding.evidence, 8_000);
   const safeCategory = sanitizeAgentMarkdown(finding.category, 32);
@@ -162,7 +162,7 @@ export function buildCommentBody(
     : "";
   const fileLine =
     safeFile
-      ? `**${catalog.message('bugbot.finding.location')}:** \`${safeFile}${finding.line != null ? `:${finding.line}${finding.endLine != null && finding.endLine > finding.line ? `-${finding.endLine}` : ''}` : ""}\`\n\n`
+      ? `**${catalog.message('bugbot.finding.location')}:** ${renderMarkdownCodeSpan(`${safeFile}${finding.line != null ? `:${finding.line}${finding.endLine != null && finding.endLine > finding.line ? `-${finding.endLine}` : ''}` : ''}`)}\n\n`
       : "";
   const metadata = [
     safeCategory ? `**${catalog.message('bugbot.finding.category')}:** ${safeCategory}` : '',

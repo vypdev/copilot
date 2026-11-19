@@ -102658,7 +102658,7 @@ function buildCommentBody(finding, resolved, resolution, options = {}) {
     const safeTitle = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.title, 500) || catalog.message('bugbot.finding.defaultTitle');
     const safeDescription = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.description, 8000) || catalog.message('bugbot.finding.defaultDescription');
     const safeSeverity = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.severity, 32);
-    const safeFile = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.file, 500).replace(/`/g, "\\`");
+    const safeFile = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.file, 500);
     const safeSuggestion = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.suggestion, 8000);
     const safeEvidence = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.evidence, 8000);
     const safeCategory = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.category, 32);
@@ -102666,7 +102666,7 @@ function buildCommentBody(finding, resolved, resolution, options = {}) {
         ? `**${catalog.message('bugbot.finding.severity')}:** ${safeSeverity}\n\n`
         : "";
     const fileLine = safeFile
-        ? `**${catalog.message('bugbot.finding.location')}:** \`${safeFile}${finding.line != null ? `:${finding.line}${finding.endLine != null && finding.endLine > finding.line ? `-${finding.endLine}` : ''}` : ""}\`\n\n`
+        ? `**${catalog.message('bugbot.finding.location')}:** ${(0, github_comment_publication_policy_1.renderMarkdownCodeSpan)(`${safeFile}${finding.line != null ? `:${finding.line}${finding.endLine != null && finding.endLine > finding.line ? `-${finding.endLine}` : ''}` : ''}`)}\n\n`
         : "";
     const metadata = [
         safeCategory ? `**${catalog.message('bugbot.finding.category')}:** ${safeCategory}` : '',
@@ -105122,6 +105122,8 @@ function renderBugbotApprovalReceipt(publication, native, headSha) {
         return undefined;
     const { authority, repositoryId, pullNumber, baseSha, coverage, verification, outcome, findingStates } = publication;
     const { runId, attempt } = native;
+    // Mode binds the effective policy. In shadow/disabled this attests the
+    // observed ordinary review, never the diagnostic verifier projection.
     if (!authority || !['enforced', 'disabled', 'shadow'].includes(authority.mode)
         || ![repositoryId, pullNumber, runId, attempt, authority.generation, authority.workflowId, authority.sourceAppId].every(positive)
         || !/^[a-f0-9]{64}$/u.test(authority.policyDigest)
@@ -107196,11 +107198,18 @@ function fileMatchesIgnorePatterns(filePath, ignorePatterns) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderMarkdownCodeSpan = renderMarkdownCodeSpan;
 exports.sanitizeAgentMarkdown = sanitizeAgentMarkdown;
 exports.sanitizePublishedError = sanitizePublishedError;
 exports.escapeHtml = escapeHtml;
 const untrusted_content_1 = __nccwpck_require__(67057);
 const secret_redaction_1 = __nccwpck_require__(254);
+/** Render a single-line locator as data, including embedded Markdown delimiters. */
+function renderMarkdownCodeSpan(value) {
+    const delimiter = '`'.repeat(Math.max(0, ...(value.match(/`+/gu) ?? []).map(run => run.length)) + 1);
+    const padding = /`|^\s|\s$/u.test(value) && !/^\s*$/u.test(value) ? ' ' : '';
+    return `${delimiter}${padding}${value}${padding}${delimiter}`;
+}
 /**
  * Model output is untrusted too. Keep useful Markdown, but neutralize the
  * GitHub automation surfaces that could create side effects when published.
@@ -131564,10 +131573,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectVerifiedBugbotPublication = projectVerifiedBugbotPublication;
 const finding_1 = __nccwpck_require__(31011);
 const limit_comments_1 = __nccwpck_require__(31643);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 function describeCitation(citation) {
     const range = citation.first === citation.last ? String(citation.first) : `${citation.first}–${citation.last}`;
-    if (citation.kind === 'git')
-        return `${citation.path}:${range} (${citation.sha})`;
+    if (citation.kind === 'git') {
+        const location = `${citation.path}:${range}`;
+        return `${(0, github_comment_publication_policy_1.renderMarkdownCodeSpan)(location)} (${citation.sha})`;
+    }
     if (citation.url)
         return `${citation.url} (lines ${range})`;
     return `${citation.kind} evidence (${citation.sha})`;
@@ -164237,7 +164249,7 @@ async function createGithubBugbotStatusCardDispatcher(binding, environment = pro
     };
     const terminal = {
         async publish(input) {
-            const source = await pullRequests.getBugbotSourceBoundPullRequestIdentity(binding.owner, binding.repository, input.pullRequestNumber, binding.evidenceToken);
+            const source = await pullRequests.getBugbotSourceBoundPullRequestIdentity(binding.owner, binding.repository, input.pullRequestNumber, binding.token);
             const base = (0, git_object_id_1.canonicalGitObjectId)(source.baseSha);
             const baseRef = (0, git_object_id_1.canonicalGitObjectId)(source.baseRefSha);
             if (!base || !baseRef || base !== input.baseSha || baseRef !== (input.baseRefSha ?? input.baseSha)

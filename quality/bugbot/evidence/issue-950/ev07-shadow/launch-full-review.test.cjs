@@ -19,6 +19,21 @@ function fixture(t, encoded) {
     return directory;
 }
 
+function commitPlan(file) {
+    const directory = path.dirname(file);
+    const git = (...args) => execFileSync('git', ['-C', directory, ...args], {
+        encoding: 'utf8', env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null',
+            GIT_AUTHOR_NAME: 'Fixture', GIT_AUTHOR_EMAIL: 'fixture@example.invalid',
+            GIT_COMMITTER_NAME: 'Fixture', GIT_COMMITTER_EMAIL: 'fixture@example.invalid' },
+    }).trim();
+    git('init', '--quiet', '--template=');
+    git('add', path.basename(file));
+    const commit = git('commit-tree', git('write-tree'), '-m', 'Preregister synthetic admission control');
+    git('update-ref', 'HEAD', commit);
+    return { commit, path: path.basename(file), blob: git('rev-parse', `${commit}:${path.basename(file)}`),
+        sha256: createHash('sha256').update(readFileSync(file)).digest('hex') };
+}
+
 for (const [name, data] of [
     ['missing', undefined],
     ['malformed', '{'],
@@ -58,10 +73,12 @@ function boundCorpusFixture(t) {
             .map(file => [file, hash(readFileSync(path.join(__dirname, file)))])) };
     const planFile = path.join(directory, 'plan.json');
     writeFileSync(planFile, JSON.stringify(plan));
+    const preregistration = commitPlan(planFile);
     const corpus = JSON.parse(readFileSync(path.join(root, 'quality/bugbot/corpus.v1.json')));
     const predictions = { schemaVersion: 1, predictions: Object.fromEntries(corpus.cases.map(item =>
         [item.id, item.expected.map(finding => ({ ...finding, confidence: 1 }))])) };
     const rows = [{ event: 'start', cli: plan.runtime.codex, configuration: plan.detector, plan: hash(readFileSync(planFile)),
+        preregistration,
         runner: hash(readFileSync(path.join(__dirname, 'corpus.cjs'))), implementation: plan.implementation,
         corpus: plan.corpus.sha256, gitHubMutationPorts: 0 }, ...corpus.cases.map((item, index) => ({ event: 'case', index,
         id: item.id, status: 'completed', predictions: predictions.predictions[item.id], calls: [{ model: plan.detector.model,
@@ -74,7 +91,7 @@ function boundCorpusFixture(t) {
     return { directory, planFile, rows, score };
 }
 
-for (const mode of ['valid', 'plan', 'implementation', 'runtime', 'runner', 'prediction', 'score', 'duplicate', 'flags',
+for (const mode of ['valid', 'plan', 'implementation', 'runtime', 'runner', 'prediction', 'score', 'duplicate', 'flags', 'uncommitted-plan', 'omitted-positives',
     'changed-review-driver', 'missing-loader', 'changed-launcher']) {
     test(`binds independent corpus dispatch to its actual ledger and score: ${mode}`, t => {
         const f = boundCorpusFixture(t);
@@ -89,6 +106,13 @@ for (const mode of ['valid', 'plan', 'implementation', 'runtime', 'runner', 'pre
         }
         if (mode === 'duplicate') f.rows[2] = f.rows[1];
         if (mode === 'flags') f.rows[1].calls[0].model = 'unregistered-model';
+        if (mode === 'uncommitted-plan' || mode === 'omitted-positives') {
+            const selected = JSON.parse(readFileSync(f.planFile));
+            if (mode === 'omitted-positives') selected.repositoryCohort.order = selected.repositoryCohort.order.filter(id => id.endsWith('1'));
+            writeFileSync(f.planFile, JSON.stringify(selected, null, 2));
+            f.rows[0].plan = createHash('sha256').update(readFileSync(f.planFile)).digest('hex');
+            if (mode === 'omitted-positives') f.rows[0].preregistration = commitPlan(f.planFile);
+        }
         if (['changed-review-driver', 'missing-loader', 'changed-launcher'].includes(mode)) {
             const selected = JSON.parse(readFileSync(f.planFile));
             if (mode === 'missing-loader') delete selected.inspectedArtifacts['load.cjs'];

@@ -22,6 +22,8 @@ export function renderBugbotApprovalReceipt(
     if (!publication || !native) return undefined;
     const { authority, repositoryId, pullNumber, baseSha, coverage, verification, outcome, findingStates } = publication;
     const { runId, attempt } = native;
+    // Mode binds the effective policy. In shadow/disabled this attests the
+    // observed ordinary review, never the diagnostic verifier projection.
     if (!authority || !['enforced', 'disabled', 'shadow'].includes(authority.mode)
         || ![repositoryId, pullNumber, runId, attempt, authority.generation, authority.workflowId, authority.sourceAppId].every(positive)
         || !/^[a-f0-9]{64}$/u.test(authority.policyDigest)
