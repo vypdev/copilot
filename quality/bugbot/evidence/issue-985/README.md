@@ -97,3 +97,36 @@ clean merge. Original v1, reviewed v2, derivation, IDs, labels, order and frozen
 verification, committed-source controls and all final-head native gates/findings
 remain required before a normal authorized PR merge. No unchanged Action retry,
 force or remote branch creation/rename/deletion is part of this recovery.
+
+
+## Integration after deletion-hunk provenance (#973)
+
+Official synchronization [44753257593](https://github.com/vypdev/copilot/actions/runs/44753257593/job/136346272617)
+published `a114134011b98904b4806ddd58ec9f780d27ab60`, combining the prior
+`fa92ca94079ed31edada346a5fb5d5d604864ac0` with develop
+`25eaba3a641abb05d1ac2847917c97863e5a714f`. The Action resolved one documentation
+conflict, preserving both changes. Native build/typecheck, all943 Jest suites /
+18,695 tests (35 old skips), coverage budgets, all385 extension files /5,291 tests,
+lint, specification and documentation validation passed. Full raw logs are
+retained losslessly, with hashes and identities in `action-sync-a114-receipt.json`.
+
+Executable source, compiled bundles and lockfile match that develop parent.
+The only package difference appends the six v2 controls to the inherited shadow
+command. All v1/v2 bytes, original labels/order, frozen #950 history and #985
+controls remain unchanged. The prior committed-source202/202 deterministic pass
+is archived against fa92; it is not relabeled as a pass on this combined revision.
+
+The previous fa92 native coverage attempt remains failed: its first unchanged
+English SetupManagementPanel SSR render exceeded the existing5,000ms test
+timeout;942 suites /18,694 tests passed, one failed and35 old skips remained.
+Downstream extension coverage did not execute. The unchanged isolated SSR suite
+passed32/32 locally in9.762s, without modifying tests, source, timers or runners.
+That diagnostic does not establish the native timing cause or actual browser,
+screen-reader, zoom or platform observations. Both negative log and diagnostic
+are retained with their exact identities; no unchanged fa92 retry was launched.
+
+The contributor evidence delivery requires its own ordinary hook, committed-source
+controls and final-head native gates/findings before normal integration. This
+revision makes no new corpus measurement, qualified-profile, installation or
+production claim. BUGBOT_VERIFICATION_MODE remains disabled; evaluated-pilot PR
+write attempts remain zero.
