@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "status": "unstarted",
+  "preregistration": null,
+  "plannedOuterCases": 174,
+  "completedOuterCases": 0,
+  "measuredModelCalls": 0,
+  "score": null,
+  "passed": null,
+  "fullReview": "unstarted",
+  "qualifiedProfile": null,
+  "evaluatedPrWriteAttempts": 0,
+  "production": "disabled"
+}

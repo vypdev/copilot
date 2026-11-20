@@ -4438,7 +4438,7 @@ Production verification remains disabled regardless of the eventual score.
 
 ## Proposed change: Preregister and evaluate the Luna xhigh detector on the unchanged 174 case EV 07 corpus
 
-- Status: Draft
+- Status: Ready for implementation — reviewed phase-1 contract; measurements unstarted
 - Catalog capability: bugbot-analysis-and-autofix
 
 ### 1. Executive summary
@@ -4555,7 +4555,7 @@ This is a trusted qualification composition, not a new public Action input, CLI 
 | Usage telemetry | Optional provider-reported usage | Unknown is permitted. Usage cannot stop research, reject supported evidence, or affect scoring/admission. |
 | Cancellation | Explicit cancellation signal | Available to the authorized research operator; on cancellation, stop the operation and descendants and clean owned private artifacts. |
 
-Invalid corpus pins, source/runtime/driver/schema/output pins, or authority reject before spawn. The exact public configuration surface is intentionally not configurable through user-controlled inputs. The concrete project invocation and prerequisites for validation remain unverified in this draft.
+Invalid corpus pins, source/runtime/driver/schema/output pins, or authority reject before spawn. The exact public configuration surface is intentionally not configurable through user-controlled inputs. The selected repository declares `pnpm run validate:specifications` and `pnpm run generate:specifications`; their existence is verified from `package.json`, separately from executed validation.
 
 ### 8. Clean Architecture design
 
@@ -4571,6 +4571,8 @@ Invalid corpus pins, source/runtime/driver/schema/output pins, or authority reje
 
 The selected source defines `AgentExecutionPlan` in `src/domain/agent_execution_plan.ts`; planning is composed in `src/infrastructure/agents/agent_execution_planner.ts`; process execution and cancellation are handled in `src/data/repository/agent_cli_execution.ts`; the findings capability adapter is in `src/data/repository/ai/agent_capability_adapter.ts`. The current planner’s brokered verification route requires an empty read-only workspace, while the ordinary findings adapter supplies its request timeout. The proposal therefore requires a narrowly scoped, authenticated, cancellation-only read-only lifecycle through the existing planner and executor while retaining the canonical detector workspace and ordinary detector/capability/provider path. Do not set a brokered flag ad hoc, move detector work to an artificial empty directory, inflate a timeout, or replace detector transport.
 
+The existing independent corpus benchmark uses its remote-free synthetic Git workspace, with only supplied synthetic context in model prompts. Full review MUST retain each real pinned subject checkout; it cannot be moved to an empty brokered workspace. This distinction preserves the existing benchmark protocol and prevents evaluator oracle context from entering model input.
+
 #### 8.2 Contracts and trust boundaries
 
 - Only trusted authenticated qualification composition can select the exception. The plan must bind findings capability, read-only workspace, source/runtime/driver/schema/output identities, credentials isolation, and explicit cancellation authority consistently.
@@ -4581,7 +4583,7 @@ The selected source defines `AgentExecutionPlan` in `src/domain/agent_execution_
 
 #### 8.3 Architecture acceptance
 
-The qualification owner must coordinate the scoped amendment with `specs/agent-execution-policy-hardening.md` and compatible runtime guidance in `docs/agents/execution-contract.mdx`. Validate that selection is unavailable to public configuration and that rejection happens before spawn; cancellation terminates a deterministic long-running child and descendants with cleanup; ordinary and immutable-source deadline behavior remains intact; and read-only execution preserves the canonical workspace. Verification must use actual controlled process/admission operations where required, with no claim that fake tests establish real provider, human setup, or platform acceptance. The precise installed validation commands and their definitions are unverified; acceptance requires the prescribed specification, catalog, and documentation consistency outcomes without inventing an invocation.
+The qualification owner must coordinate the scoped amendment with `specs/agent-execution-policy-hardening.md` and compatible runtime guidance in `docs/agents/execution-contract.mdx`. Validate that selection is unavailable to public configuration and that rejection happens before spawn; cancellation terminates a deterministic long-running child and descendants with cleanup; ordinary and immutable-source deadline behavior remains intact; and read-only execution preserves the canonical workspace. Verification must use actual controlled process/admission operations where required, with no claim that fake tests establish real provider, human setup, or platform acceptance. The actual repository declares `pnpm run validate:specifications`, `pnpm run generate:specifications`, `pnpm run validate:documentation` and `pnpm run validate:agent-docs`; acceptance requires their observed outcomes, separately from command existence.
 
 ### 9. UI/UX and content contract
 
@@ -4611,7 +4613,7 @@ The issue974 evidence ledger must make the measurement independently inspectable
 
 Report exact precision, recall, F1, exact location, severity, category, and Brier results against the unchanged gates: precision at least 90%, recall at least 85%, F1 at least 87%, each exact location/severity/category measure at least 80%, and Brier at most 0.16. Account for all cases and attempts even after an early gate failure. Keep v1/default selection and its historical plan and score bytes intact; the explicit v2 selection must preserve the 174 IDs, order, and labels, 173 unchanged cases, and all frozen historical measurements. The pinned corpus and coherent full-review admission are covered by `ev974-C09`, `ev974-C10`, and `ev974-C11`; unchanged gates and phase admission are covered by `ev974-C12` and `ev974-C13`.
 
-Use `quality/bugbot/evidence/issue974/README.md`, `quality/bugbot/evidence/issue974/plan.json`, and `quality/bugbot/evidence/issue974/results.json` as the declared evidence destinations. Summaries and operational guidance must describe how to inspect actual attempts, failures, cancellation, zero-write status, and recovery without exposing credentials or raw prompt contents. No verification command or invocation is established by this delta; its concrete invocation and prerequisites remain unverified.
+Use `quality/bugbot/evidence/issue974/README.md`, `quality/bugbot/evidence/issue974/plan.json`, and `quality/bugbot/evidence/issue974/results.json` as the declared evidence destinations. Summaries and operational guidance must describe how to inspect actual attempts, failures, cancellation, zero-write status, and recovery without exposing credentials or raw prompt contents. The applicable repository commands are declared in `package.json`; executed validation and final native checks must be recorded separately.
 
 ### 13. Compatibility, migration, rollout, and rollback
 
@@ -4623,7 +4625,7 @@ This is a backlog specification delta, not a campaign preregistration, execution
 
 ### 14. Testing strategy and numeric budget
 
-The amendment adds a minimum of 24 distinct deterministic controls across ordinary Jest and the shadow control runner. Count each case once in its owning specification; these controls are additional to, and do not relabel or replace, the existing 216 combined controls. Preserve the five approved budget areas and their existing minimums. The new controls cover investigation lifecycle and authority, explicit v2 admission, corpus scoring and attempt accounting, immutable preregistration, and phase admission. Repeated model calls are corpus measurements, not additional deterministic cases.
+The amendment adds a minimum of 24 distinct deterministic controls across ordinary Jest and the shadow control runner. Count each case once in its owning specification; these controls are additional to, and do not relabel or replace, the existing 216 combined controls. Preserve the four approved budget areas and their existing minimums. The new controls cover investigation lifecycle and authority, explicit v2 admission, corpus scoring and attempt accounting, immutable preregistration, and phase admission. Repeated model calls are corpus measurements, not additional deterministic cases.
 
 Exercise pure authority and selection branches at 100% enumerated coverage. Changed process and planner modules retain at least 95% line and statement coverage and at least 90% branch and function coverage, alongside existing repository gates. Use controlled bootstrap and process operations for admission and cancellation; existing fakes do not prove provider, human Setup, or platform acceptance. Keep measurement evidence distinct from planned controls and deterministic acceptance.
 
@@ -4631,7 +4633,7 @@ Acceptance includes the issue’s unchanged 174-case EV-07 corpus and all actual
 
 Keep the explicit v2 selection coherent across corpus loading and full-review admission, while omission retains v1/default and frozen historical measurements. Reject source, write, runtime, driver, schema, output, credential, or authority mismatches before spawn. Research continues until completion, actual failure, or explicit cancellation; time, turns, reads, and token usage cannot truncate supported investigation. Cancellation terminates the ordinary operation and descendants and cleans owned private artifacts. Failed, interrupted, missing, or incomplete evidence remains visible and cannot admit the paired phase. A passing v2 corpus admits only the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase; zero actual candidates means zero verifier sessions, and phase42 remains unstarted until the corpus genuinely passes.
 
-Publication acceptance requires that the specification satisfy the repository’s required format; internal and cross-document consistency is checked; and reciprocal catalog ownership, paths, and evidence agree with the generated view. The source standard names SDK maintenance invocations, but this selected project’s applicable invocation and prerequisites remain unverified here; do not claim those outcomes executed. Structural inventories and derived counts demonstrate consistency only, not semantic completeness, executed acceptance, or qualification.
+Publication acceptance requires that the specification satisfy the repository’s required format; internal and cross-document consistency is checked; and reciprocal catalog ownership, paths, and evidence agree with the generated view. The selected repository actually declares the SDK validation invocations in `package.json`; record executed outcomes without treating their declarations as passing evidence. Structural inventories and derived counts demonstrate consistency only, not semantic completeness, executed acceptance, or qualification.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -4674,7 +4676,7 @@ Update `docs/agents/execution-contract.mdx` with the narrowly authenticated, can
 
 Create `quality/bugbot/evidence/issue974/README.md`, `quality/bugbot/evidence/issue974/plan.json`, and `quality/bugbot/evidence/issue974/results.json`. The README explains truthful invocation and prerequisites, preregistration, attempt accounting, failure and cancellation, zero writes, recovery, and how to inspect the exact plan and results. The plan records the frozen source/runtime/driver/profile tuple, corpus selection and digest, prompts and schemas, ordering, concurrency, and retry policy before calls. Results retain the complete ledger, outcomes, exact scores, unknowns, and limitations, including failure or unavailability. These are prospective creates, not evidence that the files already exist. Preserve issue950 plans and data as historical evidence.
 
-Register evidence and tests with their appropriate existing catalog owners; do not introduce a synthetic capability or count a case twice. Keep the issue974 file inventory in the host-owned navigation slot. The immutable selected owner is `specs/bugbot-analysis-publication-and-autofix.md`; its retained contract and cases remain in force. The requirements and inventory establish deliverables, not executed validation. The concrete consumer validation invocation and prerequisites remain unverified.
+Register evidence and tests with their appropriate existing catalog owners; do not introduce a synthetic capability or count a case twice. Keep the issue974 file inventory in the host-owned navigation slot. The immutable selected owner is `specs/bugbot-analysis-publication-and-autofix.md`; its retained contract and cases remain in force. The requirements and inventory establish deliverables, not executed validation. Use the repository’s declared specification/catalog and documentation commands, recording actual results.
 
 | Path | Change |
 | --- | --- |
@@ -4720,7 +4722,6 @@ The complete host-retained inventory contains 24 distinct new controls; referenc
 
 ### 18. Implementation sequence
 
-#### 18. Implementation sequence
 
 1. Treat the reported merges of #970, #971, #972, #973, and causal #985 as prerequisites to verify against the qualification admission record before any measurement. The supplied update identifies merged PRs #983, #984, #988, #986, and #990 and selected base `0ddac1011204db6dda45dff0f99e3ef91309c701`; these are planning inputs, not measurement evidence. Preserve the existing qualification bootstrap as the launch authority.
 2. Review and implement the narrowly scoped authenticated, cancellation-only, read-only investigation lifecycle through the existing planner and process executor. Keep the ordinary detector, capability, provider path, and canonical source workspace. Coordinate the explicit lifecycle amendment with `specs/agent-execution-policy-hardening.md` and the runtime guidance in `docs/agents/execution-contract.mdx`. Retain ordinary consumer defaults, pre-branch source deadlines, bounded version/ACL probes, and source, runtime, credential, schema, output, and integrity boundaries.
@@ -4733,7 +4734,6 @@ The 24 distinct proposed controls remain in the existing approved inventory and 
 
 ### 19. Definition of Done
 
-#### 19. Definition of Done
 
 - [ ] The reviewed lifecycle exception is available only through trusted authenticated qualification composition; the ordinary detector path and canonical workspace remain intact, explicit cancellation terminates descendants and cleans owned private artifacts, and unsupported or write-capable routes fail before child spawn.
 - [ ] Source snapshot, authority, workspace, runtime, driver, schema, output, credential, and integrity mismatches reject before spawn. Research ends only on completion, actual failure, or explicit cancellation; elapsed time, turns, reads, and token usage do not cut off investigation or reject supported evidence. Ordinary consumer timers and bounded technical probes retain their existing scopes.
@@ -4743,12 +4743,11 @@ The 24 distinct proposed controls remain in the existing approved inventory and 
 - [ ] Deterministic admission controls reject foreign source/runtime, reject a failed corpus at the next phase, preserve incomplete attempts, and accept unknown usage as telemetry. The approved 24 distinct controls remain allocated across their owning specifications without duplicating case counts.
 - [ ] One coherent corpus and full-review driver/admission closure is frozen before 174. Only a passing v2 result may admit the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase. Zero actual candidates produce zero verifier sessions; phase 42 remains unstarted until a genuinely passing corpus. A detector pass is not a qualified verifier profile.
 - [ ] Every result, including a negative or unavailable decision, retains the complete ledger and first failures. Evaluated PR write attempts are zero. Production remains disabled; no default installation, release, or activation follows from this campaign.
-- [ ] The specification satisfies the repository’s required format; internal and cross-document consistency is checked; reciprocal catalog ownership, paths, and evidence agree with the generated view. The concrete invocation and prerequisites for these validation outcomes remain unverified in the selected project view; do not substitute a command inferred from an SDK example.
+- [ ] The specification satisfies the repository’s required format; internal and cross-document consistency is checked; reciprocal catalog ownership, paths, and evidence agree with the generated view. Use the actually declared specification/catalog and documentation commands and retain their execution evidence.
 - [ ] The new issue974 plan, results, and README are published at their declared paths, and the execution-contract and quality-observability documentation agree with the reviewed contract. Publication and documentation do not imply measurement, execution, qualification, or acceptance.
 
 ### 20. References and decisions
 
-#### 20. References and decisions
 
 - This is a bounded amendment to the immutable retained owner `specs/bugbot-analysis-publication-and-autofix.md`. Its detector, publication, approval, recovery, quality-gate, and historical-evidence contracts remain in force.
 - Issue #974 defines the requested qualification question and the unchanged 174-case EV-07 corpus. The supplied planning update reports that prerequisites #970, #971, #972, #973, and causal #985 have merged; confirm that state through the authorized bootstrap and admission evidence before execution. Supplied PR identities and reported integration results are not source measurements or evidence that the #974 campaign ran.
@@ -4757,4 +4756,4 @@ The 24 distinct proposed controls remain in the existing approved inventory and 
 - The lifecycle amendment is jointly owned with `specs/agent-execution-policy-hardening.md` and `docs/agents/execution-contract.mdx`. Qualification reporting and operator guidance are also updated in `docs/bugbot/quality-observability.mdx`. Prospective evidence files are declared in the host’s path inventory: `quality/bugbot/evidence/issue974/README.md`, `quality/bugbot/evidence/issue974/plan.json`, and `quality/bugbot/evidence/issue974/results.json`.
 - Decision: admit only the explicitly pinned v2 corpus for this measurement; never redirect v1/default. Use the ordinary Luna detector path and report that this does not establish that Sol ran. Preserve optional unknown usage, actual provider identity where available, first failures, and complete negative evidence.
 - Decision: a passing corpus can only admit the fixed paired phase under the same frozen tuple. It cannot qualify or activate a verifier profile. Production remains disabled and evaluated PR write attempts remain zero.
-- Unresolved operational evidence: exact implementation/driver closure and the concrete specification, consistency, and catalog-validation invocations must be verified in the immutable source and reviewed preregistration. No validation command, campaign result, or product acceptance is claimed here.
+- Unresolved operational evidence: exact implementation/driver closure and the specification, consistency and catalog-validation outcomes must be retained with the immutable source and reviewed preregistration; the actual commands are verified in `package.json`. No successful validation, campaign result or product acceptance is implied by the command declarations.

@@ -20,12 +20,12 @@ const snapshot = (source, value, count = 0) => ({
 const args = ['diff', '--no-ext-diff', '--no-textconv', '--no-renames'];
 const originalPullNumbers = { X1: 24, P1: 28, J1: 28 };
 
-function prepareDetector(planner, request, log, selected = plan) {
-    const execution = preparePinnedExecution(planner, request, selected.runtime);
-    return admitPreparedDetector(execution, log, selected);
+function prepareDetector(planner, request, log, selected = plan, prepared = () => undefined) {
+    const execution = preparePinnedExecution(planner, request, selected.runtime, selected.lifecycle);
+    return admitPreparedDetector(execution, log, selected, prepared);
 }
 
-function admitPreparedDetector(execution, log, selected = plan) {
+function admitPreparedDetector(execution, log, selected = plan, prepared = () => undefined) {
     try {
         const runtimeProof = requirePinnedExecution(execution, selected.runtime);
         const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
@@ -33,6 +33,10 @@ function admitPreparedDetector(execution, log, selected = plan) {
         assert.deepEqual(flags, { model: selected.detector.model, modelProvider: selected.detector.modelProvider,
             reasoningEffort: selected.detector.effort, sandbox: 'read-only' });
         log({ event: 'detector-admitted', flags, runtime: execution.runtimeContract.version, runtimeProof });
+        prepared({ flags, runtimeProof, runtimeContract: execution.runtimeContract,
+            workspaceMode: execution.workspaceMode, output: execution.output,
+            qualificationInvestigation: execution.qualificationInvestigation === true,
+            schemaArtifactSha256: execution.artifacts?.find(item => item.purpose === 'output-schema')?.sha256 ?? null });
         return execution;
     } catch (error) {
         fs.rmSync(execution.runtimeDirectory, { recursive: true, force: true });
@@ -107,7 +111,11 @@ async function run(checkout, id, repetition, output, preflight = false) {
     const subject = readSubject(id, checkout);
     assert.equal(git(checkout, 'status', '--porcelain'), '');
     fs.writeFileSync(output, '', { flag: 'wx', mode: 0o600 });
-    const log = row => fs.appendFileSync(output, JSON.stringify(row) + '\n');
+    const log = row => {
+        const descriptor = fs.openSync(output, 'a', 0o600);
+        try { fs.writeFileSync(descriptor, JSON.stringify(row) + '\n'); if (plan.schemaVersion === 2) fs.fsyncSync(descriptor); }
+        finally { fs.closeSync(descriptor); }
+    };
     const preregistration = selectedPlanProvenance();
     log({ event: 'start', subject, repetition, implementation, provenance, plan: preregistration.sha256, preregistration, startedAt: new Date().toISOString() });
     const repository = { owner: 'vypdev', name: id.startsWith('U') ? 'ha-ui' : 'domus' };
@@ -154,14 +162,24 @@ async function run(checkout, id, repetition, output, preflight = false) {
     assert.deepEqual(operation.analysis.agentConfiguration, plan.detector);
     process.chdir(checkout);
     const planner = new AgentExecutionPlanner();
+    let detectorCli;
+    if (!preflight && plan.schemaVersion === 2) {
+        const artifactDirectory = output + '.attempts';
+        fs.mkdirSync(artifactDirectory, { mode: 0o700 });
+        detectorCli = require('../../issue974/attempt-ledger.cjs').createRecordedCli({
+            caseId: id + ':r' + repetition, record: log, artifactDirectory,
+            createClient: (observer, prepared) => new AgentCliClient({
+                prepare: request => prepareDetector(planner, request, log, plan, prepared),
+            }, { observe(fact) { log({ event: 'detector', fact }); observer.observe(fact); } }),
+        });
+    } else detectorCli = new AgentCliClient({ prepare: request => prepareDetector(planner, request, log) },
+        { observe(fact) { log({ event: 'detector', fact }); } });
     const detector = preflight ? { query: async ({ prompt }) => ({
         outputLocale: 'en-US', findings: [], resolved_findings: [],
         partition_id: prompt.match(/Return partition_id exactly as `([^`]+)`/u)?.[1],
         reviewed_head_sha: subject.head,
     }) }
-        : createFindingsQueryPort({ cli: new AgentCliClient({
-            prepare: request => prepareDetector(planner, request, log),
-        }, { observe(fact) { log({ event: 'detector', fact }); } }) });
+        : createFindingsQueryPort({ cli: detectorCli });
     const cancel = new AbortController();
     process.once('SIGINT', () => cancel.abort());
     process.once('SIGTERM', () => cancel.abort());

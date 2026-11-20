@@ -2464,7 +2464,9 @@
         "src/application/policies/bugbot_mutation_cancellation_policy.ts",
         "quality/bugbot/corpus.v2.json",
         "quality/bugbot/evidence/issue-985/derivation.json",
-        "quality/bugbot/evidence/issue-985/historical-hashes.json"
+        "quality/bugbot/evidence/issue-985/historical-hashes.json",
+        "quality/bugbot/evidence/issue974/corpus-selection.cjs",
+        "quality/bugbot/evidence/issue974/attempt-ledger.cjs"
       ],
       "tests": [
         "src/application/policies/__tests__/bugbot_shadow_configuration_policy.test.ts",
@@ -2587,7 +2589,8 @@
         "quality/bugbot/evidence/issue-950/ev07-shadow/plan.test.cjs",
         "src/application/policies/__tests__/bugbot_mutation_cancellation_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/observe_bugbot_base.test.ts",
-        "quality/bugbot/evidence/issue-985/corpus-revision.test.cjs"
+        "quality/bugbot/evidence/issue-985/corpus-revision.test.cjs",
+        "quality/bugbot/evidence/issue974/qualification.test.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -2607,7 +2610,8 @@
         "quality/bugbot/evidence/issue-950/ev07-shadow/preregistration.md",
         "quality/bugbot/evidence/issue-950/shadow-verification/README.md",
         "quality/bugbot/evidence/issue-950/review-progress-follow-up.md",
-        "quality/bugbot/evidence/issue-985/README.md"
+        "quality/bugbot/evidence/issue-985/README.md",
+        "quality/bugbot/evidence/issue974/README.md"
       ]
     },
     {
@@ -2989,7 +2993,8 @@
         "src/application/policies/agent_source_snapshot_policy.ts",
         "src/infrastructure/agents/agent_source_snapshot_git.ts",
         "src/infrastructure/agents/agent_source_snapshot_workspace.ts",
-        "src/infrastructure/agents/agent_source_snapshot_integrity.ts"
+        "src/infrastructure/agents/agent_source_snapshot_integrity.ts",
+        "src/infrastructure/agents/qualification_investigation_admission.ts"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -3030,7 +3035,8 @@
         "src/infrastructure/agents/__tests__/agent_source_snapshot_integrity.test.ts",
         "src/infrastructure/agents/__tests__/agent_source_snapshot_gate.integration.test.ts",
         "src/application/policies/__tests__/sdd_source_context_presentation.test.ts",
-        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts"
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts",
+        "src/infrastructure/agents/__tests__/qualification_investigation.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",

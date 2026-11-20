@@ -34,7 +34,9 @@ async function run(destination, preflight = false) {
         'corpus runner differs from the preregistered implementation');
     assert(destination, 'usage: node corpus.cjs <new output directory>');
     destination = path.resolve(destination);
-    const corpusFile = path.join(root, 'quality/bugbot/corpus.v1.json');
+    const v2 = plan.schemaVersion === 2;
+    const corpusFile = v2 ? require('../../issue974/corpus-selection.cjs').selectedCorpus(plan, root).file
+        : path.join(root, 'quality/bugbot/corpus.v1.json');
     assert.equal(hash(fs.readFileSync(corpusFile)), plan.corpus.sha256);
     const corpus = await loadBugbotBenchmark(corpusFile);
     assert.equal(corpus.cases.length, plan.corpus.cases);
@@ -44,10 +46,16 @@ async function run(destination, preflight = false) {
     const cli = cliProbe.version;
     fs.mkdirSync(destination);
     const ledger = path.join(destination, 'corpus.jsonl');
-    const record = row => fs.appendFileSync(ledger, JSON.stringify(row) + '\n', { mode: 0o600 });
+    const record = v2 ? require('../../issue974/attempt-ledger.cjs').createDurableRecorder(ledger)
+        : row => fs.appendFileSync(ledger, JSON.stringify(row) + '\n', { mode: 0o600 });
+    const artifactDirectory = path.join(destination, 'attempts');
+    if (v2) fs.mkdirSync(artifactDirectory, { mode: 0o700 });
     record({ event: 'start', at: new Date().toISOString(), cli, cliProbe, configuration,
         plan: preregistration.sha256, preregistration, runner: hash(fs.readFileSync(__filename)),
         implementation, provenance, corpus: plan.corpus.sha256, gitHubMutationPorts: 0 });
+    if (v2) for (const [index, testCase] of corpus.cases.entries()) {
+        record({ event: 'case-slot', index, id: testCase.id, status: 'not-started' });
+    }
     const cwd = fs.mkdtempSync(path.join(tmpdir(), 'copilot-ev07-corpus-'));
     const oldCwd = process.cwd();
     const cancel = new AbortController();
@@ -55,7 +63,7 @@ async function run(destination, preflight = false) {
     process.once('SIGINT', abort);
     process.once('SIGTERM', abort);
     const results = new Map();
-    function prepare(request, calls, runtimeProofs) {
+    function prepare(request, calls, runtimeProofs, prepared = () => undefined) {
         const invocation = preparePinnedExecution(planner, request, plan.runtime);
         try {
             const proof = requirePinnedExecution(invocation);
@@ -66,6 +74,10 @@ async function run(destination, preflight = false) {
             assert.equal(flags.sandbox, 'read-only');
             calls.push(flags);
             runtimeProofs.push(proof);
+            prepared({ flags, runtimeProof: proof, runtimeContract: invocation.runtimeContract,
+                workspaceMode: invocation.workspaceMode, output: invocation.output,
+                qualificationInvestigation: invocation.qualificationInvestigation === true,
+                schemaArtifactSha256: invocation.artifacts.find(item => item.purpose === 'output-schema')?.sha256 ?? null });
             return invocation;
         } catch (error) {
             fs.rmSync(invocation.runtimeDirectory, { recursive: true, force: true });
@@ -82,7 +94,7 @@ async function run(destination, preflight = false) {
             fs.rmSync(admission.runtimeDirectory, { recursive: true, force: true });
             return 'qualification planner preflight';
         } } });
-        await canary.query({ agentId: 'qualification-preflight', configuration, prompt: 'qualification planner preflight' });
+        await canary.query({ agentId: 'qualification-preflight', configuration, prompt: 'qualification planner preflight', signal: cancel.signal });
         assert.equal(flags.length, 1);
         record({ event: 'planner-preflight', flags, runtimeProofs });
         if (preflight) return;
@@ -92,9 +104,13 @@ async function run(destination, preflight = false) {
                 const testCase = corpus.cases[index];
                 const start = performance.now();
                 const calls = [], runtimeProofs = [];
-                const agent = createFindingsQueryPort({ cli: new AgentCliClient({
-                    prepare: request => prepare(request, calls, runtimeProofs),
-                }) });
+                const cli = v2 ? require('../../issue974/attempt-ledger.cjs').createRecordedCli({
+                    caseId: testCase.id, record, artifactDirectory,
+                    createClient: (observer, prepared) => new AgentCliClient({
+                        prepare: request => prepare(request, calls, runtimeProofs, prepared),
+                    }, observer),
+                }) : new AgentCliClient({ prepare: request => prepare(request, calls, runtimeProofs) });
+                const agent = createFindingsQueryPort({ cli });
                 let outcome;
                 try {
                     const result = await runBugbotBenchmarkAgent({ ...corpus, cases: [testCase] }, {
@@ -110,7 +126,8 @@ async function run(destination, preflight = false) {
                     const failure = error.cause?.category ?? error.code ?? error.name;
                     outcome = { status: cancel.signal.aborted ? 'interrupted' : 'failed', failure };
                 }
-                const row = { event: 'case', index, id: testCase.id, wallMs: Math.round(performance.now() - start), calls, runtimeProofs, ...outcome };
+                const row = { event: 'case', index, id: testCase.id, wallMs: Math.round(performance.now() - start), calls, runtimeProofs,
+                    ...(v2 ? { attemptIds: cli.attemptIds } : {}), ...outcome };
                 results.set(testCase.id, row);
                 record(row);
             }
@@ -123,9 +140,21 @@ async function run(destination, preflight = false) {
             if (!row) record({ event: 'case', index, id: testCase.id, status: 'not-started' });
         }
         const bundle = { schemaVersion: 1, predictions };
-        const score = evaluateBugbotBenchmark(corpus, bundle);
+        const gates = plan.corpus.gates;
+        const score = evaluateBugbotBenchmark(corpus, bundle, { precision: gates.precision, recall: gates.recall,
+            f1: gates.f1, locationAccuracy: gates.exactLocation, severityAccuracy: gates.severity,
+            categoryAccuracy: gates.category, maxConfidenceBrierScore: gates.maxBrier });
         const complete = Object.keys(predictions).length === corpus.cases.length;
-        const decision = { complete, completed: Object.keys(predictions).length, passed: complete && score.violations.length === 0,
+        let attemptsComplete = !v2;
+        if (v2 && complete) {
+            const rows = fs.readFileSync(ledger, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+            try {
+                require('../../issue974/attempt-ledger.cjs').validateCompleteAttempts(rows, [...results.values()], plan, artifactDirectory);
+                attemptsComplete = true;
+            } catch { record({ event: 'attempt-admission', status: 'incomplete', fullReview: 'unstarted' }); }
+        }
+        const decision = { complete, completed: Object.keys(predictions).length, passed: complete && attemptsComplete && score.violations.length === 0,
+            ...(v2 ? { attemptsComplete } : {}),
             githubWriteAttempts: 0, workspaceUnchanged: fs.readdirSync(cwd).every(entry => entry === '.git'), score };
         fs.writeFileSync(path.join(destination, 'predictions.json'), JSON.stringify(bundle, null, 2) + '\n');
         fs.writeFileSync(path.join(destination, 'corpus-score.json'), JSON.stringify(decision, null, 2) + '\n');

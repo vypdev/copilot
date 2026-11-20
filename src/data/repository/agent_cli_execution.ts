@@ -13,6 +13,7 @@ import { verifySourceSnapshotWorkspace } from '../../infrastructure/agents/agent
 import { agentExecutionTempParent } from '../../infrastructure/agents/agent_private_install_root';
 import { SddSourceContextFailure } from '../../domain/agent_source_snapshot';
 import { AGENT_EXECUTION_TIMEOUT_MAX_MS } from '../../domain/agent_execution_plan';
+import { isAdmittedQualificationInvestigation } from '../../infrastructure/agents/qualification_investigation_admission';
 
 const MAX_STDERR_BYTES = 8 * 1024;
 
@@ -24,6 +25,13 @@ export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: A
         try {
             runtimeDirectory = verifyOwnedRuntimeDirectory(plan.runtimeDirectory);
             verifyAdmittedPlan(plan, runtimeDirectory);
+            if (plan.qualificationInvestigation !== undefined
+                && !isAdmittedQualificationInvestigation(plan, signal)) {
+                throw new AgentCliError('Qualification investigation plan has no matching in-process admission.', 'configuration');
+            }
+            if (plan.qualificationInvestigation && signal?.aborted) {
+                throw new AgentCliError('Agent CLI execution was cancelled.', 'cancelled');
+            }
             if (plan.brokeredVerification && (plan.capability !== 'findings'
                 || plan.workspaceMode !== 'read-only' || plan.sourceSnapshot || plan.sourceDeadlineMs !== undefined)) {
                 throw new AgentCliError('Invalid brokered verification execution plan.', 'configuration');
@@ -164,7 +172,12 @@ export function createAgentProcessLifecycle(
     const onStdinError = () => beginTermination(new AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = () => finishReject(new AgentCliError('Unable to start agent CLI.', 'process'));
     const onClose = (code: number | null) => {
+        if (settled) return;
         if (terminationError) {
+            // The leader can close before a TERM-ignoring descendant. Its
+            // detached POSIX group still belongs to this operation; remove any
+            // survivors before clearing the delayed force timer and settling.
+            if (process.platform !== 'win32' && child.pid) signalProcessTree(child, 'SIGKILL');
             finishReject(terminationError);
             return;
         }
@@ -192,7 +205,7 @@ export function createAgentProcessLifecycle(
                 : outputFailure('Agent CLI returned invalid output.', 'unclassified'));
         }
     };
-    if (!plan.brokeredVerification) {
+    if (!plan.brokeredVerification && !isAdmittedQualificationInvestigation(plan, signal)) {
         timers.timeout = setTimeout(() => {
             beginTermination(new AgentCliError(`Agent CLI timed out after ${plan.timeoutMs}ms.`, 'timeout'));
         }, plan.timeoutMs);

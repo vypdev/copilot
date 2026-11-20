@@ -68,7 +68,8 @@ function requirePinnedCliProbe(runtime = require('./configuration.cjs').runtime)
     return { version, proof };
 }
 
-function preparePinnedExecution(planner, request, runtime = require('./configuration.cjs').runtime) {
+function preparePinnedExecution(planner, request, runtime = require('./configuration.cjs').runtime,
+    lifecycle = require('./configuration.cjs').lifecycle) {
     // The ordinary planner probes the selected CLI before returning its plan.
     // Resolve through its production helpers and admit those bytes first;
     // then retain the ordinary planner and its post-preparation proof unchanged.
@@ -84,14 +85,20 @@ function preparePinnedExecution(planner, request, runtime = require('./configura
     requirePinnedExecution({ executable: invocation.executable, launcherArgv,
         ...(launcherArgv.length && { launcherSha256: createHash('sha256').update(readFileSync(launcherArgv[0])).digest('hex') }),
         runtimeContract: { version: runtime?.codex } }, runtime);
-    return planner.prepare(request);
+    return lifecycle === 'qualification-investigation-v1'
+        ? planner.prepareQualificationInvestigation(request) : planner.prepare(request);
 }
 
 const qualificationDrivers = Object.freeze(['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs',
     'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py', '../execution-provenance.cjs', '../qualification-bootstrap.cjs']);
 
+function selectedQualificationDrivers(selected) {
+    return selected.schemaVersion === 2 ? [...qualificationDrivers,
+        '../../issue974/corpus-selection.cjs', '../../issue974/attempt-ledger.cjs'] : qualificationDrivers;
+}
+
 function requirePinnedDrivers(selected = require('./configuration.cjs')) {
-    const drivers = attestDrivers(__dirname, selected.inspectedArtifacts, qualificationDrivers);
+    const drivers = attestDrivers(__dirname, selected.inspectedArtifacts, selectedQualificationDrivers(selected));
     selectedPlanProvenance(undefined, selected);
     return drivers;
 }
@@ -133,7 +140,7 @@ function requireQualificationPolicy(selected) {
         '572dfedf3db3975d9478a16222495b228494e5a3e321eaf1e5d108788edf8235', 'published qualification policy changed');
     const baseline = JSON.parse(policy);
     const actual = selected.repositoryCohort, required = baseline.repositoryCohort;
-    assert(selected.schemaVersion === 1 && selected.mode === 'shadow' && selected.publication === 'dry-run'
+    assert([1, 2].includes(selected.schemaVersion) && selected.mode === 'shadow' && selected.publication === 'dry-run'
         && selected.production === 'disabled', 'qualification policy must remain shadow, dry-run and disabled');
     assert.equal(actual?.manifestSha256, required.manifestSha256, 'qualification cohort provenance');
     assert.equal(actual?.oracleSha256, required.oracleSha256, 'qualification oracle provenance');
@@ -145,7 +152,17 @@ function requireQualificationPolicy(selected) {
     }
     assert(Number.isFinite(actual.maximumAddedP95Ms) && actual.maximumAddedP95Ms >= 0
         && actual.maximumAddedP95Ms <= required.maximumAddedP95Ms, 'qualification latency criterion cannot be weakened');
-    assert.equal(selected.corpus?.sha256, baseline.corpus.sha256, 'qualification independent corpus provenance');
+    if (selected.schemaVersion === 2) {
+        require('../../issue974/corpus-selection.cjs').requireCorpusSelection(selected);
+        assert.deepEqual(selected.detector, { provider: 'codex', modelProvider: 'openai', model: 'gpt-6-luna', effort: 'xhigh' },
+            'v2 detector profile cannot substitute a model');
+        assert.deepEqual(selected.verifier, { provider: 'codex', modelProvider: 'openai', model: 'gpt-6.1-sol', effort: 'xhigh' },
+            'v2 paired verifier profile differs');
+        assert.deepEqual(actual.order, required.order, 'v2 preserves fixed paired subject order');
+    } else {
+        assert.equal(selected.lifecycle, undefined, 'v1 cannot select the new investigation lifecycle');
+        assert.equal(selected.corpus?.sha256, baseline.corpus.sha256, 'qualification independent corpus provenance');
+    }
     assert.equal(selected.corpus?.cases, baseline.corpus.cases, 'qualification requires all 174 independent cases');
     for (const [field, minimum] of Object.entries(baseline.corpus.gates)) {
         const value = selected.corpus.gates?.[field];
@@ -157,7 +174,8 @@ function requireQualificationPolicy(selected) {
 function selectedPlanSha256() { return selectedPlanProvenance().sha256; }
 
 module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedExecution, requirePinnedCliProbe,
-    preparePinnedExecution, requirePinnedDrivers, qualificationProvenance, qualificationDrivers, selectedPlanSha256, selectedPlanProvenance };
+    preparePinnedExecution, requirePinnedDrivers, qualificationProvenance, qualificationDrivers, selectedQualificationDrivers,
+    requireQualificationPolicy, selectedPlanSha256, selectedPlanProvenance };
 
 if (require.main === module) {
     assert.equal(process.argv[2], '--plan-provenance');

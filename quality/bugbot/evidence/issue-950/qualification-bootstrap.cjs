@@ -85,11 +85,13 @@ function reviewedPlan(repository, revision, planPath, planSha256, bootstrapSha25
     assert.equal(sha256(bytes), planSha256, 'reviewed committed plan differs');
     assert(fs.readFileSync(physical(root, planPath)).equals(bytes), 'working plan differs from reviewed commit');
     const plan = JSON.parse(bytes);
+    assert(plan.schemaVersion !== 2 || mode !== 'normal-flow', 'v2 qualification has no normal-flow admission route');
     assert.equal(plan.publication, 'dry-run', 'qualification must remain dry-run');
     assert.match(plan.implementation ?? '', /^[a-f0-9]{40}$/u);
     git('merge-base', '--is-ancestor', plan.implementation, revision);
     const base = prefix + (mode === 'normal-flow' ? 'normal-flow-shadow/' : 'ev07-shadow/');
-    const inventory = mode === 'normal-flow' ? normal : ev07;
+    const inventory = mode === 'normal-flow' ? normal : plan.schemaVersion === 2 ? [...ev07,
+        '../../issue974/corpus-selection.cjs', '../../issue974/attempt-ledger.cjs'] : ev07;
     const expected = mode === 'normal-flow' ? plan.drivers : plan.inspectedArtifacts;
     const admitted = [];
     for (const driver of inventory) {

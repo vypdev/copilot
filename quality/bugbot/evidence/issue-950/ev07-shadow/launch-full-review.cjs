@@ -16,7 +16,8 @@ function validateCorpusProvenance(directory, result) {
     const hash = input => createHash('sha256').update(input).digest('hex');
     const root = path.resolve(__dirname, '../../../../..');
     const planFile = process.env.COPILOT_EV07_PLAN ? path.resolve(process.env.COPILOT_EV07_PLAN) : path.join(__dirname, 'plan.json');
-    const source = readFileSync(path.join(root, 'quality/bugbot/corpus.v1.json'));
+    const source = readFileSync(plan.schemaVersion === 2 ? require('../../issue974/corpus-selection.cjs').selectedCorpus(plan, root).file
+        : path.join(root, 'quality/bugbot/corpus.v1.json'));
     assert.equal(hash(source), corpus.sha256);
     const inventory = JSON.parse(source);
     const predictions = JSON.parse(readFileSync(path.join(directory, 'corpus-v3/predictions.json'), 'utf8'));
@@ -36,6 +37,13 @@ function validateCorpusProvenance(directory, result) {
     requirePinnedRuntime(start.cli);
     assert.deepEqual(finish, { event: 'finish', complete: true, passed: true, githubWriteAttempts: 0, workspaceUnchanged: true });
     const rows = ledger.filter(row => row.event === 'case');
+    if (plan.schemaVersion === 2) {
+        assert.equal(result.attemptsComplete, true, 'complete application-attempt evidence required');
+        const slots = ledger.filter(row => row.event === 'case-slot');
+        assert.deepEqual(slots, inventory.cases.map((item, index) => ({ event: 'case-slot', index, id: item.id, status: 'not-started' })));
+        require('../../issue974/attempt-ledger.cjs').validateCompleteAttempts(ledger, rows, plan,
+            path.join(directory, 'corpus-v3/attempts'));
+    }
     assert.equal(rows.length, corpus.cases);
     assert.equal(new Set(rows.map(row => row.id)).size, corpus.cases);
     assert.equal(predictions.schemaVersion, 1);
