@@ -1,0 +1,21 @@
+{
+  "encoding": "gzip",
+  "lossless": true,
+  "records": [
+    {
+      "file": "official-sync-verification-failure.log.gz",
+      "rawBytes": 3734914,
+      "rawSha256": "63bb0403d5c7376f909e3411c2229b9a72ddc44646c797798929e29bba81d5c1"
+    },
+    {
+      "file": "extension-commands-isolated.log.gz",
+      "rawBytes": 188,
+      "rawSha256": "b1fef65402a077e9c3dc42f99d5d7b303967c4a1f919bec6ac6bbdae295d9db8"
+    },
+    {
+      "file": "postmerge-audit-controls.log.gz",
+      "rawBytes": 429,
+      "rawSha256": "e8f11c012b54159e2943a9cedf3c325834c1a53adb5b005442bab99af16200f4"
+    }
+  ]
+}

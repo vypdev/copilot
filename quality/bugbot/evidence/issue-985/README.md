@@ -63,3 +63,37 @@ full verification, committed-source shadow controls, a normal same-ref push with
 fresh identity checks and final-head native checks remain required. No unchanged
 Action retry, force, ref creation/rename/deletion, installation or activation is
 part of this recovery.
+
+
+## Integration after the #971 audit
+
+After #971 merged into develop `c6590bd8e03aced19250d681788f53268dede600`,
+official synchronization [44739846048](https://github.com/vypdev/copilot/actions/runs/44739846048/job/136300431878)
+merged cleanly without a conflict or fixer. Build and typecheck passed. Native
+coverage then stopped: 942 Jest suites / 18,688 tests passed and 35 old skips
+remained; the first unchanged operator Actions test exceeded its existing
+30-second timeout and six later cases encountered the unfinished same-process
+inspection guard. Extension tests and downstream coverage-budget checks did not
+run. The Action aborted and verified restoration of the exact prior head
+`8ce0a5d3146a9fb8d38c73303a7a7abec05fef20`, with no commit or push attempted.
+Error reference: `0e6a85a1-7e38-4e9f-b3c4-24cb2e7ccd00`.
+
+The complete negative log is retained in
+`c659-official-sync-verification-failure.log.gz`. The test, adapter, journal and
+HTTP implementation have identical Git blobs on the old child, c659 parent and
+successful #973 synchronization. All eight operator Actions cases passed unchanged
+in a separate local run (2.667 seconds). Its log and identity receipt are retained
+in `c659-operator-actions-isolated.log.gz` and the adjacent JSON. This diagnostic
+does not establish the native timing cause, a full native coverage pass, or actual
+Setup platform observations.
+
+The recorded `c659-sync-reconciliation-plan.json` is a new recovery plan tied to
+this actual error and exact child/parent, under the maintainer's standing merge
+delegation. It does not reuse the old 4736 failure as authority for a new base.
+The same existing ref is reconciled with c659; no executable source, assertion,
+timeout, workflow, runner placement or concurrency setting is changed from the
+clean merge. Original v1, reviewed v2, derivation, IDs, labels, order and frozen
+#950 artifacts remain byte-identical to the prior child. Ordinary full delivery
+verification, committed-source controls and all final-head native gates/findings
+remain required before a normal authorized PR merge. No unchanged Action retry,
+force or remote branch creation/rename/deletion is part of this recovery.
