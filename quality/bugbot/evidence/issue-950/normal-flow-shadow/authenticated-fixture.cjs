@@ -41,8 +41,9 @@ function authenticatedFixture(t, manifest, driverSuffix = '') {
     const commit = message => git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
         '-c', 'core.hooksPath=/dev/null', 'commit', '--quiet', '-m', message);
     git('add', '--', ...sourcePaths, ...driverPaths);
-    // This commit belongs only to the disposable fixture, never a delivery ref.
-    commit('Pin current synthetic source and admitted driver snapshot');
+    // A clean committed source already supplies this pin. Any new snapshot
+    // commit belongs only to the disposable fixture, never a delivery ref.
+    if (git('diff', '--cached', '--name-only')) commit('Pin current synthetic source and admitted driver snapshot');
     const implementation = git('rev-parse', 'HEAD');
     const forbidden = path.join(directory, 'model-invoked'), executable = path.join(bin, 'codex');
     fs.writeFileSync(executable, '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "codex-cli fixture"; exit 0; fi\n'

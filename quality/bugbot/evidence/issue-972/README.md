@@ -99,3 +99,19 @@ retained. `combined-uncommitted-source-shadow.log.gz` and
 including all five interrupted exits130, one completed exit0 and one failed exit1
 with empty write inventories. The complete suite must be rerun against the
 committed candidate before any push; this precommit attempt is not a full pass.
+
+The first committed-source replay on c00f0aec passes203/204, including all17
+previously rejected root-bound cases and all eight terminal-state controls.
+Its only failure is fixture construction for the relative-lab case: when source
+and drivers already equal the cloned HEAD, a new snapshot commit has nothing to
+commit. The helper now reuses that existing committed source pin and creates a
+snapshot commit only when staged bytes differ. The separate plan commit and
+complete public bootstrap admission remain mandatory. The exact203/204 log and
+operation ledgers are retained as committed-c00f-shadow-203-of-204.log.gz and
+committed-c00f-controls.json; this result is not reported as a full pass.
+
+The corrected relative-lab control passes1/1 in60.24s through the real bootstrap,
+with zero candidates, verifiers, model calls and writes. Its exact log and the
+bounded fixture-only change are retained in clean-fixture-relative-focus.log.gz
+and clean-fixture-correction.json. A new ordinary delivery commit and complete
+204-case committed-source replay remain required before publication.
