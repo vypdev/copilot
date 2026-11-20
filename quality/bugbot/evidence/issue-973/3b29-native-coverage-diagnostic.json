@@ -1,0 +1,26 @@
+{
+  "at": "2026-11-20T12:28:06.290223+00:00",
+  "run": 44729937683,
+  "job": 136266802599,
+  "head": "3b29fc14851596c2a610c8d909103b24aeaa71c7",
+  "raw": "/private/tmp/copilot-goal-973-3b29-native-coverage-failure.raw.log",
+  "rawBytes": 3154470,
+  "rawSha256": "edeaffcb04a9fc1fabb964ec12bf7b9c3bf8727e7f14ada1a69e76381c7db0fc",
+  "native943JestAndModuleFloors": "PASS18695tests35oldskip",
+  "nativeExtension": "381files/5271testsPASS;3buildbeforeAll60000ms timeouts produce19unexecutedcases;1history_centerready5000msassertionfails",
+  "identicalExtensionTrees": {
+    "3b29fc14851596c2a610c8d909103b24aeaa71c7": "4a5bbf2f98bec1b429c9821fb8a0eca3e3e66a21",
+    "a2344c44cc74ca8e133417d817627688b04a6e3f": "4a5bbf2f98bec1b429c9821fb8a0eca3e3e66a21",
+    "4736cd4f0b28b2ae2579434904c6ce7b5bdea58e": "4a5bbf2f98bec1b429c9821fb8a0eca3e3e66a21"
+  },
+  "unchangedLocalFourSuites": {
+    "exitCode": 0,
+    "tests": 25,
+    "testFiles": 4,
+    "seconds": 43.26,
+    "receipt": "/private/tmp/copilot-goal-973-native-failure-four-suites-isolated-receipt.json"
+  },
+  "nativeRetryPerformed": false,
+  "wholeNativePassOrRootTimingCauseClaimed": false,
+  "actualPlatformObservationClaimed": false
+}

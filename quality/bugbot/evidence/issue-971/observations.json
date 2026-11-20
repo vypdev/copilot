@@ -1,0 +1,68 @@
+{
+  "node": "v24.20.0",
+  "method": "immutable owned oracles and separately authored primitives; no consumer execution",
+  "sources": {
+    "bugbot_call_path_oracles.ts": "c5f247d9783fcba2f5edcf74cf4300d36d906d20fa29567492245ff4d007cbe6",
+    "bugbot_request_transform_oracles.ts": "1657b1b19c5c6deb365f0d93ead363aa19b65c267b803ef23ab27f73a38ea896",
+    "bugbot_initial_session_oracles.ts": "e171b5936d28bc554a44b5133b9e3105ec031e606f12eebd2835cc1b5087402f"
+  },
+  "observations": {
+    "test-delegate-bypasses-stub": {
+      "passes": false,
+      "calls": 0
+    },
+    "request-transform-write": {
+      "kind": "observed",
+      "headers": [
+        "no-cache",
+        "no-cache",
+        "no-cache"
+      ],
+      "mockHeaders": [
+        "no-cache",
+        "no-cache",
+        "no-cache"
+      ],
+      "producerCalls": 3,
+      "productionHeaderPasses": false,
+      "testHeaderPasses": false,
+      "validUtf8": true
+    },
+    "session-source-opaque-bootstrap": {
+      "kind": "observed",
+      "setup": "opaque.setup.ts",
+      "tokenEndpointCalls": 1,
+      "initialSegments": 1,
+      "selectedSegments": 1,
+      "assertionPassed": false
+    },
+    "session-source-expired-refresh": {
+      "kind": "observed",
+      "setup": "signed.setup.ts",
+      "tokenEndpointCalls": 1,
+      "initialSegments": 3,
+      "selectedSegments": 1,
+      "assertionPassed": false
+    },
+    "python": {
+      "python": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]",
+      "nested_list_rejected": true,
+      "mapping_container_accepted": true,
+      "membership_first_failure": "TypeError",
+      "container_contract": "not supplied; acceptance alone does not prove a defect"
+    },
+    "actions-readonly-metadata": {
+      "rootSteps": 1,
+      "jobsPresent": false,
+      "contract": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idsteps",
+      "scope": "parsed supplied fragment and official syntax; no native GitHub run"
+    },
+    "shell-unquoted-path": {
+      "unquotedExit": 1,
+      "quotedExit": 0,
+      "archived": "owned dir/source file.txt"
+    }
+  },
+  "modelCalls": 0,
+  "evaluatedPrWriteAttempts": 0
+}

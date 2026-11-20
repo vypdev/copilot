@@ -1,0 +1,17 @@
+{
+  "startedAt": "2026-11-20T13:50:25.866272+00:00",
+  "finishedAt": "2026-11-20T13:52:24.041857+00:00",
+  "head": "fa92ca94079ed31edada346a5fb5d5d604864ac0",
+  "exitCode": 0,
+  "tests": 202,
+  "passed": 202,
+  "failed": 0,
+  "skipped": 0,
+  "cancelled": 0,
+  "log": "/private/tmp/copilot-goal-985-c659-committed-shadow.log",
+  "rawBytes": 21353,
+  "rawSha256": "0b2717e7a25084f751b36783483a31f466fe9978dea9e0bf8cf9ad021def0969",
+  "qualificationModelCalls": 0,
+  "evaluatedPilotPrWriteAttempts": 0,
+  "scope": "Committed-source deterministic delivery controls; not profile qualification or actual Setup observations."
+}

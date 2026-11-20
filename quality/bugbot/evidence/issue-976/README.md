@@ -33,3 +33,26 @@ receipt is unavailable on failure; existing publication controls preserve the
 last verified card and Check fallback. Production verification stays disabled.
 The corresponding workflow still needs explicit reviewed installation on the
 trusted default branch under #977. A develop PR cannot establish installation.
+
+## Exact-parent reconciliation, 2026-11-20
+
+The [official synchronization](https://github.com/vypdev/copilot/actions/runs/44792755868)
+against `0ddac1011204db6dda45dff0f99e3ef91309c701` passed its source and extension
+tests but aborted at the final workspace guard (`unexpected-paths`, one added
+generated bundle). It pushed no synchronization commit. The original branch
+and parent remained unchanged. Rebuilding the original contribution changed no
+bundle; that proposed explanation was disproved.
+
+The [recorded exact-parent recovery plan](./exact-parent-reconciliation-plan.json)
+uses the maintainer-delegated merge authority after that actual Action error.
+It preserves the Action-created ref and original contribution, without remote
+branch creation, replacement, force, deletion or protection changes. All parent
+contracts and both SDD appendices remain present, and the source/workflow patch
+ID is unchanged (`5258c02e3c9035e7781c00129f01af81f5ef7ea8`).
+
+The [prepared-merge validation](./exact-parent-validation.json) passes the five
+owning suites and 62 assertions, build, specification generation/validation,
+documentation and agent-doc contracts; Graphify was updated with AST analysis.
+These facts describe the prepared merge. The ordinary commit hook and final
+native checks must be inspected separately. The failed native log and exact
+lossless log digests are retained; no installation or canary is claimed.
