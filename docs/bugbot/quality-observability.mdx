@@ -967,6 +967,16 @@ waiting. Live progress remains informational.
 
 ### Qualification provenance
 
+Treat scorer FP/FN labels separately from independently checked causal defects.
+The [EV-07 failure audit](https://github.com/vypdev/copilot/issues/971) reproduces
+the frozen current and prior negative results. Its eleven rejected category
+matches contain detected hypotheses, rather than eleven absent hypotheses.
+Every unmatched prediction and expectation retains an evidence row; unresolved
+premises remain unresolved. Neither a taxonomy diagnostic nor a supported
+fixture inconsistency changes a completed campaign's labels, calibration,
+thresholds or qualification decision. A new campaign requires its own committed
+implementation, driver and runtime identities. Production remains disabled.
+
 The full-review qualification runner rederives the independent corpus score from the recorded predictions and checks the complete per-case ledger against the frozen plan, source, compiler configuration, CLI and invocation profile. A passing summary copied from another run cannot open full review. The CLI version must match before measured work starts. Historical campaigns remain reproducible from their preregistration commits with their original runner and rubric; stricter admission in a later revision does not rewrite their results. This local evaluation control adds no repository or organization setting and does not qualify a profile by itself.
 Freeze the implementation, lockfile, shipping compiler configuration and all
 eight evaluator driver hashes before measurement. The current runners reject
