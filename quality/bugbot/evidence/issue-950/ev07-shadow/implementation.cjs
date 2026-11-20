@@ -62,7 +62,7 @@ function requirePinnedCliProbe(runtime = require('./configuration.cjs').runtime)
     // Never resolve through PATH, or run even --version before byte admission.
     const version = execFileSync(execution.executable, [...launcher, '--version'], {
         encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
-        env: { PATH: '/usr/bin:/bin' },
+        env: { PATH: '/usr/bin:/bin' }, timeout: 15_000, killSignal: 'SIGKILL',
     }).trim();
     requirePinnedRuntime(version, runtime);
     return { version, proof };

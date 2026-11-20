@@ -316,3 +316,43 @@ new-SHA native review remain separate outstanding checks.
 
 - `public-launch-bootstrap-final-20.log.gz`: 3078 original bytes; SHA-256 `dd36c3d82104459d248551924674cbb8b0497bfce81fb19e0fc9af0766bfb3fd`.
 - `public-launch-shadow-194.log.gz`: 20219 original bytes; SHA-256 `b21d59d3f604cb4168a71ee8f25b8ff3843fa19e1b1a3d4fa8ae065d7a3dfb57`.
+
+
+## Executable version health probe
+
+Native Review on `7652c1c5` resolved all seven earlier findings, then identified the
+unbounded synchronous --version probe (LOW, thread `PRRT_kwDONSeBW865y_KP`). Its
+complete native CI/Commit/Verification/Branch Sync pass; Review remains NEUTRAL
+with that finding. Both added real-process rejection assertions fail against
+the unchanged `7652c1c5` implementation: the admitted direct CLI and optional launcher
+actually enter --version and remain blocked until owned 30-second test cleanup.
+The launcher deliberately handles SIGTERM without exiting. Neither fixture calls
+a model or an evaluated PR.
+
+The correction uses the ordinary production version reader's 15,000 ms operational
+health timeout, plus SIGKILL so a stalled probe cannot keep the synchronous call
+waiting by handling SIGTERM. Bytes/launcher admission still comes first; version
+text still must match the reviewed runtime. This applies only to --version
+metadata before any model call. No investigation time/turn/read/token limit,
+cohort/order/retry change or consumer option is added. Ordinary production source
+and model/cancellation policy remain unchanged. Future measurements still require
+new driver pins.
+
+The two real-process cases require ETIMEDOUT, exact --version arguments and no
+surviving fixture CLI. Their 30-second cleanup is only for owned model-free test
+processes. Together with existing controls the budget is 17 runtime cases and 196
+combined controls; final results and mandatory hook/native outcomes are separate.
+The fixed timeout/SIGKILL semantics follow the
+[pinned Node v24.20.0 subprocess contract](https://nodejs.org/download/release/v24.20.0/docs/api/child_process.html#child_processexecfilesyncfile-args-options).
+
+- `version-health-causal-negative.log.gz`: 1963 original bytes; SHA-256 `9c4385e2bce6129024b292bade23cc8ba31f76a635065f04452c5d2b0a8c2103`.
+
+Both focused real-process cases pass, followed by **196/196** complete controls,
+zero skipped/cancelled/model calls/evaluated-PR writes. The full suite includes
+all 17 runtime cases, 20 bootstrap cases and the actual relative-lab zero-candidate
+normal-flow journey. Final specification/catalog/documentation validation and
+Graphify pass. The complete mandatory hook and new-SHA native outcomes remain
+separate delivery checks.
+
+- `version-health-focus-pass.log.gz`: 297 original bytes; SHA-256 `c8ca995662705c8a0159358e3c0b8c1c2c65afd722ad92e8b102e0005e39f0b3`.
+- `version-health-shadow-196.log.gz`: 20413 original bytes; SHA-256 `ef572c6320a0ba3e03560695c607799074b347056af85c8ff3ad4f893611b85b`.

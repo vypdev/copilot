@@ -2648,3 +2648,31 @@ fixture attempts and successful outputs byte-exactly. Update operator guidance,
 catalog evidence and Graphify; run specification/docs validation and the complete
 required build/Jest/lint hook. Report native review/checks for the newly published
 SHA separately. Neither a local pass nor an earlier SHA's review qualifies a profile.
+
+
+### Pinned executable version health probe — #970, 2026-11-20
+
+The admitted executable's `--version` health probe MUST fail closed after the
+same fixed 15,000 ms operational timeout as the ordinary production version reader.
+It MUST use SIGKILL for that probe process so handling SIGTERM cannot keep the
+synchronous caller blocked. Executable/optional-launcher digest admission remains
+before execution; successful version text must still match the reviewed runtime.
+Timeout leaves qualification unstarted and propagates a preflight error rather
+than a clean model verdict. No retry is implied; preserve its attempt/output.
+
+This rule applies only to executable metadata before a model is called. It MUST
+NOT impose a time, turn, token or read limit on investigation, trim a verdict,
+change cohort/order/retry policies, or replace explicit operation cancellation.
+Production source and existing ordinary-planner behavior remain unchanged. The
+fixed health rule is not a new consumer option or plan-controlled override.
+
+Additional numeric budget: **two real-process runtime cases**, making 17 focused
+runtime cases and 196 combined controls. A byte-admitted direct CLI and an optional
+launcher both enter --version and stall; the launcher also handles SIGTERM without
+exiting. Each MUST yield ETIMEDOUT, leave no live fixture CLI and dispatch no model.
+Owned test-process cleanup is 30 seconds and never constrains an investigation.
+Run these assertions against the previous code first and retain the causal
+failures, then the corrected results. Existing fast success, changed-byte refusal,
+20 bootstrap cases and explicit cancellation remain required. Update operator
+guidance/catalog, run specification/docs validation and Graphify, and pass the
+complete mandatory hook plus actual final-head native checks/review.

@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict');
 const { mkdtempSync, existsSync, rmSync, writeFileSync, mkdirSync, readFileSync } = require('node:fs');
-const { execFileSync, spawnSync } = require('node:child_process');
+const { execFileSync, spawnSync, spawn } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
@@ -124,3 +124,51 @@ for (const mode of ['pinned', 'foreign']) test('ordinary planner admits CLI byte
         } finally { rmSync(execution.runtimeDirectory, { recursive: true, force: true }); }
     }
 });
+
+
+for (const mode of ['direct-stall', 'launcher-ignores-term']) {
+    test('an admitted --version health probe fails closed for ' + mode, async t => {
+        const directory = mkdtempSync(path.join(tmpdir(), 'ev07-stalled-version-'));
+        t.after(() => rmSync(directory, { recursive: true, force: true }));
+        const marker = path.join(directory, 'started.json'), executable = path.join(directory, 'cli');
+        const launcher = mode === 'launcher-ignores-term';
+        const program = (launcher ? '' : '#!' + process.execPath + '\n')
+            + 'require("node:fs").writeFileSync(' + JSON.stringify(marker)
+            + ',JSON.stringify({pid:process.pid,args:process.argv.slice(2)}));'
+            + (launcher ? 'process.on("SIGTERM",()=>{});' : '') + 'setInterval(()=>{},1000);\n';
+        writeFileSync(executable, program, { mode: 0o700 });
+        const digest = file => createHash('sha256').update(readFileSync(file)).digest('hex');
+        const runtime = { executable: launcher ? process.execPath : executable, codex: 'codex-cli stalled-fixture',
+            codexSha256: digest(launcher ? process.execPath : executable),
+            ...(launcher && { launcher: executable, launcherSha256: digest(executable) }) };
+        const script = 'try { require(process.argv[1]).requirePinnedCliProbe(JSON.parse(process.argv[2]));'
+            + 'console.log(JSON.stringify({unexpectedSuccess:true})); } catch(error) {'
+            + 'console.log(JSON.stringify({code:error.code,signal:error.signal})); }';
+        const child = spawn(process.execPath, ['-e', script, path.resolve(__dirname, 'implementation.cjs'),
+            JSON.stringify(runtime)], { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+        const cleanup = () => {
+            if (child.exitCode === null && child.signalCode === null && child.pid) {
+                try { process.kill(-child.pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+            }
+        };
+        t.after(cleanup);
+        let timer, timedOut = false, stdout = '', stderr = '';
+        child.stdout.on('data', bytes => { stdout += bytes; });
+        child.stderr.on('data', bytes => { stderr += bytes; });
+        try {
+            // Cleanup of these owned model-free processes only, never a research deadline.
+            const result = await new Promise((resolve, reject) => {
+                timer = setTimeout(() => { timedOut = true; cleanup(); }, 30_000);
+                child.once('error', reject);
+                child.once('close', (code, signal) => resolve({ code, signal }));
+            });
+            assert.equal(existsSync(marker), true, 'the byte-admitted fixture actually entered --version');
+            const started = JSON.parse(readFileSync(marker));
+            assert.deepEqual(started.args, ['--version']);
+            assert.equal(timedOut, false, 'the health probe stayed blocked; owned fixture cleanup was required');
+            assert.equal(result.code, 0, stderr);
+            assert.deepEqual(JSON.parse(stdout), { code: 'ETIMEDOUT', signal: 'SIGKILL' });
+            assert.throws(() => process.kill(started.pid, 0), { code: 'ESRCH' }, 'no stalled CLI remains alive');
+        } finally { clearTimeout(timer); cleanup(); }
+    });
+}
