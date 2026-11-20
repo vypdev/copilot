@@ -86,3 +86,30 @@ java -jar /tmp/new-971-cancellation.jar
 Use a fresh destination. The audit script refuses to overwrite an existing output. The three deterministic scoring controls reproduce current and prior decisions and show that a diagnostic category change cannot rewrite the frozen campaign. Node oracle and native primitive observations are separate causal evidence, never model input or qualification.
 
 No new profile is qualified. #974 still requires the merged deterministic prerequisites, any independently justified corrections, and a committed exact implementation/driver/runtime preregistration. #975 requires an actually passing corpus on identical pins. Production remains `BUGBOT_VERIFICATION_MODE=disabled`; evaluated-PR write attempts remain zero.
+
+## Integration after #970
+
+The official synchronization run44715033832 prepared a clean merge of exact
+develop4736cd4 into the existing1f3fbdde audit branch; no fixer was needed. Its
+configured verification passed all943 Jest suites and18,695 tests, with the35
+pre-existing skips. The extension run passed384 files but its unchanged
+commands.test.ts beforeAll build exceeded the existing60,000ms hook timeout.
+The Action aborted the merge without publishing. The complete native failure is
+retained losslessly in official-sync-verification-failure.log.gz, with its exact
+raw digest/length in integration-log-manifest.json.
+
+The extension Git tree is byte-identical on both source revisions
+(4a5bbf2f98bec1b429c9821fb8a0eca3e3e66a21). The same unmodified six-case suite
+passes locally in21.18 seconds; its log and receipt are retained separately.
+That local observation does not establish a complete native Linux pass or prove
+the cause of the earlier delay. No timeout, concurrency, runner or source change
+was made to that suite, and no unchanged Action retry was sent.
+
+After the maintainer delegated merge judgment, the same clean merge was prepared
+on the existing managed ref under the recorded sync-reconciliation-plan.json.
+Ordinary repository verification and committed-source shadow controls must pass
+before a normal same-ref push, with both remote identities checked again. The
+final native CI, including extension verification, and Review must pass on that
+published head before PR integration. No ref creation/rename/deletion, force,
+installation or production change is part of this recovery. All frozen scores,
+labels, audit classifications and five unresolved premises above are preserved.
