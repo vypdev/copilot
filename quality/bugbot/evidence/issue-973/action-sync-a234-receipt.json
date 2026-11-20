@@ -1,0 +1,31 @@
+{
+  "sourceHead": "a2344c44cc74ca8e133417d817627688b04a6e3f",
+  "parents": [
+    "dfe3e4aaa08e6cc95ddbeaa55c7daf833653446a",
+    "4736cd4f0b28b2ae2579434904c6ce7b5bdea58e"
+  ],
+  "syncRun": 44715040973,
+  "syncJob": 136216142474,
+  "nativeJest": {
+    "suites": 943,
+    "passed": 18695,
+    "preExistingSkipped": 35
+  },
+  "nativeExtension": {
+    "files": 385,
+    "passed": 5291
+  },
+  "nativeStatic": {
+    "run": 44723696726,
+    "job": 136245653499,
+    "shadowTests": 202,
+    "passed": 202,
+    "failed": 0,
+    "skipped": 0,
+    "specifications": "PASS",
+    "documentation": "PASS"
+  },
+  "qualificationCampaigns": 0,
+  "evaluatedPilotPrWriteAttempts": 0,
+  "remaining": "Bot push skipped Commit; final-head native groups and findings must complete after normal contributor evidence update. No merge claimed."
+}

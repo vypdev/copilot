@@ -1075,3 +1075,17 @@ Before #974 measures anything, merge the prerequisites and reviewed correction,
 then commit exact drivers/preregistration that select and hash v2. The threshold
 and production-disabled policies remain in force. No v2 qualification result is
 claimed by the fixture correction.
+### Deletion-only citation metadata
+
+A deletion-only hunk contains no new-side changed lines. A citation spanning
+adjacent unchanged lines in the head therefore records `inChangedLines=false`.
+Nonempty addition/replacement intervals retain their existing overlap behavior.
+This metadata describes the cited source; it does not relocate a finding or
+replace the immutable LEFT deletion anchor. A legitimate LEFT citation still
+uses the pinned comparison base and its original range. Blob/SHA, range,
+candidate-bound receipt and prior-delivery validation remain mandatory.
+
+The [deletion metadata regression](https://github.com/vypdev/copilot/issues/973)
+uses six real Git/broker controls and preserves the original negative control.
+It changes no evaluator label, score floor, model input authority or historical
+campaign. Production verification remains disabled.

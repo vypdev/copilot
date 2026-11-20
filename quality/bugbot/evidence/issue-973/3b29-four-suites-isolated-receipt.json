@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-20T12:26:59.952007+00:00",
+  "exitCode": 0,
+  "head": "3b29fc14851596c2a610c8d909103b24aeaa71c7",
+  "log": "/private/tmp/copilot-goal-973-native-failure-four-suites-isolated.log",
+  "sourcesTestsTimeoutsConcurrencyRunnerUnchanged": true,
+  "scope": "Only unchanged four-suite local diagnostic; not whole native Linux acceptance or actual Safari/Setup platform observation."
+}
