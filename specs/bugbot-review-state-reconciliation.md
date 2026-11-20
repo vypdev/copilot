@@ -2725,3 +2725,89 @@ combined uncommitted-plan failures and the causal failed-review/exit-0 control.
 Update testing guidance, the #972 evidence README and catalog paths together;
 run focused/full shadow, specifications, documentation, graph and ordinary
 repository verification before integrating the final exact delivery head.
+
+## Accepted status-writer dispatch acknowledgment (#976)
+
+This bounded correction is submitted for review with #976. It does not prove
+installation on the trusted default branch; #977 owns that separate, explicitly
+authorized operation. The existing worker still authenticates the producer,
+comparison, policy and current native evidence before serialized publication.
+
+An accepted dispatch can omit `workflow_run_id`. The caller MUST correlate that
+operation without blindly repeating its POST or adopting a merely recent run.
+The infrastructure acknowledgment adapter derives `operation` as SHA-256 of the
+exact encoded version-1 handoff, including producer run/attempt, kind, comparison,
+policy and any verified body. The source-only workflow accepts this internal
+string input and includes it in its native run title. Progress wakes prefix
+the digest with their native observation sequence, so later progress still
+dispatches while a duplicate observation shares its acknowledgment. The worker recomputes the
+digest from its actual handoff before any provider read; a missing or forged
+correlation is skipped and the Action publishing step fails. It grants no publication
+authority and is not an independent attestation of executable producer code.
+No public Action option, consumer template or model-investigation bound changes.
+
+```mermaid
+flowchart LR
+  H[Validated handoff] --> P[One dispatch POST]
+  P --> D{Run ID returned?}
+  D -->|yes| V[Validate exact worker and publishing step]
+  D -->|no| L[Read complete correlated run listings]
+  L -->|one exact match| V
+  L -->|none, foreign, ambiguous or unavailable| K[Keep verified card and Check fallback]
+  V -->|successful publication| R[Existing receipt may proceed]
+```
+
+In words, the direct ID remains the ordinary path. Missing-ID recovery reads the
+workflow identity and the authenticated producer's creation time/attempt, then
+searches that workflow on the same repository/default ref. A match requires the
+full operation title, repository, workflow ID/path, event, branch, first worker
+attempt and a creation time no earlier than the origin. Enumerate up to ten pages
+of 100 unique runs and require a consistent complete count before adopting one
+match. A truncated, repeated, inconsistent or ambiguous listing is unresolved.
+Six lookup passes with 500 ms between passes cover eventual visibility and
+transient reads; 401/403 or invalid identity fails closed. These fixed bounds
+apply only to short acknowledgment reads. They impose no verifier research
+cutoff, token budget, turn count or read quota.
+
+The adapter remembers a submitted operation within its producing attempt and
+shares an in-flight acknowledgment between duplicate callers. A lost POST
+response or a subsequent lookup failure never permits another POST for that
+operation in that adapter. Retrying acknowledgment repeats reads. This is not a
+durable exactly-once protocol across arbitrary process restarts. A native rerun
+has a different producer attempt and therefore a different handoff identity;
+ordinary worker source/attempt fences continue to apply.
+
+Even a directly returned ID MUST match the expected native title, repository,
+workflow path/ref/event and first worker attempt before its one successful
+publishing job/step can acknowledge completion. Failure leaves the last verified
+comment and existing Check/Job Summary authoritative, performs no unqueued card
+fallback and issues no completed publication receipt. Operator guidance is:
+“Publication acknowledgment unavailable. Inspect the native writer run and retry
+acknowledgment; the previous verified review remains available.” This adds no
+locale-specific status-card text; diagnostics remain technical detail.
+
+Rollout requires reviewing the matching adapter and source workflow together and
+then installing that exact workflow on trusted default under #977. An old writer
+that lacks operation correlation cannot satisfy this recovery contract. A
+prepared PR, develop merge or fake-provider control does not demonstrate an
+installed writer. Keep production verification disabled throughout.
+
+The test budget is **13 new dispatch declarations / 18 controlled-provider
+rows**, plus one worker declaration covering missing/forged correlation (two rows), plus the seven existing dispatch controls and existing publication/policy
+integration suites. Distribution: unique accepted 204, absent match, ambiguity,
+four foreign-identity dimensions, missing permission, transient workflow/origin/run-list read failures,
+read-only retry after acceptance, foreign direct ID, later-page match, incomplete
+listing, lost-response/concurrent retry, replaced origin attempt and distinct/replayed
+progress sequences. Assert POST
+counts, selected run, absent acknowledgment on failures, and the existing
+preserved-card/no-receipt behavior through the actual publication workflow.
+All endpoints are fake; no real secrets or GitHub writes occur.
+
+Acceptance requires that matrix, targeted publication integration, workflow,
+typecheck, build/bundle, architecture, coverage, documentation and specification
+checks at the delivered SHA. Register the adapter in the existing capability
+catalog, regenerate its view, and update failure/retry guidance. Keep historical
+pilot artifacts and all qualification gates unchanged. Primary API behavior is
+specified by [GitHub workflow dispatch](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event),
+[workflow runs](https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-workflow)
+and [native run names](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#run-name).
