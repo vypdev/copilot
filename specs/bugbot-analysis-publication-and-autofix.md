@@ -4435,3 +4435,326 @@ does not silently redirect it. Preserve prompt/schema/order/retry/runtime/source
 identity, all existing thresholds and zero evaluated-PR writes. A v1 score cannot
 qualify v2, and a failed new campaign still leaves all 42 full reviews unstarted.
 Production verification remains disabled regardless of the eventual score.
+
+## Proposed change: Preregister and evaluate the Luna xhigh detector on the unchanged 174 case EV 07 corpus
+
+- Status: Draft
+- Catalog capability: bugbot-analysis-and-autofix
+
+### 1. Executive summary
+
+This update preregisters one independently reviewable qualification phase for the Luna xhigh detector on corpus revision 2. It preserves the existing analysis, publication, and autofix contract and all historical corpus evidence. Before any measured call, the exact source, drivers, runtime, prompts, schemas, corpus selection, ordering, and retry policy must be committed and admitted. The result must account for every outer case and actual follow-up, including failure or interruption. A passing detector score can admit the paired full-review phase under its existing rules; it does not qualify or activate a verifier profile. Production verification remains disabled.
+
+### 2. Problem, current behavior, and evidence
+
+#### 2.1 Problem
+
+The previous campaign did not pass the independent detection gate, and its older source pin cannot establish the behavior of the merged implementation or a later correction. Operators need a result tied to the exact reviewed source and execution tuple, with enough retained evidence to distinguish a complete pass from a failed, interrupted, unavailable, or incomplete campaign.
+
+#### 2.2 Current behavior
+
+The existing qualification contract uses committed plans and source/runtime identity checks; campaign score thresholds assess completed evidence and do not impose research deadlines or token ceilings. The quality-observability contract records that corpus revision 2 keeps the 174 IDs, order, and labels unchanged, while preserving revision 1 and historical measurements. It requires a new committed plan selecting and hashing revision 2 before measurement. No revision-2 qualification result is established by the corpus correction itself. See `docs/bugbot/quality-observability.mdx`.
+
+The agent execution contract binds pre-branch SDD work to its immutable source view and applies existing preparation and operation deadlines in that scope. The proposed qualification lifecycle must be a separately authenticated, cancellation-only, read-only route that preserves the normal detector workspace and execution path; it must not broaden ordinary consumer defaults or the SDD source deadline. The runtime contract and its evidence are described in `docs/agents/execution-contract.mdx` and `specs/agent-execution-policy-hardening.md`.
+
+#### 2.3 Evidence and unknowns
+
+The selected tree contains the current owning contract at `specs/bugbot-analysis-publication-and-autofix.md`, the runtime owner at `specs/agent-execution-policy-hardening.md`, the execution guidance at `docs/agents/execution-contract.mdx`, and corpus-revision evidence under `quality/bugbot/evidence/issue-985/`. These establish the contracts and revision relationship cited above; they do not establish that issue #974's campaign has run or passed. The historical failure is context for this proposed delta, not a result for the new source pin. Actual qualification outcome, provider-reported model identity, and usage remain unknown until supported by retained run evidence.
+
+### 3. Actors, surfaces, and terminology
+
+The qualification maintainer prepares and reviews the immutable plan and evidence; the authenticated qualification composition admits the narrowly scoped research operation; the ordinary detector and its provider adapter perform the analysis; and an independent reviewer inspects the complete ledger and score. The evidence README and plan/results artifacts are the operator-facing record, alongside the existing quality-observability documentation.
+
+“Corpus revision 2” means the explicitly selected corrected corpus with the original 174 case IDs, order, and labels. “Outer case” means one of those corpus entries; an application-generated literal follow-up is recorded as part of the actual operation, not silently omitted. “Configured/resolved identity” records the committed selection and runtime resolution; “provider-reported identity” records only what the provider actually reports, and remains unknown if unavailable. “Research lifecycle” means the trusted read-only investigation route with explicit cancellation and descendant cleanup. “Passing corpus” means all unchanged scoring gates pass on complete evidence; it is not verifier-profile qualification.
+
+### 4. Goals, non-goals, and fixed invariants
+
+#### 4.1 Goals
+
+1. Evaluate exactly the explicitly pinned revision-2 corpus using the ordinary detector with the proposed Codex/OpenAI `gpt-6-luna` xhigh configuration, without model substitution or a claim that Sol verification ran.
+2. Make the preregistration and complete outcome independently inspectable: preserve all 174 case outcomes, actual generated-literal follow-ups, attempts, bounded failures, interruptions, observer state, prompt/schema identity, configured and resolved runtime identity, and provider-reported identity when available.
+3. Apply the existing gates unchanged: precision at least 90%, recall at least 85%, F1 at least 87%, exact location, severity, and category each at least 80%, and Brier score at most 0.16. Failed, interrupted, missing, or incomplete evidence cannot admit the paired phase.
+4. Admit the paired full-review phase only after a genuinely passing corpus and only for the same committed implementation, drivers, runtime, and profile. Freeze the full-review driver and admission closure before the corpus run; a failed or incomplete corpus leaves that phase unstarted.
+5. Retain the deterministic controls for source/runtime rejection, next-phase rejection after corpus failure, incomplete-attempt visibility, and acceptance of unknown usage as telemetry. Evaluated PR write attempts remain zero.
+
+#### 4.2 Non-goals
+
+This is a backlog specification delta, not an execution authorization, campaign result, profile qualification, release, or production activation. It does not reopen the earlier delivery, change labels or historical measurements, install a default, enable verification, or claim real provider, human Setup, or platform acceptance. It does not introduce a model fallback, public setting, ambient switch, write-capable research role, artificial empty detector workspace, ad hoc brokered flag, inflated timeout, or replacement executor.
+
+#### 4.3 Fixed invariants
+
+- Preserve revision 1/default behavior, all 174 revision-2 identities/order/labels, the 173 unchanged cases, and every frozen historical measurement. Selection and corpus loading must be coherent; foreign path/hash, wrong count, or changed identities reject before model execution.
+- Commit and independently admit the exact source and runtime tuple, actual CLI and launcher digests, drivers, corpus hashes, prompts, schemas, order, concurrency, and retry policy before measured calls. Preparation/admission is not proof that a process spawned; flags do not prove a provider-reported model or session.
+- Use the ordinary detector, capability, provider, and canonical source workspace. The research route is authenticated, read-only, and cancellation-only. Explicit abort cancels the complete ordinary operation and descendants and cleans owned private artifacts. Source-snapshot, authority, write, or integrity mismatches reject before spawn. Existing consumer defaults, technical version/ACL probes, and pre-branch SDD source deadlines retain their scope.
+- Research elapsed time, turn/read counts, and token usage are telemetry, not investigation cutoffs or grounds to reject supported evidence. Preserve unknown usage as unknown. Do not retry to chase a passing score; preserve first failures, all attempts, and negative admission decisions.
+- Keep the external independently supplied bootstrap/plan pins and sanitized Git admission before imports or CLI probes. A passing detector corpus admits only the same frozen paired phase; zero actual candidates means zero verifier sessions, and phase 42 remains unstarted until genuine corpus passage. This result does not qualify a verifier profile.
+- Production verification stays disabled, defaults and releases remain unchanged, and evaluated PR write attempts stay at zero.
+
+| Requirement | Behavior |
+| --- | --- |
+| EV974-G01 | Select only the explicitly pinned v2 corpus from merged #985; preserve v1/default,174 IDs/order/labels,173 unchanged cases and every frozen historical measurement. |
+| EV974-G02 | Use the ordinary detector/benchmark and its actual generated-literal follow-ups with Codex/OpenAI gpt-6-luna xhigh. Record configured/resolved identities separately from provider-reported identities; unavailable provider identity/usage remains unknown. No model substitution. |
+| EV974-G03 | Durably retain every application CLI attempt, prompt/schema identity, response or bounded failure, observer state, interruption and outer-case outcome. Distinguish preparation/admission from proof of process spawn; do not infer a session or reported model from flags. |
+| EV974-G04 | Research ends on completion, actual failure or explicit cancellation, with the complete ordinary operation and descendants canceled and owned private artifacts cleaned. Research time, turn/read counts or token usage cannot cut the investigation short or reject supported evidence. Write/source-snapshot/authority mismatches reject before spawn. |
+| EV974-G05 | Apply all existing precision/recall/F1/location/severity/category/Brier gates to all 174 cases. Failed, interrupted, missing or incomplete attempts remain visible and cannot admit the paired phase. |
+| EV974-G06 | Freeze one coherent corpus and full-review driver/admission closure before 174. A passing v2 corpus can admit only the same implementation/drivers/runtime/profile to the fixed14-by-three phase. Zero actual candidates entails zero verifier sessions; phase42 remains unstarted until a genuinely passing corpus. |
+| EV974-G07 | Preserve the external independently supplied bootstrap/plan pins, source/lock/compiler/driver/runtime identity and sanitized Git admission before imports or CLI probes. Freeze actual CLI/interpreter/launcher digests and prompt/schema generators before measurement. |
+| EV974-G08 | Preserve first failures, complete ledgers and negative decisions; no rerun to chase a pass. A detector pass is not a qualified verifier profile. Production remains disabled, no default installation/release occurs, and evaluated PR write attempts remain zero. |
+
+### 5. Current versus proposed product journey
+
+The retained owner’s review journey remains in force: pin the review inputs, collect and validate detector output, verify eligible findings, then publish only after validation and freshness checks. This delta adds a separately preregistered qualification journey for the detector on the unchanged EV-07 corpus.
+
+| Stage | Current | Proposed delta | Operator-visible result |
+|---|---|---|---|
+| Admit | The ordinary findings path uses the canonical repository workspace and existing execution bounds. | After the stated prerequisites are merged, admit only the explicitly pinned v2 corpus and trusted research composition. Keep v1 as the default. Reject source, runtime, driver, schema, output, credential, or authority mismatches before child spawn. | The preregistration identifies the exact source and execution tuple before measurement. |
+| Measure | The prior EV-07 campaign is historical evidence from an older source pin. | Run the ordinary detector with the proposed Codex/OpenAI `gpt-6-luna` xhigh configuration against all 174 cases, in the committed order and retry policy. Retain every actual generated-literal follow-up. | One complete, inspectable attempt ledger; provider-reported model and usage remain distinct from configured/resolved identities and may be unknown. |
+| Decide | The retained contract governs ordinary findings and publication. | Apply every unchanged numerical gate to the complete corpus. Failed, interrupted, missing, or incomplete attempts remain visible and cannot admit the paired phase. | Publish the exact score and outcome, including failure; incomplete or failed corpus leaves full review unstarted. |
+| Hand off | Qualification does not activate production verification. | A passing v2 corpus may admit only the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase. | No claim that Sol ran, no verifier qualification from detector results, and production remains disabled. |
+
+Text equivalent: prerequisite merge and exact preregistration -> pinned v2 admission -> 174-case detector measurement and ledger -> gate decision -> either stop with retained evidence or admit the unchanged tuple to the next phase. The retained owner at `specs/bugbot-analysis-publication-and-autofix.md` remains authoritative for finding identity, verification, publication, and autofix behavior.
+
+### 6. Functional behavior and state model
+
+#### 6.1 Qualification path
+
+1. The authenticated qualification composition selects the research lifecycle only after prerequisites are merged. Freeze the final implementation, actual CLI and launcher digests, drivers, corpus, prompts, schemas, order, and retry policy before any measured call.
+2. Load only the explicitly pinned v2 corpus selected from merged #985. Confirm 174 cases, preserved v1/default behavior, the same 174 IDs/order/labels, 173 unchanged cases, and every frozen historical measurement. Reject a foreign path or hash, wrong count, or altered identity set before model execution.
+3. Run the ordinary detector/capability/provider path in its canonical source workspace with read-only provider arguments and the ordinary output contract. Use Codex/OpenAI `gpt-6-luna` xhigh; do not substitute a model. Record configured and resolved identities separately from provider-reported identities. Missing provider identity or usage is unknown, not inferred from flags.
+4. Retain each outer-case attempt, actual generated-literal follow-up, prompt/schema identity, response or bounded failure, observer state, interruption, and outer outcome. Distinguish preparation/admission from evidence that a child process actually spawned. Preserve the first failure and do not rerun to chase a pass.
+5. Score all 174 cases using the unchanged gates: precision at least 90%, recall at least 85%, F1 at least 87%, exact location/severity/category each at least 80%, and Brier at most 0.16. Keep the complete ledger and exact score, including negative decisions.
+6. Only a genuinely passing corpus may admit the identical implementation, drivers, runtime, and profile to the fixed 14-by-three phase. Zero actual candidates means zero verifier sessions. Phase 42 stays unstarted until the corpus passes.
+
+#### 6.2 Alternative, interruption, and recovery behavior
+
+- A source snapshot, write/source mismatch, or authority mismatch rejects before spawn. Preparation or admission alone is not proof of a process launch.
+- Explicit cancellation ends research, cancels the complete ordinary operation and descendants, and cleans owned private artifacts. Research duration, turn/read counts, and token usage cannot end investigation or reject supported evidence. Existing ordinary consumer defaults and technical version/ACL probes retain their current scope.
+- Failed, interrupted, missing, or incomplete attempts remain in the results and block paired-phase admission. Unknown usage is valid optional telemetry. Provider-reported identity stays unknown when unavailable.
+- A detector pass qualifies no verifier profile and authorizes no production activation, default installation, release, or evaluated PR write. Evaluated PR write attempts must be zero.
+
+#### 6.3 State model
+
+| State | Meaning | Allowed next state | Recovery/owner |
+|---|---|---|---|
+| Not admitted | Prerequisites, trusted composition, or source/authority pins are not satisfied. | Admitted only after validation succeeds. | Qualification composition; no child is started on rejection. |
+| Admitted | Exact corpus and preregistration pins are accepted; this does not prove spawn. | Measuring, or rejected before spawn. | Admission boundary records the decision. |
+| Measuring | Outer attempts and any actual follow-ups are being recorded. | Complete, failed, or canceled. | Research owner retains partial ledger and controls explicit cancellation. |
+| Complete | All 174 outer cases and actual follow-ups have terminal outcomes. | Passed or failed gate. | Scorer records the exact result and full ledger. |
+| Failed/canceled/incomplete | Failure, interruption, or missing outcomes prevent a complete passing corpus. | Terminal for this preregistration. | Preserve first failure and artifacts; no pass-chasing rerun or paired phase. |
+| Passed corpus | All unchanged gates pass on complete evidence. | Paired phase admitted with the same frozen tuple. | Qualification owner; no verifier qualification or production activation follows by implication. |
+
+### 7. User-facing configuration
+
+This is a trusted qualification composition, not a new public Action input, CLI option, repository Variable, or ambient environment switch. No caller-supplied model fallback or write-capable exception is added.
+
+| Input | Type and allowed value | Default and scope |
+|---|---|---|
+| Corpus selection | Explicit committed v2 selection with matching path/hash and 174-case identity set | Omitted selection preserves v1/default and historical plan/score bytes; no silent redirect. Selection is frozen for the run. |
+| Detector identity | Codex/OpenAI provider, `gpt-6-luna`, xhigh | Fixed by the preregistration; no model substitution. Configured/resolved and provider-reported identities are recorded separately. |
+| Order and retry policy | Exact committed order and policy | Frozen before measured calls; one outer attempt per case, with ordinary application follow-ups or retries recorded if they actually occur. No rerun to chase a pass. |
+| Usage telemetry | Optional provider-reported usage | Unknown is permitted. Usage cannot stop research, reject supported evidence, or affect scoring/admission. |
+| Cancellation | Explicit cancellation signal | Available to the authorized research operator; on cancellation, stop the operation and descendants and clean owned private artifacts. |
+
+Invalid corpus pins, source/runtime/driver/schema/output pins, or authority reject before spawn. The exact public configuration surface is intentionally not configurable through user-controlled inputs. The concrete project invocation and prerequisites for validation remain unverified in this draft.
+
+### 8. Clean Architecture design
+
+#### 8.1 Responsibilities and dependency direction
+
+| Boundary | Owns | Must not own |
+|---|---|---|
+| Domain and pure policy | Corpus identity, gate thresholds, phase-admission decision, terminal outcome classification | Provider calls, process management, or publication effects |
+| Application qualification workflow | Pin validation, measurement orchestration, attempt/follow-up accounting, complete-ledger checks, scoring inputs, and paired-phase admission | Model substitution, mutable corpus selection, or production activation |
+| Semantic execution boundary | Trusted findings-role request, read-only qualification authority, canonical workspace, and cancellation contract | Public switches, ambient authority, or write-capable roles |
+| CLI/process adapter | Actual spawn evidence, bounded response/failure capture, descendant cancellation, and owned-artifact cleanup | Inferring provider identity from configured flags or treating preparation as spawn |
+| Evidence and presentation | Preregistration, complete results ledger, exact score, observer state, interruption, and sanitized recovery facts | Rewriting historical issue-950 evidence or hiding failed/incomplete attempts |
+
+The selected source defines `AgentExecutionPlan` in `src/domain/agent_execution_plan.ts`; planning is composed in `src/infrastructure/agents/agent_execution_planner.ts`; process execution and cancellation are handled in `src/data/repository/agent_cli_execution.ts`; the findings capability adapter is in `src/data/repository/ai/agent_capability_adapter.ts`. The current planner’s brokered verification route requires an empty read-only workspace, while the ordinary findings adapter supplies its request timeout. The proposal therefore requires a narrowly scoped, authenticated, cancellation-only read-only lifecycle through the existing planner and executor while retaining the canonical detector workspace and ordinary detector/capability/provider path. Do not set a brokered flag ad hoc, move detector work to an artificial empty directory, inflate a timeout, or replace detector transport.
+
+#### 8.2 Contracts and trust boundaries
+
+- Only trusted authenticated qualification composition can select the exception. The plan must bind findings capability, read-only workspace, source/runtime/driver/schema/output identities, credentials isolation, and explicit cancellation authority consistently.
+- Preserve ordinary consumer defaults, pre-branch SDD source deadlines, bounded version/ACL probes, sandbox, credentials, local schema/output validation, and freshness/integrity contracts in their existing scopes.
+- Reject write capability, forged or inconsistent authority, nested/foreign workspace, and ambient provider configuration before child spawn. Preparation/admission must be represented separately from actual process spawn.
+- Research completion, actual failure, or explicit cancellation ends the operation. Cancellation reaches descendants and cleans only owned private artifacts. No elapsed research cutoff, turn/read limit, or token limit may reject supported evidence.
+- Attempt and results artifacts must preserve the frozen inputs, every outer case and actual follow-up, response or bounded failure, unknown telemetry, interruption, and exact gate outcome. Keep prior issue-950 plans and measurements immutable.
+
+#### 8.3 Architecture acceptance
+
+The qualification owner must coordinate the scoped amendment with `specs/agent-execution-policy-hardening.md` and compatible runtime guidance in `docs/agents/execution-contract.mdx`. Validate that selection is unavailable to public configuration and that rejection happens before spawn; cancellation terminates a deterministic long-running child and descendants with cleanup; ordinary and immutable-source deadline behavior remains intact; and read-only execution preserves the canonical workspace. Verification must use actual controlled process/admission operations where required, with no claim that fake tests establish real provider, human setup, or platform acceptance. The precise installed validation commands and their definitions are unverified; acceptance requires the prescribed specification, catalog, and documentation consistency outcomes without inventing an invocation.
+
+### 9. UI/UX and content contract
+
+This delta adds one independently reviewable EV-07 detector qualification result to the retained qualification and publication contract in `specs/bugbot-analysis-publication-and-autofix.md` (see “Versioned corpus input correction (#985)”). The run status and its durable evidence must distinguish preregistered, running, passed, failed, incomplete, canceled, and unavailable outcomes. Report the corpus phase as complete only after all 174 outer cases and every actual generated-literal follow-up have terminal outcomes. A passing detector result admits only consideration of the separately gated full-review phase; it does not qualify a verifier profile or enable production.
+
+The evidence README and results view must lead with what happened, what remains unstarted, the impact, the next review action, and links to the exact preregistration and result artifacts. Show aggregate gate outcomes and the exact scores; provide per-case and per-attempt details in the linked ledger. State explicitly when an attempt failed, was interrupted, is missing, or has unknown provider-reported identity or usage. Do not present preparation or admission as proof that a process spawned, configured model identity as provider-reported identity, or a detector pass as evidence that Sol ran. Keep the existing finding/publication surfaces and notification behavior unchanged.
+
+Use plain text labels alongside any status icons, semantic headings, descriptive artifact links, and readable tables on narrow screens. Render evidence as sanitized Markdown and keep raw prompts, credentials, and unrestricted command output out of public summaries. Preserve the existing locale and fallback policy of the owning specification.
+
+### 10. Failure, recovery, and cleanup
+
+Reject source, write-authority, runtime, driver, schema, output-contract, or evidence-integrity mismatches before process spawn. A rejected admission must retain its bounded reason and leave no child process or owned private runtime behind. Distinguish this outcome from an admitted operation whose process actually spawned; flags, plans, or configured argv alone do not establish a session.
+
+Once admitted, the ordinary detector operation and its descendants continue until completion, an actual failure, or explicit cancellation. The research lifecycle has no elapsed-time, turn-count, read-count, or token-usage cutoff. On cancellation, terminate descendants and clean owned private artifacts. Preserve every application CLI attempt, response or bounded failure, observer state, interruption, and outer-case outcome in the durable ledger. Keep one outer attempt per case and the exact preregistered order, concurrency, and retry policy; retain any actual application-generated follow-up or retry, and never rerun to chase a passing score.
+
+A failed, interrupted, missing, or incomplete attempt remains visible and cannot admit the paired phase. A failed or incomplete corpus leaves full review unstarted. A passing corpus can admit only the same frozen implementation, drivers, runtime, and profile to the fixed 14-by-three phase; zero actual candidates means zero verifier sessions. Phase 42 remains unstarted until a genuinely passing corpus. These outcomes are exercised by the lifecycle and admission controls, including `ev974-C03`, `ev974-C07`, `ev974-C12`, and `ev974-C15`.
+
+### 11. Security, permissions, and privacy
+
+The exception applies only to the authenticated qualification composition and its read-only findings route. Retain the canonical detector workspace and ordinary detector, capability, provider, and executor path. Do not expose a public Action input, CLI setting, repository Variable, ambient environment switch, unsupported role, or write-capable route that grants the exception. Reject fixer/write capability and inconsistent or forged authority before any child starts. Preserve ordinary consumer defaults, sandboxing, credential isolation, schema/output validation, and existing technical version, ACL, and pre-branch source-deadline boundaries. The agent-runtime owner must explicitly document the narrow lifecycle exception in its contract and compatible runtime guidance if this route is selected.
+
+Keep independent bootstrap and plan pins, source and lock identity, compiler, driver, runtime, and sanitized Git admission ahead of imports or CLI probes. Freeze actual CLI/interpreter/launcher digests and prompt/schema generators before measurement. Never infer a session or reported model from configuration flags. Preserve unavailable provider-reported identity and usage as unknown; usage is optional telemetry and cannot stop the investigation or disqualify supported evidence. Evaluated PR write attempts remain zero, and production verification remains disabled for every outcome. Authority and boundary controls include `ev974-C04`, `ev974-C05`, `ev974-C06`, and `ev974-C08`.
+
+### 12. Observability and operational UX
+
+The issue974 evidence ledger must make the measurement independently inspectable: selected corpus identity and version, all 174 ordered case identities and labels, frozen historical measurements, source/runtime/driver/profile and prompt/schema identities, configured and provider-reported model identities as separate fields, actual attempts and generated-literal follow-ups, observer state, interruptions, outer-case outcomes, gate calculations, and the final pass/fail/incomplete/unavailable disposition. Preserve unknown usage and provider identity explicitly. Retain the first failure and every negative decision; do not overwrite them with a later run.
+
+Report exact precision, recall, F1, exact location, severity, category, and Brier results against the unchanged gates: precision at least 90%, recall at least 85%, F1 at least 87%, each exact location/severity/category measure at least 80%, and Brier at most 0.16. Account for all cases and attempts even after an early gate failure. Keep v1/default selection and its historical plan and score bytes intact; the explicit v2 selection must preserve the 174 IDs, order, and labels, 173 unchanged cases, and all frozen historical measurements. The pinned corpus and coherent full-review admission are covered by `ev974-C09`, `ev974-C10`, and `ev974-C11`; unchanged gates and phase admission are covered by `ev974-C12` and `ev974-C13`.
+
+Use `quality/bugbot/evidence/issue974/README.md`, `quality/bugbot/evidence/issue974/plan.json`, and `quality/bugbot/evidence/issue974/results.json` as the declared evidence destinations. Summaries and operational guidance must describe how to inspect actual attempts, failures, cancellation, zero-write status, and recovery without exposing credentials or raw prompt contents. No verification command or invocation is established by this delta; its concrete invocation and prerequisites remain unverified.
+
+### 13. Compatibility, migration, rollout, and rollback
+
+Keep the existing v1 corpus and default behavior unchanged. The v2 corpus is selected only by the exact explicit committed pin in the preregistration; omission retains v1/default and cannot silently redirect a run. Do not modify issue950 plans or data, frozen historical measurements, labels, case order, or the historical 173 unchanged cases. Reject foreign corpus paths or hashes, wrong counts, and changed identity sets before model execution.
+
+Commit the exact final implementation, corpus and driver hashes, actual CLI/launcher digests, prompts/schemas, runtime/profile, order, concurrency, and retry policy before any measured call. Start qualification only after the deterministic prerequisites, causal #985 correction, and independently justified corrections are merged and the full review driver/admission closure is frozen. Preserve the external bootstrap/plan pins and sanitized Git admission. The supplied merged-prerequisite facts identify selected commit `0ddac1011204db6dda45dff0f99e3ef91309c701`; they do not constitute qualification measurements.
+
+This is a backlog specification delta, not a campaign preregistration, execution result, release, or activation authorization. Keep `BUGBOT_VERIFICATION_MODE=disabled`; do not install a new default, release, or activate production verification. A detector pass admits only the specified next phase; it is not verifier-profile qualification. Rollback or a failed/incomplete run must retain its evidence and negative decisions, with no model substitution or pass-seeking rerun.
+
+### 14. Testing strategy and numeric budget
+
+The amendment adds a minimum of 24 distinct deterministic controls across ordinary Jest and the shadow control runner. Count each case once in its owning specification; these controls are additional to, and do not relabel or replace, the existing 216 combined controls. Preserve the five approved budget areas and their existing minimums. The new controls cover investigation lifecycle and authority, explicit v2 admission, corpus scoring and attempt accounting, immutable preregistration, and phase admission. Repeated model calls are corpus measurements, not additional deterministic cases.
+
+Exercise pure authority and selection branches at 100% enumerated coverage. Changed process and planner modules retain at least 95% line and statement coverage and at least 90% branch and function coverage, alongside existing repository gates. Use controlled bootstrap and process operations for admission and cancellation; existing fakes do not prove provider, human Setup, or platform acceptance. Keep measurement evidence distinct from planned controls and deterministic acceptance.
+
+Acceptance includes the issue’s unchanged 174-case EV-07 corpus and all actual generated-literal follow-ups. Freeze the final implementation, corpus and driver hashes, actual CLI and launcher digests, prompts and schemas, ordering, concurrency, and retry policy before any measured call. Account for one outer attempt per case, each actual follow-up, interruption, failure, and incomplete attempt. Preserve optional unknown usage and provider-reported model identity; configuration flags do not prove spawn or reported identity. Apply every existing precision, recall, F1, exact-location, severity, category, Brier, paired-cohort, repetition, positive-control, and post-run latency gate without weakening it. Preserve first failures and negative decisions; do not rerun to chase a pass.
+
+Keep the explicit v2 selection coherent across corpus loading and full-review admission, while omission retains v1/default and frozen historical measurements. Reject source, write, runtime, driver, schema, output, credential, or authority mismatches before spawn. Research continues until completion, actual failure, or explicit cancellation; time, turns, reads, and token usage cannot truncate supported investigation. Cancellation terminates the ordinary operation and descendants and cleans owned private artifacts. Failed, interrupted, missing, or incomplete evidence remains visible and cannot admit the paired phase. A passing v2 corpus admits only the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase; zero actual candidates means zero verifier sessions, and phase42 remains unstarted until the corpus genuinely passes.
+
+Publication acceptance requires that the specification satisfy the repository’s required format; internal and cross-document consistency is checked; and reciprocal catalog ownership, paths, and evidence agree with the generated view. The source standard names SDK maintenance invocations, but this selected project’s applicable invocation and prerequisites remain unverified here; do not claim those outcomes executed. Structural inventories and derived counts demonstrate consistency only, not semantic completeness, executed acceptance, or qualification.
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Investigation lifecycle and authority | 8 | Observable scenarios in the case inventory. |
+| Explicit v2 admission | 6 | Observable scenarios in the case inventory. |
+| Attempt ledger and independence | 6 | Observable scenarios in the case inventory. |
+| Next-phase gate | 4 | Observable scenarios in the case inventory. |
+| Total | 24 | Distinct inventory cases; repeated executions do not add cases. |
+
+| Case ID | Area | Requirements | Scenario |
+| --- | --- | --- | --- |
+| ev974-C01 | Investigation lifecycle and authority | EV974-G04 | A new comparison control proves ordinary execution retains its existing timer while the explicitly admitted research route has no investigation timer. |
+| ev974-C02 | Investigation lifecycle and authority | EV974-G02, EV974-G04 | The research planner preserves canonical detector workspace, read-only provider argv/schema, credentials isolation and output contract. |
+| ev974-C03 | Investigation lifecycle and authority | EV974-G04 | A deterministic long-running child survives the former investigation boundary, then explicit abort terminates descendants and cleans its owned runtime. |
+| ev974-C04 | Investigation lifecycle and authority | EV974-G04 | The new research entry rejects fixer/write capability before any child starts. |
+| ev974-C05 | Investigation lifecycle and authority | EV974-G04 | Other unsupported roles cannot acquire the research exception through the findings-only route. |
+| ev974-C06 | Investigation lifecycle and authority | EV974-G04, EV974-G07 | An immutable SDD source snapshot/deadline cannot acquire the new exception or lose its existing admission/deadline contract. |
+| ev974-C07 | Investigation lifecycle and authority | EV974-G04 | A forged research plan with workspace-write or inconsistent authority is rejected by the process boundary with no child and exact cleanup. |
+| ev974-C08 | Investigation lifecycle and authority | EV974-G04, EV974-G07 | Nested/foreign workspace and ambient provider configuration still fail the ordinary preflight; no public/environment switch grants the exception. |
+| ev974-C09 | Explicit v2 admission | EV974-G01, EV974-G06 | The explicit committed v2 selection is consumed coherently by corpus loading and full-review admission. |
+| ev974-C10 | Explicit v2 admission | EV974-G01, EV974-G08 | Omitting the new selection retains v1/default and every historical plan/score byte; no silent redirect occurs. |
+| ev974-C11 | Explicit v2 admission | EV974-G01, EV974-G05 | A foreign corpus path/hash, wrong count or changed identity set is rejected before model execution. |
+| ev974-C12 | Explicit v2 admission | EV974-G05, EV974-G06 | V2 cannot weaken any numerical gate, paired cohort/repetition floor, positive-control requirement or post-run latency criterion. |
+| ev974-C13 | Explicit v2 admission | EV974-G07 | Actual v2 public-bootstrap launch rejects foreign source/runtime before modules or the CLI probe execute. |
+| ev974-C14 | Explicit v2 admission | EV974-G07 | Actual v2 public-bootstrap launch rejects foreign driver/bootstrap bytes; no alternative entry can initialize admission. |
+| ev974-C15 | Attempt ledger and independence | EV974-G02, EV974-G03 | Multiple actual generated-literal requests retain distinct starts, prompt/schema identities, observations and terminal response records. |
+| ev974-C16 | Attempt ledger and independence | EV974-G03, EV974-G07 | Failed preparation remains a failed application attempt without falsely claiming a spawned provider session or provider-reported model. |
+| ev974-C17 | Attempt ledger and independence | EV974-G03, EV974-G08 | Provider failure and every actually attempted follow-up are retained without an unregistered retry. |
+| ev974-C18 | Attempt ledger and independence | EV974-G03, EV974-G04, EV974-G05 | Mid-call interruption preserves the durable start and explicit incomplete/failed states, including all unstarted outer-case slots. |
+| ev974-C19 | Attempt ledger and independence | EV974-G02, EV974-G08 | Unknown/high/cumulative usage does not change evidence acceptance; configured flags do not become provider-reported identity. |
+| ev974-C20 | Attempt ledger and independence | EV974-G02, EV974-G03 | V2 input goes through the ordinary prompt builder with expected labels/oracles excluded; the ledger binds actual delivered prompt/schema bytes. |
+| ev974-C21 | Next-phase gate | EV974-G05, EV974-G06 | Failed or incomplete corpus admission launches zero full-review children and retains the actual first failed stage. |
+| ev974-C22 | Next-phase gate | EV974-G06, EV974-G07 | A passing-looking result for a foreign implementation, driver, runtime, corpus or profile tuple cannot admit 42. |
+| ev974-C23 | Next-phase gate | EV974-G03, EV974-G05, EV974-G06 | Missing, duplicate or unterminated attempt records prevent admission even when all outer case IDs claim completion. |
+| ev974-C24 | Next-phase gate | EV974-G05, EV974-G06, EV974-G08 | Authentic complete v2 evidence is independently rescored and can admit the unchanged fixed42-slot protocol, without qualifying or activating the profile. |
+
+### 15. Documentation and discoverability
+
+Update `docs/agents/execution-contract.mdx` with the narrowly authenticated, cancellation-only, read-only investigation lifecycle, its authority boundary, and descendant cleanup. Update `docs/bugbot/quality-observability.mdx` with the preregistration, exact attempt scope, unknown telemetry, failed and canceled outcomes, zero-write result, and recovery guidance. Update `specs/agent-execution-policy-hardening.md` with the explicit scoped runtime-contract amendment if this lifecycle is selected. Preserve ordinary consumer defaults, technical version/ACL probes, and pre-branch source deadlines in their existing scopes.
+
+Create `quality/bugbot/evidence/issue974/README.md`, `quality/bugbot/evidence/issue974/plan.json`, and `quality/bugbot/evidence/issue974/results.json`. The README explains truthful invocation and prerequisites, preregistration, attempt accounting, failure and cancellation, zero writes, recovery, and how to inspect the exact plan and results. The plan records the frozen source/runtime/driver/profile tuple, corpus selection and digest, prompts and schemas, ordering, concurrency, and retry policy before calls. Results retain the complete ledger, outcomes, exact scores, unknowns, and limitations, including failure or unavailability. These are prospective creates, not evidence that the files already exist. Preserve issue950 plans and data as historical evidence.
+
+Register evidence and tests with their appropriate existing catalog owners; do not introduce a synthetic capability or count a case twice. Keep the issue974 file inventory in the host-owned navigation slot. The immutable selected owner is `specs/bugbot-analysis-publication-and-autofix.md`; its retained contract and cases remain in force. The requirements and inventory establish deliverables, not executed validation. The concrete consumer validation invocation and prerequisites remain unverified.
+
+| Path | Change |
+| --- | --- |
+| docs/agents/execution-contract.mdx | update |
+| docs/bugbot/quality-observability.mdx | update |
+| quality/bugbot/evidence/issue974/README.md | create |
+| quality/bugbot/evidence/issue974/plan.json | create |
+| quality/bugbot/evidence/issue974/results.json | create |
+| specs/agent-execution-policy-hardening.md | update |
+| specs/bugbot-analysis-publication-and-autofix.md | update |
+
+[docs/agents/execution-contract.mdx](../docs/agents/execution-contract.mdx) · [docs/bugbot/quality-observability.mdx](../docs/bugbot/quality-observability.mdx) · [quality/bugbot/evidence/issue974/README.md](../quality/bugbot/evidence/issue974/README.md) · [quality/bugbot/evidence/issue974/plan.json](../quality/bugbot/evidence/issue974/plan.json) · [quality/bugbot/evidence/issue974/results.json](../quality/bugbot/evidence/issue974/results.json) · [specs/agent-execution-policy-hardening.md](agent-execution-policy-hardening.md) · [specs/bugbot-analysis-publication-and-autofix.md](bugbot-analysis-publication-and-autofix.md)
+
+### 16. Acceptance scenarios
+
+1. Given an authenticated qualification composition, when the research route is selected, then the ordinary detector, capability, provider path, and canonical source workspace remain in use with read-only authority and no investigation timer; ordinary execution retains its existing timer (`ev974-C01`, `ev974-C02`).
+2. Given a long-running descendant or explicit abort, when cancellation occurs, then the complete ordinary operation and descendants terminate and owned runtime artifacts are cleaned. Fixer/write capability, unsupported roles, forged authority, nested or foreign workspaces, and ambient provider configuration cannot acquire the exception or start a child (`ev974-C03`, `ev974-C04`, `ev974-C05`, `ev974-C07`, `ev974-C08`). An immutable SDD source snapshot and deadline retain their existing admission contract (`ev974-C06`).
+3. Given the explicitly pinned v2 selection, when corpus loading and full-review admission run, then they consume one coherent selection. Omitting the selection retains v1/default, all historical plan and score bytes, 174 case IDs/order/labels, 173 unchanged cases, and frozen measurements. A foreign path or hash, wrong count, or changed identity set is rejected before model execution, and v2 cannot weaken any score, cohort, repetition, positive-control, or latency gate (`ev974-C09`, `ev974-C10`, `ev974-C11`, `ev974-C12`).
+4. Given the preregistered Luna xhigh detector phase, when the ordinary detector and actual generated-literal follow-ups run, then the evidence accounts for every outer case and actual call, preserves configured/resolved identities separately from provider-reported identity, and leaves unavailable identity or usage unknown. No model substitution occurs; Luna detector evidence does not claim Sol verification. The exact corpus gates apply to all 174 cases, and any failed, interrupted, missing, or incomplete attempt remains visible and blocks paired-phase admission.
+5. Given a source, write, runtime, driver, prompt/schema, output, credential, or authority mismatch, when qualification admission is checked, then it rejects before process spawn. Preparation or admission alone is not proof of spawn. During admitted research, elapsed time, turns, reads, and token usage do not cut off the investigation or reject supported evidence; completion, actual failure, or explicit cancellation ends it, and cancellation cleans the complete operation and descendants.
+6. Given a failed or incomplete corpus, when the next phase is considered, then full review remains unstarted. Given a passing v2 corpus, only the same implementation, drivers, runtime, and profile may enter the fixed 14-by-three phase; zero actual candidates yields zero verifier sessions. Phase42 remains unstarted until the corpus genuinely passes. A detector pass alone does not qualify a verifier profile.
+7. Given the independent external bootstrap and plan pins, when admission is prepared, then source, lock, compiler, driver, and runtime identities and sanitized Git admission are frozen before imports or CLI probes; actual CLI/interpreter/launcher digests and prompt/schema generators are frozen before measurement. Given a passing detector result, production remains disabled, no default installation or release follows, and evaluated PR write attempts are zero.
+8. Given publication review, when the amendment is ready for publication, then required format is satisfied, internal and cross-document consistency is checked, and reciprocal catalog ownership, paths, and evidence agree with the generated view. These are explicit observable publication outcomes; they do not assert that a project command ran or that corpus acceptance passed.
+
+### 17. Requirements traceability
+
+The approved requirements map to the concrete behaviors in the host-retained inventory. EV974-G01 is exercised by the coherent explicit v2 selection, preserved v1/default and historical measurements, and rejection of foreign or altered corpus identity (`ev974-C09`, `ev974-C10`, `ev974-C11`). EV974-G02 is exercised by the ordinary detector and provider path, canonical workspace, actual follow-ups, separate configured/resolved and provider-reported identities, and no substitution (`ev974-C02`). EV974-G03 is exercised by durable accounting of attempts, generated-literal follow-ups, failures, interruption, observer state, and outer-case outcome; preserve the distinction between preparation/admission and actual spawn.
+
+EV974-G04 is exercised by ordinary timer preservation versus the research route without an investigation timer, cancellation and descendant cleanup, pre-spawn rejection, and preservation of existing SDD and ordinary preflight boundaries (`ev974-C01`, `ev974-C03`, `ev974-C04`, `ev974-C05`, `ev974-C06`, `ev974-C07`, `ev974-C08`). EV974-G05 is exercised by unchanged gates and rejection of wrong corpus identity or weakened thresholds (`ev974-C11`, `ev974-C12`), together with the 174-case outcome ledger and the rule that incomplete or failed attempts block phase admission. EV974-G06 is exercised by coherent corpus/full-review selection, immutable v1/default behavior, unchanged gates, same-tuple phase admission, and zero-session behavior where no candidates exist (`ev974-C09`, `ev974-C10`, `ev974-C12`). EV974-G07 is exercised by preserving source snapshot/deadline and ordinary admission boundaries (`ev974-C06`, `ev974-C08`), plus the frozen bootstrap, plan, source/runtime/driver identity, and pre-measurement CLI and generator digests. EV974-G08 is exercised by preserving historical defaults and measurements, making failures and negative decisions durable, withholding phase admission after failure, and keeping production disabled with zero evaluated-PR write attempts (`ev974-C10`).
+
+The complete host-retained inventory contains 24 distinct new controls; references above do not redefine or rename its case identities. Each inventory case must list only requirements whose observable behavior it exercises, and each requirement must map to at least one concrete case. The remaining approved case assertions are retained by the host inventory and must be reconciled against these requirement mappings there. Existing owning case IDs remain references and are not additional definitions. This traceability is structural; it does not claim test execution, semantic completeness, a passing corpus, verifier qualification, or production authorization.
+
+| Requirement | Cases |
+|---|---|
+| EV974-G01 | ev974-C09, ev974-C10, ev974-C11 |
+| EV974-G02 | ev974-C02, ev974-C15, ev974-C19, ev974-C20 |
+| EV974-G03 | ev974-C15, ev974-C16, ev974-C17, ev974-C18, ev974-C20, ev974-C23 |
+| EV974-G04 | ev974-C01, ev974-C02, ev974-C03, ev974-C04, ev974-C05, ev974-C06, ev974-C07, ev974-C08, ev974-C18 |
+| EV974-G05 | ev974-C11, ev974-C12, ev974-C18, ev974-C21, ev974-C23, ev974-C24 |
+| EV974-G06 | ev974-C09, ev974-C12, ev974-C21, ev974-C22, ev974-C23, ev974-C24 |
+| EV974-G07 | ev974-C06, ev974-C08, ev974-C13, ev974-C14, ev974-C16, ev974-C22 |
+| EV974-G08 | ev974-C10, ev974-C17, ev974-C19, ev974-C24 |
+
+### 18. Implementation sequence
+
+#### 18. Implementation sequence
+
+1. Treat the reported merges of #970, #971, #972, #973, and causal #985 as prerequisites to verify against the qualification admission record before any measurement. The supplied update identifies merged PRs #983, #984, #988, #986, and #990 and selected base `0ddac1011204db6dda45dff0f99e3ef91309c701`; these are planning inputs, not measurement evidence. Preserve the existing qualification bootstrap as the launch authority.
+2. Review and implement the narrowly scoped authenticated, cancellation-only, read-only investigation lifecycle through the existing planner and process executor. Keep the ordinary detector, capability, provider path, and canonical source workspace. Coordinate the explicit lifecycle amendment with `specs/agent-execution-policy-hardening.md` and the runtime guidance in `docs/agents/execution-contract.mdx`. Retain ordinary consumer defaults, pre-branch source deadlines, bounded version/ACL probes, and source, runtime, credential, schema, output, and integrity boundaries.
+3. Freeze and independently review the exact implementation, source and lock state, compiler, driver/runtime/profile, actual CLI/interpreter/launcher identities, prompt/schema generators, corpus selection, order, concurrency, retry policy, and full-review admission closure before measured calls. Pin only the explicit v2 corpus derived from merged #985. Keep v1/default, its historical plans and scores, the 174 identities/order/labels, and the 173 unchanged cases intact. Record exact identities and evidence in the new issue974 plan; do not treat flags as proof of a spawned process or provider-reported identity.
+4. Run the ordinary detector and benchmark for the 174-case v2 corpus using the proposed Codex/OpenAI `gpt-6-luna` xhigh configuration. Retain every application CLI attempt and generated-literal follow-up, prompt/schema identity, response or bounded failure, observer state, interruption, and outer-case outcome. Distinguish preparation/admission from proof of spawn, and configured/resolved identity from provider-reported identity. Unknown provider identity and usage remain unknown; do not substitute a model or rerun to chase a pass.
+5. Score the complete corpus against every unchanged precision, recall, F1, exact-location, severity, category, and Brier gate. Preserve failed, interrupted, missing, or incomplete attempts in the ledger. A failed or incomplete corpus does not admit the paired phase. Only a genuinely passing v2 corpus may admit the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase; zero actual candidates means zero verifier sessions, and phase 42 remains unstarted until admission.
+6. Publish the exact plan and complete result, including a failure or unavailable outcome, through the new issue974 evidence artifacts. Update `docs/bugbot/quality-observability.mdx`, `docs/agents/execution-contract.mdx`, and the scoped runtime owner consistently. Keep production verification disabled, evaluated PR write attempts at zero, and release, default installation, and verifier qualification out of this work.
+
+The 24 distinct proposed controls remain in the existing approved inventory and budgets; each is counted once in its owning SDD. They cover the investigation lifecycle/authority boundary, coherent explicit v2 admission and immutable v1 behavior, complete-attempt and gate handling, frozen full-review admission, and source/runtime/driver closure. Existing owner cases remain references, not new definitions. The retained owner contract and its existing test budgets are not replaced by these controls.
+
+### 19. Definition of Done
+
+#### 19. Definition of Done
+
+- [ ] The reviewed lifecycle exception is available only through trusted authenticated qualification composition; the ordinary detector path and canonical workspace remain intact, explicit cancellation terminates descendants and cleans owned private artifacts, and unsupported or write-capable routes fail before child spawn.
+- [ ] Source snapshot, authority, workspace, runtime, driver, schema, output, credential, and integrity mismatches reject before spawn. Research ends only on completion, actual failure, or explicit cancellation; elapsed time, turns, reads, and token usage do not cut off investigation or reject supported evidence. Ordinary consumer timers and bounded technical probes retain their existing scopes.
+- [ ] Preregistration pins the exact v2 corpus, implementation and complete driver/runtime/profile closure, prompts and schemas, execution order/concurrency/retry policy, and actual CLI/interpreter/launcher identities before measured calls. The explicit v2 selection is coherent across corpus loading and full-review admission; omission retains v1/default and frozen historical measurements.
+- [ ] The result accounts for all 174 outer cases and every actual generated-literal follow-up, failed or interrupted call, and incomplete attempt. Configured/resolved and provider-reported model identities remain distinct; unavailable provider identity or usage is recorded as unknown. No model substitution or pass-seeking rerun occurs.
+- [ ] All unchanged numerical gates are evaluated over the complete corpus: precision at least 90%, recall at least 85%, F1 at least 87%, exact location, severity, and category each at least 80%, and Brier score at most 0.16. Failed, interrupted, missing, or incomplete evidence stays visible and cannot admit the paired phase.
+- [ ] Deterministic admission controls reject foreign source/runtime, reject a failed corpus at the next phase, preserve incomplete attempts, and accept unknown usage as telemetry. The approved 24 distinct controls remain allocated across their owning specifications without duplicating case counts.
+- [ ] One coherent corpus and full-review driver/admission closure is frozen before 174. Only a passing v2 result may admit the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase. Zero actual candidates produce zero verifier sessions; phase 42 remains unstarted until a genuinely passing corpus. A detector pass is not a qualified verifier profile.
+- [ ] Every result, including a negative or unavailable decision, retains the complete ledger and first failures. Evaluated PR write attempts are zero. Production remains disabled; no default installation, release, or activation follows from this campaign.
+- [ ] The specification satisfies the repository’s required format; internal and cross-document consistency is checked; reciprocal catalog ownership, paths, and evidence agree with the generated view. The concrete invocation and prerequisites for these validation outcomes remain unverified in the selected project view; do not substitute a command inferred from an SDK example.
+- [ ] The new issue974 plan, results, and README are published at their declared paths, and the execution-contract and quality-observability documentation agree with the reviewed contract. Publication and documentation do not imply measurement, execution, qualification, or acceptance.
+
+### 20. References and decisions
+
+#### 20. References and decisions
+
+- This is a bounded amendment to the immutable retained owner `specs/bugbot-analysis-publication-and-autofix.md`. Its detector, publication, approval, recovery, quality-gate, and historical-evidence contracts remain in force.
+- Issue #974 defines the requested qualification question and the unchanged 174-case EV-07 corpus. The supplied planning update reports that prerequisites #970, #971, #972, #973, and causal #985 have merged; confirm that state through the authorized bootstrap and admission evidence before execution. Supplied PR identities and reported integration results are not source measurements or evidence that the #974 campaign ran.
+- `quality/bugbot/evidence/issue-950/ev07-shadow/preregistration.md`, `quality/bugbot/evidence/issue-950/ev07-shadow/campaign-provenance-results.md`, and `quality/bugbot/evidence/issue-950/ev07-shadow/plan.json` are historical pilot evidence. They establish neither qualification of the merged implementation nor the result of this future v2 campaign. Preserve the v1 corpus/default and all frozen historical records.
+- `quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs`, `quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs`, `quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs`, and `quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs` are existing source references supplied for review; inspect their exact selected-revision contents before relying on specific behavior or invocation details.
+- The lifecycle amendment is jointly owned with `specs/agent-execution-policy-hardening.md` and `docs/agents/execution-contract.mdx`. Qualification reporting and operator guidance are also updated in `docs/bugbot/quality-observability.mdx`. Prospective evidence files are declared in the host’s path inventory: `quality/bugbot/evidence/issue974/README.md`, `quality/bugbot/evidence/issue974/plan.json`, and `quality/bugbot/evidence/issue974/results.json`.
+- Decision: admit only the explicitly pinned v2 corpus for this measurement; never redirect v1/default. Use the ordinary Luna detector path and report that this does not establish that Sol ran. Preserve optional unknown usage, actual provider identity where available, first failures, and complete negative evidence.
+- Decision: a passing corpus can only admit the fixed paired phase under the same frozen tuple. It cannot qualify or activate a verifier profile. Production remains disabled and evaluated PR write attempts remain zero.
+- Unresolved operational evidence: exact implementation/driver closure and the concrete specification, consistency, and catalog-validation invocations must be verified in the immutable source and reviewed preregistration. No validation command, campaign result, or product acceptance is claimed here.
