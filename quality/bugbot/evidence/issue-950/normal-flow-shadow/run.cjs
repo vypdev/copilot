@@ -1,5 +1,7 @@
 'use strict';
 
+if (require.main === module) throw new Error('Use the independently reviewed immutable bootstrap; direct qualification runners are unsupported.');
+
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
@@ -9,26 +11,34 @@ const path = require('node:path');
 const official = require('../shadow-real-prs/official.json');
 const shadowPlan = require('../shadow-verification/plan.json');
 const root = path.resolve(__dirname, '../../../../..');
-const ts = require(path.join(root, 'node_modules/typescript'));
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
-}).outputText, filename);
-
-const load = file => require(path.join(root, 'src', file));
-const { composeBugbotReview } = load('infrastructure/composition/bugbot_review_composition');
-const { createPinnedBugbotShadowVerifier } = load('infrastructure/bugbot/shadow_verification_adapter');
-const { ask, codexInvocation } = load('infrastructure/bugbot/shadow/session.cjs');
-const { projectBugbotReviewOperationContext } = load('application/usecases/steps/commit/bugbot/bugbot_review_operation_context');
-const { buildAgentTasksFromValues } = load('actions/agent_input_builder');
-const { Ai } = load('data/model/ai');
-const { createFindingsQueryPort } = load('infrastructure/composition/agent_capability_composition_root');
-const { AgentCliClient } = load('data/repository/agent_cli_client');
-const { AgentExecutionPlanner } = load('infrastructure/agents/agent_execution_planner');
-const { resolveBugbotReviewEffort } = load('domain/bugbot/review_configuration');
+const { attestSource, attestRuntime, admitQualificationModules, attestDrivers, pinnedGit, trustedGitExecutable,
+    attestCommittedArtifact, requireBootstrapAdmission } = require('../execution-provenance.cjs');
+const { requirePinnedExecution, requirePinnedCliProbe, preparePinnedExecution } = require('../ev07-shadow/implementation.cjs');
+const normalFlowDrivers = Object.freeze(['run.cjs', '../execution-provenance.cjs', '../ev07-shadow/load.cjs',
+    '../ev07-shadow/implementation.cjs', '../ev07-shadow/configuration.cjs', '../qualification-bootstrap.cjs']);
+let application;
+function loadApplication() {
+    if (application) return application;
+    require('../ev07-shadow/load.cjs');
+    const load = file => require(path.join(root, 'src', file));
+    const { composeBugbotReview } = load('infrastructure/composition/bugbot_review_composition');
+    const { createPinnedBugbotShadowVerifier } = load('infrastructure/bugbot/shadow_verification_adapter');
+    const { ask, codexInvocation } = load('infrastructure/bugbot/shadow/session.cjs');
+    const { projectBugbotReviewOperationContext } = load('application/usecases/steps/commit/bugbot/bugbot_review_operation_context');
+    const { buildAgentTasksFromValues } = load('actions/agent_input_builder');
+    const { Ai } = load('data/model/ai');
+    const { createFindingsQueryPort } = load('infrastructure/composition/agent_capability_composition_root');
+    const { AgentCliClient } = load('data/repository/agent_cli_client');
+    const { AgentExecutionPlanner } = load('infrastructure/agents/agent_execution_planner');
+    const { resolveBugbotReviewEffort } = load('domain/bugbot/review_configuration');
+    application = { composeBugbotReview, createPinnedBugbotShadowVerifier, ask, codexInvocation,
+        projectBugbotReviewOperationContext, buildAgentTasksFromValues, Ai, createFindingsQueryPort,
+        AgentCliClient, AgentExecutionPlanner, resolveBugbotReviewEffort };
+    return application;
+}
 
 const hash = text => createHash('sha256').update(text).digest('hex');
-const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, '-c', 'core.hooksPath=/dev/null', ...args],
-    { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+const git = (cwd, ...args) => pinnedGit(cwd)(...args).toString('utf8');
 const snapshot = (source, value, count = 0) => ({
     value, coverage: { source, status: 'complete', pagesFetched: 1, itemsFetched: count, itemsRetained: count,
         omittedItems: 0, truncatedItems: 0, limitReached: false },
@@ -70,6 +80,7 @@ function selectVerifierProfiles(subject, detector) {
         assert(!subject.compareInheritedVerifier, 'matched comparison requires an experimental verifier');
         return { primary: detector };
     }
+    const { buildAgentTasksFromValues } = loadApplication();
     const { model, effort } = subject.experimentalVerifier;
     assert(typeof model === 'string' && model.trim(), 'experimental verifier model required');
     const { reviewer } = buildAgentTasksFromValues({ 'reviewer-model': model, 'reviewer-effort': effort });
@@ -84,6 +95,7 @@ async function verifyMatchedCandidate(request, profiles, verifyArm, recordCompar
     // The review already runs up to two candidates at a time. Run the arms
     // sequentially within each candidate so the same session limit applies.
     const settled = async (arm, input) => {
+        if (input.signal?.aborted) return { status: 'technical-failure', reason: 'investigation-canceled' };
         try {
             return await verifyArm(arm, input);
         } catch {
@@ -96,10 +108,25 @@ async function verifyMatchedCandidate(request, profiles, verifyArm, recordCompar
     return experimental;
 }
 
-async function run(lab, number, destination, manifestPath = path.join(__dirname, 'subjects.json')) {
+async function run(lab, number, destination, manifestPath = path.join(__dirname, 'subjects.json'), ports = {}) {
     lab = path.resolve(lab);
-    const manifest = fs.readFileSync(manifestPath);
+    const admission = requireBootstrapAdmission(root);
+    const authenticated = attestCommittedArtifact(root, manifestPath, admission.planSha256, admission.planCommit);
+    const manifest = authenticated.bytes;
     const frozen = JSON.parse(manifest);
+    const provenance = { bootstrap: admission, manifest: authenticated.provenance, ...attestSource(root, frozen.implementation),
+        drivers: attestDrivers(__dirname, frozen.drivers, normalFlowDrivers), runtime: attestRuntime(root, frozen.runtime) };
+    admitQualificationModules(root);
+    const directRuntime = { executable: frozen.runtime.executable, prefixArgs: frozen.runtime.launcher ? [frozen.runtime.launcher] : [] };
+    const attestDirect = () => requirePinnedExecution({ executable: directRuntime.executable, launcherArgv: directRuntime.prefixArgs,
+        ...(frozen.runtime.launcher && { launcherSha256: frozen.runtime.launcherSha256 }),
+        runtimeContract: { version: frozen.runtime.codex } }, frozen.runtime);
+    const cliProbe = requirePinnedCliProbe(frozen.runtime);
+    const cli = cliProbe.version;
+    provenance.cli = { ...cliProbe.proof, version: cli };
+    const { composeBugbotReview, createPinnedBugbotShadowVerifier, ask, codexInvocation,
+        projectBugbotReviewOperationContext, buildAgentTasksFromValues, Ai, createFindingsQueryPort,
+        AgentCliClient, AgentExecutionPlanner, resolveBugbotReviewEffort } = loadApplication();
     const { workflowInputs } = frozen;
     assert.equal(frozen.publication, 'dry-run');
     const subject = frozen.subjects.find(item => item.number === Number(number));
@@ -120,7 +147,7 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
     const cancel = () => cancellation.abort();
     process.once('SIGINT', cancel);
     process.once('SIGTERM', cancel);
-    const signal = cancellation.signal;
+    const signal = ports.signal ? AbortSignal.any([cancellation.signal, ports.signal]) : cancellation.signal;
     const withCancellation = original => original ? AbortSignal.any([original, signal]) : signal;
     const writes = [];
     const guard = new Proxy({}, { get: (_target, method) => () => {
@@ -129,7 +156,8 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
         throw new Error('forbidden GitHub mutation');
     } });
     try {
-        git(scratch, 'clone', '-q', '--shared', '--no-checkout', source, checkout);
+        execFileSync(trustedGitExecutable(), ['clone', '-q', '--shared', '--no-checkout', source, checkout],
+            { cwd: scratch, env: require('../execution-provenance.cjs').gitEnvironment() });
         git(checkout, 'remote', 'remove', 'origin');
         git(checkout, 'checkout', '-q', '--detach', subject.head);
         assert.equal(git(checkout, 'remote'), '');
@@ -142,6 +170,10 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             headRepositoryOwner: owner, headRepositoryName: name, headRef: subject.headRef,
             headSha: subject.head, changedFileCount: diff.changes.length };
         const scm = {
+            progress: { async observe(progress, dryRun, locale) {
+                log({ event: 'operation-progress', progress });
+                await ports.progress?.observe(progress, dryRun, locale);
+            } },
             context: {
                 getPullRequest: async () => identity, getSourceBoundPullRequest: async () => identity,
                 findOpenPullRequestsByExactHead: async () => [],
@@ -159,8 +191,9 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
         if (workflowInputs) {
             assert.equal(process.env.REVIEWER_EFFORT, workflowInputs.REVIEWER_EFFORT);
             assert.equal(process.env.BUGBOT_EFFORT, workflowInputs.BUGBOT_EFFORT);
-            const runtime = execFileSync(process.env.PILOT_LOCAL_PYTHON, ['-c',
-                'import platform,sqlite3; print(platform.python_version(), sqlite3.sqlite_version)'], { encoding: 'utf8' }).trim();
+            const runtime = execFileSync(process.env.PILOT_LOCAL_PYTHON, ['-I', '-S', '-c',
+                'import platform,sqlite3; print(platform.python_version(), sqlite3.sqlite_version)'],
+            { encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } }).trim();
             assert.equal(runtime, shadowPlan.localRuntime.python + ' ' + shadowPlan.localRuntime.sqlite);
             log({ event: 'local-runtime', runtime, scope: shadowPlan.localRuntime.scope });
         }
@@ -170,7 +203,7 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
         const ai = new Ai('shadow-campaign', '', false, workflowInputs ? ['build/*', 'specs/CATALOG.md'] : [], false,
             'low', 20, [], tasks, undefined, { publicationMode: frozen.publication, effort: reviewEffort });
         const operation = projectBugbotReviewOperationContext({
-            ai, owner, repo: name, issueNumber: subject.number, isPullRequest: true, eventName: 'pull_request',
+            bugbotReviewSignal: signal, ai, owner, repo: name, issueNumber: subject.number, isPullRequest: true, eventName: 'pull_request',
             tokenUser: 'copilot', locale: { issue: 'en-US', pullRequest: 'en-US' },
             pullRequest: { number: subject.number, head: subject.headRef, action: 'opened' },
             commit: { branch: subject.headRef }, currentConfiguration: { parentBranch: subject.baseRef }, branches: {},
@@ -186,13 +219,19 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             assert.equal(invocation.modelProvider, expected.modelProvider);
             assert.equal(invocation.sandbox, 'read-only');
         };
-        const standardDetector = createFindingsQueryPort({ cli: new AgentCliClient({
+        const standardDetector = ports.findings ?? createFindingsQueryPort({ cli: new AgentCliClient({
             prepare(request) {
-                const plan = planner.prepare(request);
-                const flags = codexInvocation(plan.argv);
-                attest(flags);
-                log({ event: 'detector-invocation', invocation: flags, capability: plan.capability, atMs: sinceStart() });
-                return plan;
+                const plan = preparePinnedExecution(planner, request, frozen.runtime);
+                try {
+                    const runtimeProof = requirePinnedExecution(plan, frozen.runtime);
+                    const flags = codexInvocation(plan.argv);
+                    attest(flags);
+                    log({ event: 'detector-invocation', invocation: flags, capability: plan.capability, runtimeProof, atMs: sinceStart() });
+                    return plan;
+                } catch (error) {
+                    fs.rmSync(plan.runtimeDirectory, { recursive: true, force: true });
+                    throw error;
+                }
             },
         }, { observe(observation) {
             if (observation.state === 'failed') log({ event: 'detector-provider-failure', observation, atMs: sinceStart() });
@@ -209,8 +248,8 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
         });
         log({ event: 'plan', subject, files: diff.changes.length, comparisonSha256: hash(JSON.stringify(diff)),
             configuration: selected, verifierConfiguration, workflowInputs, reviewEffort, effectiveDepth, subjectsSha256: hash(manifest),
-            cli: execFileSync('codex', ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(),
-            implementation: git(root, 'rev-parse', 'HEAD').trim(), runnerSha256: hash(fs.readFileSync(__filename)) });
+            cli,
+            implementation: provenance.implementation, provenance, runnerSha256: hash(fs.readFileSync(__filename)) });
         let invocation = 0;
         const detector = { async query(request) {
             const turn = ++invocation;
@@ -239,13 +278,16 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
                 && input.headSha === subject.head && input.baseSha === subject.base
                 ? { repo: source, officialDirectory: lab, catalog: official,
                     ...(workflowInputs && { localRuntime: shadowPlan.localRuntime }) } : undefined,
-            transport: turn => ask({ ...turn,
+            transport: turn => {
+                attestDirect();
+                return ask({ ...turn, runtime: directRuntime,
                 onInvocation(flags) {
                     attest(flags, expected);
                     log(label(arm, { event: 'verifier-invocation', id: turn.candidateId, invocation: flags,
                         continuation: Boolean(turn.threadId), atMs: sinceStart() }));
                 },
-            }),
+                });
+            },
         });
         const primaryArm = profiles.experimental ? 'experimental' : 'inherited';
         const adapters = { [primaryArm]: makeAdapter(primaryArm, profiles.primary) };
@@ -258,7 +300,11 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             peak = Math.max(peak, active);
             log(label(arm, { event: 'verifier-start', id: candidate.id, active, atMs: startedAt }));
             try {
-                return await adapters[arm].verify({ ...request, signal: withCancellation(request.signal) });
+                const input = { ...request, signal: withCancellation(request.signal) };
+                const result = await (ports.verifier ?? adapters[arm]).verify(input);
+                // Controlled fixtures can observe provider settlement before canceling the enclosing operation.
+                if (ports.verifierResult) await ports.verifierResult.observe({ arm, id: candidate.id, result, signal: input.signal });
+                return result;
             } finally {
                 active -= 1;
                 lastVerifier = sinceStart();
@@ -272,13 +318,16 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
                 return verifyMatchedCandidate(request, profiles, verifyArm, log);
             },
         };
+        await ports.beforeReview?.({ signal });
         const results = await composeBugbotReview({ findings: detector, scm, shadowVerification: verifier,
             experimentalShadowProfile: profiles.experimental }).invoke(operation);
         const wallMs = sinceStart();
-        log({ event: 'workflow-result', results, writes, checkoutUnchanged: git(checkout, 'status', '--porcelain') === '',
+        const status = signal.aborted ? 'interrupted' : results.every(result => result.success) ? 'completed' : 'failed';
+        log({ event: 'workflow-result', status, results, writes, checkoutUnchanged: git(checkout, 'status', '--porcelain') === '',
             wallMs, verificationWallMs: firstVerifier === undefined ? 0 : lastVerifier - firstVerifier,
             peakVerifierConcurrency: peak });
         assert.deepEqual(writes, []);
+        return { status, results, writes };
     } finally {
         process.removeListener('SIGINT', cancel);
         process.removeListener('SIGTERM', cancel);
@@ -287,11 +336,4 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
     }
 }
 
-if (require.main === module) {
-    run(...process.argv.slice(2)).catch(error => {
-        console.error(error);
-        process.exitCode = 1;
-    });
-}
-
-module.exports = { selectVerifierProfiles, verifyMatchedCandidate };
+module.exports = { run, selectVerifierProfiles, verifyMatchedCandidate, normalFlowDrivers };

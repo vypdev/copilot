@@ -1,0 +1,116 @@
+{
+  "review_threads": [
+    {
+      "id": "PRRT_kwDONSeBW865qmvk",
+      "is_resolved": true,
+      "is_outdated": true,
+      "head_sha": "f133dcd8456c8ed31005aa2a083031220c20e13c",
+      "path": "quality/bugbot/evidence/issue-972/README.md",
+      "line": null,
+      "diff_side": "RIGHT",
+      "start_line": null,
+      "start_diff_side": null,
+      "original_line": 35,
+      "original_start_line": null,
+      "resolved_by": {
+        "login": "vypbot",
+        "name": "vypbot",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/260864876?u=6f31d95fb5e553f0d2e817c229c4b08d2e930c10&v=4",
+        "id": null
+      },
+      "comments": [
+        {
+          "id": "PRRC_kwDONSeBW88AAAABFDDYrw",
+          "database_id": 4633712815,
+          "body": "## Documented cancellation test path does not resolve from the repository root\n\n**Severity:** low\n\n**Category:** correctness \u00b7 **Confidence:** 90%\n\n**Location:** `quality/bugbot/evidence/issue-972/README.md:35`\n\nThe reproduction instructions run from the repository root, but `normal-flow-shadow/cancellation.test.cjs` is located at `quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs`. Following this instruction from the root cannot locate the test, preventing users from retaining the documented cancellation ledger.\n**Evidence:**\nThe only matching test file in the repository is `quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs`; the README gives no working-directory change before the relative path.\n\n\n**Suggested fix:**\nUse the repository-relative test path or specify the required working directory.\n\n**Apply this change:**\n\n```suggestion\ndestination when running `node --test` on `quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs`.\n```\n\n\n\n---\n**Resolved:** The configured agent confirmed it was fixed in the latest analysis.\n<!-- copilot-bugbot finding_id:\"quality/bugbot/evidence/issue-972/README.md:35:cancellation-test-path\" resolved:true finding_fingerprint:\"fp-93d6bef3\" finding_semantic:\"sf-3a4a061f\" finding_resolution:\"fixed\" -->",
+          "created_at": "2026-11-19T19:09:09Z",
+          "updated_at": "2026-11-19T20:05:13Z",
+          "author": {
+            "login": "vypbot",
+            "name": "vypbot",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/u/260864876?u=6f31d95fb5e553f0d2e817c229c4b08d2e930c10&v=4",
+            "id": null
+          },
+          "viewer_did_author": false
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDONSeBW865-anK",
+      "is_resolved": true,
+      "is_outdated": false,
+      "head_sha": "f133dcd8456c8ed31005aa2a083031220c20e13c",
+      "path": "specs/bugbot-review-state-reconciliation.md",
+      "line": 2716,
+      "diff_side": "RIGHT",
+      "start_line": 2712,
+      "start_diff_side": "RIGHT",
+      "original_line": 2715,
+      "original_start_line": 2711,
+      "resolved_by": {
+        "login": "vypbot",
+        "name": "vypbot",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/260864876?u=6f31d95fb5e553f0d2e817c229c4b08d2e930c10&v=4",
+        "id": null
+      },
+      "comments": [
+        {
+          "id": "PRRC_kwDONSeBW88AAAABFLLmjg",
+          "database_id": 4642236046,
+          "body": "## Update the combined control count for the eight new cases\n\n**Severity:** low\n\n**Category:** correctness \u00b7 **Confidence:** 94%\n\n**Location:** `specs/bugbot-review-state-reconciliation.md:2711-2715`\n\nThis section adds eight cancellation controls to the shadow-verification suite, but the spec still states that the combined budget is 196 at line 2670. The suite includes cancellation.test.cjs, which defines seven loop cases and one additional experimental-arm case; the evidence README reports a 204-case combined replay. These conflicting totals make the acceptance budget ambiguous. Update the aggregate to 204 or clarify that 196 excludes these eight controls.\n**Evidence:**\nThe added requirement enumerates eight controls at lines 2711\u20132715. package.json includes cancellation.test.cjs in test:bugbot-shadow-verification; that file defines seven cases in its loop and one separate case. The evidence README reports combined runs out of 204, while the spec's prior aggregate at line 2670 remains 196.\n\n\n**Suggested fix:**\nUpdate the aggregate count to 204, or state explicitly that the 196-case budget excludes these eight cancellation controls.\n\n\n\n---\n**Resolved:** The configured agent confirmed it was fixed in the latest analysis.\n<!-- copilot-bugbot finding_id:\"specs/bugbot-review-state-reconciliation.md:2711:combined-control-budget\" resolved:true finding_fingerprint:\"fp-342621bd\" finding_semantic:\"sf-f73aa8d2\" finding_resolution:\"fixed\" -->",
+          "created_at": "2026-11-20T12:07:35Z",
+          "updated_at": "2026-11-20T12:38:33Z",
+          "author": {
+            "login": "vypbot",
+            "name": "vypbot",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/u/260864876?u=6f31d95fb5e553f0d2e817c229c4b08d2e930c10&v=4",
+            "id": null
+          },
+          "viewer_did_author": false
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDONSeBW865_sfT",
+      "is_resolved": true,
+      "is_outdated": false,
+      "head_sha": "f133dcd8456c8ed31005aa2a083031220c20e13c",
+      "path": "specs/bugbot-review-state-reconciliation.md",
+      "line": 2714,
+      "diff_side": "RIGHT",
+      "start_line": 2714,
+      "start_diff_side": null,
+      "original_line": 2714,
+      "original_start_line": null,
+      "resolved_by": {
+        "login": "vypbot",
+        "name": "vypbot",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/260864876?u=6f31d95fb5e553f0d2e817c229c4b08d2e930c10&v=4",
+        "id": null
+      },
+      "comments": [
+        {
+          "id": "PRRC_kwDONSeBW88AAAABFLtTBQ",
+          "database_id": 4642788101,
+          "body": "## The post-provider interruption control cancels before the provider result\n\n**Severity:** low\n\n**Category:** correctness \u00b7 **Confidence:** 94%\n\n**Location:** `specs/bugbot-review-state-reconciliation.md:2714`\n\nThe new acceptance budget requires a distinct cancellation boundary after provider interruption. In the `after-provider-interruption` fixture, however, `cancellation.abort()` runs before the verifier returns the `provider-turn-failed` result. This tests cancellation while verification is still in flight, so the required post-interruption ordering is not covered and a regression at that boundary could pass the control suite.\n**Evidence:**\nThe changed requirement names \u201cafter provider interruption\u201d as a distinct boundary. In `quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs`, the `after-provider-interruption` branch calls `cancellation.abort()` and only then returns `{ status: 'technical-failure', reason: 'provider-turn-failed' }`.\n\n\n**Suggested fix:**\nOrder the controlled fixture so the provider interruption is observed before cancellation, then assert the ordinary operation's terminal state for that sequence.\n\n\n\n---\n**Resolved:** The configured agent confirmed it was fixed in the latest analysis.\n<!-- copilot-bugbot finding_id:\"specs/bugbot-review-state-reconciliation.md:2714:post-provider-cancellation-control\" resolved:true finding_fingerprint:\"fp-5dca4c14\" finding_semantic:\"sf-e36f25c8\" finding_resolution:\"fixed\" -->",
+          "created_at": "2026-11-20T13:07:32Z",
+          "updated_at": "2026-11-20T14:52:54Z",
+          "author": {
+            "login": "vypbot",
+            "name": "vypbot",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/u/260864876?u=6f31d95fb5e553f0d2e817c229c4b08d2e930c10&v=4",
+            "id": null
+          },
+          "viewer_did_author": false
+        }
+      ]
+    }
+  ],
+  "recordedAt": "2026-11-20T15:01:05.765671+00:00"
+}

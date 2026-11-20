@@ -1,0 +1,13 @@
+{
+  "outcome": "failed",
+  "stage": "mandatory pre-commit Jest",
+  "suitesPassed": 942,
+  "suiteFailedToStart": "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_autofix_commit.test.ts",
+  "signal": "SIGSEGV",
+  "testsPassed": 18663,
+  "testsSkipped": 35,
+  "rawSha256": "8cb3a458b0bf8402e360e3007ebad58b73815a7be4d159c1b07351cf420337a8",
+  "rawBytes": 531309,
+  "models": 0,
+  "realGitHubWrites": 0
+}

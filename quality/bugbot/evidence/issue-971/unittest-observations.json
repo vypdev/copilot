@@ -1,0 +1,208 @@
+{
+  "python": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "method": "Actual Python unittest discovery/execution of separately authored fixed owned fixtures; corpus text is never read or interpreted.",
+  "modules": [
+    {
+      "path": ".github/scripts/tests/test_manifest_core.py",
+      "sha256": "d617a487617443aef6136494dd8f4373cea1c8b8828102d2b5332839760264bd",
+      "methods": 14
+    },
+    {
+      "path": ".github/scripts/tests/test_manifest_export.py",
+      "sha256": "aa9d6360698c9a7cfcd78d73267ffff7e331b22ec636700d6036acb1a690ac19",
+      "methods": 5
+    },
+    {
+      "path": "backend/checks/test_manifest_health.py",
+      "sha256": "2169106841a988c0385adb0847b710859f0f9c4fb4f929956724b677e4cc7891",
+      "methods": 1
+    }
+  ],
+  "observations": [
+    {
+      "id": "unittest-discovery-delegated-wildcard",
+      "initialCwd": ".",
+      "effectiveCwd": "owned repository root",
+      "command": [
+        "sys.executable",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        ".github/scripts/tests",
+        "-p",
+        "test_manifest_*.py",
+        "-v"
+      ],
+      "runnerSourceSha256": "fe525c3672b91353732b8f20b00800c599532a4995da2fa3292cd32539e31d17",
+      "testsPassed": 19,
+      "targetMethodsPassed": 5,
+      "moduleQualifiedOkRecords": [
+        "test_core_0 (test_manifest_core.CoreTests.test_core_0) ... ok",
+        "test_core_1 (test_manifest_core.CoreTests.test_core_1) ... ok",
+        "test_core_10 (test_manifest_core.CoreTests.test_core_10) ... ok",
+        "test_core_11 (test_manifest_core.CoreTests.test_core_11) ... ok",
+        "test_core_12 (test_manifest_core.CoreTests.test_core_12) ... ok",
+        "test_core_13 (test_manifest_core.CoreTests.test_core_13) ... ok",
+        "test_core_2 (test_manifest_core.CoreTests.test_core_2) ... ok",
+        "test_core_3 (test_manifest_core.CoreTests.test_core_3) ... ok",
+        "test_core_4 (test_manifest_core.CoreTests.test_core_4) ... ok",
+        "test_core_5 (test_manifest_core.CoreTests.test_core_5) ... ok",
+        "test_core_6 (test_manifest_core.CoreTests.test_core_6) ... ok",
+        "test_core_7 (test_manifest_core.CoreTests.test_core_7) ... ok",
+        "test_core_8 (test_manifest_core.CoreTests.test_core_8) ... ok",
+        "test_core_9 (test_manifest_core.CoreTests.test_core_9) ... ok",
+        "test_export_0 (test_manifest_export.ExportTests.test_export_0) ... ok",
+        "test_export_1 (test_manifest_export.ExportTests.test_export_1) ... ok",
+        "test_export_2 (test_manifest_export.ExportTests.test_export_2) ... ok",
+        "test_export_3 (test_manifest_export.ExportTests.test_export_3) ... ok",
+        "test_export_4 (test_manifest_export.ExportTests.test_export_4) ... ok"
+      ],
+      "exit": 0
+    },
+    {
+      "id": "unittest-discovery-nested-working-directory",
+      "initialCwd": "backend",
+      "effectiveCwd": "owned repository root",
+      "command": [
+        "sys.executable",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        ".github/scripts/tests",
+        "-p",
+        "test_manifest_*.py",
+        "-v"
+      ],
+      "runnerSourceSha256": "f0c9edbb275bf7aa2f0cf597bc0cd3d2ec754863b9a059cd2b9fdcba449ed041",
+      "testsPassed": 19,
+      "targetMethodsPassed": 5,
+      "moduleQualifiedOkRecords": [
+        "test_core_0 (test_manifest_core.CoreTests.test_core_0) ... ok",
+        "test_core_1 (test_manifest_core.CoreTests.test_core_1) ... ok",
+        "test_core_10 (test_manifest_core.CoreTests.test_core_10) ... ok",
+        "test_core_11 (test_manifest_core.CoreTests.test_core_11) ... ok",
+        "test_core_12 (test_manifest_core.CoreTests.test_core_12) ... ok",
+        "test_core_13 (test_manifest_core.CoreTests.test_core_13) ... ok",
+        "test_core_2 (test_manifest_core.CoreTests.test_core_2) ... ok",
+        "test_core_3 (test_manifest_core.CoreTests.test_core_3) ... ok",
+        "test_core_4 (test_manifest_core.CoreTests.test_core_4) ... ok",
+        "test_core_5 (test_manifest_core.CoreTests.test_core_5) ... ok",
+        "test_core_6 (test_manifest_core.CoreTests.test_core_6) ... ok",
+        "test_core_7 (test_manifest_core.CoreTests.test_core_7) ... ok",
+        "test_core_8 (test_manifest_core.CoreTests.test_core_8) ... ok",
+        "test_core_9 (test_manifest_core.CoreTests.test_core_9) ... ok",
+        "test_export_0 (test_manifest_export.ExportTests.test_export_0) ... ok",
+        "test_export_1 (test_manifest_export.ExportTests.test_export_1) ... ok",
+        "test_export_2 (test_manifest_export.ExportTests.test_export_2) ... ok",
+        "test_export_3 (test_manifest_export.ExportTests.test_export_3) ... ok",
+        "test_export_4 (test_manifest_export.ExportTests.test_export_4) ... ok"
+      ],
+      "exit": 0
+    },
+    {
+      "id": "unittest-discovery-literal-argv-pattern",
+      "initialCwd": ".",
+      "effectiveCwd": "owned repository root",
+      "command": [
+        "sys.executable",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        ".github/scripts/tests",
+        "-p",
+        "test_manifest_*.py",
+        "-v"
+      ],
+      "runnerSourceSha256": "dcb22a088e565aeff94b14457396c3e3a8e8e95964df35f5319e0f99f090d9cb",
+      "testsPassed": 19,
+      "targetMethodsPassed": 5,
+      "moduleQualifiedOkRecords": [
+        "test_core_0 (test_manifest_core.CoreTests.test_core_0) ... ok",
+        "test_core_1 (test_manifest_core.CoreTests.test_core_1) ... ok",
+        "test_core_10 (test_manifest_core.CoreTests.test_core_10) ... ok",
+        "test_core_11 (test_manifest_core.CoreTests.test_core_11) ... ok",
+        "test_core_12 (test_manifest_core.CoreTests.test_core_12) ... ok",
+        "test_core_13 (test_manifest_core.CoreTests.test_core_13) ... ok",
+        "test_core_2 (test_manifest_core.CoreTests.test_core_2) ... ok",
+        "test_core_3 (test_manifest_core.CoreTests.test_core_3) ... ok",
+        "test_core_4 (test_manifest_core.CoreTests.test_core_4) ... ok",
+        "test_core_5 (test_manifest_core.CoreTests.test_core_5) ... ok",
+        "test_core_6 (test_manifest_core.CoreTests.test_core_6) ... ok",
+        "test_core_7 (test_manifest_core.CoreTests.test_core_7) ... ok",
+        "test_core_8 (test_manifest_core.CoreTests.test_core_8) ... ok",
+        "test_core_9 (test_manifest_core.CoreTests.test_core_9) ... ok",
+        "test_export_0 (test_manifest_export.ExportTests.test_export_0) ... ok",
+        "test_export_1 (test_manifest_export.ExportTests.test_export_1) ... ok",
+        "test_export_2 (test_manifest_export.ExportTests.test_export_2) ... ok",
+        "test_export_3 (test_manifest_export.ExportTests.test_export_3) ... ok",
+        "test_export_4 (test_manifest_export.ExportTests.test_export_4) ... ok"
+      ],
+      "exit": 0
+    },
+    {
+      "id": "unittest-discovery-excluded-by-pattern",
+      "initialCwd": ".",
+      "effectiveCwd": "owned repository root",
+      "command": [
+        "sys.executable",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        ".github/scripts/tests",
+        "-p",
+        "test_manifest_core.py",
+        "-v"
+      ],
+      "runnerSourceSha256": "507f52c57d97d76104bc84b76cbd3886c7998374f3d1d89346dae5f412f94542",
+      "testsPassed": 14,
+      "targetMethodsPassed": 0,
+      "moduleQualifiedOkRecords": [
+        "test_core_0 (test_manifest_core.CoreTests.test_core_0) ... ok",
+        "test_core_1 (test_manifest_core.CoreTests.test_core_1) ... ok",
+        "test_core_10 (test_manifest_core.CoreTests.test_core_10) ... ok",
+        "test_core_11 (test_manifest_core.CoreTests.test_core_11) ... ok",
+        "test_core_12 (test_manifest_core.CoreTests.test_core_12) ... ok",
+        "test_core_13 (test_manifest_core.CoreTests.test_core_13) ... ok",
+        "test_core_2 (test_manifest_core.CoreTests.test_core_2) ... ok",
+        "test_core_3 (test_manifest_core.CoreTests.test_core_3) ... ok",
+        "test_core_4 (test_manifest_core.CoreTests.test_core_4) ... ok",
+        "test_core_5 (test_manifest_core.CoreTests.test_core_5) ... ok",
+        "test_core_6 (test_manifest_core.CoreTests.test_core_6) ... ok",
+        "test_core_7 (test_manifest_core.CoreTests.test_core_7) ... ok",
+        "test_core_8 (test_manifest_core.CoreTests.test_core_8) ... ok",
+        "test_core_9 (test_manifest_core.CoreTests.test_core_9) ... ok"
+      ],
+      "exit": 0
+    },
+    {
+      "id": "unittest-discovery-wrong-start-directory",
+      "initialCwd": ".",
+      "effectiveCwd": "owned repository root",
+      "command": [
+        "sys.executable",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "backend/checks",
+        "-p",
+        "test_manifest_*.py",
+        "-v"
+      ],
+      "runnerSourceSha256": "ed5c157df9960c8d7259530d9f8b793a4e3b5388803c75c3fee3c8fdc301896f",
+      "testsPassed": 1,
+      "targetMethodsPassed": 0,
+      "moduleQualifiedOkRecords": [
+        "test_health_0 (test_manifest_health.HealthTests.test_health_0) ... ok"
+      ],
+      "exit": 0
+    }
+  ],
+  "unavailableRunnerCase": "No execution performed or claimed",
+  "consumerExecution": false,
+  "consumerMutation": false
+}

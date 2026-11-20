@@ -1,0 +1,44 @@
+{
+  "startedAt": "2026-11-20T14:23:37.983110+00:00",
+  "finishedAt": "2026-11-20T14:23:49.130298+00:00",
+  "head": "fa92ca94079ed31edada346a5fb5d5d604864ac0",
+  "exitCode": 0,
+  "testsPassed": 32,
+  "testsFailed": 0,
+  "testsPending": 0,
+  "sourceIdentities": {
+    "fa92ca94079ed31edada346a5fb5d5d604864ac0": {
+      "src/cli/__tests__/web_setup_management_components.test.ts": "3b283e8734b2c66730f00dbbf23b297b576439de",
+      "test-support/web-setup-renderer.ts": "b66f271e12b65f469f4d6d23429a8193e7477de6",
+      "test-support/setup-management-fixtures.ts": "a9fe4d946a48c00acaeda6c4c52de25c70caefa6",
+      "src/application/policies/setup_management_policy.ts": "3f1a9ed99f3d3a1acfe126b063b0b9728e65179f",
+      "web": "9f755a2267d74a19b4292a2097db50100e1cbb32",
+      "pnpm-lock.yaml": "ecbab407f287839253cb8d1924ed9094ab5d2187"
+    },
+    "8ce0a5d3146a9fb8d38c73303a7a7abec05fef20": {
+      "src/cli/__tests__/web_setup_management_components.test.ts": "3b283e8734b2c66730f00dbbf23b297b576439de",
+      "test-support/web-setup-renderer.ts": "b66f271e12b65f469f4d6d23429a8193e7477de6",
+      "test-support/setup-management-fixtures.ts": "a9fe4d946a48c00acaeda6c4c52de25c70caefa6",
+      "src/application/policies/setup_management_policy.ts": "3f1a9ed99f3d3a1acfe126b063b0b9728e65179f",
+      "web": "9f755a2267d74a19b4292a2097db50100e1cbb32",
+      "pnpm-lock.yaml": "ecbab407f287839253cb8d1924ed9094ab5d2187"
+    },
+    "c6590bd8e03aced19250d681788f53268dede600": {
+      "src/cli/__tests__/web_setup_management_components.test.ts": "3b283e8734b2c66730f00dbbf23b297b576439de",
+      "test-support/web-setup-renderer.ts": "b66f271e12b65f469f4d6d23429a8193e7477de6",
+      "test-support/setup-management-fixtures.ts": "a9fe4d946a48c00acaeda6c4c52de25c70caefa6",
+      "src/application/policies/setup_management_policy.ts": "3f1a9ed99f3d3a1acfe126b063b0b9728e65179f",
+      "web": "9f755a2267d74a19b4292a2097db50100e1cbb32",
+      "pnpm-lock.yaml": "ecbab407f287839253cb8d1924ed9094ab5d2187"
+    }
+  },
+  "sourceTestsTimeoutsConcurrencyRunnerUnchanged": true,
+  "rawBytes": 291,
+  "rawSha256": "9eec13c5c0ecd659fc967f1e7c397c1ba1117b8fb142bc319a301f17141c0ffb",
+  "nativeFailure": {
+    "run": 44748313315,
+    "job": 136329289763,
+    "firstFailure": "English first SSR render in SetupManagementPanel exceeded existing5000ms;1failed/942suites18694testsPASS35oldskips;downstreamcoverage/extensionnotrun"
+  },
+  "scope": "Unchanged isolated deterministic SSR suite; not full native coverage, root timing cause or real browser/screenreader/zoom/Setup acceptance."
+}

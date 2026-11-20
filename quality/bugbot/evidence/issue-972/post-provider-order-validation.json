@@ -1,0 +1,148 @@
+{
+  "recordedAt": "2026-11-20T14:06:24.671071+00:00",
+  "sourceBase": "2a30e17530bd517da33446449572609bd8c1678b",
+  "reviewFinding": {
+    "thread": "PRRT_kwDONSeBW865_sfT",
+    "comment": 4642788101,
+    "fingerprint": "fp-5dca4c14",
+    "stateAtPreparation": "valid and open; corrected source still needs ordinary commit/full committed replay/final-head Review"
+  },
+  "nativeSynchronization": {
+    "run": 44740742936,
+    "job": 136303469909,
+    "head": "2a30e17530bd517da33446449572609bd8c1678b",
+    "parents": [
+      "64cd558d899b20bbe2a285e6ec00df0b6bc70884",
+      "c6590bd8e03aced19250d681788f53268dede600"
+    ],
+    "conclusion": "SUCCESS",
+    "jestSuites": 943,
+    "jestPassed": 18695,
+    "preExistingSkipped": 35,
+    "extensionFiles": 385,
+    "extensionTestsPassed": 5291
+  },
+  "prior64cdCoverageFailure": {
+    "run": 44740279836,
+    "job": 136306673887,
+    "jestSuitesPassed": 942,
+    "testsPassed": 18693,
+    "testsFailed": 2,
+    "preExistingSkipped": 35,
+    "reason": "Fake PAT/OpenAI transport shell spawnSync reached existing5000ms timeout; no downstream extension/coverage-budget execution",
+    "unchangedIsolatedSuite": "82/82PASS8.324s; realcredentialhealthdispatches0; does not establish native timing cause or whole native pass"
+  },
+  "orderingNegative": {
+    "startedAt": "2026-11-20T14:00:56.440721+00:00",
+    "finishedAt": "2026-11-20T14:01:48.973932+00:00",
+    "exitCode": 1,
+    "expectedNegative": true,
+    "baseHead": "2a30e17530bd517da33446449572609bd8c1678b",
+    "hypothesis": "Old fixture aborts before provider failure is returned/observed; new ordering assertion must reject that ordering.",
+    "logBytes": 1149,
+    "rawSha256": "f75d4736c018365d2be942aef8f1670ac579467c9f17a7669403fa005664f1e6",
+    "controls": "/private/tmp/copilot-goal-972-post-provider-order-red-controls.json",
+    "models": 0,
+    "evaluatedPilotPrWriteAttempts": 0
+  },
+  "orderingPositive": {
+    "startedAt": "2026-11-20T14:03:25.506043+00:00",
+    "finishedAt": "2026-11-20T14:04:08.968404+00:00",
+    "exitCode": 0,
+    "baseHead": "2a30e17530bd517da33446449572609bd8c1678b",
+    "logBytes": 243,
+    "rawSha256": "9abfe51f9ce356fab5410f2708acc270a3babde9e4a5efad011f9c9d01d1e479",
+    "controls": "/private/tmp/copilot-goal-972-post-provider-order-green-controls.json",
+    "qualificationModelCalls": 0,
+    "evaluatedPilotPrWriteAttempts": 0,
+    "observations": [
+      {
+        "stage": "detector",
+        "abortedAtEntry": false
+      },
+      {
+        "stage": "verifier",
+        "id": "controlled-candidate",
+        "abortedAtEntry": false
+      },
+      {
+        "stage": "provider-result-observed",
+        "status": "technical-failure",
+        "reason": "provider-turn-failed",
+        "abortedAtObservation": false
+      },
+      {
+        "stage": "post-provider-cancellation",
+        "abortedAfterObservation": true
+      }
+    ],
+    "childExitCode": 130
+  },
+  "changedDriverSha256": {
+    "quality/bugbot/evidence/issue-950/normal-flow-shadow/run.cjs": "37fa5509dbf8f470f62e1cd3336539714bb438319aabcf3fb4f737b369c88c11",
+    "quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs": "d1792e01d8779c2e1eba2d448741f6c9f0c3a0138c73c487a6c85bb7e9b8b557"
+  },
+  "remaining": "Ordinary delivery commit/full committed-source replay and final native groups/findings required. Existing204-case budget unchanged; earlier passes preserved with post-provider-ordering limitation.",
+  "qualificationModelCalls": 0,
+  "evaluatedPilotPrWriteAttempts": 0,
+  "records": [
+    {
+      "file": "action-sync-44740742936.log.gz",
+      "encoding": "gzip",
+      "lossless": true,
+      "rawBytes": 3795051,
+      "rawSha256": "539f6222255e534490df307273a7994c0549a2386e2b384f01ae10eb8a741447",
+      "compressedSha256": "4c0ae825da400aa47ddb5db7b6bf5ba1f5ebd8baab4c6517991d70782c2f9cbb"
+    },
+    {
+      "file": "64cd-native-coverage-failure.log.gz",
+      "encoding": "gzip",
+      "lossless": true,
+      "rawBytes": 3045129,
+      "rawSha256": "188c255f55dcbb9a569ba77f7a6897c921cda993b52deaecdd8588442575ccf9",
+      "compressedSha256": "a12d271498878d3397020cedf186cc5f4ec18e32abfa400314c2f387f57e6f3c"
+    },
+    {
+      "file": "64cd-credential-transport-isolated.log.gz",
+      "encoding": "gzip",
+      "lossless": true,
+      "rawBytes": 290,
+      "rawSha256": "4a7a294bd856509528bd7fa194aaf670dbddda996d6051e5c9ca75a2686bc982",
+      "compressedSha256": "aa1f0fc2b86cf0808e7de6b984d8c02b02bed6a7056dc2ef3936618ab9835924"
+    },
+    {
+      "file": "post-provider-order-red.log.gz",
+      "encoding": "gzip",
+      "lossless": true,
+      "rawBytes": 1149,
+      "rawSha256": "f75d4736c018365d2be942aef8f1670ac579467c9f17a7669403fa005664f1e6",
+      "compressedSha256": "7b0eb54274a160f87eb9b803aa14b0b981702e2bb42edafad1b52807e9b4c7d4"
+    },
+    {
+      "file": "post-provider-order-green.log.gz",
+      "encoding": "gzip",
+      "lossless": true,
+      "rawBytes": 243,
+      "rawSha256": "9abfe51f9ce356fab5410f2708acc270a3babde9e4a5efad011f9c9d01d1e479",
+      "compressedSha256": "0cbf914c1a603ae4ac697bd48bd65ce312e33f698f36666910dde163a2c06566"
+    },
+    {
+      "file": "64cd-credential-transport-isolated-receipt.json",
+      "encoding": "UTF-8 JSON",
+      "rawBytes": 1269,
+      "rawSha256": "eb35c38ea2720c5c3cca8cb48fe7032ba1fe8d3a4c344ca06658136d44aa7db0"
+    },
+    {
+      "file": "post-provider-order-red-controls.json",
+      "encoding": "UTF-8 JSON",
+      "rawBytes": 19692,
+      "rawSha256": "39df71a11900b06bcfe5187317ceccc43bdf185c5bf105e1d364bf512eb68983"
+    },
+    {
+      "file": "post-provider-order-green-controls.json",
+      "encoding": "UTF-8 JSON",
+      "rawBytes": 19649,
+      "rawSha256": "cd45af9c0d5383a4a11f46e80b418497facb11d97ad1ec058765a4b16dacb2c9"
+    }
+  ]
+}

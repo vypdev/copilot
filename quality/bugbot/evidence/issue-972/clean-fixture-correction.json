@@ -1,0 +1,8 @@
+{
+  "previousCandidate": "c00f0aec7904d47cce1b2260bac4011a8351c4c2",
+  "previousResult": "203/204; only clean fixture snapshot commit had no changes",
+  "correction": "Reuse existing committed source pin when the owned fixture snapshot index is clean. Preserve separate committed plan, all public bootstrap/source/runtime checks, actual runner and profiles.",
+  "focusedCase": "1/1 PASS60.24s, real bootstrap, relative lab, zero candidates/verifiers/modelcalls/writes",
+  "newDeliveryCommitAndFull204RequiredBeforePush": true,
+  "reconciliationPlanSha256": "1c22665936321f825b397af3f9fb9d9ca0fc4f3bcb991c980a5fc8f1b14b0312"
+}

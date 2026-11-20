@@ -1,17 +1,21 @@
 'use strict';
 
-const { spawn } = require('node:child_process');
+if (require.main === module) throw new Error('Use the independently reviewed immutable bootstrap; direct qualification runners are unsupported.');
+
+const { spawnQualificationDriver } = require('../execution-provenance.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const { requirePassingCorpus } = require('./launch-full-review.cjs');
-const { requirePinnedImplementation, selectedPlanProvenance } = require('./implementation.cjs');
+const { qualificationProvenance, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
 const concurrency = 3;
 
 async function run(campaign) {
+    require('../execution-provenance.cjs').requireBootstrapAdmission(path.resolve(__dirname, '../../../../..'));
     campaign = requirePassingCorpus(campaign);
-    const implementation = requirePinnedImplementation();
+    const provenance = qualificationProvenance(plan);
+    const implementation = provenance.implementation;
     const preregistration = selectedPlanProvenance();
     const output = path.join(campaign, 'full-review');
     const score = path.join(campaign, 'corpus-v3/corpus-score.json');
@@ -31,7 +35,7 @@ async function run(campaign) {
     };
     process.once('SIGINT', cancel);
     process.once('SIGTERM', cancel);
-    record({ event: 'start', at: new Date().toISOString(), planned: slots.length, concurrency, implementation,
+    record({ event: 'start', at: new Date().toISOString(), planned: slots.length, concurrency, implementation, provenance,
         plan: preregistration.sha256, preregistration });
     try {
         async function worker() {
@@ -42,7 +46,7 @@ async function run(campaign) {
                 const log = fs.openSync(path.join(output, name + '.log'), 'wx', 0o600);
                 record({ event: 'slot-start', ...slot });
                 try {
-                    const child = spawn(process.execPath, [path.join(__dirname, 'review.cjs'), path.join(checkouts, slot.id),
+                    const child = spawnQualificationDriver('review', [path.join(checkouts, slot.id),
                         slot.id, String(slot.repetition), destination], { stdio: ['ignore', log, log] });
                     running.add(child);
                     const exit = await new Promise(resolve => {
@@ -64,4 +68,4 @@ async function run(campaign) {
     }
 }
 
-run(process.argv[2]).catch(error => { console.error(error.code ?? error.name, error.message); process.exitCode = 1; });
+module.exports = { run };

@@ -1,28 +1,35 @@
 'use strict';
 
+if (require.main === module) throw new Error('Use the independently reviewed immutable bootstrap; direct qualification runners are unsupported.');
+
 const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { trustedGitExecutable, gitEnvironment, admitQualificationModules } = require('../execution-provenance.cjs');
 const { tmpdir } = require('node:os');
-const { requirePinnedImplementation, requirePinnedRuntime, requirePinnedExecution, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
-require('./load.cjs');
-
-const { runBugbotBenchmarkAgent } = require('../../../../../src/tooling/bugbot_benchmark_runner');
-const { evaluateBugbotBenchmark, loadBugbotBenchmark } = require('../../../../../src/tooling/bugbot_benchmark');
-const { createFindingsQueryPort } = require('../../../../../src/infrastructure/composition/agent_capability_composition_root');
-const { AgentCliClient } = require('../../../../../src/data/repository/agent_cli_client');
-const { AgentExecutionPlanner } = require('../../../../../src/infrastructure/agents/agent_execution_planner');
-const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
+const { qualificationProvenance, requirePinnedCliProbe, requirePinnedExecution, preparePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
 const root = path.resolve(__dirname, '../../../../..');
 const hash = input => createHash('sha256').update(input).digest('hex');
 
 async function run(destination, preflight = false) {
-    requirePinnedDrivers(plan);
-    const implementation = requirePinnedImplementation();
+    require('../execution-provenance.cjs').requireBootstrapAdmission(root);
+    const provenance = qualificationProvenance(plan);
+    const implementation = provenance.implementation;
+    admitQualificationModules(root);
+    const cliProbe = requirePinnedCliProbe(plan.runtime);
+    require('./load.cjs');
+
+    const { runBugbotBenchmarkAgent } = require('../../../../../src/tooling/bugbot_benchmark_runner');
+    const { evaluateBugbotBenchmark, loadBugbotBenchmark } = require('../../../../../src/tooling/bugbot_benchmark');
+    const { createFindingsQueryPort } = require('../../../../../src/infrastructure/composition/agent_capability_composition_root');
+    const { AgentCliClient } = require('../../../../../src/data/repository/agent_cli_client');
+    const { AgentExecutionPlanner } = require('../../../../../src/infrastructure/agents/agent_execution_planner');
+    const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
+
     assert.equal(hash(fs.readFileSync(__filename)), plan.inspectedArtifacts?.['corpus.cjs'],
         'corpus runner differs from the preregistered implementation');
     assert(destination, 'usage: node corpus.cjs <new output directory>');
@@ -34,14 +41,13 @@ async function run(destination, preflight = false) {
     const configuration = plan.detector;
     const preregistration = selectedPlanProvenance();
     const planner = new AgentExecutionPlanner();
-    const cli = execFileSync('codex', ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    requirePinnedRuntime(cli);
+    const cli = cliProbe.version;
     fs.mkdirSync(destination);
     const ledger = path.join(destination, 'corpus.jsonl');
     const record = row => fs.appendFileSync(ledger, JSON.stringify(row) + '\n', { mode: 0o600 });
-    record({ event: 'start', at: new Date().toISOString(), cli, configuration,
+    record({ event: 'start', at: new Date().toISOString(), cli, cliProbe, configuration,
         plan: preregistration.sha256, preregistration, runner: hash(fs.readFileSync(__filename)),
-        implementation, corpus: plan.corpus.sha256, gitHubMutationPorts: 0 });
+        implementation, provenance, corpus: plan.corpus.sha256, gitHubMutationPorts: 0 });
     const cwd = fs.mkdtempSync(path.join(tmpdir(), 'copilot-ev07-corpus-'));
     const oldCwd = process.cwd();
     const cancel = new AbortController();
@@ -50,7 +56,7 @@ async function run(destination, preflight = false) {
     process.once('SIGTERM', abort);
     const results = new Map();
     function prepare(request, calls, runtimeProofs) {
-        const invocation = planner.prepare(request);
+        const invocation = preparePinnedExecution(planner, request, plan.runtime);
         try {
             const proof = requirePinnedExecution(invocation);
             const flags = codexInvocation(invocation.argv);
@@ -68,7 +74,7 @@ async function run(destination, preflight = false) {
     }
     let next = 0;
     try {
-        execFileSync('git', ['init', '--quiet', '--template='], { cwd });
+        execFileSync(trustedGitExecutable(), ['init', '--quiet', '--template='], { cwd, env: gitEnvironment() });
         process.chdir(cwd);
         const flags = [], runtimeProofs = [];
         const canary = createFindingsQueryPort({ cli: { async execute(request) {
@@ -133,4 +139,4 @@ async function run(destination, preflight = false) {
     }
 }
 
-run(process.argv[2], process.argv[3] === '--preflight').catch(error => { console.error(error.code ?? error.name, error.message); process.exitCode = 1; });
+module.exports = { run: (destination, flag) => run(destination, flag === '--preflight') };
