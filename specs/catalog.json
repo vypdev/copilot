@@ -664,9 +664,9 @@
       "id": "bugbot-review-state-reconciliation",
       "title": "Bugbot review-state reconciliation",
       "status": "implemented",
-      "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
+      "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions; bind qualification execution to independently reviewed external bootstrap code with complete public admission in every process and bounded executable version health probes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-19",
+      "lastVerified": "2026-11-20",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
@@ -727,7 +727,15 @@
         "src/application/policies/bugbot_status_card_publication_policy.ts",
         "src/infrastructure/github/github_bugbot_status_card_workflow.ts",
         "src/infrastructure/github/github_bugbot_status_card_dispatch.ts",
-        "src/infrastructure/github/native_list_pagination.ts"
+        "src/infrastructure/github/native_list_pagination.ts",
+        "quality/bugbot/evidence/issue-950/execution-provenance.cjs",
+        "quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs",
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/run.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/full-review.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",
@@ -773,7 +781,12 @@
         "src/infrastructure/github/__tests__/github_bugbot_status_card_lane.test.ts",
         "src/infrastructure/github/__tests__/github_bugbot_status_card_dispatch.test.ts",
         "src/infrastructure/github/__tests__/github_bugbot_status_card_observation.test.ts",
-        "src/infrastructure/github/__tests__/github_bugbot_status_card_handoff.test.ts"
+        "src/infrastructure/github/__tests__/github_bugbot_status_card_handoff.test.ts",
+        "quality/bugbot/evidence/issue-950/qualification-bootstrap.test.cjs",
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/paths.test.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/review-runtime.test.cjs",
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs",
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated-fixture.cjs"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",
@@ -784,7 +797,9 @@
         "docs/bugbot/how-it-works.mdx",
         "docs/bugbot/programmatic-api.mdx",
         "docs/pull-requests/workflow-setup.mdx",
-        "docs/issues/comment-commands.mdx"
+        "docs/issues/comment-commands.mdx",
+        "docs/development/testing.mdx",
+        "quality/bugbot/evidence/issue-972/README.md"
       ]
     },
     {

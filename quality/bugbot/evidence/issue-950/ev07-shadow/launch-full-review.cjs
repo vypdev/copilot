@@ -1,16 +1,18 @@
 'use strict';
 
+if (require.main === module) throw new Error('Use the independently reviewed immutable bootstrap; direct qualification runners are unsupported.');
+
 const { readFileSync } = require('node:fs');
-const { spawn } = require('node:child_process');
+const { spawnQualificationDriver } = require('../execution-provenance.cjs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const { corpus } = require('./configuration.cjs');
 const plan = require('./configuration.cjs');
-const { requirePinnedRuntime, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
+const { requirePinnedRuntime, qualificationProvenance, selectedPlanProvenance } = require('./implementation.cjs');
 
 function validateCorpusProvenance(directory, result) {
-    requirePinnedDrivers(plan);
+    const provenance = qualificationProvenance(plan);
     const hash = input => createHash('sha256').update(input).digest('hex');
     const root = path.resolve(__dirname, '../../../../..');
     const planFile = process.env.COPILOT_EV07_PLAN ? path.resolve(process.env.COPILOT_EV07_PLAN) : path.join(__dirname, 'plan.json');
@@ -27,6 +29,7 @@ function validateCorpusProvenance(directory, result) {
     assert.equal(start.runner, hash(readFileSync(path.join(__dirname, 'corpus.cjs'))));
     assert.equal(start.runner, plan.inspectedArtifacts?.['corpus.cjs']);
     assert.equal(start.implementation, plan.implementation);
+    assert.deepEqual(start.provenance, provenance);
     assert.equal(start.corpus, corpus.sha256);
     assert.equal(start.gitHubMutationPorts, 0);
     assert.deepEqual(start.configuration, plan.detector);
@@ -78,28 +81,27 @@ function requirePassingCorpus(campaign) {
     return directory;
 }
 
-function launchFullReview(campaign, launch = spawn) {
+function launchFullReview(campaign, launch) {
     const directory = requirePassingCorpus(campaign);
-    return launch(process.execPath, [path.join(__dirname, 'full-review.cjs'), directory], { stdio: 'inherit' });
+    return launch ? launch(process.execPath, [path.join(__dirname, 'full-review.cjs'), directory], { stdio: 'inherit' })
+        : spawnQualificationDriver('full-review-runner', [directory], { stdio: 'inherit' });
 }
 
-if (require.main === module) {
-    try {
-        const child = launchFullReview(process.argv[2]);
+async function run(campaign) {
+    require('../execution-provenance.cjs').requireBootstrapAdmission(path.resolve(__dirname, '../../../../..'));
+    const child = launchFullReview(campaign);
+    return new Promise((resolve, reject) => {
         const interrupt = () => child.kill('SIGINT');
         const terminate = () => child.kill('SIGTERM');
         process.once('SIGINT', interrupt);
         process.once('SIGTERM', terminate);
-        child.once('error', () => { process.exitCode = 1; });
+        child.once('error', reject);
         child.once('close', (code, signal) => {
             process.removeListener('SIGINT', interrupt);
             process.removeListener('SIGTERM', terminate);
-            process.exitCode = code ?? (signal === 'SIGINT' ? 130 : signal === 'SIGTERM' ? 143 : 1);
+            resolve(code ?? (signal === 'SIGINT' ? 130 : signal === 'SIGTERM' ? 143 : 1));
         });
-    } catch (error) {
-        console.error(error.message);
-        process.exitCode = 1;
-    }
+    });
 }
 
-module.exports = { launchFullReview, requirePassingCorpus };
+module.exports = { run, launchFullReview, requirePassingCorpus };

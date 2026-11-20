@@ -19,6 +19,42 @@
       "compressedPath": "worker-failure-recheck.log.gz",
       "rawSha256": "30e9bf3bbb000c12a98a7141f8b7ec0df7f3ebf4979a6d980368c398614795cb",
       "rawBytes": 193
+    },
+    {
+      "originalPath": "official-sync-timeout.log",
+      "compressedPath": "official-sync-timeout.log.gz",
+      "rawSha256": "d8146be41a8baad5e6e7d7f688bb0525299152b390f8e217cfd3f101eaad23a3",
+      "rawBytes": 32998
+    },
+    {
+      "originalPath": "combined-uncommitted-fixture.log",
+      "compressedPath": "combined-uncommitted-fixture.log.gz",
+      "rawSha256": "4ffc7aa2f0a36d3477cf3697183cac025bbf88c1a9026c757c73cde59ea6bdae",
+      "rawBytes": 8137
+    },
+    {
+      "originalPath": "authenticated-provider-failure-negative.log",
+      "compressedPath": "authenticated-provider-failure-negative.log.gz",
+      "rawSha256": "6d6408074fdca46095b36e2a03a57e64996ec60d67b8f7398a6984075a14982e",
+      "rawBytes": 1100
+    },
+    {
+      "originalPath": "authenticated-initial-focus.log",
+      "compressedPath": "authenticated-initial-focus.log.gz",
+      "rawSha256": "8efb24f3a1be7b174a2c488d278fc0785eb6167bdea3d538d44d72a1ac9d92db",
+      "rawBytes": 2047
+    },
+    {
+      "originalPath": "authenticated-provider-fixed.log",
+      "compressedPath": "authenticated-provider-fixed.log.gz",
+      "rawSha256": "4b7587773eae6b794c46131b5645ba87d29e2e95334319c5cb45890b74ff4fdd",
+      "rawBytes": 229
+    },
+    {
+      "originalPath": "combined-uncommitted-source-shadow.log",
+      "compressedPath": "combined-uncommitted-source-shadow.log.gz",
+      "rawSha256": "2575ba9689c2c0702259f97c26072c579bb191cd6f6de13ef8c2341b5471d001",
+      "rawBytes": 44020
     }
   ]
 }

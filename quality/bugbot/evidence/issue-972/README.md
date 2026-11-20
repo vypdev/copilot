@@ -52,3 +52,50 @@ Raw control logs are stored losslessly as gzip because their original reporter
 whitespace fails the source diff gate. The compressed-logs.json manifest binds
 each exact decompressed SHA-256 and length. Original committed attempts remain
 in Git history; no log line or negative outcome has been rewritten.
+
+## Integration with the authenticated #970 bootstrap
+
+The original seven-case evidence above remains historical. The integrated
+controls now commit an owned disposable source snapshot and a second plan commit,
+then invoke the reviewed external bootstrap. Their controlled-provider wrapper
+is appended to the unchanged actual runner and included in the authenticated
+driver digest; no production entrypoint, admission bypass or test mode is added.
+The relative-lab control shares this fixture so precommit package changes also
+have a truthful source pin.
+
+The integrated inventory contains eight cases: the five original interruption
+boundaries, ordinary completion, non-cancellation provider failure, and canceled
+experimental/inherited sequencing. The actual bootstrap process must exit 130,
+0 or 1 for interrupted, completed or failed ordinary review respectively.
+The provider-failure control causally reproduced an integrated failed ledger
+exiting 0 before the bootstrap exit mapping was corrected. The initial six
+uncommitted-manifest failures and this negative result are retained separately;
+neither is a passing acceptance result.
+
+The official Action synchronization of exact develop4736cd4 into managed
+972/e1b7d2d failed at its existing 900,000ms fixer timeout and aborted without a
+push. Its run44714013610, correlated response and raw log are retained. After the
+maintainer delegated merge judgment, exceptional recovery was prepared on that
+same existing ref and exact parent, preserving all three conflict paths and both
+source-admission/cancellation contracts. Only a normal same-ref push may publish
+that verified recovery, after rechecking both remote identities. No new branch,
+force-push, installation or production change is part of this recovery.
+
+The first authenticated complete focus run passed the original seven cases.
+The additional failure case already returned exit 1, but its test incorrectly
+expected one detector request; the ordinary detector performed its existing three
+retries. `authenticated-initial-focus.log.gz` and
+`authenticated-initial-controlled-attempts.json` retain that 7/8 result, full
+committed pins and requests. The corrected assertion requires an observed
+provider failure and zero verifiers without imposing a retry count. No retry
+policy, model deadline or qualification threshold was changed.
+
+All eight terminal-state controls pass in the combined suite, including exit 1
+and the unchanged ordinary retry behavior. The first whole-suite attempt records
+187/204 passing cases; the other 17 root-bound corpus-fixture cases correctly
+reject the staged package.json against the old real HEAD. The admission check is
+retained. `combined-uncommitted-source-shadow.log.gz` and
+`combined-uncommitted-source-controls.json` preserve that complete attempt,
+including all five interrupted exits130, one completed exit0 and one failed exit1
+with empty write inventories. The complete suite must be rerun against the
+committed candidate before any push; this precommit attempt is not a full pass.
