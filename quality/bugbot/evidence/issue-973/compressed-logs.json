@@ -13,6 +13,18 @@
       "compressedPath": "initial-missing-dependency.log.gz",
       "rawSha256": "0afa6d5da501e78696051c392da214ddfaccb3d7eb42d1e2ef6404534e0bfa7b",
       "rawBytes": 1880
+    },
+    {
+      "originalPath": "action-sync-44715040973.log",
+      "compressedPath": "action-sync-44715040973.log.gz",
+      "rawSha256": "7f2b0e462930d9c0d260b994fdd5a5d4438d68d96c65450839c21c6482db291c",
+      "rawBytes": 3817265
+    },
+    {
+      "originalPath": "a234-native-static-202.log",
+      "compressedPath": "a234-native-static-202.log.gz",
+      "rawSha256": "5d5f037868bb981576c2be6ee676a97d2c7b08f8666fbff834811a7c0495afbf",
+      "rawBytes": 80263
     }
   ]
 }
