@@ -1,0 +1,42 @@
+{
+  "startedAt": "2026-11-20T13:37:29.599738+00:00",
+  "finishedAt": "2026-11-20T13:37:33.142008+00:00",
+  "head": "8ce0a5d3146a9fb8d38c73303a7a7abec05fef20",
+  "exitCode": 0,
+  "testsPassed": 8,
+  "testsFailed": 0,
+  "testsPending": 0,
+  "sourceIdentities": {
+    "8ce0a5d3146a9fb8d38c73303a7a7abec05fef20": {
+      "src/infrastructure/__tests__/setup_permission_operator_actions.test.ts": "fcba3404da84289ac428dcb0b470e9743833e08a",
+      "src/infrastructure/setup_token_permission_query_adapter.ts": "480107069f8743dda13baf666bf72417a94e5aea",
+      "src/infrastructure/setup_permission_probe_journal.ts": "47ff1a9d9291f2fbed9d682ccce5bc79e2cb6dfd",
+      "src/infrastructure/setup_permission_probe_http.ts": "b27ebdd327008b2bb4cf8ff47e0e11eb70b95346"
+    },
+    "c6590bd8e03aced19250d681788f53268dede600": {
+      "src/infrastructure/__tests__/setup_permission_operator_actions.test.ts": "fcba3404da84289ac428dcb0b470e9743833e08a",
+      "src/infrastructure/setup_token_permission_query_adapter.ts": "480107069f8743dda13baf666bf72417a94e5aea",
+      "src/infrastructure/setup_permission_probe_journal.ts": "47ff1a9d9291f2fbed9d682ccce5bc79e2cb6dfd",
+      "src/infrastructure/setup_permission_probe_http.ts": "b27ebdd327008b2bb4cf8ff47e0e11eb70b95346"
+    },
+    "7901f915644c7a295426fa4d5c5bef6899032f5c": {
+      "src/infrastructure/__tests__/setup_permission_operator_actions.test.ts": "fcba3404da84289ac428dcb0b470e9743833e08a",
+      "src/infrastructure/setup_token_permission_query_adapter.ts": "480107069f8743dda13baf666bf72417a94e5aea",
+      "src/infrastructure/setup_permission_probe_journal.ts": "47ff1a9d9291f2fbed9d682ccce5bc79e2cb6dfd",
+      "src/infrastructure/setup_permission_probe_http.ts": "b27ebdd327008b2bb4cf8ff47e0e11eb70b95346"
+    }
+  },
+  "nativeFailure": {
+    "run": 44739846048,
+    "job": 136300431878,
+    "reason": "First unchanged operator Actions test exceeded30000ms; six later assertions saw unfinished same-process inspection guard.",
+    "reference": "0e6a85a1-7e38-4e9f-b3c4-24cb2e7ccd00"
+  },
+  "sourcesTestsTimeoutsConcurrencyRunnerUnchanged": true,
+  "log": "/private/tmp/copilot-goal-985-c659-operator-actions-isolated.log",
+  "logBytes": 297,
+  "logSha256": "c65a4f3106f692df309a547b213e730f37c45de016d2c897301a857fd45a2909",
+  "wholeNativeCoveragePassClaimed": false,
+  "rootTimingCauseEstablished": false,
+  "actualPlatformObservationClaimed": false
+}

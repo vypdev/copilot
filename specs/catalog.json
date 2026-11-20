@@ -2458,7 +2458,10 @@
         "src/application/ports/pull_request_review_errors.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_review_freshness.ts",
         "src/application/usecases/steps/commit/bugbot/verify_bugbot_publication_policy.ts",
-        "src/application/policies/bugbot_mutation_cancellation_policy.ts"
+        "src/application/policies/bugbot_mutation_cancellation_policy.ts",
+        "quality/bugbot/corpus.v2.json",
+        "quality/bugbot/evidence/issue-985/derivation.json",
+        "quality/bugbot/evidence/issue-985/historical-hashes.json"
       ],
       "tests": [
         "src/application/policies/__tests__/bugbot_shadow_configuration_policy.test.ts",
@@ -2580,7 +2583,8 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/verify_bugbot_publication_paths.test.ts",
         "quality/bugbot/evidence/issue-950/ev07-shadow/plan.test.cjs",
         "src/application/policies/__tests__/bugbot_mutation_cancellation_policy.test.ts",
-        "src/application/usecases/steps/commit/bugbot/__tests__/observe_bugbot_base.test.ts"
+        "src/application/usecases/steps/commit/bugbot/__tests__/observe_bugbot_base.test.ts",
+        "quality/bugbot/evidence/issue-985/corpus-revision.test.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -2599,7 +2603,8 @@
         "quality/bugbot/evidence/issue-950/traceability.md",
         "quality/bugbot/evidence/issue-950/ev07-shadow/preregistration.md",
         "quality/bugbot/evidence/issue-950/shadow-verification/README.md",
-        "quality/bugbot/evidence/issue-950/review-progress-follow-up.md"
+        "quality/bugbot/evidence/issue-950/review-progress-follow-up.md",
+        "quality/bugbot/evidence/issue-985/README.md"
       ]
     },
     {

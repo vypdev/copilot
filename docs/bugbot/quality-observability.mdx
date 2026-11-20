@@ -1060,6 +1060,21 @@ and any launcher artifact. A version string alone cannot admit a model call.
 Record and check the runtime proof for every corpus invocation; frozen
 campaigns continue to replay through their own preregistration commits.
 
+## Corpus revision 2
+
+The #971 audit found malformed complete-workflow context in the frozen
+`actions-readonly-metadata` input. The repository's `corpus.v2.json` supplies a
+complete read-only metadata job for that case. All 174 IDs/order and labels stay
+unchanged; `corpus.v1.json` and every historical score and prediction retain
+their original bytes. The derivation and historical hashes are recorded under
+`quality/bugbot/evidence/issue-985` with six deterministic controls.
+
+This is a new input identity for independent review. It neither changes the
+current CLI/driver default nor retrospectively rescales a completed campaign.
+Before #974 measures anything, merge the prerequisites and reviewed correction,
+then commit exact drivers/preregistration that select and hash v2. The threshold
+and production-disabled policies remain in force. No v2 qualification result is
+claimed by the fixture correction.
 ### Deletion-only citation metadata
 
 A deletion-only hunk contains no new-side changed lines. A citation spanning
