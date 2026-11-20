@@ -35,3 +35,31 @@ corpus. No installation, activation, release or policy change is performed.
 
 Evidence: #971 / PR #984; the independent structural rule is GitHub's official
 [job steps syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idsteps).
+
+## Integration after #970
+
+Official synchronization run44715042422 resolved the sole package.json conflict,
+then passed943 Jest suites/18,695 tests with35 pre-existing skips. Its extension
+run passed384 files and5,281 tests, but the unchanged Safari resource suite's
+beforeAll build exceeded the existing60,000ms hook timeout; its10 cases were not
+executed. The Action aborted without commit or push and verified restoration of
+originalddc768b2. The complete native failure is retained losslessly in
+official-sync-verification-failure.log.gz, with raw hash/length in
+integration-log-manifest.json.
+
+The extension Git tree is identical on originalddc and parentdevelop4736cd4
+(4a5bbf2f98bec1b429c9821fb8a0eca3e3e66a21). The unchanged isolated Safari resource
+suite passes10/10 locally in9.86s without changing source, timeout, concurrency
+or runner configuration. This is an existing deterministic native-command
+fixture, not actual Safari acceptance or a substitute for #981/#982. It does
+not establish a whole native Linux pass or prove the earlier timeout's cause.
+
+Under the maintainer's delegated merge judgment, exceptional recovery is prepared
+on the same existing985 ref and exact parent4736, with its recorded
+sync-reconciliation-plan.json. The package test command preserves both the new
+bootstrap controls and the original v2 corpus controls. All v1/v2 bytes, IDs,
+labels, original frozen artifacts and derivation hashes are preserved. Ordinary
+full verification, committed-source shadow controls, a normal same-ref push with
+fresh identity checks and final-head native checks remain required. No unchanged
+Action retry, force, ref creation/rename/deletion, installation or activation is
+part of this recovery.
