@@ -230,3 +230,35 @@ combined committed-source controls and final-head native groups/findings before
 normal merge. No corpus/42-slot measurement, qualified profile, real Setup
 observation, default installation or production activation is claimed.
 Production verification remains disabled and evaluated-pilot write attempts zero.
+
+
+## Integration after the causal corpus correction (#985)
+
+Official [sync44768543134](https://github.com/vypdev/copilot/actions/runs/44768543134/job/136399665756)
+published `3842c4422ea31e047907085a4c3f9eeaf539bb65`, with parents
+`07613d5e91a8155b6357f5a065420be38b2e5c08` and develop
+`6382d54a823461b817b52407090dd9a9d92a973d`. The Action's fixer resolved
+one conflict in package.json. The resulting shadow-test command is the exact
+union of both parents, without duplicate files or other package changes.
+
+Native build/typecheck,943 Jest suites /18,695 tests (35 pre-existing skips;
+487.614s), coverage budgets,385 extension files /5,291 tests, lint and
+documentation/specifications passed. The full lossless log and identity receipt
+are retained here. Executable source, compiled bundles and lockfile match the
+develop parent. All #950 drivers, bootstrap and frozen history match0761;
+v1/v2 corpus and #985 evidence match the develop parent. The cancellation and
+deletion-hunk fixes are retained without changing original campaign results.
+
+The prior0761 committed replay remains210/210, with seven actual ordinary
+operations, correct settled-provider-before-abort ordering, empty write arrays
+and unchanged checkouts. Its complete readable ledger/log/receipt and all eight
+successful native groups are preserved against that older25eaba base. They do
+not certify the new combination. Its merged test inventory is expected to be
+216:196 historical controls, eight cancellation additions, six deletion-hunk
+controls and six v2 corpus controls. This inventory is not an executed result.
+
+The new contributor commit requires its ordinary complete delivery hook, actual
+committed-source replay and all final-head native checks/findings before merge.
+No model qualification call, actual Setup observation, default installation,
+qualified profile or production activation is claimed. Evaluated-pilot PR write
+attempts remain zero and production verification remains disabled.

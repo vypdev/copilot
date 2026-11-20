@@ -1,0 +1,97 @@
+{
+  "recordedAt": "2026-11-20T16:25:49.709482+00:00",
+  "sourceHead": "3842c4422ea31e047907085a4c3f9eeaf539bb65",
+  "parents": [
+    "07613d5e91a8155b6357f5a065420be38b2e5c08",
+    "6382d54a823461b817b52407090dd9a9d92a973d"
+  ],
+  "syncRun": 44768543134,
+  "syncJob": 136399665756,
+  "syncConclusion": "success",
+  "conflicts": [
+    "package.json"
+  ],
+  "actionFixerUsed": true,
+  "sourceIdentity": {
+    "executableSourceBundlesAndLockfileMatchParent": true,
+    "all950DriversBootstrapAndHistoryMatchPriorChild": true,
+    "v1V2And985EvidenceMatchParent": true,
+    "packageTestCommandExactUnion": true,
+    "otherPackageFieldsUnchanged": true
+  },
+  "nativeJest": {
+    "suites": 943,
+    "passed": 18695,
+    "preExistingSkipped": 35,
+    "seconds": 487.614
+  },
+  "nativeExtension": {
+    "files": 385,
+    "passed": 5291
+  },
+  "nativeValidation": {
+    "build": "PASS",
+    "typecheck": "PASS",
+    "coverageBudgets": "PASS",
+    "lint": "PASS",
+    "specifications": "PASS",
+    "documentation": "PASS"
+  },
+  "priorCommittedControls": {
+    "head": "07613d5e91a8155b6357f5a065420be38b2e5c08",
+    "tests": 210,
+    "passed": 210,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "ordinaryOperationRows": 7,
+    "separateMatchedArmControl": 1,
+    "providerFailureSettledBeforeAbort": true,
+    "allWriteArraysEmpty": true
+  },
+  "priorNativeGroups": {
+    "head": "07613d5e91a8155b6357f5a065420be38b2e5c08",
+    "allEight": "SUCCESS",
+    "scope": "Prior 25eaba base only; not certification of the new 6382d54 combination."
+  },
+  "records": [
+    {
+      "file": "action-sync-44768543134.log.gz",
+      "encoding": "gzip",
+      "lossless": true,
+      "rawBytes": 3788845,
+      "rawSha256": "82e5a3b984ca0ec0e1978d1438c0a1ba47a81937b7c8eabce2599452bd354c73",
+      "compressedSha256": "8ff99bbc75df74694842e4f7d9840c5508f01a787b0807a2d31bf85507fe3fb6"
+    },
+    {
+      "file": "0761-committed-shadow-210.log.gz",
+      "encoding": "gzip",
+      "lossless": true,
+      "rawBytes": 22118,
+      "rawSha256": "30207acdd10cc288f194e55d6d9dcc4291913f76e630a00033b729b83b935f22",
+      "compressedSha256": "00f8eb1ca066a593b356d75cfee4005bda63c7063c0a9dcb7db3f848149871eb"
+    },
+    {
+      "file": "0761-committed-controls.json",
+      "encoding": "UTF-8 JSON",
+      "rawBytes": 118485,
+      "rawSha256": "9a0dca5792cf30f973ca77138ca397b50d5cf3ef737e3e0910b4c665018c7622"
+    },
+    {
+      "file": "0761-committed-shadow-210-receipt.json",
+      "encoding": "UTF-8 JSON",
+      "rawBytes": 841,
+      "rawSha256": "326d5dbad178bfe3360c4297c6b7e265cc3ffb0f2a78b273c2b0194df53cf740"
+    },
+    {
+      "file": "0761-native-checks.json",
+      "encoding": "UTF-8 JSON",
+      "rawBytes": 1828,
+      "rawSha256": "6c117630b2bb5ab20999def39d3619cfa11c7d247d2c36699223acdea9f3b979"
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "evaluatedPilotPrWriteAttempts": 0,
+  "productionVerificationMode": "disabled",
+  "remaining": "Ordinary contributor hook, new combined committed-source replay (expected 216 controls) and all final-head native groups/findings. No new replay result is claimed here."
+}
