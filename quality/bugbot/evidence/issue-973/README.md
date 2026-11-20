@@ -62,3 +62,33 @@ Verification, Review, Branch Sync and all required CI groups on its own final
 head before integration. These deterministic/native delivery results are not a
 qualification campaign or independent host attestation; no evaluated-pilot PR
 write or production activation occurred.
+
+
+## Integration with the EV-07 audit in #971
+
+After #971 merged into `develop`, official Action synchronization
+[44739840949](https://github.com/vypdev/copilot/actions/runs/44739840949)
+merged that exact parent, `c6590bd8e03aced19250d681788f53268dede600`, without
+conflict or fixer changes. The Action published
+`7901f915644c7a295426fa4d5c5bef6899032f5c`. Build, typecheck, coverage budgets,
+lint, specification and documentation checks passed. The native test run passed
+943 Jest suites / 18,695 tests, retained 35 existing skips, and passed all
+385 extension files / 5,291 tests. `action-sync-7901-receipt.json` binds the
+revision and parents; `action-sync-44739840949.log.gz` retains the full log.
+
+The prior native coverage failure on `3b29fc14851596c2a610c8d909103b24aeaa71c7`
+is retained in `3b29-native-coverage-failure.log.gz` and its diagnostic JSON.
+Three unchanged build hooks timed out and a History Center readiness assertion
+failed. The four affected suites passed 25/25 tests in a separate unchanged
+local diagnostic (`3b29-four-suites-isolated.log.gz`). That diagnostic did not
+establish the native timing cause or replace a full native pass. The successful
+new-parent synchronization above is a separate executed result; no source,
+assertion, timeout, runner placement or concurrency rule was changed to obtain it.
+
+The new synchronization push again skipped `Copilot - Commit` because the Action
+published it as the bot. The accompanying contributor evidence update therefore
+requires fresh Commit, Verification, Review, Branch Sync and CI on its final SHA.
+Historical 202-control static evidence remains scoped to its earlier revision;
+no new qualification campaign, model-profile decision or real Setup observation
+is claimed here. Production verification remains disabled and evaluated-pilot
+PR write attempts remain zero.
