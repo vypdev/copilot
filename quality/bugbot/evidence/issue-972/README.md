@@ -1,5 +1,11 @@
 # Normal-flow operation cancellation — #972
 
+The earlier 204-case replays below retain their actual outcomes. Their original
+post-provider interruption case canceled before provider settlement, so its
+passing terminal state did not establish that distinct ordering boundary. See
+[the corrected control](#post-provider-ordering-control) and its retained
+counterfactual. Final committed-source and native verification remain required.
+
 The actual normal-flow runner now passes its existing signal through
 `projectBugbotReviewOperationContext`. An explicitly interrupted provider remains
 an interrupted operation, rather than a successful ordinary dry-run containing
@@ -148,3 +154,45 @@ existing .log.gz archives, all negative outcomes and the progress/binary guards
 are unchanged. This is an evidence-format correction, with no executable,
 configuration, threshold or result change; it requires a new ordinary commit and
 fresh native checks, not an unchanged retry of the rejected binary.
+
+
+## Post-provider ordering control
+
+Official Action synchronization
+[44740742936](https://github.com/vypdev/copilot/actions/runs/44740742936/job/136303469909)
+cleanly merged develop `c6590bd8e03aced19250d681788f53268dede600` and published
+`2a30e17530bd517da33446449572609bd8c1678b` (parents 64cd + c659). Native build,
+typecheck, lint, specifications and documentation passed, together with
+943 Jest suites / 18,695 tests (35 existing skips) and
+385 extension files / 5,291 tests. The full log is retained losslessly.
+
+Review on 64cd found that the case named `after-provider-interruption` aborted
+inside the verifier before returning `provider-turn-failed`. That case proved an
+interrupted terminal state but not the required post-interruption ordering.
+The new ordering assertion rejects that old fixture: its provider-result
+observation already sees an aborted signal. The targeted negative log and full
+controlled-operation rows are retained without relabeling this attempt a pass.
+
+The corrected fixture returns the provider failure first. The actual runner's
+optional internal verifier-result observation then sees a settled
+`technical-failure` / `provider-turn-failed` with an active signal, aborts the
+controller, and records the aborted signal. The ordinary operation is still
+required to report interruption, blocked publication, empty writes and child
+exit 130. The focused corrected control passes with that exact event order.
+The during-verification case continues to abort inside the verifier, so the two
+boundaries are distinct. The observer adds no CLI option, model deadline or
+provider retry; normal runs without an observer retain the existing path.
+
+`post-provider-order-validation.json` binds the full native sync log, negative
+ordering log, corrected focused log and readable control ledgers. Original v1,
+all frozen campaign data and prior failed/passing attempts remain unchanged.
+The inventory remains eight cancellation cases / 204 controls at this reviewed
+base. The corrected final commit still needs its ordinary complete hook,
+committed-source replay and fresh native groups/Review before integration.
+
+The separate 64cd native CI failure is also retained: two synthetic credential
+transport cases reached their existing 5-second shell timeout. The unchanged
+full suite passes 82/82 locally in 8.324 seconds, using fake curl and no real
+credentials or health dispatch. This diagnostic establishes neither the native
+timing cause nor a whole native pass. Source, assertion, timeout, workflow,
+runner and concurrency settings for that suite remain unchanged.

@@ -453,6 +453,14 @@ pinned temporary Git sources and fail-on-write SCM ports. They are synthetic
 controls, not model measurements or qualification evidence. The loader uses the
 shipping compiler options so the real progress/cancellation path is exercised.
 
+The post-provider control observes a settled `provider-turn-failed` result while
+the signal is still active, then explicitly cancels the enclosing operation.
+Its event-order assertions distinguish this boundary from cancellation inside
+the verifier. The retained counterfactual rejects the former fixture's early
+abort; the corrected control still requires interrupted status, blocked
+publication, empty writes and exit 130. See the exact logs and readable ledgers
+in `quality/bugbot/evidence/issue-972/post-provider-order-validation.json`.
+
 Use a new output destination for every actual attempt and retain the interrupted
 ledger. Old ledgers remain historical observations; replay needs the new driver
 pin and its applicable source/runtime admission. This adds no Action setting,
@@ -461,7 +469,8 @@ elapsed-time cutoff, token budget or turn limit. Usage remains optional telemetr
 After the #970/#972 integration, the cancellation controls enter through the
 external bootstrap too. Their disposable source snapshot and plan are committed
 before execution; a pinned owned wrapper supplies controlled providers while
-leaving the actual runner function unchanged. The relative-lab case uses the
+executing the actual runner. Its optional internal result observer exposes the
+post-provider boundary to the control without adding a CLI setting. The relative-lab case uses the
 same fixture. This does not add a production test mode or bypass source/runtime
 admission. Seven actual-operation cases and one matched-arm case distinguish
 interruption, completion and provider failure; the bootstrap exits 130, 0 and 1

@@ -300,7 +300,11 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             peak = Math.max(peak, active);
             log(label(arm, { event: 'verifier-start', id: candidate.id, active, atMs: startedAt }));
             try {
-                return await (ports.verifier ?? adapters[arm]).verify({ ...request, signal: withCancellation(request.signal) });
+                const input = { ...request, signal: withCancellation(request.signal) };
+                const result = await (ports.verifier ?? adapters[arm]).verify(input);
+                // Controlled fixtures can observe provider settlement before canceling the enclosing operation.
+                if (ports.verifierResult) await ports.verifierResult.observe({ arm, id: candidate.id, result, signal: input.signal });
+                return result;
             } finally {
                 active -= 1;
                 lastVerifier = sinceStart();

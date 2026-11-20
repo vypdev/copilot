@@ -26,6 +26,13 @@ async function controlledRun(run, lab, number, output, manifest, stage, head) {
         progress: { observe(observation) {
             if (stage === 'between-preparation-and-verification' && observation.stage === 'verifying') cancellation.abort();
         } },
+        verifierResult: { observe(observation) {
+            if (stage !== 'after-provider-interruption') return;
+            pending.push({ stage: 'provider-result-observed', status: observation.result.status,
+                reason: observation.result.reason, abortedAtObservation: observation.signal.aborted });
+            cancellation.abort();
+            pending.push({ stage: 'post-provider-cancellation', abortedAfterObservation: observation.signal.aborted });
+        } },
         findings: { async query(request) {
             detectorCalls++;
             pending.push({ stage: 'detector', abortedAtEntry: request.signal.aborted });
@@ -41,12 +48,12 @@ async function controlledRun(run, lab, number, output, manifest, stage, head) {
             verifierCalls++;
             const observation = { stage: 'verifier', id: request.candidate.id, abortedAtEntry: request.signal.aborted };
             pending.push(observation);
-            if (stage === 'during-verification' || stage === 'after-provider-interruption') {
+            if (stage === 'during-verification') {
                 cancellation.abort();
                 observation.abortedAfterInterruption = request.signal.aborted;
-                return { status: 'technical-failure', reason: stage === 'after-provider-interruption'
-                    ? 'provider-turn-failed' : 'investigation-canceled' };
+                return { status: 'technical-failure', reason: 'investigation-canceled' };
             }
+            if (stage === 'after-provider-interruption') return { status: 'technical-failure', reason: 'provider-turn-failed' };
             return { status: 'verdict', verdict: 'inconclusive', reason: 'Controlled missing evidence.',
                 missing: 'A test-only source gap.', citations: [], premises: [] };
         } },
@@ -93,6 +100,15 @@ for (const stage of ['before-detection', 'during-detection', 'between-preparatio
         retained.push({ stage, pins: fixture.pins, pending, detectorCalls, verifierCalls, exitCode: child.status, rows });
         assert.deepEqual(result.writes, []);
         assert.equal(terminal.checkoutUnchanged, true);
+        if (stage === 'after-provider-interruption') {
+            assert.deepEqual(pending.map(observation => observation.stage),
+                ['detector', 'verifier', 'provider-result-observed', 'post-provider-cancellation']);
+            assert.equal(pending[2].status, 'technical-failure');
+            assert.equal(pending[2].reason, 'provider-turn-failed');
+            assert.equal(pending[2].abortedAtObservation, false,
+                'the provider interruption must be observed before cancellation');
+            assert.equal(pending[3].abortedAfterObservation, true);
+        }
         if (stage === 'uninterrupted') {
             assert.equal(child.status, 0, child.stderr);
             assert.equal(result.status, 'completed');
