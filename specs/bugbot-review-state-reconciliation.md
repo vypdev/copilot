@@ -2590,28 +2590,39 @@ The operator's reviewed Git blob and independently selected digests remain the
 trust anchors; this change adds no independent host or human-review attestation.
 
 The external bootstrap authenticates and materializes the reviewed closure as
-above, then forks the same external bootstrap file with a private parent IPC
-channel. The worker repeats plan/driver/source/runtime verification before driver
-imports, installs immutable process-local context, and calls the admitted module.
-Only the launcher-to-scheduler and scheduler-to-review-slot child routes are
-available. Each nested process re-enters the external bootstrap and repeats the
-private-byte check; review slots recheck the matching independent corpus gate.
-IPC carries already verified context; it is not itself an accreditation of a
-compromised parent. No serialized checkout object authorizes execution.
+above, then installs immutable process-local context and calls the admitted
+module in that same process. There MUST be no internal worker CLI or IPC message
+that initializes context from caller-selected proof fields. Each nested scheduler
+or review process MUST enter the complete public bootstrap validation and private
+materialization with the same independently selected plan/bootstrap pins. Its
+private source/dependencies and fixed driver inventory are checked before import.
+The closure permits launcher-to-scheduler and scheduler-to-review-slot spawning;
+a review slot MUST receive and verify the exact parent independent corpus gate.
+Neither an IPC parent nor a serialized checkout object authorizes admission.
+
+The ordinary public modes remain corpus/full-review/normal-flow. The same launch
+also admits full-review-runner with one campaign argument and review with campaign,
+checkout, subject ID, repetition and output arguments. Unknown modes/argument
+shapes fail before materialization. These paths require all explicit reviewed
+plan/bootstrap identities and the complete source/runtime proof, including for a
+direct invocation; they are no admission shortcut. Reviewed digest selection and
+the trusted operator/host remain external prerequisites, without a new claim of
+independent human-review or host attestation.
 
 ```mermaid
 flowchart LR
-  A[Reviewed external bootstrap] --> B[Verify plan and immutable closure]
+  A[Reviewed external bootstrap and explicit pins] --> B[Verify plan and immutable closure]
   B --> C[Private source and dependency proof]
-  C --> D[Fork same external bootstrap over IPC]
-  D --> E[Repeat private-byte and runtime checks]
-  E --> F[Install process-local context and call driver]
-  F -->|paired child route| D
+  C --> D[Repeat private-byte and runtime checks]
+  D --> E[Install process-local context and call driver]
+  E -->|nested process with same explicit pins| A
 ```
 
-Text equivalent: independently checked external code admits the closure, starts
-each worker through that same code, verifies the private bytes again, and only
-then imports and calls a driver. A mutable receipt supplies none of these steps.
+Text equivalent: independently checked external code admits the closure, copies
+and verifies the private bytes, then imports a driver in that same process. Each
+nested process repeats the complete launch. The removed internal worker endpoint
+rejects both a direct call and an arbitrary IPC-connected parent before imports.
+
 Normal CLI selection, verifier profiles, cohort/order/retry policies, explicit
 signals and existing scoring/latency gates are preserved. Parent cancellation
 continues to reach the worker; its interrupted exit and cleanup remain observable.
@@ -2619,18 +2630,19 @@ No consumer option, production setting or research timeout/turn/read/token cap i
 introduced. Existing frozen evidence requires its original historical drivers;
 future measurements require the new exact driver identities and preregistration.
 
-Additional numeric budget: **six deterministic security/lifecycle cases**, making
-**19 bootstrap cases and 193 combined shadow controls**. Two cases reproduce the
+Additional numeric budget: **seven deterministic security/lifecycle cases**, making
+**20 bootstrap cases and 194 combined shadow controls**. Two cases reproduce the
 old real verifier accepting a fabricated receipt and a direct runner importing a
-checkout helper, then verify rejection. One rejects a worker without parent IPC.
-Two exercise the actual nested fork route, including private verifier mutation
-rejected before import. One sends SIGTERM after synthetic-worker readiness and
+checkout helper, then verify rejection. One rejects the removed worker entry without IPC. One executes the frozen f583
+bootstrap with an arbitrary IPC parent, proves its former admission, then verifies
+current rejection. Two exercise the complete nested launch, including exact corpus
+campaign propagation and private verifier mutation rejected before import. One sends SIGTERM after synthetic-worker readiness and
 checks its interrupted exit and output. Its bounded fixture cleanup applies only
 to that owned model-free test, never an investigation. Existing source/runtime,
 normal-flow and independent-corpus controls remain required; no model calls or
 evaluated-PR writes are needed for these controls.
 
-Acceptance requires all six controls, the actual relative-lab zero-candidate
+Acceptance requires all seven controls, the actual relative-lab zero-candidate
 journey and complete combined controls to pass. Preserve the old bypass, failed
 fixture attempts and successful outputs byte-exactly. Update operator guidance,
 catalog evidence and Graphify; run specification/docs validation and the complete

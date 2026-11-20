@@ -12,7 +12,7 @@ const proof = require('./execution-provenance.cjs');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const prefix = 'quality/bugbot/evidence/issue-950/';
 
-function fixture(t, crlfCheckout = false, brokerGit = false, cancellation = false) {
+function fixture(t, crlfCheckout = false, brokerGit = false, cancellation = false, bootstrapBytes) {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'qualified-bootstrap-control-'));
     t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
     const root = path.join(directory, 'project');
@@ -36,7 +36,7 @@ function fixture(t, crlfCheckout = false, brokerGit = false, cancellation = fals
         '../ev07-shadow/implementation.cjs', '../ev07-shadow/configuration.cjs', '../qualification-bootstrap.cjs'];
     for (const file of drivers) write(path.posix.normalize(prefix + 'normal-flow-shadow/' + file), 'module.exports = {};\n');
     write(prefix + 'execution-provenance.cjs', fs.readFileSync(path.join(__dirname, 'execution-provenance.cjs')));
-    write(prefix + 'qualification-bootstrap.cjs', fs.readFileSync(path.join(__dirname, 'qualification-bootstrap.cjs')));
+    write(prefix + 'qualification-bootstrap.cjs', bootstrapBytes ?? fs.readFileSync(path.join(__dirname, 'qualification-bootstrap.cjs')));
     write(prefix + 'normal-flow-shadow/run.cjs', 'exports.run=(lab,number,output)=>{const fs=require("node:fs"),path=require("node:path"),'
         + 'root=path.resolve(__dirname,"../../../../..");fs.writeFileSync(output,JSON.stringify({cwd:process.cwd(),isolated:__dirname,'
         + 'mode:process.env.BUGBOT_VERIFICATION_MODE,admission:require("../execution-provenance.cjs").requireBootstrapAdmission(root),'
@@ -191,8 +191,8 @@ test('a self-consistent checkout receipt is not bootstrap admission', t => {
     const previous = path.join(f.directory, 'previous-verifier.cjs');
     // Preserve the actual historical bytes without depending on an unmerged
     // branch commit remaining fetchable after squash or branch cleanup.
-    const legacy = require('node:zlib').gunzipSync(fs.readFileSync(path.join(__dirname,
-        '../issue-970/legacy-verifier-01097099.cjs.gz')));
+    const legacy = fs.readFileSync(path.join(__dirname,
+        '../issue-970/legacy-verifier-01097099.cjs.txt'));
     assert.equal(hash(legacy), 'c0471ff35e10cd39ff75a84e02830f4aa98f6f97bb3b47345e241cb77d3877d8');
     fs.writeFileSync(previous, legacy);
     assert.deepEqual(require(previous).requireBootstrapAdmission(f.root), fabricated,
@@ -218,11 +218,11 @@ test('a direct runner refuses a forged receipt before importing a checkout verif
     assert.equal(fs.existsSync(f.output), false);
 });
 
-test('an internal bootstrap worker refuses direct invocation without its parent IPC channel', t => {
+test('the removed internal worker entry refuses direct invocation before any admission', t => {
     const f = fixture(t);
     const run = spawnSync(process.execPath, [f.bootstrap, '--admitted-worker'], { encoding: 'utf8' });
     assert.notEqual(run.status, 0);
-    assert.match(run.stderr, /external bootstrap IPC channel/u);
+    assert.match(run.stderr, /unsupported qualification entrypoint|worker admission.*removed/u);
     assert.equal(fs.existsSync(f.marker), false);
     assert.equal(fs.existsSync(f.output), false);
 });
@@ -235,7 +235,8 @@ function nestedFixture(t, tamper) {
     for (const name of names.filter(name => !name.startsWith('../'))) f.write(base + name, 'module.exports={};\n');
     const wait = 'const wait=child=>new Promise((resolve,reject)=>{child.once("error",reject);child.once("close",code=>resolve(code??1));});';
     f.write(base + 'launch-full-review.cjs', wait
-        + 'exports.requirePassingCorpus=campaign=>campaign;exports.run=campaign=>wait(require("../execution-provenance.cjs")'
+        + 'exports.requirePassingCorpus=campaign=>{require("node:assert/strict").equal(campaign,'
+        + JSON.stringify(f.directory) + ');return campaign;};exports.run=campaign=>wait(require("../execution-provenance.cjs")'
         + '.spawnQualificationDriver("full-review-runner",[campaign]));\n');
     f.write(base + 'full-review.cjs', 'const fs=require("node:fs"),path=require("node:path"),helper=require("../execution-provenance.cjs");'
         + wait + 'exports.run=campaign=>{'
@@ -259,7 +260,7 @@ function nestedFixture(t, tamper) {
     return { ...f, result, revision };
 }
 
-test('nested qualification workers receive process-local admission through the reviewed external bootstrap', t => {
+test('nested qualification processes repeat the complete reviewed external launch', t => {
     const f = nestedFixture(t, false);
     assert.equal(f.result.status, 0, f.result.stderr);
     const result = JSON.parse(fs.readFileSync(f.output));
@@ -299,4 +300,32 @@ test('explicit cancellation reaches the admitted worker and preserves its interr
     assert.equal(signal, null, stderr);
     assert.equal(code, 143, stderr);
     assert.equal(fs.readFileSync(f.output, 'utf8'), 'interrupted');
+});
+
+test('an arbitrary IPC parent cannot initialize qualification admission, unlike the frozen previous worker', { timeout: 30000 }, async t => {
+    // An owned model-free process cleanup, never an investigation deadline.
+    const previous = fs.readFileSync(path.join(__dirname, '../issue-970/legacy-bootstrap-f583e40c.cjs.txt'));
+    assert.equal(hash(previous), 'e809d86426f33ac20bae21cf463253fcbf8f489aff4888c532e82afa40d2f609');
+    for (const legacy of [true, false]) {
+        const f = fixture(t, false, false, false, legacy ? previous : undefined);
+        const child = require('node:child_process').fork(f.bootstrap, ['--admitted-worker'],
+            { cwd: f.directory, execArgv: [], stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+        let stderr = ''; child.stderr.on('data', bytes => { stderr += bytes; });
+        t.after(() => { if (child.exitCode === null) child.kill('SIGKILL'); });
+        child.send({ root: f.root, proof: { planCommit: f.revision, planPath: f.planPath,
+            planSha256: f.planSha256, bootstrapSha256: hash(fs.readFileSync(f.bootstrap)) },
+            mode: 'normal-flow', args: ['relative-lab', '1', f.output] });
+        const [code] = await once(child, 'close');
+        if (legacy) {
+            assert.equal(code, 0, stderr);
+            const result = JSON.parse(fs.readFileSync(f.output));
+            assert.equal(result.admission.planCommit, f.revision,
+                'the real previous worker accepts the arbitrary IPC parent without the public launch path');
+        } else {
+            assert.notEqual(code, 0, 'arbitrary IPC parent initialized bootstrap context: ' + stderr);
+            assert.match(stderr, /unsupported qualification entrypoint|worker admission.*removed/u);
+            assert.equal(fs.existsSync(f.output), false);
+        }
+        assert.equal(fs.existsSync(f.marker), false);
+    }
 });

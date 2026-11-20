@@ -9,7 +9,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { createHash } = require('node:crypto');
-const { execFileSync, fork } = require('node:child_process');
+const { execFileSync, spawn } = require('node:child_process');
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const prefix = 'quality/bugbot/evidence/issue-950/';
 const ev07 = ['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs', 'review.cjs',
@@ -101,25 +101,27 @@ function reviewedPlan(repository, revision, planPath, planSha256, bootstrapSha25
     return { root, trust, bytes, plan, admitted };
 }
 
-function spawnAdmitted(request, env, options = {}) {
+function spawnReviewedLaunch(request, env, options = {}) {
     assert(Object.keys(options).every(key => key === 'stdio'), 'unsupported qualification child options');
     assert.equal(sha256(fs.readFileSync(__filename)), request.proof.bootstrapSha256, 'executing bootstrap changed');
-    const io = options.stdio ?? 'inherit';
-    const stdio = Array.isArray(io) ? [...io, 'ipc'] : [io, io, io, 'ipc'];
-    const child = fork(__filename, ['--admitted-worker'], { env, stdio, execArgv: [], cwd: process.cwd() });
-    child.send(request, error => { if (error) child.emit('error', error); });
-    return child;
+    const { proof, root, mode, args, corpusCampaign } = request;
+    // No IPC admission endpoint: every process enters the complete public
+    // validation/materialization path with the same independently supplied pins.
+    const modeArgs = mode === 'review' ? [corpusCampaign, ...args] : args;
+    return spawn(process.execPath, [__filename, root, proof.planCommit, proof.planPath,
+        proof.planSha256, proof.bootstrapSha256, mode, ...modeArgs],
+    { env, stdio: options.stdio ?? 'inherit', cwd: process.cwd() });
 }
 
-async function executeAdmitted(request) {
+async function executePrivate(request) {
     assert(request && Array.isArray(request.args) && request.args.every(arg => typeof arg === 'string'),
         'invalid admitted invocation');
     const { root: repository, proof, mode } = request;
     const { root, plan } = reviewedPlan(repository, proof.planCommit, proof.planPath,
         proof.planSha256, proof.bootstrapSha256, mode);
-    // The executing file is still the externally materialized bootstrap. Repeat
-    // private-byte/source/runtime checks before loading any private driver in
-    // each child. No receipt in this checkout is read as execution authority.
+    // This function is reachable only from launch after private materialization.
+    // There is no message handler or exported API that initializes admission.
+    // Repeat private bytes before imports; a checkout receipt has no authority.
     const verifier = require(path.join(root, prefix, 'execution-provenance.cjs'));
     verifier.attestSource(root, plan.implementation);
     verifier.attestRuntime(root, plan.runtime);
@@ -127,7 +129,7 @@ async function executeAdmitted(request) {
         assert(mode === 'full-review' && nextMode === 'full-review-runner'
             || mode === 'full-review-runner' && nextMode === 'review', 'unadmitted qualification child route');
         const corpusCampaign = mode === 'full-review' ? request.args[0] : request.corpusCampaign;
-        return spawnAdmitted({ root, proof, mode: nextMode, args, corpusCampaign }, process.env, options);
+        return spawnReviewedLaunch({ root, proof, mode: nextMode, args, corpusCampaign }, process.env, options);
     });
     if (mode === 'review') {
         assert(typeof request.corpusCampaign === 'string', 'paired review requires its passing corpus');
@@ -139,8 +141,10 @@ async function executeAdmitted(request) {
 }
 
 async function launch(repository, revision, planPath, planSha256, bootstrapSha256, mode, ...args) {
-    assert(['corpus', 'full-review', 'normal-flow'].includes(mode), 'unsupported public qualification entrypoint');
-    assert(mode === 'normal-flow' ? args.length === 3 : mode === 'full-review' ? args.length === 1
+    assert(Object.hasOwn(entries, mode), 'unsupported qualification entrypoint; worker admission endpoint removed');
+    assert(mode === 'normal-flow' ? args.length === 3
+        : mode === 'full-review' || mode === 'full-review-runner' ? args.length === 1
+        : mode === 'review' ? args.length === 5
         : args.length === 1 || args.length === 2 && args[1] === '--preflight', 'invalid qualification arguments');
     const { root, trust, bytes, plan, admitted } = reviewedPlan(repository, revision,
         planPath, planSha256, bootstrapSha256, mode);
@@ -192,33 +196,23 @@ async function launch(repository, revision, planPath, planSha256, bootstrapSha25
                 'auxiliary Python differs from reviewed runtime');
             env.PILOT_LOCAL_PYTHON = plan.runtime.pythonExecutable;
         }
-        const childArgs = mode === 'normal-flow' ? [...args, path.join(isolated, planPath)] : args;
-        const child = spawnAdmitted({ root: isolated, proof, mode, args: childArgs }, env);
-        const interrupt = () => child.kill('SIGINT'), terminate = () => child.kill('SIGTERM');
-        process.once('SIGINT', interrupt);
-        process.once('SIGTERM', terminate);
+        const corpusCampaign = mode === 'review' || mode === 'full-review-runner' ? args[0] : undefined;
+        const childArgs = mode === 'normal-flow' ? [...args, path.join(isolated, planPath)]
+            : mode === 'review' ? args.slice(1) : args;
+        const previousEnvironment = process.env;
+        process.env = env;
         try {
-            return await new Promise((resolve, reject) => {
-                child.once('error', reject);
-                child.once('close', (code, signal) => resolve(code ?? (signal === 'SIGINT' ? 130 : signal === 'SIGTERM' ? 143 : 1)));
-            });
-        } finally {
-            process.removeListener('SIGINT', interrupt);
-            process.removeListener('SIGTERM', terminate);
-        }
+            // Import and run in this verified bootstrap process, never through
+            // an internal CLI/IPC message that can bypass public admission.
+            return await executePrivate({ root: isolated, proof, mode, args: childArgs, corpusCampaign });
+        } finally { process.env = previousEnvironment; }
+
     } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
 }
 
 module.exports = { launch };
 if (require.main === module) {
-    const fail = error => { console.error(error.message); process.exitCode = 1; };
-    if (process.argv[2] === '--admitted-worker') {
-        if (!process.send || !process.connected) fail(new Error('admitted worker requires the external bootstrap IPC channel'));
-        else process.once('message', request => {
-            process.disconnect();
-            executeAdmitted(request).then(code => {
-                process.exitCode = Number.isInteger(code) ? code : code?.status === 'interrupted' ? 130 : 0;
-            }).catch(fail);
-        });
-    } else launch(...process.argv.slice(2)).then(code => { process.exitCode = code; }).catch(fail);
+    launch(...process.argv.slice(2)).then(code => {
+        process.exitCode = Number.isInteger(code) ? code : code?.status === 'interrupted' ? 130 : 0;
+    }).catch(error => { console.error(error.message); process.exitCode = 1; });
 }

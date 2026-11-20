@@ -400,16 +400,22 @@ reported by an unregistered executable cannot execute even during preparation.
 Qualification drivers now refuse direct CLI execution before importing a checkout
 helper. A `.qualification-admission.json` file, even with matching hashes, supplies
 no execution authority. Use the independently materialized external bootstrap
-above. It forks that same reviewed file with a parent IPC channel, repeats private
-plan/driver/source/runtime checks in each worker, and supplies process-local
-context before calling the driver module. Paired scheduler and review-slot
-processes follow that same route and retain the independent corpus gate.
+above. It performs the complete validation/materialization and calls the driver
+in that same bootstrap process. The internal --admitted-worker endpoint and IPC
+message handler have been removed: a parent message cannot initialize admission.
+Each nested scheduler/review process enters the complete public launch again with
+the same explicit reviewed plan/bootstrap pins and repeats all private byte and
+runtime checks. The final review slot verifies its exact parent corpus campaign.
 
-The public bootstrap arguments are unchanged; the worker channel is internal.
-Explicit cancellation still reaches the admitted worker and preserves its exit.
-There are no new consumer settings or investigation limits. The six additional
-receipt/direct-entry/IPC/nested-mutation/cancellation controls use real Git and
-owned fake workers, with zero model calls and evaluated-PR writes. Their cleanup
-timeout belongs only to the synthetic cancellation fixture. Bootstrap context is
-not independent accreditation of the host or operator review; retain the external
-digest check before starting Node and freeze new driver hashes before measuring.
+Ordinary corpus/full-review/normal-flow arguments are unchanged. Nested launches
+also use full-review-runner with one campaign argument, or review with campaign,
+checkout, subject ID, repetition and output. Every mode requires the same explicit
+reviewed plan/bootstrap identities and complete proof; there is no worker shortcut.
+Explicit cancellation reaches the executing admitted driver and preserves its exit.
+There are no new consumer settings or investigation limits. Seven additional
+receipt/direct-entry/arbitrary-IPC/nested-mutation/cancellation cases use real Git
+and owned fakes, with zero model calls and evaluated-PR writes. The frozen previous
+bootstrap demonstrates the IPC bypass before the new rejection. Fixture cleanup
+timeouts never bound a model investigation. Context is not independent host or
+human-review accreditation: retain the external digest check before starting Node
+and freeze new driver hashes before measuring.

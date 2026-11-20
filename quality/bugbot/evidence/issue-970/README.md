@@ -75,7 +75,10 @@ this local proof.
 
 The bootstrap takes repository, reviewed plan commit, repository-relative plan
 path, externally reviewed plan SHA-256, externally reviewed bootstrap SHA-256,
-mode (`corpus`, `full-review`, `normal-flow`), then that mode's arguments. It
+mode (`corpus`, `full-review`, `normal-flow`), then that mode's arguments.
+Nested scheduler/review processes use the same complete launch with
+`full-review-runner <campaign>` or `review <campaign> <checkout> <id> <repetition> <output>`;
+they do not accept an internal worker-admission message. It
 checks the immutable committed plan and the complete fixed driver inventory
 against their reviewed bytes before importing any driver or helper. It rejects
 changed physical drivers and symlinks, uses a sterile local Git clone to
@@ -192,6 +195,9 @@ Both former behaviors fail the new rejection assertions; these failures remain.
 The first negative run also exposed the existing logical macOS path alias in a
 fixture argument; the corrected counter-control uses its physical manifest path.
 
+The historical f583e40c implementation below was subsequently superseded by
+the complete-public-launch correction at the end of this document.
+
 Qualification no longer reads or creates .qualification-admission.json. Direct
 driver CLIs reject before helper imports. After admitting source/dependencies,
 the independently reviewed external bootstrap forks that same external file,
@@ -223,7 +229,7 @@ is claimed by these deterministic results.
 Lossless raw-log inventory:
 
 The real previous verifier from commit `01097099d220bd481f6e50b58d2213165bcf6194`
-is also frozen as `legacy-verifier-01097099.cjs.gz` (15,205 original bytes,
+is also frozen as `legacy-verifier-01097099.cjs.txt` (15,205 original bytes,
 SHA-256 `c0471ff35e10cd39ff75a84e02830f4aa98f6f97bb3b47345e241cb77d3877d8`).
 The causal control checks that digest before using the code on its disposable
 fixture. It does not rely on the managed branch remaining fetchable after squash.
@@ -240,3 +246,73 @@ fixture. It does not rely on the managed branch remaining fetchable after squash
 The final replay using the frozen legacy source also passes **193/193** controls.
 
 - `memory-frozen-final-shadow-193.log.gz`: 20469 original bytes; SHA-256 `5f80b7559e8a4085089ff8d0a0b5b111e55dcc67804c29fac29219cf57aef2c4`.
+
+
+Native Commit on f583e40c rejected the compressed historical verifier as required
+binary code (validation.evidence-unavailable, non-retryable). No model progress
+assessment was made and previous progress was retained. The counter-control now
+stores the exact same 15,205 source bytes as reviewable .cjs.txt data; its pinned
+SHA-256 remains unchanged. Current-base diff no longer includes a binary verifier.
+No evidence path is excluded or reclassified to bypass that check. Historical
+gzip remains in the f583 commit, and all negative outputs remain lossless.
+
+- `memory-native-binary-source-failure.log.gz`: 36085 original bytes; SHA-256 `e9c4c3bec1b138f99af7bbb9d04720a4452286830ee5d5aefca4266835c58f32`.
+
+The complete replay with the readable historical source passes **193/193**, zero skipped/cancelled/model calls/evaluated-PR writes.
+
+- `readable-legacy-shadow-193.log.gz`: 20493 original bytes; SHA-256 `49fd783acc93c3c17fbdb88f41dbb57d463095e7a0afb9500a4af2906201ba90`.
+
+
+## Every process uses the complete reviewed launch
+
+Native review on f583e40c found that its internal --admitted-worker endpoint
+accepted a self-pinned request from any IPC-connected parent. The new causal
+control executes the actual frozen previous bootstrap and observes successful
+admission without calling public launch. It then checks that the current code
+rejects the same invocation before driver execution. The historical bootstrap
+is reviewable UTF-8 data, `legacy-bootstrap-f583e40c.cjs.txt`, 14,309 bytes,
+SHA-256 `e809d86426f33ac20bae21cf463253fcbf8f489aff4888c532e82afa40d2f609`.
+
+The worker endpoint and IPC message handler are removed. The external bootstrap
+now authenticates and materializes the closure and calls the driver in that same
+process. Each nested scheduler/review process starts the external bootstrap with
+the same explicit reviewed plan and bootstrap pins, repeats the entire public
+validation/materialization/dependency-copy proof, then installs process-local
+context. Review slots retain the exact parent corpus campaign and validate its
+matching passing evidence. A caller-supplied IPC object cannot initialize context.
+The five closed modes have fixed argument counts; there is no acceptance of an
+internal worker request or persisted admission receipt. Operator review of the
+external digest remains essential; this is no independent human/host attestation.
+
+The strengthened nested positive control asserts the exact corpus campaign at
+the final slot, in addition to the plan identity. The prior first20-case local
+pass used a permissive fake corpus gate and is retained as that limited result.
+Explicit SIGTERM still reaches the executing admitted driver; the same readiness,
+interrupted-output/exit and cleanup control applies. No model or evaluated-PR
+calls, new consumer option, cohort change or investigation limit is introduced.
+
+The previous mandatory hook attempt failed with a SIGSEGV in the existing
+branch_sync_resolved_workspace suite: 942 suites /18,689 tests passed. Its six
+unchanged tests pass in isolation. The raw failure and isolated result are
+retained, and the complete hook must run again on the final correction.
+The initial standalone IPC diagnostic did not load its helper; a second
+standalone diagnostic rewrote a generated driver path incorrectly and therefore
+refused for the wrong reason. Neither establishes the vulnerability or the fix.
+The in-repository causal failure does: the unchanged real previous worker returns
+zero and writes admitted output; the corrected assertion rejects that behavior.
+
+- `readable-legacy-hook-sigsegv.log.gz`: 463058 original bytes; SHA-256 `40dac502be2bfb2b796f45e8c35ec1a50c82a5ecbd452c2347170b4248ce7352`.
+- `readable-legacy-hook-isolated-six.log.gz`: 209 original bytes; SHA-256 `11895ae53f61f01219ce0e18a30231d0f953bdefb8375c77771d9179f3b6f458`.
+- `ipc-counter-import-diagnostic.log.gz`: 1351 original bytes; SHA-256 `259e2328dccacf45cbec1972e7517fc7ca29625950b4be8a226116de4563079b`.
+- `ipc-counter-path-diagnostic.log.gz`: 279 original bytes; SHA-256 `0f88853d8605aecdcd40a76ee63c43c48912586f0b60c5d90eb8c9590ac0cca3`.
+- `ipc-parent-causal-negative.log.gz`: 1089 original bytes; SHA-256 `ea981eb57d99675c9d3b1b96ff15fc153879f1260cac9dac6304880ac846baa7`.
+- `public-launch-bootstrap-first-20.log.gz`: 3086 original bytes; SHA-256 `74abfe52a06f3d91dcd9335bfc4c3e8250b8a26b2de4e56004f913a902cf23e7`.
+
+Final strengthened bootstrap controls: **20/20** pass. The full combined suite
+passes **194/194**, zero skipped/cancelled/model calls/evaluated-PR writes,
+including the actual relative-lab zero-candidate journey. Specification/catalog,
+documentation and Graphify validation pass. The mandatory complete hook and
+new-SHA native review remain separate outstanding checks.
+
+- `public-launch-bootstrap-final-20.log.gz`: 3078 original bytes; SHA-256 `dd36c3d82104459d248551924674cbb8b0497bfce81fb19e0fc9af0766bfb3fd`.
+- `public-launch-shadow-194.log.gz`: 20219 original bytes; SHA-256 `b21d59d3f604cb4168a71ee8f25b8ff3843fa19e1b1a3d4fa8ae065d7a3dfb57`.
