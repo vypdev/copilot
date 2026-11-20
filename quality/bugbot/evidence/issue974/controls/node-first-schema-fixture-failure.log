@@ -1,0 +1,40 @@
+✔ ev974-C09 explicit v2 selection is coherent and retains all corpus identities and labels (8.190875ms)
+✔ ev974-C10 omission retains v1/default and every frozen historical artifact byte (4.357958ms)
+✔ ev974-C11 rejects foreign path/hash/count/revision, altered identities and historical redirects before calls (4.744875ms)
+✔ ev974-C12 v2 cannot weaken gates, cohort, repetition, positives, latency or the exact Luna to Sol profile (2.064625ms)
+✔ ev974-C13 actual v2 public bootstrap rejects foreign source/runtime before modules and probes (3217.452458ms)
+✔ ev974-C14 actual v2 bootstrap rejects changed drivers/bootstrap and unsupported admission endpoints (858.909125ms)
+✖ ev974-C15 ordinary benchmark generates distinct literal follow-up attempts with durable delivered bytes (469.834167ms)
+✔ ev974-C16 failed ordinary preparation is retained without a spawned session or reported identity (18.2475ms)
+✔ ev974-C17 provider and follow-up failures remain terminal with no unregistered retry (19.440542ms)
+✔ ev974-C18 interruption keeps the durable start, interrupted call and all unstarted outer slots (459.807292ms)
+✔ ev974-C19 unknown or high usage is telemetry and configured flags never become a reported identity (34.790042ms)
+✔ ev974-C20 ordinary v2 prompt generation excludes expected oracles and binds actual delivered prompt/schema bytes (36.551917ms)
+✔ ev974-C21 failed and incomplete v2 corpus launch zero full-review children and retain the first failure (3.90525ms)
+✔ ev974-C23 missing duplicate or unterminated attempts cannot admit completed-looking case IDs (28.938417ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 13
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5301.819125
+
+✖ failing tests:
+
+test at quality/bugbot/evidence/issue974/qualification.test.cjs:168:1
+✖ ev974-C15 ordinary benchmark generates distinct literal follow-up attempts with durable delivered bytes (469.834167ms)
+  Error: Agent response schema violation at $: missing required property resolved_findings.
+      at validateObject (/private/tmp/copilot-goal-974/src/data/repository/agent_json_schema_validator.ts:79:19)
+      at assertAgentResponseSchema (/private/tmp/copilot-goal-974/src/data/repository/agent_json_schema_validator.ts:19:9)
+      at interpretFindingsResponse (/private/tmp/copilot-goal-974/src/data/repository/agent_findings_response_policy.ts:30:69)
+      at Object.mapCliOutput (/private/tmp/copilot-goal-974/src/data/repository/ai/findings_agent_adapter.ts:36:199)
+      at FindingsAgentAdapter.execute (/private/tmp/copilot-goal-974/src/data/repository/ai/agent_capability_adapter.ts:36:24)
+      at async runBugbotBenchmarkAgent (/private/tmp/copilot-goal-974/src/tooling/bugbot_benchmark_runner.ts:22:26)
+      at async TestContext.<anonymous> (/private/tmp/copilot-goal-974/quality/bugbot/evidence/issue974/qualification.test.cjs:178:20)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    reason: 'required',
+    path: '$.resolved_findings'
+  }

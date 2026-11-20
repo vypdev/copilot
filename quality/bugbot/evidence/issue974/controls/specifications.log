@@ -1,0 +1,38 @@
+
+> @vypdev/copilot@3.10.13 validate:specifications /private/tmp/copilot-goal-974
+> node scripts/validate-specification-catalog.cjs && node scripts/validate-github-communication-test-budget.cjs && pnpm run validate:browser-extension-specifications
+
+specification catalog validation: PASS (22 capabilities)
+GitHub communication test budgets: PASS (semantic-github-publication=1215/135, repository-locale-localization=189/146; no file is double-counted)
+
+> @vypdev/copilot@3.10.13 validate:browser-extension-specifications /private/tmp/copilot-goal-974
+> node --test test-support/browser-extension-specifications.test.cjs && node scripts/validate-browser-extension-specifications.cjs
+
+✔ validates the complete proposed catalog, real schemas/fixtures and document ownership (87.671792ms)
+✔ rejects catalog references outside the fixed local family directory (2.268375ms)
+✔ rejects swapping a valid family path into another family slot (1.647292ms)
+✔ rejects duplicate capabilities instead of counting the same feature twice (5.110708ms)
+✔ rejects reused case identities despite an unchanged total (3.582708ms)
+✔ rejects reclassifying a required product function as deferred (3.963583ms)
+✔ rejects dropping Safari from a registered function (3.476125ms)
+✔ rejects credential-shaped unknown metadata in the closed catalog (3.381709ms)
+✔ rejects a feature detached from its family requirement (3.477542ms)
+✔ rejects replacing write-risk cases with a lower allocation (3.816416ms)
+✔ rejects stale per-family case counts in readable requirement traceability (2.521625ms)
+✔ rejects duplicate feature traceability rows (2.419875ms)
+✔ rejects duplicate feature traceability rows with conflicting cells (2.081084ms)
+✔ rejects conflicting compact Markdown rows with outer pipes true (2.849208ms)
+✔ rejects conflicting compact Markdown rows with outer pipes false (2.351ms)
+✔ rejects weakening finding-dismissal actor authorization (0.606417ms)
+✔ rejects a fabricated command outside the reviewed grammar (0.245042ms)
+✔ rejects broadening file-changing command routes in the fixture (0.220584ms)
+✔ rejects classifying a model-running command as model-free (0.167167ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 392.30975
+Browser-extension specification contract: PASS {"features":150,"commands":21,"cases":803,"schemas":5,"positiveFixtures":6,"expectedNegativeFixtures":1}

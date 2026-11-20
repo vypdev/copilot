@@ -140045,6 +140045,7 @@ const agent_source_snapshot_integrity_1 = __nccwpck_require__(5206);
 const agent_private_install_root_1 = __nccwpck_require__(44640);
 const agent_source_snapshot_1 = __nccwpck_require__(59205);
 const agent_execution_plan_1 = __nccwpck_require__(12253);
+const qualification_investigation_admission_1 = __nccwpck_require__(42224);
 const MAX_STDERR_BYTES = 8 * 1024;
 function runAgentCli(plan, prompt, signal, onToolDiagnostic) {
     return new Promise((resolve, reject) => {
@@ -140053,6 +140054,13 @@ function runAgentCli(plan, prompt, signal, onToolDiagnostic) {
         try {
             runtimeDirectory = verifyOwnedRuntimeDirectory(plan.runtimeDirectory);
             verifyAdmittedPlan(plan, runtimeDirectory);
+            if (plan.qualificationInvestigation !== undefined
+                && !(0, qualification_investigation_admission_1.isAdmittedQualificationInvestigation)(plan, signal)) {
+                throw new agent_cli_contracts_1.AgentCliError('Qualification investigation plan has no matching in-process admission.', 'configuration');
+            }
+            if (plan.qualificationInvestigation && signal?.aborted) {
+                throw new agent_cli_contracts_1.AgentCliError('Agent CLI execution was cancelled.', 'cancelled');
+            }
             if (plan.brokeredVerification && (plan.capability !== 'findings'
                 || plan.workspaceMode !== 'read-only' || plan.sourceSnapshot || plan.sourceDeadlineMs !== undefined)) {
                 throw new agent_cli_contracts_1.AgentCliError('Invalid brokered verification execution plan.', 'configuration');
@@ -140196,7 +140204,14 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
     const onStdinError = () => beginTermination(new agent_cli_contracts_1.AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = () => finishReject(new agent_cli_contracts_1.AgentCliError('Unable to start agent CLI.', 'process'));
     const onClose = (code) => {
+        if (settled)
+            return;
         if (terminationError) {
+            // The leader can close before a TERM-ignoring descendant. Its
+            // detached POSIX group still belongs to this operation; remove any
+            // survivors before clearing the delayed force timer and settling.
+            if (process.platform !== 'win32' && child.pid)
+                signalProcessTree(child, 'SIGKILL');
             finishReject(terminationError);
             return;
         }
@@ -140227,7 +140242,7 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
                 : outputFailure('Agent CLI returned invalid output.', 'unclassified'));
         }
     };
-    if (!plan.brokeredVerification) {
+    if (!plan.brokeredVerification && !(0, qualification_investigation_admission_1.isAdmittedQualificationInvestigation)(plan, signal)) {
         timers.timeout = setTimeout(() => {
             beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI timed out after ${plan.timeoutMs}ms.`, 'timeout'));
         }, plan.timeoutMs);
@@ -158767,6 +158782,7 @@ const agent_source_snapshot_policy_1 = __nccwpck_require__(1667);
 const agent_source_snapshot_1 = __nccwpck_require__(59205);
 const agent_source_snapshot_workspace_1 = __nccwpck_require__(24092);
 const agent_private_install_root_1 = __nccwpck_require__(44640);
+const qualification_investigation_admission_1 = __nccwpck_require__(42224);
 const DEFAULT_SYSTEM = {
     resolveExecutable(executable, environment) {
         try {
@@ -158803,6 +158819,22 @@ class AgentExecutionPlanner {
     }
     prepare(request) {
         return this.preparePlan(request);
+    }
+    /** Trusted qualification composition only; ordinary callers keep prepare(). */
+    prepareQualificationInvestigation(request) {
+        if (request.capability !== 'findings' || request.sourceSnapshot || !request.signal) {
+            throw new agent_cli_contracts_1.AgentCliError('Qualification investigation requires findings, no source snapshot, and explicit cancellation.', 'configuration');
+        }
+        if (request.signal.aborted)
+            throw new agent_cli_contracts_1.AgentCliError('Agent CLI execution was cancelled.', 'cancelled');
+        const plan = this.preparePlan(request);
+        try {
+            return (0, qualification_investigation_admission_1.admitQualificationInvestigationPlan)({ ...plan, qualificationInvestigation: true }, request.signal);
+        }
+        catch (error) {
+            (0, node_fs_1.rmSync)(plan.runtimeDirectory, { recursive: true, force: true });
+            throw error;
+        }
     }
     prepareBrokeredVerification(request, emptyWorkspace) {
         const workspace = (0, node_fs_1.realpathSync)(emptyWorkspace);
@@ -160047,6 +160079,45 @@ function windowsSystemTool(systemRoot, name) {
 }
 function trustedUnixShellPath(name) {
     return `/bin/${name}`;
+}
+
+
+/***/ }),
+
+/***/ 42224:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.admitQualificationInvestigationPlan = admitQualificationInvestigationPlan;
+exports.isAdmittedQualificationInvestigation = isAdmittedQualificationInvestigation;
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+// In-process authority, never an environment/configuration/serialized receipt.
+// Only the ordinary planner registers plans, after its complete preflight.
+const admissions = new WeakMap();
+function admitQualificationInvestigationPlan(plan, signal) {
+    if (plan.capability !== 'findings' || plan.workspaceMode !== 'read-only'
+        || plan.sourceSnapshot || plan.sourceDeadlineMs !== undefined || plan.brokeredVerification
+        || plan.childNetwork !== 'deny' || plan.approval !== 'never' || plan.sessionPersistence !== false) {
+        throw new agent_cli_contracts_1.AgentCliError('Qualification investigation requires ordinary read-only findings authority.', 'configuration');
+    }
+    // A spread/copy loses admission. Freeze all plan-owned mutable collections
+    // so a registered object cannot later acquire different process authority.
+    Object.freeze(plan.argv);
+    if (plan.launcherArgv)
+        Object.freeze(plan.launcherArgv);
+    Object.freeze(plan.environment);
+    for (const artifact of plan.artifacts)
+        Object.freeze(artifact);
+    Object.freeze(plan.artifacts);
+    Object.freeze(plan.runtimeContract);
+    Object.freeze(plan);
+    admissions.set(plan, signal);
+    return plan;
+}
+function isAdmittedQualificationInvestigation(plan, signal) {
+    return plan.qualificationInvestigation === true && signal !== undefined && admissions.get(plan) === signal;
 }
 
 

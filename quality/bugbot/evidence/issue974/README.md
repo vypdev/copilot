@@ -95,8 +95,11 @@ The [precommit validation receipt](./controls/precommit-validation.json) retains
 runtime checks and scoped coverage. Its logs preserve the reproduced surviving
 POSIX descendant, the corrected cancellation, an initially invalid mock response
 and an incomplete global-coverage command. These failures are not relabeled as
-passes. Two source-admission controls require the upcoming committed source;
-full commit hooks, the 232-control run and native checks are still pending.
+passes. The [ordinary source commit](./controls/source-commit.json) passed build,944 Jest
+suites/18,703 assertions (35 existing skips) and lint. The [two committed-source
+admission controls](./controls/committed-admission-focused.json) also pass using
+explicitly synthetic evidence. The generated bundle/evidence follow-up, complete
+232-control run on its clean head and final native checks remain pending.
 
 Run `pnpm exec jest` for the runtime tests and
 `pnpm run test:bugbot-shadow-verification` for the complete committed-source Node

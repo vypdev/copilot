@@ -1,0 +1,5 @@
+Test Suites: 2 passed, 2 total
+Tests:       1 skipped, 55 passed, 56 total
+Snapshots:   0 total
+Time:        7.417 s, estimated 12 s
+Ran all test suites matching src/infrastructure/agents/__tests__/qualification_investigation.test.ts|src/data/repository/__tests__/agent_cli_client.test.ts.

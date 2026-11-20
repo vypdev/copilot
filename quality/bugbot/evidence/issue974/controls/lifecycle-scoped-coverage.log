@@ -1,0 +1,22 @@
+-------------------------------------------|---------|----------|---------|---------|-------------------
+File                                       | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------------------------------|---------|----------|---------|---------|-------------------
+All files                                  |      98 |    93.51 |     100 |   99.43 |                   
+ data/repository                           |   97.56 |    93.04 |     100 |   99.06 |                   
+  agent_cli_execution.ts                   |   97.56 |    93.04 |     100 |   99.06 | 282,346           
+ infrastructure/agents                     |    98.7 |    94.33 |     100 |     100 |                   
+  agent_execution_planner.ts               |   98.52 |     93.4 |     100 |     100 | 78,199,238-240    
+  qualification_investigation_admission.ts |     100 |      100 |     100 |     100 |                   
+-------------------------------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 98% ( 392/400 )
+Branches     : 93.51% ( 274/293 )
+Functions    : 100% ( 47/47 )
+Lines        : 99.43% ( 353/355 )
+================================================================================
+Test Suites: 5 passed, 5 total
+Tests:       2 skipped, 119 passed, 121 total
+Snapshots:   0 total
+Time:        35.057 s, estimated 40 s
+Ran all test suites matching src/infrastructure/agents/__tests__/qualification_investigation.test.ts|src/infrastructure/agents/__tests__/agent_execution_planner.test.ts|src/data/repository/__tests__/agent_cli_client.test.ts|src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts|src/infrastructure/agents/__tests__/agent_source_snapshot_workspace.test.ts.

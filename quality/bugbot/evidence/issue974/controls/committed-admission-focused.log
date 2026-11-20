@@ -1,0 +1,10 @@
+✔ ev974-C22 passing-looking foreign tuple cannot admit the fixed42 phase (24098.876583ms)
+✔ ev974-C24 complete authenticated synthetic v2 evidence is rescored and admits only the unchanged fixed42 protocol (12640.614125ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 36849.283833
