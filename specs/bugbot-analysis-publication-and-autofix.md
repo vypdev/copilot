@@ -4625,7 +4625,7 @@ This is a backlog specification delta, not a campaign preregistration, execution
 
 ### 14. Testing strategy and numeric budget
 
-The amendment adds a minimum of 24 distinct deterministic controls across ordinary Jest and the shadow control runner. Count each case once in its owning specification; these controls are additional to, and do not relabel or replace, the existing 216 combined controls. Preserve the four approved budget areas and their existing minimums. The new controls cover investigation lifecycle and authority, explicit v2 admission, corpus scoring and attempt accounting, immutable preregistration, and phase admission. Repeated model calls are corpus measurements, not additional deterministic cases.
+The amendment adds a minimum of 25 distinct deterministic controls across ordinary Jest and the shadow control runner. Count each case once in its owning specification; these controls are additional to, and do not relabel or replace, the existing 216 combined controls. Preserve the four approved budget areas and their existing minimums. The new controls cover investigation lifecycle and authority, explicit v2 admission, corpus scoring and attempt accounting, immutable preregistration, and phase admission. Repeated model calls are corpus measurements, not additional deterministic cases.
 
 Exercise pure authority and selection branches at 100% enumerated coverage. Changed process and planner modules retain at least 95% line and statement coverage and at least 90% branch and function coverage, alongside existing repository gates. Use controlled bootstrap and process operations for admission and cancellation; existing fakes do not prove provider, human Setup, or platform acceptance. Keep measurement evidence distinct from planned controls and deterministic acceptance.
 
@@ -4638,10 +4638,10 @@ Publication acceptance requires that the specification satisfy the repository’
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Investigation lifecycle and authority | 8 | Observable scenarios in the case inventory. |
-| Explicit v2 admission | 6 | Observable scenarios in the case inventory. |
+| Explicit v2 admission | 7 | Observable scenarios in the case inventory. |
 | Attempt ledger and independence | 6 | Observable scenarios in the case inventory. |
 | Next-phase gate | 4 | Observable scenarios in the case inventory. |
-| Total | 24 | Distinct inventory cases; repeated executions do not add cases. |
+| Total | 25 | Distinct inventory cases; repeated executions do not add cases. |
 
 | Case ID | Area | Requirements | Scenario |
 | --- | --- | --- | --- |
@@ -4669,6 +4669,7 @@ Publication acceptance requires that the specification satisfy the repository’
 | ev974-C22 | Next-phase gate | EV974-G06, EV974-G07 | A passing-looking result for a foreign implementation, driver, runtime, corpus or profile tuple cannot admit 42. |
 | ev974-C23 | Next-phase gate | EV974-G03, EV974-G05, EV974-G06 | Missing, duplicate or unterminated attempt records prevent admission even when all outer case IDs claim completion. |
 | ev974-C24 | Next-phase gate | EV974-G05, EV974-G06, EV974-G08 | Authentic complete v2 evidence is independently rescored and can admit the unchanged fixed42-slot protocol, without qualifying or activating the profile. |
+| ev974-C25 | Explicit v2 admission | EV974-G01, EV974-G07 | The authenticated v2 public bootstrap installs the real loader fence, admits only the two separately pinned v2 helper files, and rejects an unregistered neighbor or dependency shadow before it executes. |
 
 ### 15. Documentation and discoverability
 
@@ -4707,17 +4708,17 @@ The approved requirements map to the concrete behaviors in the host-retained inv
 
 EV974-G04 is exercised by ordinary timer preservation versus the research route without an investigation timer, cancellation and descendant cleanup, pre-spawn rejection, and preservation of existing SDD and ordinary preflight boundaries (`ev974-C01`, `ev974-C03`, `ev974-C04`, `ev974-C05`, `ev974-C06`, `ev974-C07`, `ev974-C08`). EV974-G05 is exercised by unchanged gates and rejection of wrong corpus identity or weakened thresholds (`ev974-C11`, `ev974-C12`), together with the 174-case outcome ledger and the rule that incomplete or failed attempts block phase admission. EV974-G06 is exercised by coherent corpus/full-review selection, immutable v1/default behavior, unchanged gates, same-tuple phase admission, and zero-session behavior where no candidates exist (`ev974-C09`, `ev974-C10`, `ev974-C12`). EV974-G07 is exercised by preserving source snapshot/deadline and ordinary admission boundaries (`ev974-C06`, `ev974-C08`), plus the frozen bootstrap, plan, source/runtime/driver identity, and pre-measurement CLI and generator digests. EV974-G08 is exercised by preserving historical defaults and measurements, making failures and negative decisions durable, withholding phase admission after failure, and keeping production disabled with zero evaluated-PR write attempts (`ev974-C10`).
 
-The complete host-retained inventory contains 24 distinct new controls; references above do not redefine or rename its case identities. Each inventory case must list only requirements whose observable behavior it exercises, and each requirement must map to at least one concrete case. The remaining approved case assertions are retained by the host inventory and must be reconciled against these requirement mappings there. Existing owning case IDs remain references and are not additional definitions. This traceability is structural; it does not claim test execution, semantic completeness, a passing corpus, verifier qualification, or production authorization.
+The complete host-retained inventory contains 25 distinct new controls; references above do not redefine or rename its case identities. Each inventory case must list only requirements whose observable behavior it exercises, and each requirement must map to at least one concrete case. The remaining approved case assertions are retained by the host inventory and must be reconciled against these requirement mappings there. Existing owning case IDs remain references and are not additional definitions. This traceability is structural; it does not claim test execution, semantic completeness, a passing corpus, verifier qualification, or production authorization.
 
 | Requirement | Cases |
 |---|---|
-| EV974-G01 | ev974-C09, ev974-C10, ev974-C11 |
+| EV974-G01 | ev974-C09, ev974-C10, ev974-C11, ev974-C25 |
 | EV974-G02 | ev974-C02, ev974-C15, ev974-C19, ev974-C20 |
 | EV974-G03 | ev974-C15, ev974-C16, ev974-C17, ev974-C18, ev974-C20, ev974-C23 |
 | EV974-G04 | ev974-C01, ev974-C02, ev974-C03, ev974-C04, ev974-C05, ev974-C06, ev974-C07, ev974-C08, ev974-C18 |
 | EV974-G05 | ev974-C11, ev974-C12, ev974-C18, ev974-C21, ev974-C23, ev974-C24 |
 | EV974-G06 | ev974-C09, ev974-C12, ev974-C21, ev974-C22, ev974-C23, ev974-C24 |
-| EV974-G07 | ev974-C06, ev974-C08, ev974-C13, ev974-C14, ev974-C16, ev974-C22 |
+| EV974-G07 | ev974-C06, ev974-C08, ev974-C13, ev974-C14, ev974-C16, ev974-C22, ev974-C25 |
 | EV974-G08 | ev974-C10, ev974-C17, ev974-C19, ev974-C24 |
 
 ### 18. Implementation sequence
@@ -4730,7 +4731,7 @@ The complete host-retained inventory contains 24 distinct new controls; referenc
 5. Score the complete corpus against every unchanged precision, recall, F1, exact-location, severity, category, and Brier gate. Preserve failed, interrupted, missing, or incomplete attempts in the ledger. A failed or incomplete corpus does not admit the paired phase. Only a genuinely passing v2 corpus may admit the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase; zero actual candidates means zero verifier sessions, and phase 42 remains unstarted until admission.
 6. Publish the exact plan and complete result, including a failure or unavailable outcome, through the new issue974 evidence artifacts. Update `docs/bugbot/quality-observability.mdx`, `docs/agents/execution-contract.mdx`, and the scoped runtime owner consistently. Keep production verification disabled, evaluated PR write attempts at zero, and release, default installation, and verifier qualification out of this work.
 
-The 24 distinct proposed controls remain in the existing approved inventory and budgets; each is counted once in its owning SDD. They cover the investigation lifecycle/authority boundary, coherent explicit v2 admission and immutable v1 behavior, complete-attempt and gate handling, frozen full-review admission, and source/runtime/driver closure. Existing owner cases remain references, not new definitions. The retained owner contract and its existing test budgets are not replaced by these controls.
+The 25 distinct proposed controls remain in the existing approved inventory and budgets; each is counted once in its owning SDD. They cover the investigation lifecycle/authority boundary, coherent explicit v2 admission and immutable v1 behavior, complete-attempt and gate handling, frozen full-review admission, and source/runtime/driver closure. Existing owner cases remain references, not new definitions. The retained owner contract and its existing test budgets are not replaced by these controls.
 
 ### 19. Definition of Done
 
@@ -4740,7 +4741,7 @@ The 24 distinct proposed controls remain in the existing approved inventory and 
 - [ ] Preregistration pins the exact v2 corpus, implementation and complete driver/runtime/profile closure, prompts and schemas, execution order/concurrency/retry policy, and actual CLI/interpreter/launcher identities before measured calls. The explicit v2 selection is coherent across corpus loading and full-review admission; omission retains v1/default and frozen historical measurements.
 - [ ] The result accounts for all 174 outer cases and every actual generated-literal follow-up, failed or interrupted call, and incomplete attempt. Configured/resolved and provider-reported model identities remain distinct; unavailable provider identity or usage is recorded as unknown. No model substitution or pass-seeking rerun occurs.
 - [ ] All unchanged numerical gates are evaluated over the complete corpus: precision at least 90%, recall at least 85%, F1 at least 87%, exact location, severity, and category each at least 80%, and Brier score at most 0.16. Failed, interrupted, missing, or incomplete evidence stays visible and cannot admit the paired phase.
-- [ ] Deterministic admission controls reject foreign source/runtime, reject a failed corpus at the next phase, preserve incomplete attempts, and accept unknown usage as telemetry. The approved 24 distinct controls remain allocated across their owning specifications without duplicating case counts.
+- [ ] Deterministic admission controls reject foreign source/runtime, reject a failed corpus at the next phase, preserve incomplete attempts, and accept unknown usage as telemetry. The approved 25 distinct controls remain allocated across their owning specifications without duplicating case counts.
 - [ ] One coherent corpus and full-review driver/admission closure is frozen before 174. Only a passing v2 result may admit the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase. Zero actual candidates produce zero verifier sessions; phase 42 remains unstarted until a genuinely passing corpus. A detector pass is not a qualified verifier profile.
 - [ ] Every result, including a negative or unavailable decision, retains the complete ledger and first failures. Evaluated PR write attempts are zero. Production remains disabled; no default installation, release, or activation follows from this campaign.
 - [ ] The specification satisfies the repository’s required format; internal and cross-document consistency is checked; reciprocal catalog ownership, paths, and evidence agree with the generated view. Use the actually declared specification/catalog and documentation commands and retain their execution evidence.
@@ -4757,3 +4758,5 @@ The 24 distinct proposed controls remain in the existing approved inventory and 
 - Decision: admit only the explicitly pinned v2 corpus for this measurement; never redirect v1/default. Use the ordinary Luna detector path and report that this does not establish that Sol ran. Preserve optional unknown usage, actual provider identity where available, first failures, and complete negative evidence.
 - Decision: a passing corpus can only admit the fixed paired phase under the same frozen tuple. It cannot qualify or activate a verifier profile. Production remains disabled and evaluated PR write attempts remain zero.
 - Unresolved operational evidence: exact implementation/driver closure and the specification, consistency and catalog-validation outcomes must be retained with the immutable source and reviewed preregistration; the actual commands are verified in `package.json`. No successful validation, campaign result or product acceptance is implied by the command declarations.
+
+The additional C25 control preserves the original 24 case identities. It reproduces the missing v2-helper module admission after the authenticated bootstrap installs its loader fence. The corrected fence admits only `corpus-selection.cjs` and `attempt-ledger.cjs` when their bytes match the authenticated committed v2 plan; the historical directory/default remains unchanged. A neighboring unregistered module is not admitted, and a v2 helper dependency shadow rejects before imports. This is a model-free integration control, not a corpus measurement.

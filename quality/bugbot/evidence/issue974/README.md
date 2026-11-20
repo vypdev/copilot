@@ -84,10 +84,10 @@ and a new committed preregistration, not a search for a passing result.
 
 ## Validation and current evidence
 
-The new budget is 24 distinct controls: eight Jest lifecycle/authority controls
-(`ev974-C01`–`C08`) and sixteen Node qualification controls (`C09`–`C24`). They are
+The new budget is 25 distinct controls: eight Jest lifecycle/authority controls
+(`ev974-C01`–`C08`) and seventeen Node qualification controls (`C09`–`C25`). They are
 additional to the 216 retained Node controls; the complete Node command therefore
-has 232 controls, while the eight lifecycle cases remain separately counted.
+has 233 controls, while the eight lifecycle cases remain separately counted.
 No deterministic fake result constitutes a measured corpus/profile result.
 
 The [precommit validation receipt](./controls/precommit-validation.json) retains
@@ -99,7 +99,7 @@ passes. The [ordinary source commit](./controls/source-commit.json) passed build
 suites/18,703 assertions (35 existing skips) and lint. The [two committed-source
 admission controls](./controls/committed-admission-focused.json) also pass using
 explicitly synthetic evidence. The generated bundle/evidence follow-up, complete
-232-control run on its clean head and final native checks remain pending.
+233-control run on its clean head and final native checks remain pending.
 
 Run `pnpm exec jest` for the runtime tests and
 `pnpm run test:bugbot-shadow-verification` for the complete committed-source Node
@@ -115,3 +115,19 @@ scoped coverage evidence, full native validation and later actual measurements.
 The fixed thresholds remain precision 90%, recall 85%, F1 87%, exact location,
 severity and category 80% each, and Brier at most 0.16. A detector pass alone does
 not qualify a verifier profile or activate anything.
+
+## Loader integration correction after initial publication
+
+The initial `5241685` delivery passed 232 local Node controls and both 944-suite
+commit hooks. Native Static rejected trailing spaces in two preserved coverage
+logs; their exact original bytes are now retained in deterministic gzip with raw
+digests, preserving the strict whitespace check. The [native failure receipt](./controls/5241685-native-static-failure.json) retains that negative result.
+
+A new model-free public-bootstrap control C25 then reproduced rejection of the
+v2 helpers by the historical module fence. The corrected fence admits only the
+two helper files whose hashes match the authenticated committed v2 plan and
+rejects unregistered neighbors and dependency shadows. The original 24 controls
+remain unchanged in identity; C25 is an additional necessary integration case.
+The complete corrected Node command has 233 controls. Final committed-source
+replay and native checks for this correction remain pending. No model
+measurement, profile qualification or production activation is inferred.

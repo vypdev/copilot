@@ -27,7 +27,7 @@
   },
   "retainedNegativeResults": [
     {
-      "log": "lifecycle-incomplete-global-coverage.log",
+      "log": "lifecycle-incomplete-global-coverage.log.gz",
       "exit": 1,
       "testsPassed": 119,
       "reason": "scoped collection excluded two globally configured coverage owners; not a passing whole-coverage command"
@@ -90,14 +90,6 @@
       "bytes": 206,
       "sha256": "1ce929bed9cdcd3c71ec8322cb883b7c7b339058eb40fba6516e58b8de61ebdf"
     },
-    "lifecycle-incomplete-global-coverage.log": {
-      "bytes": 1990,
-      "sha256": "d284c9213fecaa664690f5afe553becb278ad02697b125e825be9fe0e4ca4d00"
-    },
-    "lifecycle-scoped-coverage.log": {
-      "bytes": 1855,
-      "sha256": "3393e5828e8f53db495ddf3c04ec423d201724c733520d1d5430a807ffac2992"
-    },
     "lifecycle-scoped-coverage.json": {
       "bytes": 1316,
       "sha256": "48238713dadb166b85d9d870f11c3db70057912efc490859c07775ff684eef9b"
@@ -149,6 +141,24 @@
     "focused-lint.log": {
       "bytes": 0,
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "lifecycle-incomplete-global-coverage.log.gz": {
+      "bytes": 583,
+      "sha256": "b53b2e539bdbd1d8972f61ade2e4cd0b9de78a5a30b0e0a6d4252dfbad9d9510",
+      "encoding": "gzip",
+      "rawBytes": 1990,
+      "rawSha256": "d284c9213fecaa664690f5afe553becb278ad02697b125e825be9fe0e4ca4d00",
+      "originalFile": "lifecycle-incomplete-global-coverage.log",
+      "reason": "Lossless transport; raw trailing spaces retained without weakening native Git whitespace checks."
+    },
+    "lifecycle-scoped-coverage.log.gz": {
+      "bytes": 538,
+      "sha256": "d4e1a8ba00aa9aed3834f538459f49184e4255588c33febeb3f4d6f2f9b1581d",
+      "encoding": "gzip",
+      "rawBytes": 1855,
+      "rawSha256": "3393e5828e8f53db495ddf3c04ec423d201724c733520d1d5430a807ffac2992",
+      "originalFile": "lifecycle-scoped-coverage.log",
+      "reason": "Lossless transport; raw trailing spaces retained without weakening native Git whitespace checks."
     }
   }
 }

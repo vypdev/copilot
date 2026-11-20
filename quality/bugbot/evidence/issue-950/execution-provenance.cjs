@@ -154,7 +154,7 @@ function dependencyIdentity(root) {
     // These ancestors could otherwise shadow the admitted root dependencies.
     for (const relative of ['quality', 'quality/bugbot', 'quality/bugbot/evidence',
         'quality/bugbot/evidence/issue-950', 'quality/bugbot/evidence/issue-950/ev07-shadow',
-        'quality/bugbot/evidence/issue-950/normal-flow-shadow']) {
+        'quality/bugbot/evidence/issue-950/normal-flow-shadow', 'quality/bugbot/evidence/issue974']) {
         assert(!fs.existsSync(path.join(root, relative, 'node_modules')), 'unadmitted qualification dependency shadow');
     }
     assert(!process.env.NODE_PATH && !process.env.NODE_OPTIONS, 'qualification requires a clean Node loader environment');
@@ -169,12 +169,32 @@ function admitQualificationModules(root) {
     assert.equal(typeof registerHooks, 'function', 'qualification requires synchronous Node module hooks');
     const admitted = ['src', 'node_modules', 'quality/bugbot/evidence/issue-950']
         .map(relative => path.join(root, relative) + path.sep);
+    const exactFiles = new Set();
+    // New evaluator helpers are outside the historical directory. Only the
+    // authenticated public bootstrap's committed v2 plan can admit these two
+    // exact files; neither an environment switch nor a directory-wide grant can.
+    const proof = bootstrapAdmission(root);
+    if (proof) {
+        const bytes = fs.readFileSync(path.join(root, proof.planPath));
+        assert.equal(hash(bytes), proof.planSha256, 'admitted qualification plan changed');
+        const selected = JSON.parse(bytes);
+        if (selected.schemaVersion === 2) {
+            for (const name of ['corpus-selection.cjs', 'attempt-ledger.cjs']) {
+                const file = path.join(root, 'quality/bugbot/evidence/issue974', name);
+                const expected = selected.inspectedArtifacts?.['../../issue974/' + name];
+                assert.match(expected ?? '', /^[a-f0-9]{64}$/u, 'v2 helper is absent from the reviewed closure');
+                assert.equal(hash(fs.readFileSync(file)), expected, 'v2 helper differs from the reviewed closure');
+                exactFiles.add(file);
+            }
+        }
+    }
     return registerHooks({ resolve(specifier, context, nextResolve) {
         const result = nextResolve(specifier, context);
         if (!result.url.startsWith('node:')) {
             assert(result.url.startsWith('file:'), 'qualification module must have a physical admitted path');
             const file = fs.realpathSync(fileURLToPath(result.url));
-            assert(admitted.some(prefix => file.startsWith(prefix)), 'module is outside the admitted qualification closure');
+            assert(admitted.some(prefix => file.startsWith(prefix)) || exactFiles.has(file),
+                'module is outside the admitted qualification closure');
         }
         return result;
     } });

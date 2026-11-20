@@ -115,7 +115,7 @@ test('ev974-C12 v2 cannot weaken gates, cohort, repetition, positives, latency o
     for (const mutate of mutations) { const p = plan(); mutate(p); assert.throws(() => implementation.requireQualificationPolicy(p)); }
 });
 
-function publicBootstrapFixture(t) {
+function publicBootstrapFixture(t, moduleFence = false) {
     const directory = temporary(t), project = path.join(directory, 'project'); fs.mkdirSync(project);
     const prefix = 'quality/bugbot/evidence/issue-950/', git = gitAt(project);
     const write = (file, bytes) => { fs.mkdirSync(path.dirname(path.join(project, file)), { recursive: true }); fs.writeFileSync(path.join(project, file), bytes); };
@@ -131,6 +131,21 @@ function publicBootstrapFixture(t) {
     for (const file of ['execution-provenance.cjs', 'qualification-bootstrap.cjs']) write(prefix + file, fs.readFileSync(path.join(__dirname, '../issue-950', file)));
     write(prefix + 'ev07-shadow/corpus.cjs', `require('node:fs').writeFileSync(${JSON.stringify(marker)},'entered');
         exports.run=()=>{require('node:child_process').execFileSync(process.execPath,['-e',${JSON.stringify(`require('node:fs').writeFileSync(${JSON.stringify(probe)},'probe');`)}]);};\n`);
+    if (moduleFence) {
+        for (const file of ['corpus-selection.cjs', 'attempt-ledger.cjs']) {
+            write('quality/bugbot/evidence/issue974/' + file, fs.readFileSync(path.join(__dirname, file)));
+        }
+        write(prefix + 'ev07-shadow/corpus.cjs', `exports.run=(output)=>{
+            const fs=require('node:fs'),path=require('node:path'),root=path.resolve(__dirname,'../../../../..');
+            const admission=require('../execution-provenance.cjs');admission.requireBootstrapAdmission(root);
+            admission.admitQualificationModules(root);
+            ${moduleFence === 'unlisted' ? "require('../../issue974/unlisted.cjs');" : ''}
+            const selection=require('../../issue974/corpus-selection.cjs').requireCorpusSelection(JSON.parse(fs.readFileSync(process.env.COPILOT_EV07_PLAN)));
+            const record=require('../../issue974/attempt-ledger.cjs').createDurableRecorder(output);
+            record({version:selection.version,modelCalls:0});};\n`);
+        if (moduleFence === 'unlisted') write('quality/bugbot/evidence/issue974/unlisted.cjs',
+            `require('node:fs').writeFileSync(${JSON.stringify(marker)},'unlisted module executed');`);
+    }
     git('add', '.'); const source = git('commit-tree', git('write-tree'), '-m', 'Trusted synthetic v2 source'); git('update-ref', 'HEAD', source);
     p.implementation = source; p.runtime = sourceProof.runtimeIdentity(project);
     p.inspectedArtifacts = Object.fromEntries(drivers.map(file => [file, hash(fs.readFileSync(path.join(project, prefix, 'ev07-shadow', file)))]));
@@ -336,4 +351,19 @@ test('ev974-C24 complete authenticated synthetic v2 evidence is rescored and adm
     fs.writeFileSync(path.join(prepared.destination, 'corpus-score.json'), JSON.stringify(score));
     assert.notEqual(prepared.launch().status, 0, 'a passing summary cannot bypass independent rescoring');
     assert(!fs.existsSync(path.join(f.directory, 'full-review')), 'control must not execute real full reviews');
+});
+
+test('ev974-C25 authenticated v2 public bootstrap admits its exact helper modules after the loader fence, rejecting unlisted and shadow modules', t => {
+    const valid = publicBootstrapFixture(t, true), result = valid.launch();
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(valid.directory, 'unused-output'))), { version: 2, modelCalls: 0 });
+    assert(!fs.existsSync(valid.probe), 'module admission control must not probe a provider');
+    const foreign = publicBootstrapFixture(t, 'unlisted'), rejected = foreign.launch();
+    assert.notEqual(rejected.status, 0); assert.match(rejected.stderr, /outside the admitted qualification closure/u);
+    assert(!fs.existsSync(foreign.marker), 'unregistered module must not execute');
+    const shadow = publicBootstrapFixture(t, true);
+    shadow.write('quality/bugbot/evidence/issue974/node_modules/typescript/index.js',
+        `require('node:fs').writeFileSync(${JSON.stringify(shadow.marker)},'shadow module executed');`);
+    const blocked = shadow.launch(); assert.notEqual(blocked.status, 0); assert.match(blocked.stderr, /dependency shadow/u);
+    assert(!fs.existsSync(shadow.marker) && !fs.existsSync(shadow.probe));
 });

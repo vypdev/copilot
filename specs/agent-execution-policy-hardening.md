@@ -944,7 +944,7 @@ activation, installation, runtime provisioning or new platform support follows.
 Rollback uses ordinary `prepare`; retain all measurements and negative outcomes.
 
 The eight lifecycle controls `ev974-C01`–`ev974-C08` are defined and counted once
-in the Bugbot amendment's 24-case inventory. Runtime evidence lives in
+in the Bugbot amendment's 25-case inventory. Runtime evidence lives in
 `src/infrastructure/agents/__tests__/qualification_investigation.test.ts`:
 ordinary/research timer comparison; canonical workspace/argv/schema/credentials;
 real POSIX descendant cancellation after the ordinary bound; fixer rejection;
