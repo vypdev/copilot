@@ -1,0 +1,172 @@
+[
+  {
+    "case": "rust-unchecked-input",
+    "classification": "taxonomy-mismatch",
+    "reason": "The prediction identifies the supplied parse().unwrap() panic on malformed request input. The scorer rejects security versus reliability; the severity also differs (high versus medium). No Rust process was executed in this audit.",
+    "evidence": [
+      "Supplied request-controlled parse/unwrap line and the scenario's explicit service-panic contract."
+    ],
+    "scope": "supplied synthetic fixture; no claim about a private consumer",
+    "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+  },
+  {
+    "case": "shell-unquoted-path",
+    "classification": "taxonomy-mismatch",
+    "reason": "The prediction identifies unquoted word splitting at the exact changed command. Its proposed -- and quoting repair also addresses option interpretation. The frozen security expectation differs from correctness and high differs from medium.",
+    "evidence": [
+      "Fixed shell archive reproduction; original command and unchanged expected security taxonomy."
+    ],
+    "scope": "supplied synthetic fixture; no claim about a private consumer",
+    "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+  },
+  {
+    "case": "py-short-circuit-unsafe-order",
+    "classification": "taxonomy-mismatch",
+    "reason": "Membership runs before isinstance. A list/dict step reaches set membership and raises TypeError; the prediction describes that exact path. Reliability differs from the frozen correctness label, and severity differs.",
+    "evidence": [
+      "Fixed Python short-circuit control; supplied expression order."
+    ],
+    "scope": "supplied synthetic fixture; no claim about a private consumer",
+    "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+  },
+  {
+    "case": "ts-viewport-version-without-cleanup",
+    "classification": "taxonomy-mismatch",
+    "reason": "The pinned 1.0 mount appends a child and preserves the loader; the removed caller cleanup is the missing operation. The prediction follows that same version and path. Reliability differs from correctness.",
+    "evidence": [
+      "Supplied immutable 1.0 mount source and index.html; no framework/browser execution is claimed."
+    ],
+    "scope": "supplied synthetic fixture; no claim about a private consumer",
+    "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+  },
+  {
+    "case": "kt-broad-catch-swallows-cancellation",
+    "classification": "taxonomy-mismatch",
+    "reason": "The scenario requires cancellation propagation and supplies no other guard. The new Throwable catch wraps that cancellation in DatabaseException/Left. The prediction identifies this same cause; reliability differs from correctness. It also reports line 5 rather than frozen line 4.",
+    "evidence": [
+      "Separately authored Kotlin CancellationException mapping control; supplied try/catch and cancellation contract."
+    ],
+    "scope": "supplied synthetic fixture; no claim about a private consumer",
+    "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+  },
+  {
+    "case": "test-delegate-bypasses-stub",
+    "classification": "taxonomy-mismatch",
+    "reason": "The public reader returns right(row) and never invokes bindSession. The new assertion therefore fails with zero participant-projection calls. The prediction describes this exact route; reliability differs from correctness.",
+    "evidence": [
+      "observeCallPathFixture on its immutable owned fixture, independently of model output."
+    ],
+    "scope": "supplied synthetic fixture; no claim about a private consumer",
+    "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+  },
+  {
+    "case": "action-old-input-on-new-version",
+    "classification": "taxonomy-mismatch",
+    "reason": "The selected revision reads enable-problem-matcher; the added problem-matcher belongs to the older revision. The default remains enabled and the supplied absent-asset contract fails registration. Correctness differs from reliability.",
+    "evidence": [
+      "Supplied exact-revision manifest/runtime contract; this synthetic Action is not executed on GitHub."
+    ],
+    "scope": "supplied synthetic fixture; no claim about a private consumer",
+    "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+  },
+  {
+    "case": "request-transform-write",
+    "classification": "taxonomy-mismatch",
+    "reason": "The real authored request path emits no-cache, preserves it, and reaches a test requiring no-store. The prediction identifies that actual value and failure; security differs from correctness.",
+    "evidence": [
+      "observeRequestTransform on the immutable owned write-policy fixture."
+    ],
+    "scope": "supplied synthetic fixture; no claim about a private consumer",
+    "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+  },
+  {
+    "case": "session-source-opaque-bootstrap",
+    "classification": "taxonomy-mismatch",
+    "reason": "Configured opaque.setup.ts persists the opaque token and its future expiry skips refresh. The compact-token assertion fails on that selected token. Reliability differs from correctness.",
+    "evidence": [
+      "observeInitialSessionSource with real Node HMAC/base64url and the immutable owned opaque fixture."
+    ],
+    "scope": "supplied synthetic fixture; no claim about a private consumer",
+    "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+  },
+  {
+    "case": "session-source-expired-refresh",
+    "classification": "taxonomy-mismatch",
+    "reason": "The selected signed session expires before the fixed clock; the actual refresh response supplies an opaque token. The prediction follows that replacement and failed assertion. Reliability differs from correctness.",
+    "evidence": [
+      "observeInitialSessionSource with real Node HMAC/base64url and the immutable owned expired fixture."
+    ],
+    "scope": "supplied synthetic fixture; no claim about a private consumer",
+    "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+  },
+  {
+    "case": "unittest-discovery-wrong-start-directory",
+    "classification": "taxonomy-mismatch",
+    "reason": "The selected start directory runs the unrelated health method and excludes both required manifest modules. The prediction explains that same actual selection. Reliability differs from correctness; the final location is the expected line 12 despite a stale line-9 string in its ID.",
+    "evidence": [
+      "Actual fixed owned Python unittest discovery: 1 health method, 0 export methods; passing control runs 19 methods including 5 export methods."
+    ],
+    "scope": "supplied synthetic fixture; no claim about a private consumer",
+    "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+  },
+  {
+    "case": "sql-bounded-query",
+    "classification": "unresolved",
+    "reason": "The prediction needs tied created_at values and a required stable boundary. The scenario calls the order deterministic, but supplies no schema or uniqueness constraint to establish or refute ties. The conditional SQL concern is not independently proven for the declared fixture.",
+    "evidence": [
+      "No schema or tie witness is supplied; expected=[] is a scorer label, not independent proof."
+    ],
+    "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+    "nextAction": "Obtain the authored schema/ordering contract before proposing either a detector change or a corpus correction."
+  },
+  {
+    "case": "actions-readonly-metadata",
+    "classification": "actual-causal-defect",
+    "reason": "The supplied added YAML has root-level steps and no jobs mapping. Read-only metadata access does not repair that workflow shape. The prediction identifies a causal defect in the supplied fixture, separately from the scorer's empty expectation.",
+    "evidence": [
+      "Parsed YAML structure; GitHub workflow syntax places steps under jobs.<job_id>.steps (official documentation checked 2026-11-19)."
+    ],
+    "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+    "nextAction": "Submit the fixture/rubric inconsistency for separate review; do not relabel this completed campaign or suppress a supported workflow finding."
+  },
+  {
+    "case": "react-complete-dependencies",
+    "classification": "unresolved",
+    "reason": "The stale-response hypothesis is possible for an asynchronous loader, but the fixture supplies no loadUser implementation, scheduling guarantee, cleanup elsewhere, or interaction witness. Complete dependencies alone neither proves nor refutes that separate hypothesis.",
+    "evidence": [
+      "Only the three-line effect and its dependency intent are supplied; the actual loader contract is missing."
+    ],
+    "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+    "nextAction": "Request a frozen loader/interaction witness. Do not infer a production prompt defect solely from expected=[]."
+  },
+  {
+    "case": "csharp-contained-path",
+    "classification": "unresolved",
+    "reason": "The prediction assumes Windows case-insensitive path resolution and a requirement to accept differently cased contained paths. Neither supported OS/filesystem policy nor that acceptance requirement is supplied. No .NET/Windows execution is available in this audit.",
+    "evidence": [
+      "Supplied ordinal containment check; absent target-platform and alternate-spelling contract."
+    ],
+    "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+    "nextAction": "Keep the platform premise unresolved; obtain the actual supported filesystem contract before a narrow correction."
+  },
+  {
+    "case": "py-coverage-config-branch",
+    "classification": "unresolved",
+    "reason": "coverage run collects data while reporting applies fail_under, but the excerpt does not prove the complete job has no report step or that this change promises threshold enforcement. The separate threshold hypothesis cannot be resolved from this fragment alone.",
+    "evidence": [
+      "Supplied coverage command/configuration; no complete job or version-matched reporting observation."
+    ],
+    "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+    "nextAction": "Inspect the complete authored job and reporting requirement; retain the scorer FP without inventing a confirmed missed threshold defect."
+  },
+  {
+    "case": "py-short-circuit-unhashable",
+    "classification": "unresolved",
+    "reason": "A fixed Python control proves a mapping with an allowed string key returns True. The prediction additionally requires the whole issue_steps value to be an array; the scenario describes arbitrary persisted JSON but does not specify that container-shape contract. The concrete behavior is proven; whether it violates the intended contract remains unresolved.",
+    "evidence": [
+      "Fixed Python mapping/list/short-circuit observations, with no consumer execution."
+    ],
+    "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+    "nextAction": "Obtain the checkpoint container-shape requirement. Only then propose a narrow boundary or corpus follow-up."
+  }
+]
