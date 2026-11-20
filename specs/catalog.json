@@ -1096,7 +1096,8 @@
         "specs/github-runtime-doctor-command.md",
         "specs/organization-configuration-reuse-and-batch-setup.md",
         "specs/setup-runner-profiles-and-installation-parity.md",
-        "specs/copilot-comment-workflow-coordinator.md"
+        "specs/copilot-comment-workflow-coordinator.md",
+        "specs/setup-bugbot-publisher-manifest-route.md"
       ],
       "workflows": [
         "setup/workflows/agent-cli-provisioning.yml",
