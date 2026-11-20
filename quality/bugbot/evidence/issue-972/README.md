@@ -196,3 +196,37 @@ full suite passes 82/82 locally in 8.324 seconds, using fake curl and no real
 credentials or health dispatch. This diagnostic establishes neither the native
 timing cause nor a whole native pass. Source, assertion, timeout, workflow,
 runner and concurrency settings for that suite remain unchanged.
+
+
+## Integration after deletion-hunk provenance (#973)
+
+Official [sync44755243183](https://github.com/vypdev/copilot/actions/runs/44755243183/job/136353130726)
+merged cleanly without a fixer and published
+`cf3736d504fe88bb0f92ef0f6939b19e657e77f6`, with parents
+`f133dcd8456c8ed31005aa2a083031220c20e13c` and develop
+`25eaba3a641abb05d1ac2847917c97863e5a714f`. Native build/typecheck,
+all943 Jest suites /18,695 tests (35 old skips;588.650s), coverage budgets,
+all385 extension files /5,291 tests, lint and documentation/specifications passed.
+The complete lossless native log and exact identity receipt are retained here.
+
+Executable source, compiled bundles and lockfile match that develop parent.
+Cancellation drivers, authenticated fixtures, bootstrap, package and ordering
+controls match f133 byte-for-byte; the inherited broker now includes #973's
+deletion-hunk provenance fix. Frozen #950 measurements remain unchanged.
+
+The f133 committed-source204/204 pass is preserved against its exact older head,
+including its full readable seven-operation ledger and log. Those operations
+record five interrupted exits130, one completed exit0 and one provider-failed
+exit1, all with empty write arrays and unchanged fixture checkouts. The eighth
+cancellation case separately proves matched-arm cancellation. The corrected
+post-provider case observes settled provider failure with a non-aborted signal
+before cancellation; the ordering negative remains failed in the earlier record.
+Native Review136358102701 succeeded on f133 at14:53:08Z and the bot resolved
+the valid ordering finding at14:52:54Z; its complete thread readback is retained.
+This historical review does not certify a later integrated SHA.
+
+The ordinary contributor evidence commit still requires its own complete hook,
+combined committed-source controls and final-head native groups/findings before
+normal merge. No corpus/42-slot measurement, qualified profile, real Setup
+observation, default installation or production activation is claimed.
+Production verification remains disabled and evaluated-pilot write attempts zero.
