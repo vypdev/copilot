@@ -4760,3 +4760,221 @@ The 25 distinct proposed controls remain in the existing approved inventory and 
 - Unresolved operational evidence: exact implementation/driver closure and the specification, consistency and catalog-validation outcomes must be retained with the immutable source and reviewed preregistration; the actual commands are verified in `package.json`. No successful validation, campaign result or product acceptance is implied by the command declarations.
 
 The additional C25 control preserves the original 24 case identities. It reproduces the missing v2-helper module admission after the authenticated bootstrap installs its loader fence. The corrected fence admits only `corpus-selection.cjs` and `attempt-ledger.cjs` when their bytes match the authenticated committed v2 plan; the historical directory/default remains unchanged. A neighboring unregistered module is not admitted, and a v2 helper dependency shadow rejects before imports. This is a model-free integration control, not a corpus measurement.
+
+## Qualification operation containment amendment
+
+- Status: Proposed official revision; no implementation or execution acceptance claimed
+- Date: 2026-11-20
+- Catalog capability ID: bugbot-analysis-and-autofix
+- Owners: Copilot maintainers
+- Scope: Dedicated owned execution scopes for the existing immutable qualification route.
+- Retained owner: specs/bugbot-analysis-publication-and-autofix.md
+- Related issue: https://github.com/vypdev/copilot/issues/974
+- Open product decisions: none; actual immutable image/CLI pins and native runtime acceptance remain execution prerequisites.
+- Existing published content and all prior case definitions are retained verbatim by the host; this is an appendix only.
+
+### 1. Executive summary
+
+Give each COMPLETE outer operation an owned Linux PID namespace, integrate it into the existing authenticated bootstrap and ordinary execution path, and require stopped-scope evidence before outer cleanup or result acceptance. No new benchmark or public consumer mode.
+
+```text
+Authenticate bytes -> own one complete operation scope -> ordinary detector/follow-ups
+ -> completion / actual failure / explicit abort / owner EOF -> stop confirmation
+ -> retain actual outcome -> unchanged corpus/full-review gates
+```
+Text equivalent: authenticate, contain, execute normally, stop, retain evidence, evaluate unchanged gates.
+
+### 2. Problem, current behavior, and evidence
+
+The published bb5a6fe4a3dc3b6c988c7b69f438ea5abe07fc48 is preparation with unchanged38f4 source,233 deterministic Node controls and no174/42 measurement. The valid escaped-session finding survives group cancellation; ignored stdio can settle while a descendant lives, inherited pipes can prevent settlement. Exact negative: https://github.com/vypdev/copilot/pull/997#discussion_r4646554738 . Separate model-free Linux namespace/owner-SIGKILL/EOF prototypes stopped owned descendants and all test containers were removed. They used an unrelated cached application image, not an admitted SDK runtime. No model/provider/native qualification acceptance is inferred. The existing25 case inventory is already reserved in the retained owner; do not redeclare it in this appendix.
+
+### 3. Actors, surfaces, and terminology
+
+The immutable external bootstrap owns scope lifetime. The inner ordinary planner/executor receives a private authenticated cancellation capability. A scope is one complete corpus case or one complete paired review operation, including every actual application follow-up. A stopped scope, completed provider call and qualified profile are distinct facts. Maintainers inspect preregistration, attempt ledger, scope receipts and negative evidence; no evaluated PR mutation is introduced.
+
+### 4. Goals, non-goals, and fixed invariants
+
+| Requirement | Behavior |
+|---|---|
+| EV974-S01 | Authenticate the source/lock/compiler/closed driver/bootstrap and actual image/runtime/CLI/launcher bytes before imports, version probes or model startup; retain the noncircular implementation-then-preregistration commit model. |
+| EV974-S02 | A fixed dedicated Linux PID namespace contains EACH complete outer corpus case or paired ordinary review, including all actual generated-literal follow-ups; integrate only through the existing immutable public bootstrap and normal planner/provider/executor. |
+| EV974-S03 | An exact private plan/signal/owner/operation capability owns cancellation. No public/environment/serialized grant or uncontained fallback can start qualification. Preserve canonical source, read-only, schema and credential boundaries. |
+| EV974-S04 | Explicit abort, outer-owner EOF/death and normal completion release the entire owned scope; confirm stopped namespace before outer cleanup/result acceptance. Group signals, process close or sampled PPIDs do not prove cleanup. |
+| EV974-S05 | Use the reviewed local Docker Engine Unix-socket API and fixed non-TTY owned-stdin lifetime; deny model Docker authority, host PID, privileges and arbitrary mounts/flags. Engine/kernel reports are observations, not independent byte attestation. |
+| EV974-S06 | Retain durable starts, known/uncertain owned IDs and incomplete outcomes. Never replay an unknown operation or clean unrelated/conflicting scopes. Unknown usage and provider identity remain unknown. |
+| EV974-S07 | Keep all174/42 inventories, unchanged numerical/profile/cohort/positive/latency gates and no-outer-retry policy. Existing25 controls and216 older Node controls remain owned by their retained inventories; add6 deterministic and4 actual native SDK controls only. |
+| EV974-S08 | Keep research run/wait unbounded by elapsed time, heartbeat, turns, reads or tokens; technical cleanup escalation follows a real termination request only. Preserve ordinary consumer/source deadlines, optional telemetry, zero pilot writes and disabled production. |
+
+Non-goals: model substitution, alternate detector, generic Docker wrapper, default installation, release, runner/privilege change, production activation, human/platform Setup acceptance or replay to chase a pass. All retained scientific and source-integrity contracts remain effective.
+
+### 5. Current versus proposed product journey
+
+Current process groups do not contain new-session descendants. Proposed scope ownership covers the whole operation through namespace lifetime. Preparation remains separate from admitted runtime, active operation and measurement.
+
+```mermaid
+flowchart LR
+ A[Verified immutable bootstrap] --> B[Owned complete operation]
+ B --> C[Ordinary model call chain]
+ C --> D[Scope stopped and confirmed]
+ D --> E[Retained real outcome]
+ E --> F[Unchanged qualification gates]
+```
+Text equivalent: verified bootstrap owns ordinary execution; stopped-scope confirmation precedes retained outcome and the unchanged scientific gates.
+
+### 6. Functional behavior and state model
+
+Use a trusted, immutable outer qualification bootstrap to own a dedicated Linux PID namespace for EACH complete outer operation: one of the174 corpus cases with all its actual generated-literal follow-ups, or one of the42 complete ordinary paired-review operations with all of its actual detector/verifier calls. Host composition may run on macOS or Linux; this is a verified runtime capability, not a new arbitrary client-OS rule. No persistent runner or service is installed or reconfigured.
+
+The existing public bootstrap remains the only supported qualification entry. Integrate containment into its closed authenticated modes/inventory and existing corpus/full-review orchestration; do not create a parallel benchmark, alternate detector, direct working-tree entrypoint, generic Docker wrapper or environment flag granting authority. Preserve all174 IDs/order/labels, unchanged scoring and gates, configured Luna detector and Sol verifier/xhigh profiles, concurrency and one-outer-attempt policy. Preserve corpus's oracle-free synthetic remote-free workspace and full review's entire real pinned subject source. Never substitute an empty broker workspace for the ordinary full-review detector or deliver independent labels/oracles as model input.
+
+Each operation uses the same reviewed immutable SDK runtime image, source/compiler/dependency/CLI and launcher tuple across both phases. Unique operation/container IDs are observed execution identities, not substitutes for byte identities. Prewrite all planned slots and preserve every real application call/start/preparation/observer/terminal artifact, including generated-literal calls and partial failure. Internal per-slot dispatch is authenticated orchestration of the COMPLETE frozen inventory, not a public case-limit/skip/retry option. A missing slot, interrupted owner or incomplete call chain cannot admit phase42. Zero actual candidates still starts zero verifiers.
+
+States: preparation, containment-admitted, active, stopping, stopped-complete, stopped-failed, interrupted/incomplete and ownership-unknown. An unknown scope cannot be adopted, replayed, cleaned or reported completed. Scope confirmation precedes outer cleanup and accepted terminal result even on normal completion. Prewrite all slots and retain every actually generated call.
+
+### 7. User-facing configuration
+
+No new public Action input, CLI flag, repository Variable, Docker argument list, mutable image tag or ambient grant. Fixed runtime: existing local Docker Engine API via reviewed local Unix socket, non-TTY OpenStdin=true/StdinOnce=true, immutable trusted PID1 exits on control EOF; outer bootstrap alone owns writer. Observed prototype Engine 29.8.2, Linux arm64, kernel 7.2.12-orbstack-00394-gbecdd6130068 is an observation, not byte attestation. Final plan pins actual image/config/source/compiler/dependencies/CLI+launcher/client and records actual host/worker OS/architecture/engine/kernel. HostmacOS/Linux may use verified capability without an arbitrary client-OS gate. Recommended measured mode retains ordinary provider/read-only/schema/credential policy; separate closed native-control purpose may run hash-frozen model-free fixtures but cannot authorize model calls. Incompatible capability blocks startup; no group-only fallback.
+
+### 8. Clean Architecture design
+
+Authenticate the host bootstrap, plan commit/path/hash, source/lock/compiler/closed drivers and physical bytes using trusted sanitized Git BEFORE importing application modules or invoking any runtime/CLI probe. Freeze the complete image by immutable content digest and exact configuration; inside its admitted immutable source/runtime, verify Node/Git/compiler/dependency closure and actual CLI/interpreter/launcher bytes before version probes or models. Preserve the noncircular implementation-commit then preregistration-commit model: an image built from the implementation cannot silently change after the plan is committed. Transport later plan Git objects through verified read-only staging; never treat a working-tree plan or a claimed image tag as authority.
+
+The reviewed plan must close and pin the containment profile: image digest, host launcher bytes, relevant client/engine/kernel observations and explicit trusted-platform assumptions, ownership/correlation, fixed mounts and exact input/output paths. A reported daemon/kernel version is not independent byte attestation of that platform. Model execution gets no Docker socket/client authority, host PID namespace, privileged mode, arbitrary host mounts, broad Docker flags, mutable tag, source/template/workflow override or new repository Variable. Normal backend connectivity and the normal child's read-only/network-denied/native-schema/credential policy retain their distinct scopes. Never bake credentials into an image/build context or expose them in public receipts, argv diagnostics or logs. Use the existing private runtime credential policy only.
+
+The trusted outer owner and the inner ordinary planner/executor must share one authenticated operation-scope cancellation capability bound to the exact plan/signal and owned operation. Pure policy/semantic ports own admission and lifecycle decisions; transport/OS adapters own Docker/process calls; composition owns the verified scope. Preserve existing dependency direction and enforce the actual registration/composition with architecture tests. Serialized receipts, provider fields, public CLI flags and ambient environment cannot grant the cancellation-only exception. Uncontained investigation must fail BEFORE model spawn, rather than falling back to group-only cleanup. Ordinary consumer/source-snapshot defaults and their existing technical deadlines remain unchanged; this is not a new public consumer execution mode.
+
+Pure scope policy owns closed admission and immutable correlations. Semantic application ports expose operation ownership/stop confirmation without Docker DTOs. The OS/container adapter owns process/engine transport; authenticated composition alone binds the exact plan/signal/owner/operation capability. Existing planner/provider/executor remains the real model path. Add executable dependency/composition tests, reject raw HTTP/process imports in application/pure policy, and register every exact driver/helper/supervisor before imports. Do not implement a second execution stack. Runtime image identity is not independent producer/platform attestation.
+
+### 9. UI/UX and content contract
+
+Use existing evidence README/results and static locale/fallback rules; no new web flow or accessibility observation is claimed. Lead with state, retained facts, impact, one primary action, exact plan/scope/attempt links and collapsed diagnostics.
+
+Pending: `Preparing the immutable execution scope. No model has started.`
+Action required: `The runtime does not match the preregistration. Inspect the runtime receipt before preparing again.`
+Failed/blocked: `Execution scope could not be verified. No model started. Inspect the runtime receipt.`
+Partial: `Interrupted. The owned execution scope has stopped. Retained attempts are incomplete; paired reviews have not started.`
+Complete operation: `The operation ended and its owned scope is stopped. Inspect the retained result; qualification gates remain separate.`
+Unknown: `Owned-scope state is unconfirmed. Automatic replay and cleanup are blocked. Inspect the recorded ownership.`
+Use textual states, semantic headings, descriptive links, sanitized bounded names/URLs and narrow-screen readable tables. Do not emit a new progress-comment stream or report model/provider identity from argv.
+
+### 10. Failure, recovery, and cleanup
+
+On explicit abort, stop the ENTIRE owned namespace, including processes that double-fork, reparent or change session/group. Require confirmation that the owned namespace init has terminated and its scope is stopped BEFORE outer runtime cleanup or a terminal completion claim. Do not infer descendant cleanup from a CLI close event, a group KILL request, a single exit code, a sampled PPID tree, or the disappearance of pipes. Normal operation completion must also release the full owned execution scope before its retained result is accepted and the next independent operation is considered complete.
+
+Owner disconnection/abrupt launcher death must stop the scope through a verified lifetime channel, such as an owned stdin/IPC lifetime whose actual engine behavior is tested. Do not add a heartbeat deadline or investigation timeout as a substitute. A cancelled/owner-lost operation is interrupted/incomplete; durable starts without terminals stay visible. A controller must never turn a container exit into successful research completion. Bound technical cleanup/escalation only after an actual termination request; never cap research duration, turns, reads or tokens. Provider failure and explicit interruption remain separate, and unavailable usage/provider-reported model identity stays unknown.
+
+Retain exact owned IDs/labels/image/plan/receipts and all known/uncertain effects. Recovery may inspect and stop ONLY the positively identified owned scope; unknown or conflicting ownership blocks automatic adoption, replay or cleanup. Never touch existing unrelated containers, refs, installations or processes. No blind duplicate operation/model call, force/deletion/rebase of remote branches, or silent retry to find a passing score. If any174 outcome is failed/incomplete, preserve it and leave42 unstarted; another campaign still requires a causal correction and fresh committed preregistration.
+
+### 11. Security, permissions, and privacy
+
+No model-facing Docker socket/client authority, host PID, privileged mode, arbitrary mounts/flags or write-capable authority. Preserve normal child network-denied/read-only native schema and private credentials; backend transport and child network denial have distinct scopes. Never bake credentials into image/context or publish them in logs/argv/receipts. Source/runtime/driver mismatches reject before imports/probes/models. Private capability binds exact plan, live signal, owner and operation; no environment/serialized/model output grants it. Cleanup targets only positively identified owned scopes and never unrelated containers/processes/installations. Actual engine/CLI incompatibility is a retained unavailable result, not permission to relax containment or native sandbox policy.
+
+### 12. Observability and operational UX
+
+Retain exact owned IDs/labels, immutable tuple, purpose, lifecycle transitions, stop confirmation, all durable attempt starts/terminals, observer/preparation artifacts and known/uncertain effects. Keep configured and actually provider-reported model identity separate; unavailable identity/usage remains null/unknown telemetry. An init/container exit cannot become successful research automatically. A missing terminal or lost owner stays interrupted/incomplete and blocks phase42. Keep bounded sanitized diagnostics and actual artifact links; no repeated notifications for unchanged state.
+
+### 13. Compatibility, migration, rollout, and rollback
+
+Append this amendment to the existing owner; retain all original source/history, v1/default corpus, explicit v2 corpus identity,174 IDs/order/labels,173 unchanged cases, frozen measurements, original25 controls and216 older Node controls. No retroactive repair/relabel of negative evidence. Existing consumer/source deadlines and technical version/ACL probes retain their own scopes. One common frozen tuple is required across corpus and full review, with full42 closure frozen before174. Rollback requires a fresh immutable source/plan and cannot reuse old pass evidence for changed bytes. Failed/incomplete174 leaves42unstarted; causal correction and a new committed preregistration are required for any later campaign.
+
+### 14. Testing strategy and numeric budget
+
+This appendix adds exactly the minimum10 distinct cases below, not35 new cases and not a second declaration of the retained25. Six deterministic Node cases extend the combined command from233 to239 (216+17+6). Four actual native model-free SDK cases have a separately declared executable command in `package.json`; no silent skips or fake substitutions. Combined campaign-specific floor is35 =25retained+10new. All10 are presently unexecuted. Pure authority/selection/scope policy targets100% all metrics. Changed runtime/planner/containment modules retain95% statements/lines and90% branches/functions plus unchanged global and changed-path gates. Actual native controls use the admitted SDK image and immutable public bootstrap/ordinary execution path, with explicitly frozen model-free subprocess fixtures only for cancellation; they do not replace actual CLI/version/provider admission or any model measurement.
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Containment admission and orchestration | 6 | Closed immutable tuple, private ownership, complete inventories and no fallback |
+| Actual native contained SDK | 4 | Real SDK scope abort, escaped/inherited descendants, owner death and completion races |
+| Total | 10 | Additional distinct controls; retained25 and older216 counted only by their existing owners |
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| ev974-C26 | Containment admission and orchestration | EV974-S01 | Closed image/runtime/bootstrap/source/CLI pins reject a mismatch before imports, probes or model startup. |
+| ev974-C27 | Containment admission and orchestration | EV974-S02, EV974-S03, EV974-S05 | Arbitrary flags, host PID/socket/privilege/mounts, mutable tags and untrusted authority cannot acquire a scope. |
+| ev974-C28 | Containment admission and orchestration | EV974-S03, EV974-S05 | Exact signal/plan/owner/operation correlation is immutable; a public/environment/serialized grant or foreign scope is rejected. |
+| ev974-C29 | Containment admission and orchestration | EV974-S06, EV974-S07 | A durable interrupted/missing/orphan terminal chain remains incomplete and blocks phase42, without replacing unknown telemetry. |
+| ev974-C30 | Containment admission and orchestration | EV974-S02, EV974-S07 | The fixed complete174/42 inventories, no-outer-retry, same-tuple gates and zero-candidate behavior remain coherent through contained dispatch. |
+| ev974-C31 | Containment admission and orchestration | EV974-S03, EV974-S04, EV974-S08 | Uncontained fallback is forbidden; ordinary consumer and source-snapshot lifecycles/technical probes retain scope, and displayed status cannot report success before stop confirmation. |
+| ev974-C32 | Actual native contained SDK | EV974-S04 | An ignored-stdio new-session descendant is removed on explicit abort before outer cleanup and never yields completed research. |
+| ev974-C33 | Actual native contained SDK | EV974-S04 | Inherited pipes and a double-fork/reparented descendant cannot prevent complete scope cancellation/cleanup. |
+| ev974-C34 | Actual native contained SDK | EV974-S04, EV974-S05, EV974-S06 | Abrupt outer-owner death/disconnection closes its verified lifetime channel, removes the complete scope and preserves incomplete evidence. |
+| ev974-C35 | Actual native contained SDK | EV974-S04, EV974-S06, EV974-S08 | Successful completion and cancellation races retain the correct outcome, exact owned-scope identity and no surviving scope; unrelated running scopes remain untouched. |
+
+### 15. Documentation and discoverability
+
+Update runtime/Bugbot owners, execution guidance, quality operations, evidence README/plan/results, architecture/coverage contracts and exact closed source/driver inventory together. Documentation must explain invocation, all states, relevant immutable runtime/CLI prerequisites, unknown ownership, explicit abort/EOF, technical cleanup, negative retention and no-replay recovery. The plan remains deliberately not-preregistered until actual source/runtime pins are committed; no preparation result becomes acceptance.
+
+| Path | Change |
+|---|---|
+| `specs/bugbot-analysis-publication-and-autofix.md` | update |
+| `specs/agent-execution-policy-hardening.md` | update |
+| `quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs` | update |
+| `quality/bugbot/evidence/issue-950/execution-provenance.cjs` | update |
+| `quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs` | update |
+| `quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs` | update |
+| `quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs` | update |
+| `quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs` | update |
+| `quality/bugbot/evidence/issue974/attempt-ledger.cjs` | update |
+| `quality/bugbot/evidence/issue974/corpus-selection.cjs` | update |
+| `quality/bugbot/evidence/issue974/qualification.test.cjs` | update |
+| `quality/bugbot/evidence/issue974/operation-containment.cjs` | create |
+| `quality/bugbot/evidence/issue974/qualification-supervisor.cjs` | create |
+| `quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile` | create |
+| `quality/bugbot/evidence/issue974/containment-native.test.cjs` | create |
+| `quality/bugbot/evidence/issue974/containment-native-fixture.cjs` | create |
+| `src/domain/agent_execution_plan.ts` | update |
+| `src/application/ports/qualification_operation_scope_ports.ts` | create |
+| `src/application/policies/qualification_operation_scope_policy.ts` | create |
+| `src/infrastructure/agents/qualification_operation_scope.ts` | create |
+| `src/infrastructure/agents/qualification_investigation_admission.ts` | update |
+| `src/infrastructure/agents/agent_execution_planner.ts` | update |
+| `src/data/repository/agent_cli_execution.ts` | update |
+| `src/infrastructure/agents/__tests__/qualification_investigation.test.ts` | update |
+| `quality/bugbot/evidence/issue974/README.md` | update |
+| `quality/bugbot/evidence/issue974/plan.json` | update |
+| `quality/bugbot/evidence/issue974/results.json` | update |
+| `docs/agents/execution-contract.mdx` | update |
+| `docs/bugbot/quality-observability.mdx` | update |
+| `specs/catalog.json` | update |
+| `specs/CATALOG.md` | update |
+| `package.json` | update |
+| `scripts/coverage-budgets.json` | update |
+| `src/architecture/__tests__/agent_output_locale_boundaries.test.ts` | update |
+
+### 16. Acceptance scenarios
+
+Given a foreign source/image/runtime/driver/CLI byte, admission rejects before imports/probes/models. Given a contained ordinary operation with actual follow-ups, one owned scope covers the complete chain. Given explicit abort or abrupt owner loss, all escaped/reparented descendants stop and confirmation precedes outer cleanup. Given inherited pipes, cancellation still settles without a research deadline. Given success/cancel races, retained outcome is truthful, full scope is released and unrelated scopes remain untouched. Given incomplete/unknown effects, no replay, blind cleanup or phase42 occurs. Given authentic complete174pass, only the same tuple may proceed to fixed42; all historical gates/comparisons remain mandatory and activation remains disabled.
+
+### 17. Requirements traceability
+
+| Requirement | Cases |
+|---|---|
+| EV974-S01 | ev974-C26 |
+| EV974-S02 | ev974-C27, ev974-C30 |
+| EV974-S03 | ev974-C27, ev974-C28, ev974-C31 |
+| EV974-S04 | ev974-C31, ev974-C32, ev974-C33, ev974-C34, ev974-C35 |
+| EV974-S05 | ev974-C27, ev974-C28, ev974-C34 |
+| EV974-S06 | ev974-C29, ev974-C34, ev974-C35 |
+| EV974-S07 | ev974-C29, ev974-C30 |
+| EV974-S08 | ev974-C31, ev974-C35 |
+
+Architecture/composition enforces layer ownership; section15 assigns documentation paths. Original25 and216 cases remain references to retained owners, never redefined here. The new native-control purpose and measured-campaign purpose must be distinct in producer and admission receipts.
+
+### 18. Implementation sequence
+
+Official revision/seed validation and same-branch publication -> pure scope policy/semantic ports -> existing bootstrap/image/source/driver integration -> six deterministic controls -> four actual native SDK controls -> complete source/package/build/type/lint/architecture/spec/catalog/docs and final native findings -> exact committed implementation then immutable preregistration -> one174 campaign -> unchanged gates -> same-tuple42 only on actual174pass. Freeze the full42 admission/driver closure before174. No code or runtime image alone is preregistration or qualification.
+
+### 19. Definition of Done
+
+- Every new requirement maps reciprocally to the ten new cases; retained owners/cases remain verbatim and counted once.
+- Actual shared immutable bootstrap, ordinary planner/provider/executor and private whole-operation scope are implemented and architecture-enforced.
+- All original25/216 controls and six new deterministic plus four actual native SDK controls pass without silent skip or weakened coverage.
+- Exact image/config/source/lock/compiler/drivers/runtime/CLI/launcher/prompt/schema/order/retry identities are committed before probes/models; source and runtime mismatch reject before imports.
+- Abort, owner EOF and normal completion stop the entire exact owned namespace before outer cleanup/result acceptance; unknown state remains incomplete without replay.
+- Complete174/42 ledgers, all scientific/comparison gates and optional unknown telemetry remain intact. No token/time/turn/read cap truncates research.
+- Actual build/type/lint/package/architecture/specification/catalog/docs/Graphify and final-SHA native checks/findings are retained; `pnpm run validate:specifications` and `pnpm run generate:specifications` keep the catalog current.
+- No installation, runner/privilege/protection change, release, model acceptance or profile qualification is inferred from preparation. Production disabled; evaluated-pilot PR writes0.
+
+### 20. References and decisions
+
+Retained owning SDD and runtime owner are listed in section15. Primary mechanism: https://www.man7.org/linux/man-pages/man7/pid_namespaces.7.html ; Node detached/session behavior: https://nodejs.org/api/child_process.html#optionsdetached . Selected decision is existing local Docker Engine with verified owned stdin/EOF lifetime; actual immutable SDK image and CLI admission are separate pending evidence. Earlier native preparation failures44817084221 (unknown reference) and44821319812 (25reserved identities redeclared) are retained. This candidate defines only10 new cases and fresh EV974-S requirement identities. It is a proposed appendix, not implemented containment, model measurement, native acceptance, qualified profile or activation authorization.
