@@ -2502,3 +2502,177 @@ path forms and one generated-card ownership case. Reuse actual workflow,
 adapter, Git and packaged entrypoints; no model calls or evaluated-PR writes.
 Update the operator documentation and catalog evidence, run specification,
 architecture and focused checks, and report final-head CI separately.
+
+
+### Independent qualification bootstrap — #970, 2026-11-19
+
+Before Node loads any qualification driver, the operator MUST extract the
+bootstrap blob with trusted operating-system Git from an independently reviewed
+revision, check its independently reviewed SHA-256, and start trusted Node with
+no preload or loader/search overrides. The bootstrap MUST authenticate the exact
+reviewed committed plan by explicit revision/path/SHA-256, compare every closed
+inventory driver with its immutable committed blob and reject changed physical
+bytes/symlink parents before loading the verifier. A working-tree verifier cannot
+establish its own integrity after executing. Direct working-tree entrypoints do
+not constitute qualification admission.
+
+The bootstrap materializes that immutable Git revision in a private source tree,
+loads the already checked verifier there, verifies the original source and
+installed dependency/runtime identity, copies dependencies, rechecks the private
+source and installation, and runs only that admitted entrypoint. Node, OS Git,
+reviewed bootstrap/plan digests and the verified package installation are the
+operator trust anchors. A receipt or run/artifact identity is not independent
+accreditation of a compromised bootstrap or host.
+
+Normal-flow MUST authenticate its manifest as that exact reviewed committed
+regular blob before reading runtime selection for any executable probe or model
+turn. The external digest cannot be supplied solely by that manifest. Record the
+stable bootstrap SHA-256 and plan commit/path/digest with the source, driver and
+runtime proof, and compare them between corpus and paired reviews. Exclude
+private ephemeral directory names from equality. Preserve dry-run publication,
+disabled production, explicit cancellation and immutable historical attempts.
+No score/latency gate or research policy changes; no consumer setting is added.
+
+```mermaid
+flowchart LR
+  A[Operator reviewed Git blob and SHA-256] --> B[External trusted Node bootstrap]
+  B --> C[Authenticate committed plan and all driver blobs]
+  C --> D[Materialize private immutable source]
+  D --> E[Verified helper checks source and installed runtime]
+  E --> F[Run admitted corpus or paired review]
+```
+
+Minimum **12 additional deterministic controls**: one isolated successful launch
+and cleanup; two changed-driver causal counter-controls; one unauthenticated CLI
+manifest counter-control; four committed-manifest integrity failures; one combined
+Git-redirection/PATH-shim case; and one installed-dependency rejection; plus one materialized-checkout transformation
+rejection before helper loading and one positive committed-manifest path control.
+Recheck private plan/driver bytes after materialization, before loading any helper.
+Retain the
+existing actual relative-lab normal-flow control with a committed fixture manifest
+and immutable launch. Use real Git and blocked model/write ports. All 174 corpus
+cases and the 42 paired slots remain unstarted until merged prerequisites and a
+new committed preregistration meet their existing independent acceptance gates.
+Update operator testing documentation and catalogue evidence together, validate
+specifications/docs and refresh the graph. Local controls do not qualify a profile.
+
+
+Qualification Git identity also applies after admission to the actual evidence
+adapter. The trusted bootstrap MUST route bare Git calls in its admitted child
+to the same verified OS executable. Use a private directory containing only that
+Git link before the original PATH, preserving ordinary Node/Codex selection; do
+not introduce a consumer setting or modify production source for this lab routing.
+Add one causal case using the actual shipped adapter: an inherited shim executes
+under the former child environment, while the admitted child reads the real Git
+identity without executing the shim. This adds one case to the twelve-control
+bootstrap minimum (thirteen total), with no models or evaluated-PR writes.
+
+
+Before invoking the ordinary planner, qualification MUST resolve its selected
+executable and optional launcher using the same production resolution/validation
+helpers and verify their registered digests. The planner performs its own version
+probe before returning a prepared plan, so post-preparation checking alone is too
+late. Preserve the unchanged ordinary planner and its final invocation/version/
+profile proof. Add two actual-planner controls: an admitted runtime prepares, and
+a mismatched executable that the old version probe ran is rejected before probe
+execution. Use the real resolution/validation/version ports and only a controlled
+workspace; no model calls, research ceilings or production settings are added.
+
+### Bootstrap admission stays outside the checkout — #970, 2026-11-20
+
+This amendment removes checkout-receipt authority from the preceding bootstrap
+contract. A self-consistent `.qualification-admission.json` MUST NOT establish
+that the independently reviewed bootstrap executed. No qualification driver may
+read that file to obtain execution authority or attach bootstrap provenance.
+Direct corpus, normal-flow, launcher, scheduler and review-slot CLIs MUST refuse
+before importing any checkout helper, including when such a receipt is present.
+The operator's reviewed Git blob and independently selected digests remain the
+trust anchors; this change adds no independent host or human-review attestation.
+
+The external bootstrap authenticates and materializes the reviewed closure as
+above, then installs immutable process-local context and calls the admitted
+module in that same process. There MUST be no internal worker CLI or IPC message
+that initializes context from caller-selected proof fields. Each nested scheduler
+or review process MUST enter the complete public bootstrap validation and private
+materialization with the same independently selected plan/bootstrap pins. Its
+private source/dependencies and fixed driver inventory are checked before import.
+The closure permits launcher-to-scheduler and scheduler-to-review-slot spawning;
+a review slot MUST receive and verify the exact parent independent corpus gate.
+Neither an IPC parent nor a serialized checkout object authorizes admission.
+
+The ordinary public modes remain corpus/full-review/normal-flow. The same launch
+also admits full-review-runner with one campaign argument and review with campaign,
+checkout, subject ID, repetition and output arguments. Unknown modes/argument
+shapes fail before materialization. These paths require all explicit reviewed
+plan/bootstrap identities and the complete source/runtime proof, including for a
+direct invocation; they are no admission shortcut. Reviewed digest selection and
+the trusted operator/host remain external prerequisites, without a new claim of
+independent human-review or host attestation.
+
+```mermaid
+flowchart LR
+  A[Reviewed external bootstrap and explicit pins] --> B[Verify plan and immutable closure]
+  B --> C[Private source and dependency proof]
+  C --> D[Repeat private-byte and runtime checks]
+  D --> E[Install process-local context and call driver]
+  E -->|nested process with same explicit pins| A
+```
+
+Text equivalent: independently checked external code admits the closure, copies
+and verifies the private bytes, then imports a driver in that same process. Each
+nested process repeats the complete launch. The removed internal worker endpoint
+rejects both a direct call and an arbitrary IPC-connected parent before imports.
+
+Normal CLI selection, verifier profiles, cohort/order/retry policies, explicit
+signals and existing scoring/latency gates are preserved. Parent cancellation
+continues to reach the worker; its interrupted exit and cleanup remain observable.
+No consumer option, production setting or research timeout/turn/read/token cap is
+introduced. Existing frozen evidence requires its original historical drivers;
+future measurements require the new exact driver identities and preregistration.
+
+Additional numeric budget: **seven deterministic security/lifecycle cases**, making
+**20 bootstrap cases and 194 combined shadow controls**. Two cases reproduce the
+old real verifier accepting a fabricated receipt and a direct runner importing a
+checkout helper, then verify rejection. One rejects the removed worker entry without IPC. One executes the frozen f583
+bootstrap with an arbitrary IPC parent, proves its former admission, then verifies
+current rejection. Two exercise the complete nested launch, including exact corpus
+campaign propagation and private verifier mutation rejected before import. One sends SIGTERM after synthetic-worker readiness and
+checks its interrupted exit and output. Its bounded fixture cleanup applies only
+to that owned model-free test, never an investigation. Existing source/runtime,
+normal-flow and independent-corpus controls remain required; no model calls or
+evaluated-PR writes are needed for these controls.
+
+Acceptance requires all seven controls, the actual relative-lab zero-candidate
+journey and complete combined controls to pass. Preserve the old bypass, failed
+fixture attempts and successful outputs byte-exactly. Update operator guidance,
+catalog evidence and Graphify; run specification/docs validation and the complete
+required build/Jest/lint hook. Report native review/checks for the newly published
+SHA separately. Neither a local pass nor an earlier SHA's review qualifies a profile.
+
+
+### Pinned executable version health probe — #970, 2026-11-20
+
+The admitted executable's `--version` health probe MUST fail closed after the
+same fixed 15,000 ms operational timeout as the ordinary production version reader.
+It MUST use SIGKILL for that probe process so handling SIGTERM cannot keep the
+synchronous caller blocked. Executable/optional-launcher digest admission remains
+before execution; successful version text must still match the reviewed runtime.
+Timeout leaves qualification unstarted and propagates a preflight error rather
+than a clean model verdict. No retry is implied; preserve its attempt/output.
+
+This rule applies only to executable metadata before a model is called. It MUST
+NOT impose a time, turn, token or read limit on investigation, trim a verdict,
+change cohort/order/retry policies, or replace explicit operation cancellation.
+Production source and existing ordinary-planner behavior remain unchanged. The
+fixed health rule is not a new consumer option or plan-controlled override.
+
+Additional numeric budget: **two real-process runtime cases**, making 17 focused
+runtime cases and 196 combined controls. A byte-admitted direct CLI and an optional
+launcher both enter --version and stall; the launcher also handles SIGTERM without
+exiting. Each MUST yield ETIMEDOUT, leave no live fixture CLI and dispatch no model.
+Owned test-process cleanup is 30 seconds and never constrains an investigation.
+Run these assertions against the previous code first and retain the causal
+failures, then the corrected results. Existing fast success, changed-byte refusal,
+20 bootstrap cases and explicit cancellation remain required. Update operator
+guidance/catalog, run specification/docs validation and Graphify, and pass the
+complete mandatory hook plus actual final-head native checks/review.
