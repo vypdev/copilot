@@ -2667,7 +2667,8 @@ Production source and existing ordinary-planner behavior remain unchanged. The
 fixed health rule is not a new consumer option or plan-controlled override.
 
 Additional numeric budget: **two real-process runtime cases**, making 17 focused
-runtime cases and 196 combined controls. A byte-admitted direct CLI and an optional
+runtime cases and 196 combined controls for this #970 revision. That historical
+total excludes the eight #972 cancellation controls specified below. A byte-admitted direct CLI and an optional
 launcher both enter --version and stall; the launcher also handles SIGTERM without
 exiting. Each MUST yield ETIMEDOUT, leave no live fixture CLI and dispatch no model.
 Owned test-process cleanup is 30 seconds and never constrains an investigation.
@@ -2713,6 +2714,9 @@ boundaries (before detection, during detection, between preparation and
 verification, during verification and after provider interruption), one
 uninterrupted completion, one non-cancellation provider failure with process
 exit 1, and one canceled experimental arm that never starts its inherited arm.
+These eight additions increase the combined suite from 196 to **204 controls**
+on this amendment's reviewed base; totals in earlier dated amendments describe
+their own revisions, and other independently integrated controls remain additive.
 The first seven MUST exercise the public bootstrap and actual ordinary
 operation with fail-on-write SCM and a CLI that permits only its version probe.
 Retain committed fixture identities, pending requests, terminal results, process

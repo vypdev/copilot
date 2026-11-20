@@ -115,3 +115,25 @@ with zero candidates, verifiers, model calls and writes. Its exact log and the
 bounded fixture-only change are retained in clean-fixture-relative-focus.log.gz
 and clean-fixture-correction.json. A new ordinary delivery commit and complete
 204-case committed-source replay remain required before publication.
+
+## Committed integrated result and budget clarification
+
+The complete publication sequence above finished on
+`a8b3d1654e5d8cc8dedb14de48792a78fdde2237`: the ordinary build, lint and all 943 suites / 18,695 tests
+pass, followed by **204/204 committed-source shadow controls**,
+zero failed, canceled or skipped, in 390.518s. All eight terminal-state controls,
+committed pins and empty write inventories pass. The normal same-existing-ref
+push and authenticated remote/PR readback completed at 11:34:15Z. The complete
+positive log and actual controlled-operation rows are retained losslessly in
+committed-a8b3-shadow-204.log.gz and committed-a8b3-controls.json.gz; the manifest
+and actual receipt are in committed-a8b3-validation.json. Older negative outcomes
+remain unchanged.
+
+Native Review on a8b3 identified a LOW ambiguity between the historical #970
+196-control total and this amendment's eight additions. The specification now
+explicitly scopes 196 to that historical revision and 204 to this amendment's
+reviewed base; other independently integrated controls remain additive. This
+clarifies the budget without changing executable code, drivers, tests, thresholds
+or runtime. A new documentation/evidence commit still requires its ordinary hook
+and fresh final-head native checks before merge. No native Review success or
+profile qualification is claimed for that not-yet-published head.
