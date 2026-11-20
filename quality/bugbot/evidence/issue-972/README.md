@@ -125,7 +125,7 @@ zero failed, canceled or skipped, in 390.518s. All eight terminal-state controls
 committed pins and empty write inventories pass. The normal same-existing-ref
 push and authenticated remote/PR readback completed at 11:34:15Z. The complete
 positive log and actual controlled-operation rows are retained losslessly in
-committed-a8b3-shadow-204.log.gz and committed-a8b3-controls.json.gz; the manifest
+committed-a8b3-shadow-204.log.gz and committed-a8b3-controls.json; the manifest
 and actual receipt are in committed-a8b3-validation.json. Older negative outcomes
 remain unchanged.
 
@@ -137,3 +137,14 @@ clarifies the budget without changing executable code, drivers, tests, threshold
 or runtime. A new documentation/evidence commit still requires its ordinary hook
 and fresh final-head native checks before merge. No native Review success or
 profile qualification is claimed for that not-yet-published head.
+
+The adf733bc native progress check correctly rejected the newly added compressed
+JSON ledger as required binary content: .json.gz is outside the unchanged
+workflow evidence exclusions. The current ledger is therefore published as
+ordinary UTF-8 JSON with the exact decompressed bytes and hash from the actual
+a8b3 run. The compressed original remains in commit adf733bc and its compressed
+hash and historical path are retained in committed-a8b3-validation.json. The
+existing .log.gz archives, all negative outcomes and the progress/binary guards
+are unchanged. This is an evidence-format correction, with no executable,
+configuration, threshold or result change; it requires a new ordinary commit and
+fresh native checks, not an unchanged retry of the rejected binary.
