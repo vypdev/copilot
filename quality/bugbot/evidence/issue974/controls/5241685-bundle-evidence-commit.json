@@ -16,6 +16,6 @@
   "oldJestSkipped": 35,
   "jestSeconds": 343.126,
   "lint": "PASS",
-  "log": "5241685-bundle-evidence-commit.log.gz",
+  "log": "../../issue-974/controls/5241685-bundle-evidence-commit.log.gz",
   "compressedSha256": "58853dba102180256befcc577d924c72c424b96a940a9aeb1d389c5666f07816"
 }

@@ -17,7 +17,7 @@
     "lint": "PASS"
   },
   "qualificationModelCalls": 0,
-  "log": "source-commit.log.gz",
+  "log": "../../issue-974/controls/source-commit.log.gz",
   "compressedBytes": 50646,
   "compressedSha256": "724d466880bd6dae3d00894ca41a545c054a070e1fabb671ab9287a2336228c1",
   "bundleFollowup": "Two tracked generated bundles were rebuilt by this hook and are included in the next normal delivery commit; this receipt does not claim they were in f06e37e."

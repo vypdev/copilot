@@ -1,0 +1,14 @@
+{
+  "startedAt": "2026-11-20T19:16:38.315218+00:00",
+  "finishedAt": "2026-11-20T19:23:12.558830+00:00",
+  "exitCode": 0,
+  "headBefore": "5241685e8089c9dace4f829214f694126936525d",
+  "headAfter": "38f4c046ecb89f7b79c9778f4123ada8053f2069",
+  "statusAfter": "",
+  "ordinaryHooks": true,
+  "qualificationCalls": 0,
+  "rawBytes": 535817,
+  "rawSha256": "ef438d9fe41180f244d1090f36335181a307e2612821ef80cd335d3f2eebd516",
+  "log": "../../issue-974/controls/38f4c04-correction-commit.log.gz",
+  "logCompression": "gzip"
+}

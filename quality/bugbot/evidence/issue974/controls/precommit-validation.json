@@ -27,7 +27,7 @@
   },
   "retainedNegativeResults": [
     {
-      "log": "lifecycle-incomplete-global-coverage.log.gz",
+      "log": "../../issue-974/controls/lifecycle-incomplete-global-coverage.log.gz",
       "exit": 1,
       "testsPassed": 119,
       "reason": "scoped collection excluded two globally configured coverage owners; not a passing whole-coverage command"
@@ -142,7 +142,7 @@
       "bytes": 0,
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
-    "lifecycle-incomplete-global-coverage.log.gz": {
+    "../../issue-974/controls/lifecycle-incomplete-global-coverage.log.gz": {
       "bytes": 583,
       "sha256": "b53b2e539bdbd1d8972f61ade2e4cd0b9de78a5a30b0e0a6d4252dfbad9d9510",
       "encoding": "gzip",
@@ -151,7 +151,7 @@
       "originalFile": "lifecycle-incomplete-global-coverage.log",
       "reason": "Lossless transport; raw trailing spaces retained without weakening native Git whitespace checks."
     },
-    "lifecycle-scoped-coverage.log.gz": {
+    "../../issue-974/controls/lifecycle-scoped-coverage.log.gz": {
       "bytes": 538,
       "sha256": "d4e1a8ba00aa9aed3834f538459f49184e4255588c33febeb3f4d6f2f9b1581d",
       "encoding": "gzip",

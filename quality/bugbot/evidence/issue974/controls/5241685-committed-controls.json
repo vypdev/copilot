@@ -16,7 +16,7 @@
   "skipped": 0,
   "cancelled": 0,
   "durationMs": 339980.601625,
-  "log": "5241685-committed-controls.log.gz",
+  "log": "../../issue-974/controls/5241685-committed-controls.log.gz",
   "compressedSha256": "2b130bc46844aab72ede251d276c99d8ef211ab918eda1ba51b8217ea1decb51",
   "scope": "Actual initial5241685 committed source; retained positive history, not a233-control/final-correction certificate."
 }

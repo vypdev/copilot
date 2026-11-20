@@ -10,5 +10,13 @@
   "fullReview": "unstarted",
   "qualifiedProfile": null,
   "evaluatedPrWriteAttempts": 0,
-  "production": "disabled"
+  "production": "disabled",
+  "prerequisiteFailures": [
+    {
+      "kind": "cancellation-descendants-escape-owned-process-group",
+      "status": "reproduced-unresolved",
+      "evidence": "controls/escaped-session-reproduction.json",
+      "measuredModelCalls": 0
+    }
+  ]
 }

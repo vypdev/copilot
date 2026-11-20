@@ -98,8 +98,9 @@ and an incomplete global-coverage command. These failures are not relabeled as
 passes. The [ordinary source commit](./controls/source-commit.json) passed build,944 Jest
 suites/18,703 assertions (35 existing skips) and lint. The [two committed-source
 admission controls](./controls/committed-admission-focused.json) also pass using
-explicitly synthetic evidence. The generated bundle/evidence follow-up, complete
-233-control run on its clean head and final native checks remain pending.
+explicitly synthetic evidence. The generated bundle/evidence follow-up and clean committed-source correction
+passed [233/233 Node controls](./controls/233-committed-controls.json), without
+failures, skips or cancellations. Final native checks remain separate.
 
 Run `pnpm exec jest` for the runtime tests and
 `pnpm run test:bugbot-shadow-verification` for the complete committed-source Node
@@ -128,6 +129,27 @@ v2 helpers by the historical module fence. The corrected fence admits only the
 two helper files whose hashes match the authenticated committed v2 plan and
 rejects unregistered neighbors and dependency shadows. The original 24 controls
 remain unchanged in identity; C25 is an additional necessary integration case.
-The complete corrected Node command has 233 controls. Final committed-source
-replay and native checks for this correction remain pending. No model
+The complete corrected Node command has 233 controls. The clean committed-source replay passed 233/233 at `38f4c04`. Native Static
+passed; native progress then rejected compressed logs outside its recognized
+`issue-<number>` generated-evidence namespace. Their exact bytes now live under
+[`issue-974/controls`](../issue-974/controls/), with updated relative receipt links
+and [lossless move proof](./controls/evidence-transport-correction.json). The
+canonical plan and source-driver paths remain here. No policy is weakened.
+Final native checks for this evidence transport correction remain pending. No model
 measurement, profile qualification or production activation is inferred.
+
+## Reproduced cancellation limitation — not admitted for measurement
+
+The [current review finding](https://github.com/vypdev/copilot/pull/997#discussion_r4646554738)
+is reproduced on the committed `38f4c04` source using two native macOS fixtures.
+A child that creates a new session survives the owned-group cancellation. With
+ignored stdio the lifecycle settles while that child survives; with inherited
+pipes the lifecycle remains pending after its leader exits. The fixture-owned
+processes were explicitly killed and verified absent.
+
+[Reproduction facts and exact fixture source](./controls/escaped-session-reproduction.json)
+retain both negative arms and the earlier fixture-only exit-observation error.
+This is an unresolved lifecycle limitation, not a passing control or evidence
+for another operating system. The prior 233 passing controls do not cover this
+case. Keep the 174-case campaign and all 42 reviews unstarted until this
+cancellation requirement has an adequate implemented and verified boundary.

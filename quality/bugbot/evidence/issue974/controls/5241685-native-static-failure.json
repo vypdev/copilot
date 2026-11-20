@@ -6,7 +6,7 @@
   "conclusion": "failure",
   "failedStep": "Validate Git diff",
   "observedCause": "Two raw coverage logs preserved trailing spaces; native strict Git diff check rejected them before later Static steps.",
-  "rawLog": "5241685-native-static-failure.log.gz",
+  "rawLog": "../../issue-974/controls/5241685-native-static-failure.log.gz",
   "rawBytes": 16230,
   "rawSha256": "65b3126bcd93e4cdd675cc40fe25eaf60484e60fe45187cae1f54e54414f7e5d",
   "compressedSha256": "25e8f6cdc8d5316de9e77005b6b3039ae7d9d93257863ed5c4bcd7bb30b5555c",
