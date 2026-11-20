@@ -1,0 +1,550 @@
+{
+  "method": "actual normal-flow runner and ordinary operation; controlled providers",
+  "modelCalls": 0,
+  "evaluatedPrWriteAttempts": 0,
+  "attempts": [
+    {
+      "stage": "during-verification",
+      "pending": [
+        {
+          "stage": "detector",
+          "abortedAtEntry": false
+        },
+        {
+          "stage": "verifier",
+          "id": "controlled-candidate",
+          "abortedAtEntry": false,
+          "abortedAfterInterruption": true
+        }
+      ],
+      "detectorCalls": 1,
+      "verifierCalls": 1,
+      "rows": [
+        {
+          "at": "2026-11-19T18:00:13.666Z",
+          "event": "plan",
+          "subject": {
+            "repository": "owner/project",
+            "number": 1,
+            "baseRef": "master",
+            "headRef": "review",
+            "head": "3dfafc9825614ad8ec0f7ded3644f450bce24470",
+            "base": "5df47e4cb8bd574c6eb388785da5e4988350817e",
+            "tree": "0f911f35ed5331207f612714640e0f1d06b153db",
+            "baseTree": "48479afc6120f8440951aa958a052b651ffbd699",
+            "model": "gpt-6-luna"
+          },
+          "files": 1,
+          "comparisonSha256": "7d9c84e6b7026144e1feb48ef741c9272017c88c1367b2205ab0be69683168d4",
+          "configuration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "verifierConfiguration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "reviewEffort": "default",
+          "effectiveDepth": "default",
+          "subjectsSha256": "ded00d0e785bf6f2d96293e9c364f0b6d1adc09680f1f5ede65e770e6a3ed461",
+          "cli": "codex-cli 0.169.1",
+          "implementation": "ccefb27627cd627ccdb7d5666fd174c2ac1da07b",
+          "runnerSha256": "1af183053299a6cb5f473cd0ed25dbe16716d58c6d3075cf7c7e91f7e1b90b27"
+        },
+        {
+          "at": "2026-11-19T18:00:13.668Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "preparing",
+            "headSha": "3dfafc9825614ad8ec0f7ded3644f450bce24470",
+            "baseSha": "5df47e4cb8bd574c6eb388785da5e4988350817e",
+            "pullNumber": 1,
+            "elapsedMs": 0,
+            "observedAt": "2026-11-19T18:00:13.668Z",
+            "sequence": 1,
+            "stageTimesMs": {}
+          }
+        },
+        {
+          "at": "2026-11-19T18:00:13.670Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "headSha": "3dfafc9825614ad8ec0f7ded3644f450bce24470",
+            "baseSha": "5df47e4cb8bd574c6eb388785da5e4988350817e",
+            "baseRefSha": "5df47e4cb8bd574c6eb388785da5e4988350817e",
+            "pullNumber": 1,
+            "elapsedMs": 2,
+            "observedAt": "2026-11-19T18:00:13.670Z",
+            "sequence": 2,
+            "stageTimesMs": {
+              "preparing": 2
+            }
+          }
+        },
+        {
+          "at": "2026-11-19T18:00:13.670Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "partitions": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "3dfafc9825614ad8ec0f7ded3644f450bce24470",
+            "baseSha": "5df47e4cb8bd574c6eb388785da5e4988350817e",
+            "baseRefSha": "5df47e4cb8bd574c6eb388785da5e4988350817e",
+            "pullNumber": 1,
+            "elapsedMs": 2,
+            "observedAt": "2026-11-19T18:00:13.670Z",
+            "sequence": 3,
+            "stageTimesMs": {
+              "preparing": 2
+            }
+          }
+        },
+        {
+          "at": "2026-11-19T18:00:13.672Z",
+          "event": "detector-start",
+          "turn": 1,
+          "resolvedModel": "gpt-6-luna",
+          "promptSha256": "99a3b22ef7436af1e4bc2910e7e003c4da3e1efea4fa600e4d5fa2d322470fde"
+        },
+        {
+          "at": "2026-11-19T18:00:13.672Z",
+          "event": "detector-result",
+          "turn": 1,
+          "findings": [
+            {
+              "id": "controlled-candidate",
+              "title": "Controlled candidate",
+              "file": "index.ts",
+              "line": 2
+            }
+          ],
+          "resolvedModel": "gpt-6-luna",
+          "reportedModel": null,
+          "wallMs": 0
+        },
+        {
+          "at": "2026-11-19T18:00:13.674Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "verifying",
+            "partitions": {
+              "completed": 1,
+              "total": 1
+            },
+            "candidates": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "3dfafc9825614ad8ec0f7ded3644f450bce24470",
+            "baseSha": "5df47e4cb8bd574c6eb388785da5e4988350817e",
+            "baseRefSha": "5df47e4cb8bd574c6eb388785da5e4988350817e",
+            "pullNumber": 1,
+            "elapsedMs": 6,
+            "observedAt": "2026-11-19T18:00:13.674Z",
+            "sequence": 4,
+            "stageTimesMs": {
+              "preparing": 2,
+              "analyzing": 4
+            }
+          }
+        },
+        {
+          "at": "2026-11-19T18:00:13.674Z",
+          "event": "verifier-start",
+          "id": "controlled-candidate",
+          "active": 1,
+          "atMs": 61
+        },
+        {
+          "at": "2026-11-19T18:00:13.674Z",
+          "event": "verifier-finish",
+          "id": "controlled-candidate",
+          "active": 0,
+          "atMs": 61,
+          "wallMs": 0
+        },
+        {
+          "at": "2026-11-19T18:00:13.675Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "finished",
+            "partitions": {
+              "completed": 1,
+              "total": 1
+            },
+            "candidates": {
+              "completed": 0,
+              "total": 1
+            },
+            "outcome": "dry-run",
+            "headSha": "3dfafc9825614ad8ec0f7ded3644f450bce24470",
+            "baseSha": "5df47e4cb8bd574c6eb388785da5e4988350817e",
+            "baseRefSha": "5df47e4cb8bd574c6eb388785da5e4988350817e",
+            "pullNumber": 1,
+            "elapsedMs": 7,
+            "observedAt": "2026-11-19T18:00:13.675Z",
+            "sequence": 5,
+            "stageTimesMs": {
+              "preparing": 2,
+              "analyzing": 4,
+              "verifying": 1
+            }
+          }
+        },
+        {
+          "at": "2026-11-19T18:00:13.708Z",
+          "event": "workflow-result",
+          "status": "interrupted",
+          "results": [
+            {
+              "id": "DetectPotentialProblemsUseCase",
+              "success": true,
+              "executed": true,
+              "steps": [
+                "Bugbot dry-run completed after atomically completing 1 diff partition with 1 accepted finding; no SCM mutations performed."
+              ],
+              "errors": [],
+              "payload": {
+                "dryRun": true,
+                "findings": [
+                  {
+                    "id": "controlled-candidate",
+                    "title": "Controlled candidate",
+                    "description": "An owned cancellation fixture hypothesis.",
+                    "file": "index.ts",
+                    "line": 2,
+                    "severity": "medium",
+                    "confidence": 0.99,
+                    "category": "correctness",
+                    "codeSnippet": "export const added = 2;",
+                    "fingerprint": "fp-c50ff98d",
+                    "semanticFingerprint": "sf-9233a5a9"
+                  }
+                ],
+                "overflowCount": 0,
+                "resolvedFindingIds": [],
+                "findingStates": {
+                  "open": 1,
+                  "reopened": 0,
+                  "fixed": 0,
+                  "obsolete": 0,
+                  "dismissed": 0,
+                  "verification-required": 0,
+                  "unknown": 0
+                },
+                "ruleSources": [],
+                "contextCoverage": {
+                  "status": "complete",
+                  "sources": [
+                    {
+                      "source": "selection",
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "issue-comments",
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "pull-request-comments",
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "review-threads",
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "diff",
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "previous-findings",
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "human-conversation",
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "rules",
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    }
+                  ]
+                },
+                "bugbotShadowVerification": {
+                  "resolvedModel": "gpt-6-luna",
+                  "provider": "codex",
+                  "detectorModelProvider": "openai",
+                  "detectorEffort": "xhigh",
+                  "verifier": {
+                    "model": "gpt-6-luna",
+                    "provider": "codex",
+                    "modelProvider": "openai",
+                    "effort": "xhigh"
+                  },
+                  "review": {
+                    "repository": {
+                      "owner": "owner",
+                      "name": "project"
+                    },
+                    "pullRequest": 1,
+                    "headSha": "3dfafc9825614ad8ec0f7ded3644f450bce24470",
+                    "baseSha": "5df47e4cb8bd574c6eb388785da5e4988350817e"
+                  },
+                  "detection": [
+                    {
+                      "partition": 1,
+                      "partitionId": "diff-1-of-1-0f3cf3b17d828e26958cfbb297496da71b4b029f93abeecda4b58eeb5e13658a",
+                      "wallMs": 1,
+                      "status": "completed",
+                      "observed": 1
+                    }
+                  ],
+                  "origins": [
+                    {
+                      "origin": "1:1",
+                      "partition": 1,
+                      "position": 1,
+                      "disposition": "prepared",
+                      "anchor": {
+                        "path": "index.ts",
+                        "line": 2,
+                        "end": 2
+                      },
+                      "candidateId": "controlled-candidate"
+                    }
+                  ],
+                  "timing": {
+                    "detectionAndPreparationMs": 3,
+                    "verificationWallMs": 1,
+                    "concurrency": 1,
+                    "workflowWallMs": 7
+                  },
+                  "candidates": [
+                    {
+                      "status": "technical-failure",
+                      "reason": "investigation-canceled",
+                      "id": "controlled-candidate",
+                      "candidate": {
+                        "id": "controlled-candidate",
+                        "hypothesis": "Controlled candidate",
+                        "anchor": {
+                          "path": "index.ts",
+                          "line": 2,
+                          "end": 2,
+                          "side": "RIGHT"
+                        },
+                        "repository": {
+                          "owner": "owner",
+                          "name": "project"
+                        },
+                        "pullRequest": 1,
+                        "headSha": "3dfafc9825614ad8ec0f7ded3644f450bce24470",
+                        "allowBase": false,
+                        "baseSha": "5df47e4cb8bd574c6eb388785da5e4988350817e"
+                      },
+                      "wallMs": 0,
+                      "ordinaryPublication": "individual"
+                    }
+                  ],
+                  "publicationSimulation": {
+                    "status": "invalid"
+                  }
+                },
+                "bugbotTelemetry": {
+                  "schemaVersion": 1,
+                  "reviewId": "owner:project:pr-1:3dfafc982561",
+                  "repository": "owner/project",
+                  "triggerKind": "pull_request",
+                  "pullRequestNumber": 1,
+                  "headSha": "3dfafc9825614ad8ec0f7ded3644f450bce24470",
+                  "publicationMode": "dry-run",
+                  "configuredEffort": "default",
+                  "agentProvider": "codex",
+                  "agentModel": "gpt-6-luna",
+                  "startedAt": "2026-11-19T18:00:13.668Z",
+                  "elapsedMs": 7,
+                  "stagesMs": {
+                    "context-preflight": 0,
+                    "context": 1,
+                    "analysis": 2,
+                    "normalization": 1,
+                    "freshness": 0
+                  },
+                  "promptCharacters": 28545,
+                  "responseCharacters": 466,
+                  "estimatedInputTokens": 7137,
+                  "estimatedOutputTokens": 117,
+                  "changedFiles": 1,
+                  "changedLines": 1,
+                  "rulesLoaded": 0,
+                  "contextSelectionReason": "event",
+                  "contextCandidateBucket": "1",
+                  "contextCoverageStatus": "complete",
+                  "contextCoverage": {
+                    "selection": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "issue-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "pull-request-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "review-threads": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "diff": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "previous-findings": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "human-conversation": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "rules": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    }
+                  },
+                  "contextLogicalProviderReads": 5,
+                  "contextRawProviderRequests": 5,
+                  "contextConcurrencyLimit": 2,
+                  "analysisPartitions": 1,
+                  "completedAnalysisPartitions": 1,
+                  "analysisDiffFragments": 1,
+                  "analysisAssignedFiles": 1,
+                  "maximumAnalysisConcurrency": 1,
+                  "candidateFindings": 1,
+                  "publishedFindings": 0,
+                  "overflowFindings": 0,
+                  "resolvedFindings": 0,
+                  "findingStates": {
+                    "open": 1,
+                    "reopened": 0,
+                    "fixed": 0,
+                    "obsolete": 0,
+                    "dismissed": 0,
+                    "verification-required": 0,
+                    "unknown": 0
+                  },
+                  "outcome": "dry-run"
+                }
+              },
+              "reminders": [],
+              "stepFormat": "plain"
+            }
+          ],
+          "writes": [],
+          "checkoutUnchanged": true,
+          "wallMs": 62,
+          "verificationWallMs": 0,
+          "peakVerifierConcurrency": 1
+        }
+      ]
+    }
+  ]
+}

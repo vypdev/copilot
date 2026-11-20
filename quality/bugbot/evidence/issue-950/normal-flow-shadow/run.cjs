@@ -95,6 +95,7 @@ async function verifyMatchedCandidate(request, profiles, verifyArm, recordCompar
     // The review already runs up to two candidates at a time. Run the arms
     // sequentially within each candidate so the same session limit applies.
     const settled = async (arm, input) => {
+        if (input.signal?.aborted) return { status: 'technical-failure', reason: 'investigation-canceled' };
         try {
             return await verifyArm(arm, input);
         } catch {
@@ -107,7 +108,7 @@ async function verifyMatchedCandidate(request, profiles, verifyArm, recordCompar
     return experimental;
 }
 
-async function run(lab, number, destination, manifestPath = path.join(__dirname, 'subjects.json')) {
+async function run(lab, number, destination, manifestPath = path.join(__dirname, 'subjects.json'), ports = {}) {
     lab = path.resolve(lab);
     const admission = requireBootstrapAdmission(root);
     const authenticated = attestCommittedArtifact(root, manifestPath, admission.planSha256, admission.planCommit);
@@ -146,7 +147,7 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
     const cancel = () => cancellation.abort();
     process.once('SIGINT', cancel);
     process.once('SIGTERM', cancel);
-    const signal = cancellation.signal;
+    const signal = ports.signal ? AbortSignal.any([cancellation.signal, ports.signal]) : cancellation.signal;
     const withCancellation = original => original ? AbortSignal.any([original, signal]) : signal;
     const writes = [];
     const guard = new Proxy({}, { get: (_target, method) => () => {
@@ -169,6 +170,10 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             headRepositoryOwner: owner, headRepositoryName: name, headRef: subject.headRef,
             headSha: subject.head, changedFileCount: diff.changes.length };
         const scm = {
+            progress: { async observe(progress, dryRun, locale) {
+                log({ event: 'operation-progress', progress });
+                await ports.progress?.observe(progress, dryRun, locale);
+            } },
             context: {
                 getPullRequest: async () => identity, getSourceBoundPullRequest: async () => identity,
                 findOpenPullRequestsByExactHead: async () => [],
@@ -198,7 +203,7 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
         const ai = new Ai('shadow-campaign', '', false, workflowInputs ? ['build/*', 'specs/CATALOG.md'] : [], false,
             'low', 20, [], tasks, undefined, { publicationMode: frozen.publication, effort: reviewEffort });
         const operation = projectBugbotReviewOperationContext({
-            ai, owner, repo: name, issueNumber: subject.number, isPullRequest: true, eventName: 'pull_request',
+            bugbotReviewSignal: signal, ai, owner, repo: name, issueNumber: subject.number, isPullRequest: true, eventName: 'pull_request',
             tokenUser: 'copilot', locale: { issue: 'en-US', pullRequest: 'en-US' },
             pullRequest: { number: subject.number, head: subject.headRef, action: 'opened' },
             commit: { branch: subject.headRef }, currentConfiguration: { parentBranch: subject.baseRef }, branches: {},
@@ -214,7 +219,7 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             assert.equal(invocation.modelProvider, expected.modelProvider);
             assert.equal(invocation.sandbox, 'read-only');
         };
-        const standardDetector = createFindingsQueryPort({ cli: new AgentCliClient({
+        const standardDetector = ports.findings ?? createFindingsQueryPort({ cli: new AgentCliClient({
             prepare(request) {
                 const plan = preparePinnedExecution(planner, request, frozen.runtime);
                 try {
@@ -295,7 +300,11 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             peak = Math.max(peak, active);
             log(label(arm, { event: 'verifier-start', id: candidate.id, active, atMs: startedAt }));
             try {
-                return await adapters[arm].verify({ ...request, signal: withCancellation(request.signal) });
+                const input = { ...request, signal: withCancellation(request.signal) };
+                const result = await (ports.verifier ?? adapters[arm]).verify(input);
+                // Controlled fixtures can observe provider settlement before canceling the enclosing operation.
+                if (ports.verifierResult) await ports.verifierResult.observe({ arm, id: candidate.id, result, signal: input.signal });
+                return result;
             } finally {
                 active -= 1;
                 lastVerifier = sinceStart();
@@ -309,13 +318,16 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
                 return verifyMatchedCandidate(request, profiles, verifyArm, log);
             },
         };
+        await ports.beforeReview?.({ signal });
         const results = await composeBugbotReview({ findings: detector, scm, shadowVerification: verifier,
             experimentalShadowProfile: profiles.experimental }).invoke(operation);
         const wallMs = sinceStart();
-        log({ event: 'workflow-result', results, writes, checkoutUnchanged: git(checkout, 'status', '--porcelain') === '',
+        const status = signal.aborted ? 'interrupted' : results.every(result => result.success) ? 'completed' : 'failed';
+        log({ event: 'workflow-result', status, results, writes, checkoutUnchanged: git(checkout, 'status', '--porcelain') === '',
             wallMs, verificationWallMs: firstVerifier === undefined ? 0 : lastVerifier - firstVerifier,
             peakVerifierConcurrency: peak });
         assert.deepEqual(writes, []);
+        return { status, results, writes };
     } finally {
         process.removeListener('SIGINT', cancel);
         process.removeListener('SIGTERM', cancel);

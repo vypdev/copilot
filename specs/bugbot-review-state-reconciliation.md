@@ -2667,7 +2667,8 @@ Production source and existing ordinary-planner behavior remain unchanged. The
 fixed health rule is not a new consumer option or plan-controlled override.
 
 Additional numeric budget: **two real-process runtime cases**, making 17 focused
-runtime cases and 196 combined controls. A byte-admitted direct CLI and an optional
+runtime cases and 196 combined controls for this #970 revision. That historical
+total excludes the eight #972 cancellation controls specified below. A byte-admitted direct CLI and an optional
 launcher both enter --version and stall; the launcher also handles SIGTERM without
 exiting. Each MUST yield ETIMEDOUT, leave no live fixture CLI and dispatch no model.
 Owned test-process cleanup is 30 seconds and never constrains an investigation.
@@ -2676,3 +2677,51 @@ failures, then the corrected results. Existing fast success, changed-byte refusa
 20 bootstrap cases and explicit cancellation remain required. Update operator
 guidance/catalog, run specification/docs validation and Graphify, and pass the
 complete mandatory hook plus actual final-head native checks/review.
+
+### Authenticated normal-flow cancellation — #972 integration, 2026-11-20
+
+The normal-flow qualification runner MUST retain #970's complete external
+bootstrap, committed plan, physical source/dependency and executable admission
+before application imports. Its existing cancellation signal MUST also reach
+the ordinary review operation, detector and verifier. An interrupted operation
+MUST remain `interrupted`, never ordinary successful completion or a completed
+verification receipt. Canceling an experimental verifier arm MUST prevent its
+inherited comparison from starting. No investigation deadline or new public
+configuration is introduced.
+
+The terminal ledger and external bootstrap exit agree: `completed` exits 0,
+`interrupted` exits 130 and `failed` exits 1. A provider error without an explicit
+cancellation remains a failure; it cannot be converted into cancellation or a
+successful process merely by moving execution into the bootstrap.
+
+```text
+Reviewed external bootstrap -> committed fixture plan and complete admission
+  -> actual runner -> ordinary operation -> completed / interrupted / failed
+```
+
+The deterministic test supervisor MAY commit a disposable synthetic source and
+plan with an explicitly pinned controlled-provider wrapper appended to the
+unchanged actual runner. The public bootstrap MUST authenticate that complete
+fixture driver before importing it. This test construction grants no new
+production admission endpoint, callback, environment bypass or authority from a
+checkout receipt. Relative-lab controls use the same committed fixture contract,
+including when current package/driver changes are not yet in the delivery HEAD.
+These are synthetic controls, not a corpus measurement, qualification result or
+independent host attestation.
+
+Minimum **eight distinct normal-flow controls**: five explicit interruption
+boundaries (before detection, during detection, between preparation and
+verification, during verification and after provider interruption), one
+uninterrupted completion, one non-cancellation provider failure with process
+exit 1, and one canceled experimental arm that never starts its inherited arm.
+These eight additions increase the combined suite from 196 to **204 controls**
+on this amendment's reviewed base; totals in earlier dated amendments describe
+their own revisions, and other independently integrated controls remain additive.
+The first seven MUST exercise the public bootstrap and actual ordinary
+operation with fail-on-write SCM and a CLI that permits only its version probe.
+Retain committed fixture identities, pending requests, terminal results, process
+exits and empty write inventories. Preserve the prior seven-case logs, the
+combined uncommitted-plan failures and the causal failed-review/exit-0 control.
+Update testing guidance, the #972 evidence README and catalog paths together;
+run focused/full shadow, specifications, documentation, graph and ordinary
+repository verification before integrating the final exact delivery head.

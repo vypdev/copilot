@@ -1,0 +1,95 @@
+{
+  "recordedAt": "2026-11-20T15:16:16.349100+00:00",
+  "sourceHead": "cf3736d504fe88bb0f92ef0f6939b19e657e77f6",
+  "parents": [
+    "f133dcd8456c8ed31005aa2a083031220c20e13c",
+    "25eaba3a641abb05d1ac2847917c97863e5a714f"
+  ],
+  "syncRun": 44755243183,
+  "syncJob": 136353130726,
+  "syncConclusion": "success",
+  "cleanMergeWithoutFixer": true,
+  "sourceIdentity": {
+    "executableSourceBundlesAndLockfileMatchParent": true,
+    "cancellationDriversBootstrapPackageAndControlsMatchPriorChild": true,
+    "frozen950HistoryUnchanged": true
+  },
+  "nativeJest": {
+    "suites": 943,
+    "passed": 18695,
+    "preExistingSkipped": 35,
+    "seconds": 588.65
+  },
+  "nativeExtension": {
+    "files": 385,
+    "passed": 5291
+  },
+  "nativeValidation": {
+    "build": "PASS",
+    "typecheck": "PASS",
+    "coverageBudgets": "PASS",
+    "lint": "PASS",
+    "specifications": "PASS",
+    "documentation": "PASS"
+  },
+  "priorCommittedControls": {
+    "head": "f133dcd8456c8ed31005aa2a083031220c20e13c",
+    "tests": 204,
+    "passed": 204,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "ordinaryOperationRows": 7,
+    "separateMatchedArmControl": 1,
+    "providerFailureSettledBeforeAbort": true,
+    "allWriteArraysEmpty": true
+  },
+  "priorNativeReview": {
+    "head": "f133dcd8456c8ed31005aa2a083031220c20e13c",
+    "check": 136358102701,
+    "conclusion": "SUCCESS",
+    "completedAt": "2026-11-20T14:53:08Z",
+    "unresolvedThreads": 0,
+    "postProviderOrderingFindingResolvedAt": "2026-11-20T14:52:54Z"
+  },
+  "records": [
+    {
+      "file": "action-sync-44755243183.log.gz",
+      "encoding": "gzip",
+      "lossless": true,
+      "rawBytes": 3801324,
+      "rawSha256": "5fd29a9afe72b3bb412cea0a8ca96fa94e87c36a314e9d01703bafa483ddfcff",
+      "compressedSha256": "c37e55700063c21212ae6ca9251b610b700e003ed8282d33248ed32e45d36388"
+    },
+    {
+      "file": "f133-committed-shadow-204.log.gz",
+      "encoding": "gzip",
+      "lossless": true,
+      "rawBytes": 21840,
+      "rawSha256": "f6348e39c57ec7bf0041c17062f91c33d2f2927b0f3f796a2abfe8923d4518a8",
+      "compressedSha256": "f1d30e769a319d4d98d8a445c170f25a01e1b6d82254cac5f86f98fb68144507"
+    },
+    {
+      "file": "f133-committed-controls.json",
+      "encoding": "UTF-8 JSON",
+      "rawBytes": 118480,
+      "rawSha256": "a48de670ab532756ad3001fa9a628bb467789d8ac1dfb0dc16dff913510cc8e2"
+    },
+    {
+      "file": "f133-committed-shadow-204-receipt.json",
+      "encoding": "UTF-8 JSON",
+      "rawBytes": 853,
+      "rawSha256": "f264803a1c8ff3ee3f2cd11828710c29cd21190d091f2ce8304cb1f0d842dc4b"
+    },
+    {
+      "file": "f133-review-threads-resolved.json",
+      "encoding": "UTF-8 JSON",
+      "rawBytes": 8069,
+      "rawSha256": "de7ba50f483f1930f4e96e14dfc77dd6e1305f5fd521b634aaec3466b9f796a8"
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "evaluatedPilotPrWriteAttempts": 0,
+  "productionVerificationMode": "disabled",
+  "remaining": "Ordinary contributor evidence commit, combined committed-source replay and final-head native checks/findings. Older passes are not relabeled as combined-head proof."
+}

@@ -784,7 +784,9 @@
         "src/infrastructure/github/__tests__/github_bugbot_status_card_handoff.test.ts",
         "quality/bugbot/evidence/issue-950/qualification-bootstrap.test.cjs",
         "quality/bugbot/evidence/issue-950/normal-flow-shadow/paths.test.cjs",
-        "quality/bugbot/evidence/issue-950/ev07-shadow/review-runtime.test.cjs"
+        "quality/bugbot/evidence/issue-950/ev07-shadow/review-runtime.test.cjs",
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs",
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated-fixture.cjs"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",
@@ -796,7 +798,8 @@
         "docs/bugbot/programmatic-api.mdx",
         "docs/pull-requests/workflow-setup.mdx",
         "docs/issues/comment-commands.mdx",
-        "docs/development/testing.mdx"
+        "docs/development/testing.mdx",
+        "quality/bugbot/evidence/issue-972/README.md"
       ]
     },
     {

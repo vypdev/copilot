@@ -2,11 +2,12 @@
 
 const assert = require('node:assert/strict');
 const { execFileSync, spawnSync } = require('node:child_process');
-const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, symlinkSync, cpSync, constants } = require('node:fs');
+const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, symlinkSync } = require('node:fs');
 const { createHash } = require('node:crypto');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
+const { authenticatedFixture } = require('./authenticated-fixture.cjs');
 const { attestSource, attestRuntime, attestDrivers, runtimeIdentity, dependencyIdentity, trustedGitExecutable } = require('../execution-provenance.cjs');
 
 function sourceFixture(t) {
@@ -246,9 +247,8 @@ for (const mode of ['require', 'import']) {
 test('the actual runner resolves a relative lab before entering its private checkout, without model calls', t => {
     const directory = mkdtempSync(path.join(tmpdir(), 'bugbot-relative-lab-'));
     t.after(() => rmSync(directory, { recursive: true, force: true }));
-    const source = path.join(directory, 'lab', 'project.git'), bin = path.join(directory, 'bin');
+    const source = path.join(directory, 'lab', 'project.git');
     mkdirSync(source, { recursive: true });
-    mkdirSync(bin);
     const git = (...args) => execFileSync('git', ['-C', source, ...args], { encoding: 'utf8' }).trim();
     git('init', '--quiet', '--template=');
     writeFileSync(path.join(source, 'index.ts'), 'export const answer = 42;\n');
@@ -257,40 +257,8 @@ test('the actual runner resolves a relative lab before entering its private chec
     const head = git('rev-parse', 'HEAD'), tree = git('rev-parse', 'HEAD^{tree}');
     const manifest = { publication: 'dry-run', effort: 'xhigh', subjects: [{ repository: 'owner/project', number: 1, baseRef: 'master', headRef: 'review', head, base: head,
             tree, baseTree: tree, model: 'gpt-6-luna' }] };
-    const forbidden = path.join(directory, 'model-invoked');
-    writeFileSync(path.join(bin, 'codex'), '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "codex-cli fixture"; exit 0; fi\n'
-        + 'touch "$MODEL_FORBIDDEN"\nexit 91\n', { mode: 0o700 });
-    const root = path.resolve(__dirname, '../../../../..');
-    const proof = require('../execution-provenance.cjs');
-    const hash = file => createHash('sha256').update(readFileSync(file)).digest('hex');
-    manifest.implementation = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-    manifest.runtime = { ...proof.runtimeIdentity(root), executable: path.join(bin, 'codex'),
-        codex: 'codex-cli fixture', codexSha256: hash(path.join(bin, 'codex')) };
-    manifest.drivers = Object.fromEntries(require('./run.cjs').normalFlowDrivers.map(file => [file, hash(path.join(__dirname, file))]));
-    const checkout = path.join(directory, 'implementation');
-    execFileSync('git', ['clone', '--quiet', '--shared', '--template=', root, checkout]);
-    // Commit the current driver snapshot inside this disposable fixture, so
-    // this control also works before the contributor implementation commit.
-    const driverPaths = require('./run.cjs').normalFlowDrivers.map(file => {
-        const relative = path.relative(root, path.join(__dirname, file));
-        writeFileSync(path.join(checkout, relative), readFileSync(path.join(root, relative)));
-        return relative;
-    });
-    cpSync(path.join(root, 'node_modules'), path.join(checkout, 'node_modules'),
-        { recursive: true, verbatimSymlinks: true, mode: constants.COPYFILE_FICLONE });
-    const relative = 'quality/bugbot/evidence/issue-950/normal-flow-shadow/relative-lab.fixture.json';
-    writeFileSync(path.join(checkout, relative), JSON.stringify(manifest));
-    execFileSync('git', ['-C', checkout, 'add', relative, ...driverPaths]);
-    execFileSync('git', ['-C', checkout, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
-        '-c', 'core.hooksPath=/dev/null', 'commit', '--quiet', '-m', 'Commit synthetic fixture manifest']);
-    const revision = execFileSync('git', ['-C', checkout, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-    const bootstrap = path.join(directory, 'reviewed-bootstrap.cjs');
-    writeFileSync(bootstrap, execFileSync('git', ['-C', checkout, 'show', revision + ':quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs']));
-    const run = spawnSync(process.execPath, [bootstrap, checkout, revision, relative,
-        hash(path.join(checkout, relative)), hash(bootstrap), 'normal-flow', 'lab', '1', 'result.jsonl'], {
-        cwd: directory, encoding: 'utf8', env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH,
-            MODEL_FORBIDDEN: forbidden },
-    });
+    const fixture = authenticatedFixture(t, manifest);
+    const run = fixture.launch('lab', 1, 'result.jsonl', directory);
     assert.equal(run.status, 0, run.stderr);
     const rows = readFileSync(path.join(directory, 'result.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
     const result = rows.find(row => row.event === 'workflow-result');
@@ -298,5 +266,5 @@ test('the actual runner resolves a relative lab before entering its private chec
     assert.equal(result.checkoutUnchanged, true);
     assert.equal(result.peakVerifierConcurrency, 0);
     assert.equal(rows.filter(row => row.event === 'detector-start').length, 0);
-    assert.equal(existsSync(forbidden), false);
+    assert.equal(existsSync(fixture.forbidden), false);
 });

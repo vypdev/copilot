@@ -435,3 +435,52 @@ The real-process controls cover both direct and optional-launcher stalls, exact
 30-second fixture cleanup never bounds research. Node's synchronous subprocess
 API otherwise continues waiting if a timed-out child handles SIGTERM; see the
 [pinned Node v24.20.0 subprocess documentation](https://nodejs.org/download/release/v24.20.0/docs/api/child_process.html#child_processexecfilesyncfile-args-options).
+
+## Normal-flow shadow cancellation
+
+The local normal-flow shadow runner forwards its explicit cancellation signal
+into the ordinary review operation, detector and verifier. An interrupted run
+records `workflow-result.status=interrupted`, retains its started/pending request
+observations, and exits with status 130. It cannot report successful ordinary
+completion or issue a completed verification receipt. A matched experimental
+arm that is canceled does not start its inherited comparison arm.
+
+Run `pnpm run test:bugbot-shadow-verification` for the model-free stage controls:
+before detection, during detection, after preparation, during verification,
+after a technical provider interruption, and uninterrupted completion. The
+controlled programmatic ports exercise the actual runner and application with
+pinned temporary Git sources and fail-on-write SCM ports. They are synthetic
+controls, not model measurements or qualification evidence. The loader uses the
+shipping compiler options so the real progress/cancellation path is exercised.
+
+The post-provider control observes a settled `provider-turn-failed` result while
+the signal is still active, then explicitly cancels the enclosing operation.
+Its event-order assertions distinguish this boundary from cancellation inside
+the verifier. The retained counterfactual rejects the former fixture's early
+abort; the corrected control still requires interrupted status, blocked
+publication, empty writes and exit 130. See the exact logs and readable ledgers
+in `quality/bugbot/evidence/issue-972/post-provider-order-validation.json`.
+
+Use a new output destination for every actual attempt and retain the interrupted
+ledger. Old ledgers remain historical observations; replay needs the new driver
+pin and its applicable source/runtime admission. This adds no Action setting,
+elapsed-time cutoff, token budget or turn limit. Usage remains optional telemetry.
+
+After the #970/#972 integration, the cancellation controls enter through the
+external bootstrap too. Their disposable source snapshot and plan are committed
+before execution; a pinned owned wrapper supplies controlled providers while
+executing the actual runner. Its optional internal result observer exposes the
+post-provider boundary to the control without adding a CLI setting. The relative-lab case uses the
+same fixture. This does not add a production test mode or bypass source/runtime
+admission. Seven actual-operation cases and one matched-arm case distinguish
+interruption, completion and provider failure; the bootstrap exits 130, 0 and 1
+respectively. No model campaign or evaluated-PR write is performed by these
+controls.
+
+Some bound-corpus evaluator fixtures authenticate the real repository HEAD.
+After merging package or application changes locally, commit the candidate
+through the required repository hook before expecting those root-bound controls
+to pass. Run the complete shadow suite against that committed source before
+publishing it; retain an earlier staged-source rejection and keep its admission
+check intact. The owned normal-flow fixtures are synthetic and do not replace
+this committed-source verification or the later qualification preregistration.

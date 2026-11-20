@@ -1,0 +1,38 @@
+{
+  "encoding": "per-record",
+  "lossless": true,
+  "records": [
+    {
+      "file": "committed-a8b3-shadow-204.log.gz",
+      "rawBytes": 21803,
+      "rawSha256": "ba4f056e1baf5392d4ffdb126034f8f6bad49c65bca9956993056ae179b5a3ee",
+      "encoding": "gzip"
+    },
+    {
+      "file": "committed-a8b3-controls.json",
+      "rawBytes": 118219,
+      "rawSha256": "7842d879082a5d6563d695973faff4bb1cc662049affb0a2f06a6875e878c797",
+      "encoding": "utf-8",
+      "historicalGzip": {
+        "commit": "adf733bc9cb6eeb442524ce39ae05dbdaf461438",
+        "path": "quality/bugbot/evidence/issue-972/committed-a8b3-controls.json.gz",
+        "compressedSha256": "9cc4f489eeca2e594f051082f88e7cbbbd0aa724eca8915f2abc986333f9bcae"
+      }
+    }
+  ],
+  "actualReceipt": {
+    "head": "a8b3d1654e5d8cc8dedb14de48792a78fdde2237",
+    "exitCode": 0,
+    "completedAt": "2026-11-20T11:30:44.612846+00:00",
+    "log": "/private/tmp/copilot-goal-972-final-shadow-204.log",
+    "evidence": "/private/tmp/copilot-goal-972-final-controlled-attempts.json"
+  },
+  "tests": {
+    "passed": 204,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "durationSeconds": 390.518,
+  "scope": "Deterministic authenticated fixtures, not measured models or profile qualification."
+}

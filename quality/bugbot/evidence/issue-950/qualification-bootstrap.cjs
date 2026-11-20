@@ -213,6 +213,6 @@ async function launch(repository, revision, planPath, planSha256, bootstrapSha25
 module.exports = { launch };
 if (require.main === module) {
     launch(...process.argv.slice(2)).then(code => {
-        process.exitCode = Number.isInteger(code) ? code : code?.status === 'interrupted' ? 130 : 0;
+        process.exitCode = Number.isInteger(code) ? code : code?.status === 'interrupted' ? 130 : code?.status === 'failed' ? 1 : 0;
     }).catch(error => { console.error(error.message); process.exitCode = 1; });
 }
