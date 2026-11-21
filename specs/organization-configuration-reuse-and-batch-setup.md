@@ -1008,13 +1008,13 @@ completion gate. This owning appendix extends its budget, case table,
 traceability and Definition of Done. Both tables MUST be read by the executable
 acceptance validator. Removing a required appendix case from the ledger MUST fail.
 
-The cumulative floor is **90 distinct cases**, with no evidence key counted by
+The cumulative floor is **91 distinct cases**, with no evidence key counted by
 two IDs: original64 + terminal reconciliation2 + required recovery19 + unresolved
-local inventory3 + operation isolation1 + structural source invocation1. The
+local inventory3 + operation isolation1 + structural source invocation1 + malformed legacy inventory1. The
 19 recovery cases below are C67–C85 (nine provider/private-v1, six coordinator,
 one cancelled uncertainty, one renewed review/audit, two proof-retention cases).
-C86–C88 are the three additional inventory requirements. C89–C90 close the next
-reviewed delivery and source-scope gaps. Parameter rows in a mapped case provide
+C86–C88 are the three additional inventory requirements. C89–C91 close the reviewed
+delivery, source-scope and complete-inventory gaps. Parameter rows in a mapped case provide
 its complete behavioral proof; they are not counted again toward the 90 IDs.
 
 | Area | Original minimum | Additional | Cumulative minimum |
@@ -1022,10 +1022,10 @@ its complete behavioral proof; they are not counted again toward the 90 IDs.
 | Pure proposal/scope/plan policy | 16 | 1 | 17 |
 | Read-only planning/freshness | 8 | 3 | 11 |
 | Application/recovery | 12 | 12 | 24 |
-| Provider/delivery contracts | 10 | 10 | 20 |
+| Provider/delivery contracts | 10 | 11 | 21 |
 | CLI/content | 12 | 0 | 12 |
 | Packaged integration/security | 6 | 0 | 6 |
-| **Total** | **64** | **26** | **90** |
+| **Total** | **64** | **27** | **91** |
 
 | Case ID | Area | Requirements | Observable assertion |
 |---|---|---|---|
@@ -1055,6 +1055,7 @@ its complete behavioral proof; they are not counted again toward the 90 IDs.
 | publisher977-C88 | Read-only planning/freshness | PU977-G01, PU977-G07 | An unresolved local reusable workflow keeps workflow inventory unknown and blocks absence-based preview and Apply. |
 | publisher977-C89 | Provider/delivery contracts | PU977-G03, PU977-G04 | Unrelated setup PRs do not block exact-operation delivery; foreign or malformed heads claiming this operation marker remain rejected. |
 | publisher977-C90 | Pure proposal/scope/plan policy | PU977-G01, PU977-G03, PU977-G07 | Structural source validation admits exactly one canonical local invocation and proves its replacement pins that executed scalar without another local reference. |
+| publisher977-C91 | Provider/delivery contracts | PU977-G03, PU977-G07 | A malformed legacy tree path rejects the complete asset inventory before any blob fetch; legitimate unrelated Git names remain readable. |
 
 Additional traceability (the companion's original mapping remains in force):
 
@@ -1062,9 +1063,9 @@ Additional traceability (the companion's original mapping remains in force):
 |---|---|---|---|
 | PU977-G01 | publisher977-C86, publisher977-C87, publisher977-C88, publisher977-C90 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
 | PU977-G02 | publisher977-C83 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
-| PU977-G03 | publisher977-C69, publisher977-C70, publisher977-C71, publisher977-C72, publisher977-C73, publisher977-C76, publisher977-C77, publisher977-C78, publisher977-C79, publisher977-C80, publisher977-C81, publisher977-C89, publisher977-C90 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
+| PU977-G03 | publisher977-C69, publisher977-C70, publisher977-C71, publisher977-C72, publisher977-C73, publisher977-C76, publisher977-C77, publisher977-C78, publisher977-C79, publisher977-C80, publisher977-C81, publisher977-C89, publisher977-C90, publisher977-C91 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
 | PU977-G04 | publisher977-C65, publisher977-C66, publisher977-C67, publisher977-C68, publisher977-C69, publisher977-C70, publisher977-C71, publisher977-C72, publisher977-C73, publisher977-C74, publisher977-C75, publisher977-C76, publisher977-C77, publisher977-C78, publisher977-C79, publisher977-C80, publisher977-C81, publisher977-C82, publisher977-C83, publisher977-C84, publisher977-C85, publisher977-C89 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
-| PU977-G07 | publisher977-C67, publisher977-C68, publisher977-C74, publisher977-C75, publisher977-C82, publisher977-C86, publisher977-C87, publisher977-C88, publisher977-C90 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
+| PU977-G07 | publisher977-C67, publisher977-C68, publisher977-C74, publisher977-C75, publisher977-C82, publisher977-C86, publisher977-C87, publisher977-C88, publisher977-C90, publisher977-C91 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
 
 Operation isolation means an unrelated open or closed installation PR is ignored.
 The exact owned branch or any PR claiming this operation's marker MUST pass all
@@ -1075,12 +1076,22 @@ unsupported merge keys, additional/ambiguous local invocations and dynamic uses.
 It then proves that the single byte-preserving replacement changed the executed
 canonical scalar. These checks expose no new configuration or authority.
 
-Definition of Done for the extended companion: all C01–C90 MUST be registered;
-86 mapped Jest cases MUST pass by exact file/full assertion name in the actual
+Definition of Done for the extended companion: all C01–C91 MUST be registered;
+87 mapped Jest cases MUST pass by exact file/full assertion name in the actual
 current run, and C55–C58 MUST pass the separately extracted npm package gate.
 Every required table row must match its ledger assertion/area/requirements.
-Further meaningful contiguous cases MAY be appended; 90 is a floor. Existing
+Further meaningful contiguous cases MAY be appended; 91 is a floor. Existing
 coverage/changed-path, architecture, docs, global and final native checks remain
 mandatory. A parser fixture with synthetic statuses proves only validator
 behavior. This gate does not establish default installation, a native canary,
 human observations, model qualification or production activation.
+
+A complete legacy Git tree MUST reject missing, non-string, empty, NUL-bearing
+or noncanonical relative path rows before any managed blob download. An unreadable
+row cannot prove the manifest absent or authorize an invented minimal baseline.
+Ordinary unrelated Git filenames, including spaces, Unicode and literal backslashes,
+remain valid inventory entries. C91 proves this reader boundary; C67 retains the
+separate real-journal/coordinator proof that failed file inspection starts no Git-object POST.
+C08 additionally binds the existing authorized-Boolean rejection and a real partial
+approval receipt that cannot override a later fresh decline; the unchanged receipt
+can resume only after another explicit approval. No old case assertion is narrowed.

@@ -126271,24 +126271,27 @@ class SetupBatchGithubReadAdapter {
         const response = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}', { owner: target.owner, repo: target.name, tree_sha: target.baseSha, recursive: '1' }));
         if (!response || response.truncated !== false || !Array.isArray(response.tree) || response.tree.length > 100000)
             throw new SetupBatchProviderError('malformed');
+        const inventory = [];
         for (const raw of response.tree) {
             const item = batchObject(raw);
-            if (typeof item?.path !== 'string')
-                continue;
+            if (!item || typeof item.path !== 'string' || item.path.includes('\0')
+                || item.path.split('/').some(part => !part || part === '.' || part === '..'))
+                throw new SetupBatchProviderError('malformed');
             const candidatePath = item.path;
             const fixed = [...setup_verification_action_1.SETUP_VERIFICATION_ACTION_PARENTS, setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH].find(path => path.toLowerCase() === candidatePath.toLowerCase());
             if (fixed && (item.path !== fixed || (fixed === setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH
                 ? item.type !== 'blob' || !['100644', '100755'].includes(String(item.mode))
                 : item.type !== 'tree' || item.mode !== '040000')))
                 throw new SetupBatchProviderError('malformed');
+            inventory.push(item);
         }
-        const entries = response.tree.map(batchObject).filter(entry => entry?.type !== 'tree' && typeof entry?.path === 'string' && (0, setup_batch_policy_1.validSetupBatchAssetPath)(entry.path));
+        const entries = inventory.filter(entry => entry.type !== 'tree' && (0, setup_batch_policy_1.validSetupBatchAssetPath)(entry.path));
         if (entries.length > 300)
             throw new SetupBatchProviderError('malformed');
         const files = [];
         let bytes = 0;
         for (const entry of entries) {
-            if (!entry || entry.type !== 'blob' || !['100644', '100755'].includes(String(entry.mode))
+            if (entry.type !== 'blob' || !['100644', '100755'].includes(String(entry.mode))
                 || !batchSha(entry.sha) || !Number.isSafeInteger(entry.size) || Number(entry.size) > 100000)
                 throw new SetupBatchProviderError('malformed');
             bytes += Number(entry.size);

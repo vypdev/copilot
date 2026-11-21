@@ -246,6 +246,14 @@
         {
           "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
           "test": "publisher immutable two-file planning publisher977-C08 ignores proposal approval/merge descriptions and excludes extra credential fields from digests and preview"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/review_setup_publisher_use_case.test.ts",
+          "test": "a proposal authorized flag cannot become approval or reach transport"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher977-C08: an old partial approval receipt cannot authorize unfinished writes after fresh decline"
         }
       ]
     },
@@ -2079,6 +2087,70 @@
         {
           "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
           "test": "closed publisher input and option policy rejects a quoted sole local action even with unrelated lexical text elsewhere"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C91",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G07"
+      ],
+      "assertion": "A malformed legacy tree path rejects the complete asset inventory before any blob fetch; legitimate unrelated Git names remain readable.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path null before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":42} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":null} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"/absolute\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"a//b\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"./file\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"a/../file\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"a/./file\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"a/\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"a\\u0000b\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection retains exact known bytes while accepting ordinary unrelated Git path names"
         }
       ]
     }

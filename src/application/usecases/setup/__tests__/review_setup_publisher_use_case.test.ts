@@ -65,6 +65,7 @@ it.each(['not-a-uuid', '', '../escape'])('rejects invalid operation %j before tr
 it('a proposal authorized flag cannot become approval or reach transport', async () => {
   const f = fixture(); Object.assign(f.input.proposal, { installationAuthorized: true });
   await expect(f.execute()).rejects.toMatchObject({ reason: 'invalid' }); expect(f.ports.inspect).not.toHaveBeenCalled();
+  expect(f.ports.present).not.toHaveBeenCalled(); expect(f.ports.confirm).not.toHaveBeenCalled(); expect(f.apply).not.toHaveBeenCalled();
 });
 it('cancellation before inspection prevents every external port call', async () => {
   const f = fixture(); f.ports.active.mockReturnValue(false);

@@ -92,7 +92,7 @@ describe('publisher acceptance report execution boundary', () => {
             expect(result.status).toBe(1); expect(result.stdout).not.toContain('mapped Jest cases passed');
         });
 
-    it.each(['publisher977-C67', 'publisher977-C90'])('rejects omission of required owning-appendix case %s', id => {
+    it.each(['publisher977-C67', 'publisher977-C90', 'publisher977-C91'])('rejects omission of required owning-appendix case %s', id => {
         const f = extendedFixture(); f.ledger.cases = f.ledger.cases.filter(item => item.id !== id);
         const result = f.execute(); expect(result.status).toBe(1);
         expect(result.stderr).toContain('Every selected SDD and owning appendix case must remain registered');

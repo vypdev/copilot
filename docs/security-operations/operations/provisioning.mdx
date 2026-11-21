@@ -105,6 +105,11 @@ non-publisher selector alone cannot prove that no publisher already exists.
 Resolve that inventory before preparing a new preview; an older preview cannot
 authorize Apply after this result changes.
 
+An incomplete or malformed Git tree blocks Setup file preparation. Unreadable
+entries cannot establish that an existing manifest is absent or authorize a
+replacement with an empty baseline. Reinspect the immutable default revision
+and complete inventory before reviewing a retry.
+
 The credential needs repository contents/PR write access and workflow-editing
 authority, including for preview because that authority forms part of the review.
 Classic credentials need applicable `repo` (or public-repository `public_repo`)

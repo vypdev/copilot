@@ -1,5 +1,5 @@
 import { DeliverSetupInstallationUseCase } from '../../application/usecases/setup/deliver_setup_installation_use_case';
-import { mkdtemp, rm, readdir } from 'node:fs/promises';
+import { mkdtemp, rm, readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { ReviewSetupPublisherUseCase } from '../../application/usecases/setup/review_setup_publisher_use_case';
@@ -81,6 +81,31 @@ function fixture() {
     transform: (next: typeof transform) => { transform = next; }, setBranch: (sha: string | undefined) => { branch = sha; },
     setPulls: (value: unknown[]) => { pulls = value; } };
 }
+
+it('publisher977-C08: an old partial approval receipt cannot authorize unfinished writes after fresh decline', async () => {
+  const f = fixture(), route = 'POST /repos/{owner}/{repo}/git/refs';
+  const original = f.transport.call.getMockImplementation()!; let interrupted = false;
+  f.transport.call.mockImplementation(async (token, actual, parameters) => {
+    if (!interrupted && actual === route) { interrupted = true; throw new SetupBatchProviderError('transient'); }
+    return original(token, actual, parameters);
+  });
+  await expect(f.executeInstalled(false)).rejects.toMatchObject({ reason: 'delivery', retained: { uncertain: 'branch' } });
+  const retained = await f.journal.load(id), before = [...f.posts()], file = join(root, `${id}.json`);
+  const receipt = await readFile(file, 'utf8');
+  expect(retained).toMatchObject({ status: 'partial', uncertain: 'branch', effects: ['tree', 'commit'] });
+  expect(retained?.approvalDigest).toMatch(/^[a-f0-9]{64}$/u);
+  f.confirm.mockResolvedValue('decline');
+  expect(await f.executeInstalled(true)).toMatchObject({ stage: 'declined' });
+  expect(f.confirm).toHaveBeenCalledTimes(2); expect(f.present.mock.calls[1][1]).toEqual(retained);
+  expect(f.posts()).toEqual(before); expect(await readFile(file, 'utf8')).toBe(receipt);
+  expect(await readdir(root)).toEqual([`${id}.json`]);
+  f.confirm.mockResolvedValue('approve');
+  expect(await f.executeInstalled(true)).toMatchObject({ stage: 'apply', result: { status: 'waiting-for-merge', pullRequestNumber: 73 } });
+  expect(f.confirm).toHaveBeenCalledTimes(3);
+  expect(f.posts().filter(actual => actual.endsWith('/git/trees'))).toHaveLength(1);
+  expect(f.posts().filter(actual => actual.endsWith('/git/commits'))).toHaveLength(1);
+  expect(f.posts().filter(actual => actual === route)).toHaveLength(2);
+});
 
 it.each(['branch', 'pull-request'] as const)('publisher recovery: fresh reviewed resume creates a confirmed-absent uncertain %s without replaying Git objects', async kind => {
   const f = fixture(), route = kind === 'branch' ? 'POST /repos/{owner}/{repo}/git/refs' : 'POST /repos/{owner}/{repo}/pulls';
