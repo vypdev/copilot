@@ -1,3 +1,4 @@
+import { JSON_SCHEMA, load } from 'js-yaml';
 import { SETUP_PUBLISHER_PURPOSE, SETUP_PUBLISHER_WORKFLOW_PATH, type SetupPublisherOperation, type SetupPublisherPlan, type SetupPublisherProposal } from '../../domain/setup_publisher_installation';
 import { setupBatchBranch } from './setup_batch_policy';
 
@@ -35,9 +36,57 @@ export function parseSetupPublisherProposal(value: unknown): SetupPublisherPropo
 /** The independently reviewed source bytes are transformed at exactly one fixed invocation. */
 export function setupPublisherWorkflow(source: string, sourceCommit: string): string {
   if (!sha.test(sourceCommit)) throw invalid();
+  const invocations = workflowInvocations(source);
+  if (invocations.filter(value => value === './').length !== 1) throw invalid();
   const root = /^([ \t]+uses: )\.\/(\r?)$/gmu;
   if ([...source.matchAll(root)].length !== 1) throw invalid();
-  return source.replace(root, `$1vypdev/copilot@${sourceCommit}$2`);
+  const pinned = `vypdev/copilot@${sourceCommit}`;
+  const transformed = source.replace(root, `$1${pinned}$2`);
+  // The lexical match must be the executed scalar, never text inside a run block.
+  if (JSON.stringify(workflowInvocations(transformed)) !== JSON.stringify(invocations.map(value => value === './' ? pinned : value))) throw invalid();
+  return transformed;
+}
+
+/** Stateless parsing only: preserve original bytes and inspect every executable uses value. */
+function workflowInvocations(source: string): string[] {
+  if (Buffer.byteLength(source, 'utf8') > 100_000 || source.includes('\0')) throw invalid();
+  const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const own = (value: Record<string, unknown>, key: string): boolean => Object.prototype.hasOwnProperty.call(value, key);
+  let document: unknown;
+  try { document = load(source, { schema: JSON_SCHEMA }); } catch { throw invalid(); }
+  if (!object(document) || !object(document.jobs) || !Object.keys(document.jobs).length) throw invalid();
+  let nodes = 0;
+  const ancestors = new Set<object>();
+  const visit = (value: unknown, depth: number): void => {
+    if (++nodes > 10_000 || depth > 64) throw invalid();
+    if (value === null || typeof value !== 'object') return;
+    if (ancestors.has(value)) throw invalid();
+    ancestors.add(value);
+    if (Array.isArray(value)) value.forEach(child => visit(child, depth + 1));
+    else {
+      if (own(value as Record<string, unknown>, '<<')) throw invalid();
+      Object.values(value).forEach(child => visit(child, depth + 1));
+    }
+    ancestors.delete(value);
+  };
+  visit(document, 0);
+  const invocations: string[] = [];
+  const invocation = (scope: Record<string, unknown>, step: boolean): void => {
+    if (!own(scope, 'uses')) return;
+    const value = scope.uses;
+    if (typeof value !== 'string' || !value || /\s/u.test(value) || value.includes('${{')
+      || /^[./\\]/u.test(value) && (!step || value !== './') || step && own(scope, 'run')) throw invalid();
+    invocations.push(value);
+  };
+  for (const job of Object.values(document.jobs)) {
+    if (!object(job) || own(job, 'steps') === own(job, 'uses')) throw invalid();
+    invocation(job, false);
+    if (own(job, 'steps')) {
+      if (!Array.isArray(job.steps) || job.steps.some(step => !object(step))) throw invalid();
+      job.steps.forEach(step => invocation(step as Record<string, unknown>, true));
+    }
+  }
+  return invocations;
 }
 
 /** Commander adaptation supplies explicit option names, including explicit false/empty values. */

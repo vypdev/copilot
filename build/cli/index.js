@@ -65007,6 +65007,7 @@ exports.parseSetupPublisherProposal = parseSetupPublisherProposal;
 exports.setupPublisherWorkflow = setupPublisherWorkflow;
 exports.assertSetupPublisherOptions = assertSetupPublisherOptions;
 exports.parseSetupPublisherOperation = parseSetupPublisherOperation;
+const js_yaml_1 = __nccwpck_require__(783);
 const setup_publisher_installation_1 = __nccwpck_require__(95417);
 const setup_batch_policy_1 = __nccwpck_require__(52214);
 const sha = /^[a-f0-9]{40}$/u, digest = /^[a-f0-9]{64}$/u;
@@ -65045,10 +65046,75 @@ function parseSetupPublisherProposal(value) {
 function setupPublisherWorkflow(source, sourceCommit) {
     if (!sha.test(sourceCommit))
         throw invalid();
+    const invocations = workflowInvocations(source);
+    if (invocations.filter(value => value === './').length !== 1)
+        throw invalid();
     const root = /^([ \t]+uses: )\.\/(\r?)$/gmu;
     if ([...source.matchAll(root)].length !== 1)
         throw invalid();
-    return source.replace(root, `$1vypdev/copilot@${sourceCommit}$2`);
+    const pinned = `vypdev/copilot@${sourceCommit}`;
+    const transformed = source.replace(root, `$1${pinned}$2`);
+    // The lexical match must be the executed scalar, never text inside a run block.
+    if (JSON.stringify(workflowInvocations(transformed)) !== JSON.stringify(invocations.map(value => value === './' ? pinned : value)))
+        throw invalid();
+    return transformed;
+}
+/** Stateless parsing only: preserve original bytes and inspect every executable uses value. */
+function workflowInvocations(source) {
+    if (Buffer.byteLength(source, 'utf8') > 100000 || source.includes('\0'))
+        throw invalid();
+    const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+    const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+    let document;
+    try {
+        document = (0, js_yaml_1.load)(source, { schema: js_yaml_1.JSON_SCHEMA });
+    }
+    catch {
+        throw invalid();
+    }
+    if (!object(document) || !object(document.jobs) || !Object.keys(document.jobs).length)
+        throw invalid();
+    let nodes = 0;
+    const ancestors = new Set();
+    const visit = (value, depth) => {
+        if (++nodes > 10000 || depth > 64)
+            throw invalid();
+        if (value === null || typeof value !== 'object')
+            return;
+        if (ancestors.has(value))
+            throw invalid();
+        ancestors.add(value);
+        if (Array.isArray(value))
+            value.forEach(child => visit(child, depth + 1));
+        else {
+            if (own(value, '<<'))
+                throw invalid();
+            Object.values(value).forEach(child => visit(child, depth + 1));
+        }
+        ancestors.delete(value);
+    };
+    visit(document, 0);
+    const invocations = [];
+    const invocation = (scope, step) => {
+        if (!own(scope, 'uses'))
+            return;
+        const value = scope.uses;
+        if (typeof value !== 'string' || !value || /\s/u.test(value) || value.includes('${{')
+            || /^[./\\]/u.test(value) && (!step || value !== './') || step && own(scope, 'run'))
+            throw invalid();
+        invocations.push(value);
+    };
+    for (const job of Object.values(document.jobs)) {
+        if (!object(job) || own(job, 'steps') === own(job, 'uses'))
+            throw invalid();
+        invocation(job, false);
+        if (own(job, 'steps')) {
+            if (!Array.isArray(job.steps) || job.steps.some(step => !object(step)))
+                throw invalid();
+            job.steps.forEach(step => invocation(step, true));
+        }
+    }
+    return invocations;
 }
 /** Commander adaptation supplies explicit option names, including explicit false/empty values. */
 function assertSetupPublisherOptions(explicit) {
@@ -126837,11 +126903,10 @@ class SetupInstallationGithubDeliveryAdapter {
                 throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
             for (const value of response) {
                 const pull = (0, setup_batch_github_read_adapter_1.batchObject)(value), head = (0, setup_batch_github_read_adapter_1.batchObject)(pull?.head), base = (0, setup_batch_github_read_adapter_1.batchObject)(pull?.base);
-                if (typeof head?.ref !== 'string' || !head.ref.startsWith('setup/copilot/'))
+                const claimsOperation = typeof pull?.body === 'string' && pull.body.includes((0, setup_batch_policy_1.setupBatchMarker)(this.plan.operationId, this.plan.target.id));
+                if (head?.ref !== branch && !claimsOperation)
                     continue;
-                if (pull?.state !== 'open' && head.ref !== branch)
-                    continue;
-                if (pull?.state !== 'open' || head.ref !== branch || head.sha !== commit || (0, setup_batch_github_read_adapter_1.batchObject)(head.repo)?.id !== this.plan.target.id
+                if (pull?.state !== 'open' || head?.ref !== branch || head.sha !== commit || (0, setup_batch_github_read_adapter_1.batchObject)(head.repo)?.id !== this.plan.target.id
                     || base?.ref !== this.plan.target.defaultBranch || (0, setup_batch_github_read_adapter_1.batchObject)(base.repo)?.id !== this.plan.target.id || typeof pull?.body !== 'string'
                     || !pull.body.includes((0, setup_batch_policy_1.setupBatchMarker)(this.plan.operationId, this.plan.target.id)) || !(0, setup_batch_github_read_adapter_1.batchPositive)(pull.number)
                     || match !== undefined)

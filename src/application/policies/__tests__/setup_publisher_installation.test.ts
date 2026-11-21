@@ -172,9 +172,53 @@ describe('closed publisher input and option policy', () => {
   });
   it('transforms exactly one root-local invocation and retains LF and CRLF source bytes', () => {
     for (const newline of ['\n', '\r\n']) {
-      const source = ['name: fixed', 'steps:', '  - uses: actions/checkout@v5', '  - name: Publish canonical comment', '    uses: ./', '    with:', '      token: fixed', ''].join(newline);
+      const source = ['name: fixed', 'jobs:', '  publish:', '    steps:', '      - uses: actions/checkout@v5', '      - name: Publish canonical comment', '        uses: ./', '        with:', '          token: fixed', ''].join(newline);
       expect(setupPublisherWorkflow(source, newSha)).toBe(source.replace('uses: ./', `uses: vypdev/copilot@${newSha}`));
     }
+  });
+  it.each([
+    ['commented', '      - uses: ./ # extra'], ['single quoted', "      - uses: './'"],
+    ['double quoted', '      - uses: "./"'], ['flow', '      - { uses: ./ }'],
+    ['nested local path', '      - uses: ./actions/other'], ['parent path', '      - uses: ../other'],
+    ['alias', '      - *local'],
+  ])('rejects an additional %s local invocation in the source workflow', (_kind, extra) => {
+    const source = ['jobs:', '  publish:', '    steps:', '      - &local', '        uses: ./', extra, ''].join('\n');
+    expect(() => setupPublisherWorkflow(source, newSha)).toThrow();
+  });
+  it('rejects a lexical root invocation inside run text while the executed local action is quoted', () => {
+    const source = ['jobs:', '  publish:', '    steps:', '      - run: |', '          uses: ./', "      - uses: './'", ''].join('\n');
+    expect(() => setupPublisherWorkflow(source, newSha)).toThrow();
+  });
+  it.each([
+    ['missing jobs', 'name: fixed'], ['array root', '[]'], ['null jobs', 'jobs: null'], ['empty jobs', 'jobs: {}'],
+    ['malformed YAML', 'jobs: ['], ['duplicate jobs', 'jobs: {}\njobs: {}'], ['custom tag', 'jobs: !custom {}'],
+    ['null job', 'jobs: {one: null}'], ['array job', 'jobs: {one: []}'], ['no execution', 'jobs: {one: {}}'],
+    ['two execution kinds', 'jobs: {one: {uses: other/action@v1, steps: []}}'],
+    ['non-array steps', 'jobs: {one: {steps: wrong}}'], ['null step', 'jobs: {one: {steps: [null]}}'],
+    ['non-string uses', 'jobs: {one: {steps: [{uses: 7}]}}'], ['empty uses', 'jobs: {one: {steps: [{uses: ""}]}}'],
+    ['whitespace uses', 'jobs: {one: {steps: [{uses: "other/action@one two"}]}}'],
+    ['dynamic uses', 'jobs: {one: {steps: [{uses: "${{ inputs.action }}"}]}}'],
+    ['reusable local root', 'jobs: {one: {uses: ./}}'], ['reusable local path', 'jobs: {one: {uses: ./.github/workflows/ci.yml}}'],
+    ['absolute path', 'jobs: {one: {steps: [{uses: /tmp/action}]}}'],
+    ['backslash path', "jobs: {one: {steps: [{uses: '\\local'}]}}"],
+    ['run and action', 'jobs: {one: {steps: [{uses: ./, run: echo unsafe}]}}'],
+    ['cyclic alias', 'jobs: {one: {steps: []}}\ncycle: &cycle {again: *cycle}'],
+    ['unresolved merge', 'jobs: {one: {steps: []}}\nx: {<<: {uses: ./}}'],
+    ['deep structure', 'jobs: {one: {steps: []}}\nx: ' + '['.repeat(65) + '0' + ']'.repeat(65)],
+    ['excess traversal', 'jobs: {one: {steps: []}}\nx: [' + Array(10_001).fill('0').join(',') + ']'],
+    ['excess bytes', 'x'.repeat(100_001)], ['NUL', 'jobs: {}\0'],
+  ])('rejects unsupported source workflow structure: %s', (_kind, source) => {
+    expect(() => setupPublisherWorkflow(source, newSha)).toThrow();
+  });
+  it('preserves remote reusable jobs, ordinary steps and non-execution uses metadata', () => {
+    const source = ['jobs:', '  remote:', '    uses: owner/project/.github/workflows/ci.yml@v1',
+      '  publish:', '    steps:', '      - run: echo ordinary', '      - name: Publisher', '        uses: ./',
+      'metadata:', '  uses: ./unexecuted', '  null: null', ''].join('\n');
+    expect(setupPublisherWorkflow(source, newSha)).toBe(source.replace('uses: ./\n', `uses: vypdev/copilot@${newSha}\n`));
+  });
+  it('rejects a quoted sole local action even with unrelated lexical text elsewhere', () => {
+    const source = ['jobs:', '  publish:', '    steps:', "      - uses: './'", ''].join('\n');
+    expect(() => setupPublisherWorkflow(source, newSha)).toThrow();
   });
   it.each(['name: no local step\n', '    uses: ./\n    uses: ./\n', '    uses: ./other\n', '    uses: ./ #custom\n'])('rejects a foreign source layout %j', source => {
     expect(() => setupPublisherWorkflow(source, newSha)).toThrow();

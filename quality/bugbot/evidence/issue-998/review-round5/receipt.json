@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T20:49:19.940604+00:00",
+  "parent": "5e20de86027dbbdb9cb814189f0fb05f6dd1e725",
+  "findings": [
+    "PRRT_kwDONSeBW866bwxy",
+    "PRRT_kwDONSeBW866bwx1",
+    "PRRT_kwDONSeBW866bwx3",
+    "PRRT_kwDONSeBW866bwx6"
+  ],
+  "runtimeRed": {
+    "passed": 272,
+    "failed": 13,
+    "skipped": 0
+  },
+  "runtimeGreen": {
+    "passed": 285,
+    "failed": 0,
+    "skipped": 0
+  },
+  "coherent": {
+    "passed": 1085,
+    "failed": 0,
+    "skipped": 0,
+    "files": 23,
+    "mappedJest": 86,
+    "registered": 90,
+    "commandExit": 1,
+    "unmetCommandScope": "Only the two changed runtime modules instrumented; web and specification-publication coverage owners unexecuted. No global coverage pass claimed.",
+    "modules": {
+      "src/application/policies/setup_publisher_installation_policy.ts": {
+        "lines": {
+          "total": 84,
+          "covered": 84,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 27,
+          "covered": 27,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 115,
+          "covered": 115,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 174,
+          "covered": 174,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "src/infrastructure/setup_installation_github_delivery_adapter.ts": {
+        "lines": {
+          "total": 136,
+          "covered": 136,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 23,
+          "covered": 23,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 177,
+          "covered": 177,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 134,
+          "covered": 134,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    }
+  },
+  "fixtureNegative": {
+    "passed": 1084,
+    "failed": 1,
+    "reason": "New positive source fixture used inline dash uses rather than required canonical named-step layout; fixture corrected, runtime checks unchanged."
+  },
+  "budgetCounterfactual": "Same64baseline registration accepted by exact parent validator and rejected by corrected one; new90registration accepted. No synthetic status is actual feature execution.",
+  "initialMappingScriptNegative": "A preparation assertion accidentally selected an older unrelated-subtree test; it stopped before ledger/spec writes. Narrow name selection fixed the script.",
+  "original66CaseObjectsUnchanged": true,
+  "selectedSddSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "contractOwner": "specs/organization-configuration-reuse-and-batch-setup.md",
+  "parentNative": "CI44941425015 all4SUCCESS;966SDK19681PASS35historicalskips,62mappedJest,11actualCLI0effects/API/web. Parent evidence is not new-source acceptance.",
+  "sourceHashes": {
+    "docs/security-operations/operations/provisioning.mdx": "41e227cc7fbc06a4ef149df83e9d983f3cc51e1962696c9d77a77141c1b0e993",
+    "scripts/validate-setup-publisher-acceptance.cjs": "44e2d3797f01a1d4a0a1cacc80e8d32a0a8b12e0708683f76e9438829a4732b5",
+    "specs/CATALOG.md": "268fc2fcfea4b143f797ded7df36553b2259781a8f5a53c150d7168d4331cc98",
+    "specs/catalog.json": "85f6cf823fed1cc63cd4ae206e544919c3be9a64fa964eb4f393df63513dce64",
+    "specs/organization-configuration-reuse-and-batch-setup.md": "2d026386c0382a24b2d5e97171a17788010b0d74d94a9d092adcb7feeb888c1d",
+    "specs/setup-publisher-installation-acceptance.json": "6800dde21d963631e81edf7dc81369d04cccd569126d0fbcec169ef2940d039a",
+    "src/application/policies/__tests__/setup_publisher_installation.test.ts": "c29ef332a1d0de8eef771b884d1b9b9a299436801484fc9a42c255ff314705c6",
+    "src/application/policies/setup_publisher_installation_policy.ts": "79af4fa2c637e29472a200fcbf9eb45181ad121b3c4edbe8d106dd4b8615c68c",
+    "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts": "d1e48f19aab004c94ac2be474db6e2ea40f652801ed45b0318c0d7188c8f9517",
+    "src/infrastructure/__tests__/setup_publisher_installation.test.ts": "65954b3535a53c34f2f0c4cb36657c4c89a6cb45745bb28eba2232076e89a2db",
+    "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts": "6683fad47d55314d73edab5ff1f6ea87920eb9b171cf8e0cf237394c1381b5cf",
+    "src/infrastructure/setup_installation_github_delivery_adapter.ts": "f4511df3571bcfe40ab4a811b0c5f16f8032778edd721d193691dfbac9312368",
+    "src/tooling/__tests__/setup_publisher_acceptance_validator.test.ts": "85cd4dac88a4b7293ca94ece0635ed7324147e1d975a4043f4ec26140be6fb6b"
+  },
+  "newArchives": 31,
+  "totalArchives": 168,
+  "newHeadGates": "Normal hooks/current bundles/package/publication and fresh exact-head native gates and review required.",
+  "installationEffects": 0,
+  "qualificationModelCalls": 0,
+  "actual174": "unstarted",
+  "actual42": "unstarted",
+  "qualifiedProfile": null,
+  "pilotWriteAttempts": 0,
+  "production": "disabled",
+  "packaging": {
+    "build": "PASS",
+    "contents": "104 files PASS",
+    "smoke": "11 actual extracted CLI invocations/0effectattempts +typedAPI/localwebPASS",
+    "documentation": "120MDX/120routes/190inputs/15workflows/16actions/6templatesPASS",
+    "bundles": {
+      "api": {
+        "bytes": 1127424,
+        "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+      },
+      "cli": {
+        "bytes": 8469725,
+        "sha256": "8e20f5b835f4d1571ef43ee54bea5fb1d16eb1c09d2f62b7fe5f28c5b06aaf32"
+      },
+      "github_action": {
+        "bytes": 11093575,
+        "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+      },
+      "deployment_recovery": {
+        "bytes": 2035151,
+        "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+      }
+    },
+    "normalHooksStillPending": true,
+    "nativeFinalHeadStillRequired": true
+  }
+}

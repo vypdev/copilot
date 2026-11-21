@@ -50,14 +50,14 @@ describe('publisher acceptance report execution boundary', () => {
 
     function extendedFixture() {
         const runtimeRoot = join(directory, `ledger-${next++}`), ledger = currentLedger();
-        ledger.cases = ledger.cases.slice(0, 64);
-        const tests = ['finalizes a retained PR-complete applying operation after exact read-only verification',
-            'reports failed terminal reconciliation without overstating the last durable PR-complete state'];
-        for (const [index, test] of tests.entries()) ledger.cases.push({ id: `publisher977-C${65 + index}`,
+        const originalCount = ledger.cases.length;
+        const tests = ['synthetic parser fixture extra acceptance alpha', 'synthetic parser fixture extra acceptance beta'];
+        for (const [index, test] of tests.entries()) ledger.cases.push({ id: `publisher977-C${originalCount + index + 1}`,
             area: 'Application/recovery', requirements: ['PU977-G04'], assertion: test, gate: 'jest',
-            evidence: [{ file: 'src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts', test }] });
+            evidence: [{ file: 'src/tooling/__tests__/setup_publisher_acceptance_validator.test.ts', test }] });
         const files = new Set(['scripts/validate-setup-publisher-acceptance.cjs', 'scripts/setup-acceptance-path.cjs',
-            'specs/setup-bugbot-publisher-manifest-route.md', ...ledger.cases.flatMap(item => item.evidence.map(evidence => evidence.file))]);
+            'specs/setup-bugbot-publisher-manifest-route.md', 'specs/organization-configuration-reuse-and-batch-setup.md',
+            ...ledger.cases.flatMap(item => item.evidence.map(evidence => evidence.file))]);
         for (const file of files) {
             mkdirSync(dirname(join(runtimeRoot, file)), { recursive: true });
             copyFileSync(join(root, file), join(runtimeRoot, file));
@@ -67,20 +67,20 @@ describe('publisher acceptance report execution boundary', () => {
             writeFileSync(join(runtimeRoot, 'specs/setup-publisher-installation-acceptance.json'), JSON.stringify(ledger));
             return run(report, runtimeRoot);
         };
-        return { ledger, report, execute };
+        return { ledger, report, execute, originalCount, runtimeRoot };
     }
 
-    it('admits meaningful C65 and C66 evidence beyond the immutable 64-case floor', () => {
+    it('admits meaningful evidence beyond both published acceptance floors', () => {
         const f = extendedFixture(), result = f.execute();
         expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
-        expect(result.stdout).toContain('62/62 mapped Jest cases passed');
+        expect(result.stdout).toContain(`${f.ledger.cases.length - 4}/${f.ledger.cases.length - 4} mapped Jest cases passed`);
     });
 
     it.each(['missing-original', 'duplicate-extra', 'foreign-requirement', 'wrong-gate', 'skipped-extra'] as const)(
         'retains acceptance integrity when an expanded ledger has %s', kind => {
-            const f = extendedFixture(), extra = f.ledger.cases[64];
+            const f = extendedFixture(), extra = f.ledger.cases[f.originalCount];
             if (kind === 'missing-original') f.ledger.cases.shift();
-            if (kind === 'duplicate-extra') f.ledger.cases[65].id = extra.id;
+            if (kind === 'duplicate-extra') f.ledger.cases[f.originalCount + 1].id = extra.id;
             if (kind === 'foreign-requirement') extra.requirements = ['PU977-FOREIGN'];
             if (kind === 'wrong-gate') extra.gate = 'npm-package-smoke';
             if (kind === 'skipped-extra') {
@@ -91,6 +91,25 @@ describe('publisher acceptance report execution boundary', () => {
             const result = f.execute();
             expect(result.status).toBe(1); expect(result.stdout).not.toContain('mapped Jest cases passed');
         });
+
+    it.each(['publisher977-C67', 'publisher977-C90'])('rejects omission of required owning-appendix case %s', id => {
+        const f = extendedFixture(); f.ledger.cases = f.ledger.cases.filter(item => item.id !== id);
+        const result = f.execute(); expect(result.status).toBe(1);
+        expect(result.stderr).toContain('Every selected SDD and owning appendix case must remain registered');
+    });
+
+    it('rejects a baseline-only ledger that omits the owning regression budget', () => {
+        const f = extendedFixture(); f.ledger.cases = f.ledger.cases.slice(0, 64);
+        const result = f.execute(); expect(result.status).toBe(1);
+        expect(result.stderr).toContain('Every selected SDD and owning appendix case must remain registered');
+    });
+
+    it('rejects a duplicate published ID instead of allowing a contract override', () => {
+        const f = extendedFixture(), path = join(f.runtimeRoot, 'specs/organization-configuration-reuse-and-batch-setup.md');
+        const row = readFileSync(path, 'utf8').split('\n').find(line => line.startsWith('| publisher977-C65'))!;
+        writeFileSync(path, readFileSync(path, 'utf8') + '\n' + row + '\n');
+        const result = f.execute(); expect(result.status).toBe(1); expect(result.stderr).toContain('duplicate published contract');
+    });
 
     it('keeps registration-only mode exclusive to an omitted report argument', () => {
         const result = run();

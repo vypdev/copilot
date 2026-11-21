@@ -97,7 +97,7 @@ function deliveryFixture(publisherInstalled = false) {
       if (!branch) throw new SetupBatchProviderError('not-found'); data = { object: { sha: branch } };
     } else if (route === 'POST /repos/{owner}/{repo}/git/refs') { branch = String(parameters.sha); data = {}; }
     else if (route === 'GET /repos/{owner}/{repo}/pulls') data = pulls;
-    else if (route === 'POST /repos/{owner}/{repo}/pulls') { pulls = [pull()]; data = pulls[0]; }
+    else if (route === 'POST /repos/{owner}/{repo}/pulls') { const created = pull(); pulls = [...pulls, created]; data = created; }
     else throw new Error('Unexpected fixed file-delivery route');
     return transform(route, data, parameters);
   }) };
@@ -110,6 +110,31 @@ function deliveryFixture(publisherInstalled = false) {
 }
 
 describe('actual shared Git delivery composition with controlled provider', () => {
+  const otherOperation = '11111111-1111-4111-8111-111111111111';
+  it.each(['open', 'closed'])('ignores an unrelated %s setup PR when creating this operation PR', async state => {
+    const f = deliveryFixture(); f.setBranch(f.commit);
+    const unrelated = { ...f.pull(), number: 91, state, body: setupBatchMarker(otherOperation, 42),
+      head: { ...f.pull().head, ref: setupBatchBranch(otherOperation) } };
+    f.setPulls([unrelated]);
+    await expect(f.writer.pullRequest(f.commit)).resolves.toBe(73);
+    expect(f.posts().map(([, route]) => route)).toEqual(['POST /repos/{owner}/{repo}/pulls']);
+    expect(f.posts()[0][2]).toMatchObject({ head: setupBatchBranch(operation.operationId), body: f.plan.body });
+  });
+  it.each(['before', 'after'])('inspects only this operation with an unrelated open setup PR %s it', async position => {
+    const f = deliveryFixture(); f.setBranch(f.commit);
+    const unrelated = { ...f.pull(), number: 91, body: setupBatchMarker(otherOperation, 42),
+      head: { ...f.pull().head, ref: setupBatchBranch(otherOperation) } };
+    f.setPulls(position === 'before' ? [unrelated, f.pull()] : [f.pull(), unrelated]);
+    await expect(f.writer.pullRequest(f.commit, true)).resolves.toBe(73);
+    expect(f.posts()).toEqual([]);
+  });
+  it.each(['different setup ref', 'human ref', 'missing head'])('rejects this operation marker on a %s without creating a PR', async kind => {
+    const f = deliveryFixture(); f.setBranch(f.commit);
+    f.setPulls([{ ...f.pull(), head: kind === 'missing head' ? undefined
+      : { ...f.pull().head, ref: kind === 'human ref' ? 'human/work' : setupBatchBranch(otherOperation) } }]);
+    await expect(f.writer.pullRequest(f.commit)).rejects.toThrow('unknown');
+    expect(f.posts()).toEqual([]);
+  });
   it.each(['exact', 'missing', 'duplicate', 'foreign', 'unterminated'] as const)(
     'publisher977-C44: complete PR pagination handles %s evidence without creating a duplicate', async outcome => {
       const f = deliveryFixture(); f.setBranch(f.commit);

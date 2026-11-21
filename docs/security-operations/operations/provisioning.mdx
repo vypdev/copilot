@@ -93,6 +93,11 @@ local Action invocation to that verified source commit. A maintainer merge
 establishes this source review boundary; it is not independent attestation of
 the producer's executable code.
 
+The source workflow must contain exactly one canonical local invocation. Setup
+checks executable YAML scopes, including aliases and quoted references, and
+rejects additional or ambiguous local invocations before preview. The generated
+workflow preserves all other source bytes and pins that executed invocation.
+
 A local Action or any reusable-workflow reference that this reader cannot inspect
 keeps publisher inventory unknown and blocks the proposal. A local path, remote
 workflow pin or a
@@ -127,6 +132,12 @@ tree difference, exact parent and nested receipt, then creates one
 deletes a ref, overwrites a human head, merges a PR or changes production settings.
 The result is **waiting for merge**; matching existing bytes remain
 **verification pending**. Neither proves native writer execution.
+
+Other installation PRs can remain open. Delivery inspects only this operation's
+owned branch and marker. A different head claiming the same marker, a duplicate
+claim or a mismatched commit blocks delivery and requires reconciliation. When
+recovering an already completed PR, Setup verifies the retained prepared commit
+and exact PR before saving **waiting for merge**; it creates no replacement.
 
 Keep the proposal and private receipt to recover a publisher operation:
 

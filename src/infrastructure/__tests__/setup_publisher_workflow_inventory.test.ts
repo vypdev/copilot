@@ -59,9 +59,13 @@ it.each(['', '[]', 'jobs: null', 'jobs: {}', 'jobs: {invalid: null}', 'jobs: {in
   expect(inspectSetupPublisherWorkflows([workflow(content)], expected).kind).toBe('unknown');
 });
 it.each([
-  'on: push\njobs:\n  ci:\n    steps:\n      - uses: ./.github/actions/status-publisher\n',
-  'on: push\njobs:\n  ci:\n    steps:\n      - uses: ./\n        with:\n          single-action: another_action\n',
-  'on: push\njobs:\n  ci:\n    uses: ./.github/workflows/ci.yml\n',
+  ['local composite', 'on: push\njobs:\n  ci:\n    steps:\n      - uses: ./.github/actions/status-publisher\n'],
+  ['local root action', 'on: push\njobs:\n  ci:\n    steps:\n      - uses: ./\n        with:\n          single-action: another_action\n'],
+  ['local reusable workflow', 'on: push\njobs:\n  ci:\n    uses: ./.github/workflows/ci.yml\n'],
+])('keeps unresolved %s inventory unknown', (_kind, content) => {
+  expect(inspectSetupPublisherWorkflows([workflow(content)], expected).kind).toBe('unknown');
+});
+it.each([
   'on: push\njobs:\n  ci:\n    steps:\n      - uses: ${{ matrix.action }}\n',
   'on: push\njobs:\n  ci:\n    steps:\n      - uses: 7\n',
   'on: push\nenv: ${{ inputs.environment }}\njobs:\n  ci:\n    steps: []\n',

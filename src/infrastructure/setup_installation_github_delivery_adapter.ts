@@ -158,9 +158,9 @@ export class SetupInstallationGithubDeliveryAdapter {
       if (!Array.isArray(response) || response.length > 100) throw new SetupBatchProviderError('malformed');
       for (const value of response) {
         const pull = batchObject(value), head = batchObject(pull?.head), base = batchObject(pull?.base);
-        if (typeof head?.ref !== 'string' || !head.ref.startsWith('setup/copilot/')) continue;
-        if (pull?.state !== 'open' && head.ref !== branch) continue;
-        if (pull?.state !== 'open' || head.ref !== branch || head.sha !== commit || batchObject(head.repo)?.id !== this.plan.target.id
+        const claimsOperation = typeof pull?.body === 'string' && pull.body.includes(setupBatchMarker(this.plan.operationId, this.plan.target.id));
+        if (head?.ref !== branch && !claimsOperation) continue;
+        if (pull?.state !== 'open' || head?.ref !== branch || head.sha !== commit || batchObject(head.repo)?.id !== this.plan.target.id
           || base?.ref !== this.plan.target.defaultBranch || batchObject(base.repo)?.id !== this.plan.target.id || typeof pull?.body !== 'string'
           || !pull.body.includes(setupBatchMarker(this.plan.operationId, this.plan.target.id)) || !batchPositive(pull.number)
           || match !== undefined) throw new SetupBatchProviderError('unknown');

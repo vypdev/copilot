@@ -367,3 +367,5 @@ comparison and isolation are retained; no deadline changes or obsolete retry.
 See review-round4/receipt.json. The duplicate terminal-recovery finding was
 posted on original470 and is already fixed by2d. No installation,174/42
 qualification or qualified profile is claimed; pilot writes0/productiondisabled.
+
+The cumulative normative90-case budget, C65–C90 assertions, traceability and extended Definition of Done live in the owning organization/batch SDD appendix. The selected companion remains immutable as the original64-case baseline. The validator reads both contracts, rejects duplicate published IDs, and requires every mapped actual assertion. Source invocation validation is stateless YAML parsing in pure policy; the GitHub adapter ignores disjoint installation PRs while fencing every own-marker claim. See review-round5/receipt.json for real test boundaries, fixture negatives and pending final-head acceptance.

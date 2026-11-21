@@ -1526,6 +1526,561 @@
           "test": "reports failed terminal reconciliation without overstating the last durable PR-complete state"
         }
       ]
+    },
+    {
+      "id": "publisher977-C67",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "A confirmed pre-POST manifest-read failure retains the strict v1 receipt and resumes without repeating completed resources.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery retries a confirmed pre-POST manifest-read failure without repeating resources"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C68",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "A confirmed pre-POST base-commit-read failure retains the strict v1 receipt and resumes without repeating completed resources.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery retries a confirmed pre-POST base-commit-read failure without repeating resources"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C69",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "A known commit is durable before its later proof read fails and is reused without another object POST.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery retains a known commit when its later proof read fails and never repeats object creation"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C70",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Fresh reviewed recovery after ref-read failure inspects absence before creating the exact unfinished target.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery reinspects and creates a confirmed absent target after ref-read failure and fresh review"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C71",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Fresh reviewed recovery after ref-create failure inspects absence before creating the exact unfinished target.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery reinspects and creates a confirmed absent target after ref-create failure and fresh review"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C72",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Fresh reviewed recovery after PR-read failure inspects absence before creating the exact unfinished target.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery reinspects and creates a confirmed absent target after PR-read failure and fresh review"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C73",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Fresh reviewed recovery after PR-create failure inspects absence before creating the exact unfinished target.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery reinspects and creates a confirmed absent target after PR-create failure and fresh review"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C74",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "An unknown git/trees POST with no object identity cannot be replayed by a reconstructed adapter and real v1 journal.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery never repeats an unknown git/trees POST without its object identity"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C75",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "An unknown git/commits POST with no object identity cannot be replayed by a reconstructed adapter and real v1 journal.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery never repeats an unknown git/commits POST without its object identity"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C76",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Only an observed stop before the tree POST clears preparation uncertainty.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects clears preparation uncertainty only after an observed stop before the tree POST"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C77",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "A known tree without a commit keeps preparation uncertain when commit creation never starts.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects does not clear unknown preparation when a tree exists but commit creation never started"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C78",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "The exact observed commit survives a subsequent failed proof read.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects retains the observed commit identity even if its subsequent proof read fails"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C79",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "An invalid observed commit cannot clear preparation uncertainty.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects rejects an invalid observed commit identity without clearing preparation uncertainty"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C80",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Create-if-absent branch recovery requires the explicit freshly reviewed policy.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects allows reviewed create-if-absent recovery only through an explicit branch policy"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C81",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Create-if-absent PR recovery requires the explicit freshly reviewed policy.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects allows reviewed create-if-absent recovery only through an explicit pull-request policy"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C82",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "Marking an interrupted legacy operation cancelled cannot erase its unknown preparation outcome.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts",
+          "test": "sequential reviewed batch Apply does not erase unknown preparation when an interrupted operation is marked cancelled"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C83",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G04"
+      ],
+      "assertion": "Confirmed pre-POST resume requires renewed review and the mandatory permission audit before preparation.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_batch_flow.test.ts",
+          "test": "shared CLI/web batch session preserves confirmed pre-POST recovery across renewed review and the mandatory permission audit"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C84",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "A second early read failure preserves confirmed no-POST proof for the next reviewed retry.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts",
+          "test": "confirmed preflight proof survives another read failure before preparation retains its no-POST proof for the next reviewed retry"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C85",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "Cancellation before target revalidation preserves confirmed no-POST proof for the next reviewed retry.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts",
+          "test": "confirmed preflight proof survives cancellation before target revalidation retains its no-POST proof for the next reviewed retry"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C86",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "An unresolved local composite keeps workflow inventory unknown and blocks absence-based preview and Apply.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "keeps unresolved local composite inventory unknown"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C87",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "An unresolved local root action keeps workflow inventory unknown and blocks absence-based preview and Apply.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "keeps unresolved local root action inventory unknown"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C88",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "An unresolved local reusable workflow keeps workflow inventory unknown and blocks absence-based preview and Apply.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "keeps unresolved local reusable workflow inventory unknown"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C89",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Unrelated setup PRs do not block exact-operation delivery; foreign or malformed heads claiming this operation marker remain rejected.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider ignores an unrelated open setup PR when creating this operation PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider ignores an unrelated closed setup PR when creating this operation PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider inspects only this operation with an unrelated open setup PR before it"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider inspects only this operation with an unrelated open setup PR after it"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects this operation marker on a different setup ref without creating a PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects this operation marker on a human ref without creating a PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects this operation marker on a missing head without creating a PR"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C90",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G03",
+        "PU977-G07"
+      ],
+      "assertion": "Structural source validation admits exactly one canonical local invocation and proves its replacement pins that executed scalar without another local reference.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional commented local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional single quoted local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional double quoted local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional flow local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional nested local path local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional parent path local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional alias local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects a lexical root invocation inside run text while the executed local action is quoted"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: missing jobs"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: array root"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: null jobs"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: empty jobs"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: malformed YAML"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: duplicate jobs"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: custom tag"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: null job"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: array job"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: no execution"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: two execution kinds"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: non-array steps"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: null step"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: non-string uses"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: empty uses"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: whitespace uses"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: dynamic uses"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: reusable local root"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: reusable local path"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: absolute path"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: backslash path"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: run and action"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: cyclic alias"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: unresolved merge"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: deep structure"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: excess traversal"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: excess bytes"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: NUL"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy preserves remote reusable jobs, ordinary steps and non-execution uses metadata"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects a quoted sole local action even with unrelated lexical text elsewhere"
+        }
+      ]
     }
   ]
 }

@@ -6,11 +6,14 @@ const { relativeJestSuitePath } = require('./setup-acceptance-path.cjs');
 
 const root = resolve(__dirname, '..');
 const ledger = JSON.parse(readFileSync(join(root, 'specs/setup-publisher-installation-acceptance.json'), 'utf8'));
-const specification = readFileSync(join(root, 'specs/setup-bugbot-publisher-manifest-route.md'), 'utf8');
-const published = new Map(specification.split('\n').filter(line => line.startsWith('| publisher977-C')).map(line => {
-  const [id, area, requirements, assertion] = line.slice(1, -1).split('|').map(cell => cell.trim());
-  return [id, { area, requirements: requirements.split(', '), assertion }];
-}));
+const publicationErrors = [], published = new Map();
+for (const path of ['specs/setup-bugbot-publisher-manifest-route.md', 'specs/organization-configuration-reuse-and-batch-setup.md']) {
+  for (const line of readFileSync(join(root, path), 'utf8').split('\n').filter(line => line.startsWith('| publisher977-C'))) {
+    const [id, area, requirements, assertion] = line.slice(1, -1).split('|').map(cell => cell.trim());
+    if (published.has(id)) publicationErrors.push(`${id}: duplicate published contract.`);
+    published.set(id, { area, requirements: requirements.split(', '), assertion });
+  }
+}
 const reportPath = process.argv[2];
 const reportSupplied = reportPath !== undefined;
 const report = reportSupplied ? JSON.parse(readFileSync(resolve(reportPath), 'utf8')) : undefined;
@@ -27,12 +30,12 @@ for (const suite of report?.testResults ?? []) {
     const statuses = executed.get(key) ?? []; statuses.push(assertion.status); executed.set(key, statuses);
   }
 }
-const errors = [], evidenceOwners = new Map();
+const errors = [...publicationErrors], evidenceOwners = new Map();
 if (ledger.schemaVersion !== 1 || !Array.isArray(ledger.cases) || ledger.cases.length < 64) errors.push('Expected v1 ledger with at least 64 cases.');
 const cases = Array.isArray(ledger.cases) ? ledger.cases : [];
 const expected = Array.from({ length: cases.length }, (_, index) => `publisher977-C${String(index + 1).padStart(2, '0')}`);
 if (JSON.stringify(cases.map(item => item.id)) !== JSON.stringify(expected)) errors.push('Case IDs/order must retain C01–C64 exactly once and append contiguous additional IDs.');
-if ([...published.keys()].some(id => !cases.some(item => item.id === id))) errors.push('Every selected SDD case must remain registered.');
+if ([...published.keys()].some(id => !cases.some(item => item.id === id))) errors.push('Every selected SDD and owning appendix case must remain registered.');
 const areas = new Set([...published.values()].map(item => item.area));
 const requirements = new Set([...published.values()].flatMap(item => item.requirements));
 let jestCases = 0;

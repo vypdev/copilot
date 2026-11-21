@@ -141,7 +141,25 @@ it('an unavailable completed ref remains unverified without a replacement POST',
 it('finalizes a retained PR-complete applying operation after exact read-only verification', async () => {
   const f = fixture(), existing = parseSetupPublisherOperation({ ...f.completed(['tree', 'commit', 'branch', 'pull-request']), status: 'applying' });
   f.retain(existing);
-  const result = await f.execute(existing);
+  let branchStarted!: () => void, releaseBranch!: () => void, pullStarted!: () => void, releasePull!: () => void;
+  const branchStart = new Promise<void>(resolve => { branchStarted = resolve; });
+  const branchProof = new Promise<void>(resolve => { releaseBranch = resolve; });
+  const pullStart = new Promise<void>(resolve => { pullStarted = resolve; });
+  const pullProof = new Promise<void>(resolve => { releasePull = resolve; });
+  const trace: string[] = [], save = f.journal.save.getMockImplementation()!;
+  f.writer.branch.mockImplementation(async () => { branchStarted(); await branchProof; f.reads.push('branch'); trace.push('branch verified'); });
+  f.writer.pullRequest.mockImplementation(async () => { pullStarted(); await pullProof; f.reads.push('pull-request'); trace.push('PR verified'); return 73; });
+  f.journal.save.mockImplementation(async value => { trace.push(`save ${value.status}`); await save(value); });
+  const pending = f.execute(existing);
+  await branchStart;
+  expect(f.writer.branch).toHaveBeenCalledWith(existing.preparedCommit, true);
+  expect(f.writer.pullRequest).not.toHaveBeenCalled(); expect(f.journal.save).not.toHaveBeenCalled();
+  expect(f.saved()).toEqual(existing);
+  releaseBranch(); await pullStart;
+  expect(f.writer.pullRequest).toHaveBeenCalledWith(existing.preparedCommit, true);
+  expect(f.journal.save).not.toHaveBeenCalled(); expect(f.saved()).toEqual(existing);
+  releasePull(); const result = await pending;
+  expect(trace).toEqual(['branch verified', 'PR verified', 'save waiting-for-merge']);
   expect(result).toEqual({ ...existing, status: 'waiting-for-merge' });
   expect(f.saved()).toEqual(result); expect(f.states).toEqual([result]);
   expect(f.reads).toEqual(['branch', 'pull-request']); expect(f.writes).toEqual([]);
