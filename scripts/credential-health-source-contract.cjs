@@ -1,8 +1,8 @@
 'use strict';
 
 const inputs = Object.freeze(['pat', 'openai', 'anthropic', 'google', 'openrouter', 'cursor', 'opencode', 'codex-api-key']);
-// Proposed source-repository operating policy. Review approval is recorded
-// separately; this mutable condition is not a boundary against workflow editors.
+// Selected source-repository operating policy; delegated integration is recorded
+// in issue-979/source-policy-decision.json. This mutable selector does not constrain workflow editors.
 const actors = Object.freeze(['1783618', '260864876']);
 const triggeringActors = Object.freeze(['efraespada', 'vypbot']);
 

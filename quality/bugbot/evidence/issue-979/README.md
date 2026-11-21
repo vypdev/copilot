@@ -1,7 +1,8 @@
 # Credential-health trust review — #979
 
-**Policy proposal; maintainer approval remains pending.** This prepares a source-only
-operating policy and its evidence. It does not establish independent protection
+**Selected for source integration under delegated maintainer merge authority.**
+The [source decision](./source-policy-decision.json) records the chosen operating
+policy and its limits. It does not establish independent protection
 against workflow-editing collaborators or install anything on trusted default.
 
 ## Observed baseline
@@ -31,7 +32,7 @@ independent review requirement. Organization runner-group policy reads return
 403 (admin:org / runner-group permission unavailable). The repository runner list
 is empty, which says nothing conclusive about shared organization capacity.
 
-## Concrete proposed policy
+## Selected source policy
 
 Only the source repository's default branch, the exact credential-health
 workflow identity and an explicit selected check may run. Original actor IDs
@@ -55,23 +56,37 @@ retry or exposing its value.
 | Workflow-editing collaborator | Can replace this mutable condition. The counter-control does exactly that. Treat such actors as credential holders unless a separately verified external boundary constrains them. |
 | Missing credential / provider failure | Existing actual shell controls use fake curl; zero real endpoints/secrets. Authentication success does not establish full grants or write capability. |
 
-Approval must explicitly choose this default-only actor policy and its trusted
-workflow-editor assumption, or require a different externally enforced design.
-The selector and repository validator are editable together and are not an
+The delegated source decision selects this default-only actor policy for normal
+integration. Workflow editors remain credential holders; a separate human reply
+accepting a stronger security assumption is not claimed. The selector and
+repository validator are editable together and are not an
 independent trust anchor. Stronger claims require organization/operator evidence
 outside candidate-controlled workflow code. This task changes no organization
 runner policy, protection, Secret, environment or token grant. Production remains
 disabled. This review is not model qualification.
 
+The Action synchronized this delivery onto `a7c23ad169bca92ade652c893f268b5c9ef566ab`
+as `72a24c9342dfef9f8603b4fe68566a190c5e735a`, preserving the original topic parent
+`f0655e7f64d7d141de2e943b68db21e8fdb32392`. Current integrated checks and final-SHA
+review still govern merge. This selection installs no workflow on default and
+authorizes no real credential-health dispatch, credential grant or external
+runner/protection change.
+
 ## Executed controls
 
-Four focused Jest suites pass **503 tests**: 11 new selection/mutability cases,
+At the original source revision, four focused Jest suites passed **503 tests**: 11 new selection/mutability cases,
 82 existing fake-curl transport cases, 58 trusted-read evidence cases and 352
 workflow-validator cases. The nine selection rows cover both allowed actors,
 unlisted original/rerun actors, default/other ref, altered workflow identity,
 fork repository, disabled flag and wrong event. The remaining new cases bind all
 jobs/runners and demonstrate the mutable-condition bypass. These do not simulate
 an independent organization policy or prove live authorization.
+
+The current integrated replay passes **511 tests in four suites**; the eight
+additional workflow-validator controls came from the merged CI aggregate fix.
+The source health workflow, selector and selection-test files were byte-identical
+before and after the official sync. The later selector edit changes its comment
+to identify this recorded source decision; its conditions remain the same.
 
 The intermediate group-format failure is retained: an old validator fixture
 expected an array, while the source now explicitly names group vypdev. Updating

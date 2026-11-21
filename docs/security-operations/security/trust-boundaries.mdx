@@ -17,10 +17,11 @@ Self-hosted runners MUST be isolated, ephemeral where possible, and cleaned afte
 
 ## Source credential-health policy review
 
-The source-only proposal in [#979](https://github.com/vypdev/copilot/issues/979)
+The source policy selected for integration under delegated maintainer authority
+in [#979](https://github.com/vypdev/copilot/issues/979)
 selects the exact default-ref health workflow and reviewed original/rerun actors,
-with an explicit false-by-default check. It requires maintainer acceptance of
-the actor/ref policy and trusted-workflow-editor assumption. A mutable condition
+with an explicit false-by-default check. This source decision does not claim
+independent protection from workflow editors. A mutable condition
 and its editable validator provide no independent boundary against workflow
 editors. GitHub's repository-write requirement for dispatch is a separate control.
 

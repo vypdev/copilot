@@ -106,7 +106,7 @@ Codex acceptance run is required or scheduled.
 
 ## Credential-health source selection
 
-The reviewed proposal in [#979](https://github.com/vypdev/copilot/issues/979)
+The source policy selected for integration in [#979](https://github.com/vypdev/copilot/issues/979)
 explicitly routes source health jobs to group `vypdev` with `self-hosted`, `codex`
 and `Linux` labels. Its default-ref/workflow and actor selector runs before a
 job receives a runner; unselected checks stay disabled. Preserve the existing
@@ -116,6 +116,6 @@ This routing does not establish runner isolation or externally enforced workflow
 access. Organization runner-group evidence is unavailable (403). A collaborator
 who can change workflow code can remove its local condition; the policy review
 must treat that privilege explicitly. The inspected default revision still has
-the old hosted health workflow, so neither a develop change nor this proposal
+the old hosted health workflow, so neither a develop change nor this source decision
 proves adoption. Inspect native actor/ref and selected checks when a run skips;
 use an explicit default-branch retry after reviewing the missing condition.
