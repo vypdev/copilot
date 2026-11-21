@@ -206,11 +206,15 @@ test('dependency admission binds actual files and refuses additions, loader shad
     assert.throws(() => dependencyIdentity(f.directory), /dependency shadow/u);
 });
 
-test('a modified dependency executes with the old proof but is refused before import by the new proof', t => {
+test('a synthetic omitted dependency proof admits changed bytes while the current proof refuses before import', t => {
     const f = dependencyFixture(t), runtime = runtimeIdentity(f.directory), marker = path.join(f.directory, 'dependency-executed');
     writeFileSync(f.file, 'require("node:fs").writeFileSync(' + JSON.stringify(marker) + ', "executed");\n');
     const helper = path.resolve(__dirname, '../execution-provenance.cjs'), old = path.join(f.directory, 'old-proof.cjs');
-    const source = readFileSync(helper, 'utf8');
+    // Build this omission control from fixed historical bytes, not the current
+    // implementation's formatting. This mutated helper is a synthetic negative
+    // control, not a claim that the frozen helper omitted dependency identity.
+    const source = readFileSync(path.resolve(__dirname, '../../issue-970/legacy-verifier-01097099.cjs.txt'), 'utf8');
+    assert.equal(createHash('sha256').update(source).digest('hex'), 'c0471ff35e10cd39ff75a84e02830f4aa98f6f97bb3b47345e241cb77d3877d8');
     assert(source.includes('return { ...dependencies, node:'));
     writeFileSync(old, source.replace('return { ...dependencies, node:', 'return { node:'));
     const run = file => spawnSync(process.execPath, ['-e',
@@ -222,7 +226,7 @@ test('a modified dependency executes with the old proof but is refused before im
     rmSync(marker);
     const refused = run(helper);
     assert.notEqual(refused.status, 0);
-    assert.match(refused.stderr, /runtime differs: dependencyTreeSha256/u);
+    assert.match(refused.stderr, /runtime differs before probes: dependencyTreeSha256/u);
     assert.equal(existsSync(marker), false);
 });
 

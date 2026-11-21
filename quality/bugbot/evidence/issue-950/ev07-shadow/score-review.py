@@ -127,8 +127,17 @@ def containment_admission(id, repetition, records):
         assert end.get("exitCode") == 0 and end.get("interrupted") is False
         host = STARTS[0]["provenance"]
         assert host["executionContext"] == "host" and host["implementation"] == SELECTED_PLAN["implementation"]
+        for field in ("tree", "sourceSha256", "dependencyLockSha256", "compilerConfigurationSha256"):
+            assert re.fullmatch(r"[a-f0-9]{40}" if field == "tree" else r"[a-f0-9]{64}", host[field])
+        if SELECTED_PLAN.get("sourceTree") is not None:
+            assert host["tree"] == SELECTED_PLAN["sourceTree"]
+        assert host["bootstrap"] == dict(bootstrapSha256=SELECTED_PLAN["inspectedArtifacts"]["../qualification-bootstrap.cjs"],
+                                         planCommit=PREREGISTRATION["commit"], planPath=PREREGISTRATION["path"], planSha256=PLAN_SHA256)
         assert host["drivers"] == SELECTED_PLAN["inspectedArtifacts"]
         assert host["containment"] == SELECTED_PLAN["containment"] and host["workerRuntime"] == SELECTED_PLAN["runtime"]
+        runtime_fields = {"dependencyTreeSha256", "dependencyEntries", "os", "arch", "kernel", "node", "nodeSha256",
+                          "gitExecutable", "gitSha256", "typescript", "typescriptSha256", "git"}
+        assert set(host["runtime"]) == runtime_fields
         assert all(value == SELECTED_PLAN["hostRuntime"][key] for key, value in host["runtime"].items())
         worker = dict(host, executionContext="worker", runtime={key: SELECTED_PLAN["runtime"][key] for key in host["runtime"]})
         assert records[0]["provenance"] == worker

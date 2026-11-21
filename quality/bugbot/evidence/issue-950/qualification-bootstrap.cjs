@@ -302,10 +302,10 @@ function operationSlot(plan, mode, identity, slot, root) {
 /** Not exported and not a public CLI mode. Only the immutable image's PID1
  * may fork this exact external bootstrap over a private inherited IPC fd. */
 async function launchContainedWorker() {
+    assert(process.channel && process.connected && process.argv.length === 2, 'private image worker unavailable');
     assert.equal(process.platform, 'linux'); assert.equal(process.ppid, 1);
     assert.equal(process.getuid(), 0); assert.equal(process.execPath, '/usr/local/bin/node');
     assert.equal(fs.realpathSync(__filename), '/qualification-bootstrap.cjs');
-    assert(process.channel && process.connected && process.argv.length === 2, 'private image worker unavailable');
     const owner = await privateMessage();
     assert(owner && Object.keys(owner).length === 3 && owner.kind === 'scope-owner');
     for (const key of ['workerUid', 'workerGid']) assert(Number.isSafeInteger(owner[key]) && owner[key] > 0);
@@ -319,6 +319,8 @@ async function launchContainedWorker() {
         const stat = fs.lstatSync(directory);
         assert(stat.isDirectory() && !stat.isSymbolicLink() && stat.uid === owner.workerUid && (stat.mode & 0o077) === 0);
     }
+    assert.equal(fs.statSync('/sdk').uid, owner.workerUid, 'immutable SDK must belong to its reviewed unprivileged worker');
+    assert.equal(fs.statSync('/sdk/.git').uid, owner.workerUid, 'immutable SDK Git owner differs');
     const input = JSON.parse(fs.readFileSync(privateFile('invocation.json'), 'utf8'));
     const fields = ['schemaVersion', 'identity', 'scopeId', 'proof', 'mode', 'slot', 'bundleSha256', 'preflight'];
     assert(input && Object.keys(input).length === fields.length && fields.every(key => Object.hasOwn(input, key)) && input.schemaVersion === 1);
@@ -399,5 +401,21 @@ module.exports = { launch };
 if (require.main === module) {
     (process.channel ? launchContainedWorker() : launch(...process.argv.slice(2))).then(code => {
         process.exitCode = Number.isInteger(code) ? code : code?.status === 'interrupted' ? 130 : code?.status === 'failed' ? 1 : 0;
-    }).catch(error => { console.error(error.message); process.exitCode = 1; });
+    }).catch(error => {
+        // Keep an early private worker failure after UID drop, including source
+        // or CLI admission errors, before the stopped container is removed.
+        // This file is diagnostic evidence, never an admission/stop receipt.
+        if (process.channel && process.platform === 'linux' && process.ppid === 1 && process.getuid() > 0
+            && __filename === '/qualification-bootstrap.cjs') {
+            try {
+                const directory = '/qualification-output', stat = fs.lstatSync(directory);
+                if (stat.isDirectory() && !stat.isSymbolicLink() && stat.uid === process.getuid() && (stat.mode & 0o077) === 0) {
+                    const fd = fs.openSync(path.join(directory, 'worker-failure.json'), 'wx', 0o600);
+                    try { fs.writeFileSync(fd, JSON.stringify({ event: 'worker-failure', diagnostic: error.stack ?? error.message }) + '\n'); fs.fsyncSync(fd); }
+                    finally { fs.closeSync(fd); }
+                }
+            } catch { /* Retain existing prefixes; diagnostics cannot grant success. */ }
+        }
+        console.error(error.message); process.exitCode = 1;
+    });
 }

@@ -4915,6 +4915,8 @@ Update runtime/Bugbot owners, execution guidance, quality operations, evidence R
 | `quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs` | update |
 | `quality/bugbot/evidence/issue-950/ev07-shadow/full-review.cjs` | update |
 | `quality/bugbot/evidence/issue-950/ev07-shadow/score-review.py` | update |
+| `quality/bugbot/evidence/issue-950/qualification-bootstrap.test.cjs` | update |
+| `quality/bugbot/evidence/issue-950/normal-flow-shadow/paths.test.cjs` | update |
 | `src/data/repository/agent_authentication.ts` | update |
 | `src/infrastructure/bugbot/shadow_verification_adapter.ts` | update |
 | `src/infrastructure/bugbot/shadow/session.cjs` | update |

@@ -213,6 +213,14 @@ Node/Git/compiler/dependencies and CLI/interpreter/native executable bytes. An
 image tag or successful build is not admission. Independently materialize and
 review the external bootstrap and native harness before executing them.
 
+The image recipe also requires `QUALIFICATION_WORKER_UID` and
+`QUALIFICATION_WORKER_GID`, the same positive IDs in the closed containment
+profile. SDK/Git ownership is assigned to that worker during the build and
+checked before its clone. [Git refuses local clones across repository owners](https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---local);
+this avoids changing global Git trust or giving the model additional privileges.
+Early private worker errors are retained as `worker-failure.json` before owned
+container cleanup. That diagnostic is never admission or stop proof.
+
 Commit four otherwise identical `purpose=native-control` plans selecting C32,
 C33, C34 and C35. Their closed `nativeControl` object contains `schemaVersion=1`,
 the exact four-case inventory, one `selectedCase`, `fixtureCliSha256` and
@@ -250,3 +258,15 @@ controls (32 tests), and live scope/pure policy coverage (127 statements,
 committed-source run, changed-module coverage, immutable image, four actual native
 controls and final native PR checks remain pending. No implementation commit,
 actual model call or measurement preregistration is claimed by these WIP checks.
+
+Implementation preparation [`63628bb2`](https://github.com/vypdev/copilot/commit/63628bb2ea01b2d9aafb589e3b1245dae54d4778)
+passed its normal build, 944 SDK suites/18,716 tests (35 existing skips) and lint
+locally; it has not been pushed. Its complete committed-source Node run retained
+236/239 passing, three compatibility failures and zero skips/cancellations.
+The failed controls assumed the former verifier source layout or earlier denial
+wording. The corrected three controls pass while preserving byte/import and
+arbitrary-IPC-parent rejection. A new C30 negative also reproduced acceptance of
+empty copied runtime projections; the scorer now requires the complete observed
+runtime fields, source identity and bootstrap correlation. Six deterministic
+controls pass after that correction. The final committed-source 239 run remains
+pending for these follow-up bytes, and actual native SDK acceptance is unexecuted.

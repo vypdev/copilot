@@ -592,13 +592,18 @@ test('ev974-C30 fixed174/fixed42 retain actual verifier follow-ups and zero cand
     // evidence. Only one slot is complete, so this can never qualify fixed42.
     const bytes = 'a'.repeat(64), scopeId = 'e'.repeat(64);
     selected.containment = { schemaVersion: 1, image: 'sha256:' + bytes };
-    selected.hostRuntime = { nodeSha256: bytes, gitSha256: bytes, typescriptSha256: bytes, dependencyTreeSha256: bytes };
-    Object.assign(selected.runtime, selected.hostRuntime);
+    selected.hostRuntime = { nodeSha256: bytes, gitSha256: bytes, typescriptSha256: bytes, dependencyTreeSha256: bytes,
+        dependencyEntries: 1, os: 'darwin', arch: 'arm64', kernel: 'synthetic-host-kernel', node: 'synthetic-node',
+        gitExecutable: '/synthetic-host/git', git: 'synthetic-git', typescript: 'synthetic-typescript' };
+    Object.assign(selected.runtime, selected.hostRuntime, { os: 'linux', kernel: 'synthetic-worker-kernel', gitExecutable: '/usr/bin/git' });
     selected.inspectedArtifacts = Object.fromEntries(implementation.selectedQualificationDrivers(selected).map(file => [file, bytes]));
     const planFile = path.join(f.directory, 'plan.json'); fs.writeFileSync(planFile, JSON.stringify(selected));
     const preregistration = commitPlan(planFile);
     const host = { implementation: selected.implementation, drivers: selected.inspectedArtifacts,
-        runtime: selected.hostRuntime, containment: selected.containment, workerRuntime: selected.runtime, executionContext: 'host' };
+        runtime: selected.hostRuntime, containment: selected.containment, workerRuntime: selected.runtime, executionContext: 'host',
+        tree: 'b'.repeat(40), sourceSha256: bytes, dependencyLockSha256: bytes, compilerConfigurationSha256: bytes,
+        bootstrap: { bootstrapSha256: selected.inspectedArtifacts['../qualification-bootstrap.cjs'],
+            planCommit: preregistration.commit, planPath: preregistration.path, planSha256: preregistration.sha256 } };
     const subject = JSON.parse(fs.readFileSync(path.join(ev07, '../v4/manifest.json'))).subjects.find(row => row.id === 'U1');
     const start = { event: 'start', implementation: selected.implementation, plan: preregistration.sha256, preregistration };
     const first = { ...start, subject, repetition: 1, provenance: { ...host, executionContext: 'worker',
@@ -638,4 +643,12 @@ test('ev974-C30 fixed174/fixed42 retain actual verifier follow-ups and zero cand
         const rows = clone(scope); mutate(rows); saveScope(rows);
         const invalid = score(); assert.equal(invalid.passed, false); assert.equal(invalid.rows[0].status, 'invalid');
     }
+    saveScope(scope);
+    const originalHostRuntime = host.runtime;
+    host.runtime = {}; first.provenance.runtime = {};
+    fs.writeFileSync(reviewFile, [first, ...f.rows, scoredResult].map(row => JSON.stringify(row)).join('\n') + '\n');
+    saveScope(scope);
+    const missingObservedRuntime = score();
+    assert.equal(missingObservedRuntime.rows[0].status, 'invalid', 'copied empty host/worker projections cannot replace actual runtime observations');
+    host.runtime = originalHostRuntime;
 });
