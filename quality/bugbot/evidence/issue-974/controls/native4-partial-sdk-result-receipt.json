@@ -1,0 +1,20 @@
+{
+  "startedAt": "2026-11-21T04:29:11.316696+00:00",
+  "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+  "planRevision": "df779284840992fffe55bbad65fbdf74142af9ca",
+  "planInventory": "/private/tmp/copilot-goal-974-native-fixture-64da6ec-2drqklp0/native-control-plan-inventory-attempt4.json",
+  "args": [
+    "node",
+    "--test",
+    "/private/tmp/copilot-goal-974-native-fixture-64da6ec-2drqklp0/independent-harness/quality/bugbot/evidence/issue974/containment-native.test.cjs"
+  ],
+  "temporary": "/private/tmp/copilot-goal-974-native-fixture-64da6ec-2drqklp0/native-controls-attempt4-tmp",
+  "hostCoverage": "/private/tmp/copilot-goal-974-native-fixture-64da6ec-2drqklp0/native-controls-attempt4-v8",
+  "modelCalls": 0,
+  "production": "disabled",
+  "finishedAt": "2026-11-21T04:35:30.578712+00:00",
+  "exitCode": 1,
+  "log": "/private/tmp/copilot-goal-974-native-fixture-64da6ec-2drqklp0/native-controls-attempt4.log",
+  "logBytes": 2528,
+  "logSha256": "67e84293fcceb2c0c2c22c9090f7ce03bc4f50806935ec54c039c9f337f08801"
+}

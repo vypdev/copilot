@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "caseId": "ev974-C34",
+  "name": "Error",
+  "message": "Model-free native fixture did not become ready.",
+  "category": null,
+  "preflightStage": null,
+  "modelCalls": 0
+}

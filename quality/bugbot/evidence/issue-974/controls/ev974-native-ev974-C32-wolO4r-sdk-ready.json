@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "caseId": "ev974-C32",
+  "scopeId": "3db8841cc4ebb7acd47814c922f76a9b34309eb53cf39bb7db6532f6ccb0fa5c",
+  "identity": {
+    "ownerId": "33046769b04e6cc8b2ec9be5b0e50bf12e6d33ecf036363b7d17804fdbf3c9e5",
+    "operationId": "control:ev974-C32",
+    "planSha256": "57eae549b5205c6ea52554e31699e8f23934d8fe4612896bb39c4d1bcd2a20f3",
+    "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+    "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+    "purpose": "native-control"
+  },
+  "realCli": {
+    "version": "codex-cli 0.169.1",
+    "proof": {
+      "executableSha256": "e14fc83739c13c1074b12bd1acce4010c893c7f6fbfc1593b4a31d74cabb57af",
+      "nativeExecutableSha256": "7a32206a6aa161b678b42f25f9b20f5f7e006497cd98cd02dc8835cbaab3bba0"
+    }
+  },
+  "fixtureCliSha256": "3bf82112127e518b4ea531a8e59e0f5e9325ad61bdebeebee7ca22ca6586741b",
+  "preparedVersion": "codex-cli 0.169.1 model-free-native-fixture",
+  "qualificationInvestigation": true,
+  "sdkSettled": true,
+  "descendant": {
+    "pid": 191,
+    "state": "S",
+    "ppid": 1,
+    "group": 191,
+    "session": 191
+  },
+  "result": "{\"ok\":true}",
+  "modelCalls": 0
+}

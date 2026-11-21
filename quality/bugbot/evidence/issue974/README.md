@@ -336,3 +336,16 @@ remain separate from actual cancellation acceptance, still0/4. A separate owned
 metadata process also confirms the effective mount check while running; this
 does not substitute for the actual SDK controls. Another source/image/plan tuple
 is required before the next native command. All174/42 model calls remain unstarted.
+
+The fourth actual command at `df77928` passes C32 and C33 through the real SDK:
+quiet ignored-stdio work and inherited-pipe double-fork work both cancel with
+confirmed namespace stop before cleanup. C34 fails fixture readiness because its
+CLI leader stays alive while it waits for the directly parented descendant's
+parent to become1. The saved SDK diagnostic and process states show that relation.
+C35 cannot prepare its C34 sentinel; an explicitly recorded SIGTERM stops only
+that positively identified owned bootstrap after the same defect is reproduced.
+All four known namespaces are confirmed stopped and removed. The result remains
+2PASS/2FAIL, not full native acceptance. The corrected C34 now uses a short-lived
+intermediary so reparenting can occur while the CLI leader stays alive, retaining
+every readiness and ownership assertion. [Raw partial result and topology correction](../issue-974/controls/native4-partial-sdk-topology-correction.json)
+require another committed source/image/plan tuple and fresh actual command.
