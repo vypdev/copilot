@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "kind": "unchanged session CJS changed-module coverage remains unmet",
+  "source": "src/infrastructure/bugbot/shadow/session.cjs",
+  "sourceSha256": "3234f7356290c1993d6fa6d6754c3ab897f6e40228e2834906d94bf0a344d0f4",
+  "required": {
+    "statements": 95,
+    "lines": 95,
+    "branches": 90,
+    "functions": 90
+  },
+  "jestFocal": {
+    "tests": 32,
+    "passed": 32,
+    "suites": 2,
+    "exitCode": 1,
+    "coverage": {
+      "statements": 8.2,
+      "lines": 10.67,
+      "branches": 0,
+      "functions": 0
+    },
+    "meaning": "selected SDK semantic tests do not exercise this CJS body; no runtime test assertion failure"
+  },
+  "originalNodeSemanticSuite": {
+    "tests": 62,
+    "passed": 62,
+    "skip": 0,
+    "cancel": 0,
+    "exitCode": 1,
+    "coverage": {
+      "statements": 84.32,
+      "lines": 92.23,
+      "branches": 73.39,
+      "functions": 77.27
+    },
+    "harness": "test-process-only Istanbul instrumentation of the byte-matching session module; no instrumentation in a qualification bootstrap/model run",
+    "meaning": "real assertions all pass, but the fixed per-module thresholds fail; retain as negative baseline and add meaningful missing behaviors rather than mixing coverage providers or weakening thresholds"
+  },
+  "qualificationModelCalls": 0,
+  "allChangedModuleCoverageSatisfied": false
+}

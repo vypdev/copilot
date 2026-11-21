@@ -1,0 +1,33 @@
+{
+  "source": "/private/tmp/copilot-goal-974/src/infrastructure/bugbot/shadow/session.cjs",
+  "sourceSha256": "3234f7356290c1993d6fa6d6754c3ab897f6e40228e2834906d94bf0a344d0f4",
+  "kind": "coverage-only Node component harness; original semantic suite, no qualification/bootstrap/model execution",
+  "summary": {
+    "lines": {
+      "total": 103,
+      "covered": 95,
+      "skipped": 0,
+      "pct": 92.23
+    },
+    "functions": {
+      "total": 22,
+      "covered": 17,
+      "skipped": 0,
+      "pct": 77.27
+    },
+    "statements": {
+      "total": 134,
+      "covered": 113,
+      "skipped": 0,
+      "pct": 84.32
+    },
+    "branches": {
+      "total": 109,
+      "covered": 80,
+      "skipped": 0,
+      "pct": 73.39
+    }
+  },
+  "changedModuleGate": false,
+  "qualificationModelCalls": 0
+}
