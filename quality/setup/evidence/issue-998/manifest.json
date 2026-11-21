@@ -71,6 +71,18 @@
       "rawSha256": "1327dd97c2f41ede724ecb226da509c0a62bf1beba9668b6f4b018f3a92d41f5",
       "gzipBytes": 601,
       "gzipSha256": "5959f56848793d329bad8169a77d31004e59902395289b3343b031a8ef451f64"
+    },
+    "native-build-before-context-correction.log.gz": {
+      "rawBytes": 409982,
+      "rawSha256": "8aab47d107e1c235067111bc5fa8013c35d5a70b92488add9e4e0c57e732f331",
+      "gzipBytes": 55156,
+      "gzipSha256": "8395b3c715374a11aa0590f702856d5ef7de887a47dc3522bea9bcacbbcbacb8"
+    },
+    "native-coverage-initial-source.log.gz": {
+      "rawBytes": 3327732,
+      "rawSha256": "9102b47acc646d18e57108da9e7e86b95c4d5eca7cf91fcd5725f3133d162fd5",
+      "gzipBytes": 605041,
+      "gzipSha256": "524b6571b9ed7147aa09f7993f82d077dda6d35fab027e56ee9edd0a5056c93f"
     }
   },
   "fullSDKCorrectedBeforeNewTests": "964suites and19584assertions PASS,35existing skips; commandexit1 at existingpurepolicycoverage95%, before20additional metadata cases. This negative gate is retained.",
@@ -106,5 +118,51 @@
     "typeOnlyFilesWithoutCoverageEntries": 5,
     "typeOnlyErasureVerifiedWithTypeScript": true,
     "basis": "Unchanged-source composed Istanbul measurements; actual uploaded Codecov/current-head native acceptance remain separate"
+  },
+  "nativeBuildBeforeContextCorrection": {
+    "head": "59f5a01a35b6960ade7b85efd1517b7598e192d6",
+    "run": 44906896354,
+    "job": 136854306694,
+    "build": "success",
+    "validateBuild": "failure allfour ncc bundles",
+    "retryRequested": false,
+    "cause": "External worktree dependency symlink changed module IDs; identical source and lock rebuilt after offline local dependency installation. Unchanged API and deployment-recovery become byte-equal to known native base. Corrected final native check remains pending."
+  },
+  "canonicalPackedReadOnly": {
+    "at": "2026-11-21T13:19:17.326126+00:00",
+    "tarballSha256": "0c840653dd2f2d778747ccd649e9ca0c39b994771e0d7f8d18fc2095daa861ad",
+    "cliSha256": "a3d8fb8384983c89b6b0b1d2056ae54c0ea21930067199261c6784a49028eaec",
+    "cliBytes": 8463905,
+    "outsideCheckout": true,
+    "modelCalls": 0,
+    "actualApply": false,
+    "proposal": "Historical merged976 source e2b, current known master destination; not the future977installation packet.",
+    "exit": 0,
+    "stdoutBytes": 4098,
+    "stderrBytes": 0,
+    "requestCount": 49,
+    "allFixedScopeGet200": true,
+    "filesystemWriteAttempts": [],
+    "childProcessAttempts": [],
+    "blockedRequests": [],
+    "credentialOutput": false,
+    "twoFilesShown": true,
+    "spanishDryRunCompleted": true,
+    "undiciObserverIsNotIndependentEnforcement": true,
+    "unchangedCliHashAfter": true
+  },
+  "initialPackedReadOnly": "packed-readonly-observation.json is retained history for the earlier d5c773 bundle, not the corrected canonical artifact.",
+  "initialSourceNativeCoverage": {
+    "head": "59f5a01a35b6960ade7b85efd1517b7598e192d6",
+    "run": 44906896354,
+    "job": 136854306831,
+    "status": "success",
+    "sdkSuites": 964,
+    "sdkPassed": 19608,
+    "sdkExistingSkips": 35,
+    "publisherLedger": "60/60Jestpass",
+    "setupLedger": "336/350pass14open",
+    "extensionFiles": 385,
+    "finalCorrectedHeadChecks": "stillrequired"
   }
 }
