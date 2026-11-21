@@ -75,3 +75,11 @@ The two `.json.log.gz` files decompress to their original JSON test reports.
 See `evidence-transport-correction.json` and the retained native failure log.
 These archives are generated evidence metadata, not reviewed application source.
 Final-head native checks and review remain required.
+
+The Action-published companion is an exact selected artifact. The native Commit
+at e2ff500 refused the later as-built edits to that file. The selected document
+now matches d9f03bcf and its approved SHA-256 byte for byte. All eight goal rows
+and64 case rows retain their exact content. Current paths and implementation
+refinements live in [implementation-notes.md](implementation-notes.md); the prior
+as-built version remains in Git. The guard, runtime source and four bundles are
+unchanged. See sdd-selection-restoration.json and the retained native failure.
