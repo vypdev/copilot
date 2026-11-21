@@ -1,5 +1,22 @@
 # EV-07 v2 detector qualification — issue #974
 
+## Corpus collector correction — component evidence
+
+The corpus host now handles collector failures with the same abort-and-await
+obligation as the paired-review collector. A real ledger-read EISDIR with modeled
+containment originally returned without aborting its two siblings. The same test
+now observes both aborts, waits for confirmed modeled stops and retains a failed
+174-slot synthetic inventory; no later synthetic slot starts. Both C31 route
+controls pass2/2. This is an additional arm of the existing C31 requirement, not
+another native acceptance case or an actual corpus run.
+
+[The retained counterfactual, harness error and corrected controls](../issue-974/controls/corpus-collector-correction/README.md)
+include exact raw/source/test hashes. The selected owning SDD and all35 case IDs
+are unchanged. Full changed-driver coverage, committed-source/native final-head
+checks, actual CLI/read-scope/scientific gates and fresh source/runtime native4
+remain required. Actual174/42 are unstarted, qualification calls0, no profile
+qualified and production disabled.
+
 ## Historical compressed evidence remains losslessly archived
 
 The [archive index](../issue-974/controls/historical-gzip-archive.json) pins every formerly added gzip text log to its exact reachable Git revision/blob, compressed-byte SHA256 and decoded UTF-8 SHA256. The original complete bytes remain in immutable Git history and in the owned local rollback; no commit/history is rewritten. Current delivery uses this reviewable index rather than newly changed binary archives, which the progress reviewer correctly refuses. Historical receipts keep their original observed paths and hashes; resolve those paths through this index.

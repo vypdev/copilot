@@ -703,3 +703,96 @@ test('ev974-C30 fixed174/fixed42 retain actual verifier follow-ups and zero cand
     assert.equal(missingObservedRuntime.rows[0].status, 'invalid', 'copied empty host/worker projections cannot replace actual runtime observations');
     host.runtime = originalHostRuntime;
 });
+
+test('ev974-C31 corpus collector failure aborts siblings and awaits their confirmed stops', async t => {
+    // Component control only: synthetic cases and modeled containment, no CLI,
+    // Docker, provider, corpus campaign or qualification admission is executed.
+    require('../issue-950/ev07-shadow/load.cjs');
+    const vm = require('node:vm'), { EventEmitter } = require('node:events');
+    const directory = temporary(t), destination = path.join(directory, 'result');
+    const selected = plan(); selected.containment = containmentProfile(); selected.corpus.concurrency = 3;
+    const source = fs.readFileSync(path.join(ev07, 'corpus.cjs'), 'utf8'), module = { exports: {} };
+    const events = new EventEmitter(), pendingStops = [];
+    const provenance = { implementation: selected.implementation, runtime: { fixture: 'host' } };
+    const worker = { ...provenance, runtime: { fixture: 'worker' } };
+    let started = 0, aborts = 0, returned = false;
+    const fakeContainment = { async runContainedOperation(request) {
+        fs.mkdirSync(request.outputDirectory, { mode: 0o700 });
+        if (request.preflight) {
+            const inner = path.join(request.outputDirectory, 'corpus-v3'); fs.mkdirSync(inner);
+            fs.writeFileSync(path.join(inner, 'corpus.jsonl'), [
+                { event: 'start', provenance: worker }, { event: 'planner-preflight' }, { event: 'finish' },
+            ].map(row => JSON.stringify(row)).join('\n') + '\n');
+            return { exitCode: 0, interrupted: false, namespaceInitStopped: true };
+        }
+        started++;
+        if (started === 1) {
+            request.record({ event: 'scope-stopped', namespaceInitStopped: true });
+            const inner = path.join(request.outputDirectory, 'corpus-v3'); fs.mkdirSync(inner);
+            // A real filesystem collector error after this modeled scope stops.
+            fs.mkdirSync(path.join(inner, 'corpus.jsonl'));
+            return { exitCode: 0, interrupted: false, namespaceInitStopped: true };
+        }
+        return new Promise(resolve => {
+            request.signal.addEventListener('abort', () => { aborts++; }, { once: true });
+            let stopped = false;
+            pendingStops.push(() => {
+                if (stopped) return;
+                stopped = true;
+                request.record({ event: 'scope-stopped', namespaceInitStopped: true });
+                resolve({ exitCode: 143, interrupted: true, namespaceInitStopped: true });
+            });
+        });
+    } };
+    const controlledRequire = name => {
+        if (name === '../execution-provenance.cjs') return {
+            requireBootstrapAdmission() {}, bootstrapOperation() {}, admitQualificationModules() {},
+        };
+        if (name === './configuration.cjs') return selected;
+        if (name === './implementation.cjs') return {
+            qualificationProvenance: () => provenance,
+            selectedPlanProvenance: () => ({ sha256: 'a'.repeat(64) }),
+            expectedQualificationContext: () => worker,
+        };
+        if (name === './load.cjs') return {};
+        if (name === '../../issue974/corpus-selection.cjs') return { selectedCorpus: () => ({ file: '/synthetic/corpus' }) };
+        if (name === '../../../../../src/tooling/bugbot_benchmark') return {
+            loadBugbotBenchmark: async () => ({ cases: Array.from({ length: 174 }, (_, index) => ({ id: 'synthetic-' + index })) }),
+            evaluateBugbotBenchmark: () => ({ violations: ['model-free component fixture, not a measured campaign'] }),
+        };
+        if (name === '../../issue974/attempt-ledger.cjs') return require('./attempt-ledger.cjs');
+        if (name === '../../issue974/operation-containment.cjs') return fakeContainment;
+        if (name === '../../../../../src/application/policies/qualification_operation_scope_policy') {
+            return require(path.join(root, 'src/application/policies/qualification_operation_scope_policy'));
+        }
+        if (name.startsWith('node:')) return require(name);
+        throw new Error('Unplanned component dependency: ' + name);
+    };
+    vm.runInNewContext(source, { require: controlledRequire, module, __dirname: ev07,
+        __filename: path.join(ev07, 'corpus.cjs'), process: events, AbortController, JSON });
+    const running = module.exports.run(destination).then(value => { returned = true; return { value }; },
+        error => { returned = true; return { error }; });
+    try {
+        await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve));
+        if (started === 0 && returned) assert.equal((await running).error, undefined, 'component preflight must reach dispatch');
+        assert.equal(started, 3); assert.equal(pendingStops.length, 2);
+        assert.equal(aborts, 2, 'collector failure must abort both pending sibling scopes');
+        assert.equal(returned, false, 'the collector must await confirmed sibling stops');
+        for (const stop of pendingStops) stop();
+        const result = await running;
+        assert.equal(result.error, undefined); assert.equal(result.value.status, 'failed');
+        assert.equal(started, 3, 'a collector failure must not dispatch later synthetic slots');
+        const rows = fs.readFileSync(path.join(destination, 'corpus.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+        assert.equal(rows.filter(row => row.event === 'case-slot').length, 174);
+        assert.equal(rows.filter(row => row.event === 'collector-failure').length, 1);
+        assert.equal(rows.filter(row => row.event === 'case' && row.status === 'missing-terminal').length, 1);
+        assert.equal(rows.filter(row => row.event === 'case' && row.status === 'interrupted').length, 2);
+        assert.equal(rows.filter(row => row.event === 'case' && row.status === 'not-started').length, 171);
+        assert.equal(rows.at(-1).passed, false); assert.equal(rows.at(-1).complete, false);
+        assert.equal(events.listenerCount('SIGINT'), 0); assert.equal(events.listenerCount('SIGTERM'), 0);
+    } finally {
+        for (const stop of pendingStops) stop();
+        await running;
+        await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve));
+    }
+});
