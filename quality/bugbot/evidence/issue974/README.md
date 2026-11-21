@@ -296,3 +296,17 @@ The current owning SDD is restored to the exact Action-published `8d443500`
 bytes. Implementation status and additional path evidence live in these
 receipts; changing those notes inside the selected publication caused the real
 Commit validation failure. No approved requirement or numerical gate changed.
+
+The second explicit native command at `25c41a9` passes host byte admission but
+fails all four tests before scope startup: Docker omits `ReadOnly: false` from
+the configured writable output mount. An exact, unstarted Engine probe retained
+that difference and the effective `RW` values of both mounts. The adapter now
+normalizes only that omitted false boolean, rejects other changed configured
+fields and checks effective source/destination/access/propagation with no extra
+or duplicate mounts. C27 accepts the actual observation and rejects changed
+permissions, missing input read-only, invalid booleans and foreign mounts.
+[Evidence and cleanup](../issue-974/controls/native-engine-mount-admission-correction.json)
+retain four created, never-started scopes confirmed removed by exact ID. These
+are failed admission attempts, not successful SDK cancellation controls. The
+correction needs a new committed implementation/image and new native-only plans
+before another actual command. Qualification model calls remain zero.

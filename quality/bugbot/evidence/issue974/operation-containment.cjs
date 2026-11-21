@@ -137,6 +137,30 @@ function observedEngine(value) {
     return { version: value.Version, apiVersion: value.ApiVersion, os: value.Os, arch: value.Arch, kernelVersion: value.KernelVersion };
 }
 
+/** Docker omits a false ReadOnly field. Confirm its effective RW value too;
+ * no other missing field, mount, permission or provider flag is normalized. */
+function requireFixedMountConfiguration(configured, effective, expected) {
+    assert(Array.isArray(configured) && configured.length === expected.length, 'scope configuration changed: Mounts');
+    for (const [index, mount] of configured.entries()) {
+        assert(mount && typeof mount === 'object' && !Array.isArray(mount), 'invalid configured mount');
+        assert(!Object.hasOwn(mount, 'ReadOnly') || typeof mount.ReadOnly === 'boolean', 'invalid mount read-only state');
+        const normalized = { ...mount, ReadOnly: Object.hasOwn(mount, 'ReadOnly') ? mount.ReadOnly : false };
+        assert(isDeepStrictEqual(normalized, expected[index]), 'scope configuration changed: Mounts');
+    }
+    assert(Array.isArray(effective) && effective.length === expected.length, 'scope effective mounts changed');
+    const destinations = new Set();
+    for (const mount of effective) {
+        assert(mount && typeof mount === 'object' && !Array.isArray(mount), 'invalid effective mount');
+        assert.deepEqual(Object.keys(mount).sort(), ['Destination', 'Mode', 'Propagation', 'RW', 'Source', 'Type']);
+        assert(!destinations.has(mount.Destination), 'duplicate effective mount'); destinations.add(mount.Destination);
+        const wanted = expected.find(value => value.Target === mount.Destination);
+        assert(wanted, 'foreign effective mount');
+        assert.equal(mount.Type, wanted.Type); assert.equal(mount.Source, wanted.Source);
+        assert.equal(mount.Mode, ''); assert.equal(mount.Propagation, wanted.BindOptions.Propagation);
+        assert.equal(mount.RW, !wanted.ReadOnly, 'effective mount access changed');
+    }
+}
+
 /** Bootstrap-authorized adapter. Unknown create/start effects are retained, never replayed. */
 async function createOperationContainment({ root, identity, inputDirectory, outputDirectory, record }) {
     identity = Object.freeze({ ...identity });
@@ -180,7 +204,8 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
         assert(isDeepStrictEqual(actual.Config.Entrypoint, config.Entrypoint), 'scope entrypoint changed');
         assert(isDeepStrictEqual(actual.Config.Cmd, config.Cmd), 'scope worker identity changed');
         assert(isDeepStrictEqual(actual.Config.Env, config.Env), 'scope environment changed');
-        for (const key of ['AutoRemove', 'RestartPolicy', 'IpcMode', 'NetworkMode', 'CapDrop', 'CapAdd', 'SecurityOpt', 'Mounts', 'Tmpfs']) {
+        requireFixedMountConfiguration(actual.HostConfig.Mounts, actual.Mounts, config.HostConfig.Mounts);
+        for (const key of ['AutoRemove', 'RestartPolicy', 'IpcMode', 'NetworkMode', 'CapDrop', 'CapAdd', 'SecurityOpt', 'Tmpfs']) {
             assert(isDeepStrictEqual(actual.HostConfig[key], config.HostConfig[key]), 'scope configuration changed: ' + key);
         }
         return actual;
@@ -384,4 +409,5 @@ async function runContainedOperation({ root, plan, mode, slot, outputDirectory, 
     }
 }
 
-module.exports = { createOperationContainment, runContainedOperation, fixedConfiguration, requireProfile, objectSha256 };
+module.exports = { createOperationContainment, runContainedOperation, fixedConfiguration, requireProfile, objectSha256,
+    requireFixedMountConfiguration };

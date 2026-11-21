@@ -212,7 +212,7 @@ test('ev974-C26 immutable public bootstrap rejects closed profile and CLI byte m
 });
 
 test('ev974-C27 closed containment refuses ambient grants, mutable images, arbitrary mounts/flags and unsafe namespace configuration', async t => {
-    const { requireProfile, fixedConfiguration, createOperationContainment } = require('./operation-containment.cjs');
+    const { requireProfile, fixedConfiguration, createOperationContainment, requireFixedMountConfiguration } = require('./operation-containment.cjs');
     const profile = containmentProfile(), directory = fs.realpathSync(temporary(t));
     const input = path.join(directory, 'input'), output = path.join(directory, 'output');
     fs.mkdirSync(input, { mode: 0o700 }); fs.mkdirSync(output, { mode: 0o700 });
@@ -229,6 +229,32 @@ test('ev974-C27 closed containment refuses ambient grants, mutable images, arbit
     for (const environment of [['GH_TOKEN=private-fixture'], ['NODE_OPTIONS=--require /foreign'], ['PATH=/a', 'PATH=/b'], {}]) {
         assert.throws(() => fixedConfiguration(profile, identity, input, output, environment));
     }
+    // Retained actual Engine inspection: output ReadOnly=false is omitted,
+    // while effective RW explicitly proves the two different access modes.
+    const observed = JSON.parse(fs.readFileSync(path.join(__dirname, '../issue-974/controls/native-engine-mount-normalization.json')));
+    const mounts = observed.configuredMounts, effective = observed.effectiveMounts, wanted = observed.requestedMounts;
+    requireFixedMountConfiguration(mounts, effective, wanted);
+    const explicitFalse = clone(mounts); explicitFalse[1].ReadOnly = false;
+    requireFixedMountConfiguration(explicitFalse, [...effective].reverse(), wanted);
+    for (const change of [rows => { delete rows[0].ReadOnly; }, rows => { rows[0].ReadOnly = false; },
+        rows => { rows[1].ReadOnly = null; }, rows => { rows[1].ReadOnly = 'false'; },
+        rows => { rows[0].Source = '/foreign'; }, rows => { rows[1].BindOptions.NonRecursive = false; },
+        rows => { rows[0].unknown = true; }, rows => rows.push(rows[0]), rows => { rows[0] = null; },
+        rows => { rows[0] = []; }]) {
+        const altered = clone(mounts); change(altered);
+        assert.throws(() => requireFixedMountConfiguration(altered, effective, wanted));
+    }
+    for (const change of [rows => { rows[0].RW = true; }, rows => { rows[1].RW = false; },
+        rows => { rows[0].Source = '/foreign'; }, rows => { rows[0].Destination = '/foreign'; },
+        rows => { rows[0].Destination = rows[1].Destination; }, rows => { rows[0].Mode = 'ro'; },
+        rows => { rows[0].Propagation = 'rshared'; }, rows => { delete rows[0].RW; },
+        rows => { rows[0].unknown = true; }, rows => rows.push(rows[0]), rows => { rows[0] = null; },
+        rows => { rows[0] = []; }]) {
+        const altered = clone(effective); change(altered);
+        assert.throws(() => requireFixedMountConfiguration(mounts, altered, wanted));
+    }
+    assert.throws(() => requireFixedMountConfiguration({}, effective, wanted));
+    assert.throws(() => requireFixedMountConfiguration(mounts, {}, wanted));
     for (const ambient of ['true', '1', JSON.stringify({ namespaceInitStopped: true })]) {
         const saved = process.env.COPILOT_QUALIFICATION_SCOPE;
         process.env.COPILOT_QUALIFICATION_SCOPE = ambient;
