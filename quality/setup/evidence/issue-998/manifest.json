@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "sourceParent": "a893b63aac1e6dc0c1e682678977ce730150eb44",
+  "at": "2026-11-21T12:31:10.495555+00:00",
+  "boundary": "Automated source evidence. All67repositorybudgets pass composed measurements on identical runtime bytes. This does not claim a successful single full-coverage execution; actual final-head native coverage/review remain required.",
+  "negativeResults": {
+    "catalogIncomplete": "36 passed, 2 failed before correction; 38 passed after",
+    "compatibility": "43 passed, 3 failed before correction; 57 passed after, including unchanged global construction guard",
+    "fullSDKBefore": "962 suites passed, 2 failed; 19483 assertions passed, 95 failed, 35 existing skips; no assertion or threshold weakened"
+  },
+  "focusedAfter": "1402 assertions passed, zero failed/skipped; 36 suites; 26 measured modules at100% allmetrics;60/60mappedJest cases pass",
+  "extractedPackage": "C55-C58: 11 actual packed CLI invocations with zero effect attempts; whole typed API and fixture web smoke passes",
+  "nativeReview": "Not established by this packet; inspect final PR checks and findings",
+  "files": {
+    "catalog-incomplete-before.log.gz": {
+      "rawBytes": 2305,
+      "rawSha256": "24ba8b009bbf0de244defd3352be1baf6965eb766792bc14cf5482fb66d2a4cd",
+      "gzipBytes": 650,
+      "gzipSha256": "d3c4b4ccb1d7a5725285e4f31208af3afaf71466eccb36b2b3e6d44da5bd64a3"
+    },
+    "catalog-incomplete-after.log.gz": {
+      "rawBytes": 1080,
+      "rawSha256": "34bf57e0725346c90eccf946fb51de157f550b4b151be1bc0a46fc786d1ed76a",
+      "gzipBytes": 335,
+      "gzipSha256": "f730ce95845d7200d74b115420b94395ff20e3d116ae8b1e39c508743dfb906b"
+    },
+    "compatibility-before.log.gz": {
+      "rawBytes": 3313058,
+      "rawSha256": "6773bbd5a3fa336cdc30b230873407ff8d738bd85d12255dddb4055a939ef536",
+      "gzipBytes": 681512,
+      "gzipSha256": "a2eb689a95641609a42e9406df6906aab057123a335b184bc612edab55c39342"
+    },
+    "compatibility-after.log.gz": {
+      "rawBytes": 421,
+      "rawSha256": "9ff42535e35b78c74829c77f47852eeeac3aa9bc851abd8b46c6af4c0da0d595",
+      "gzipBytes": 261,
+      "gzipSha256": "3a1c2c3a073d06aca055cc324cb1e164d5b1b640c1216fde855a34b049457cfa"
+    },
+    "full-sdk-before.log.gz": {
+      "rawBytes": 7160669,
+      "rawSha256": "87ac21b49722de16e8fb83aeacd198ad9a5064e039a47cc3b63683914612d432",
+      "gzipBytes": 1405727,
+      "gzipSha256": "043f651454fd53d32479ee8f59e5921279689bd12a0cc4b7b2eff3a3895c0e4f"
+    },
+    "full-sdk-before-results.json.gz": {
+      "rawBytes": 29028382,
+      "rawSha256": "7a62e4e738a275975076a3f5b2bd9e92688fc43aa3061870e211c892b089b148",
+      "gzipBytes": 3958460,
+      "gzipSha256": "77ab4de1e4cd7f63d17aec79ded5c50bbe76f691c7364075e61b61b684d1256b"
+    },
+    "focused-after-results.json.gz": {
+      "rawBytes": 1149350,
+      "rawSha256": "5967f77394c203d47010744f1bbf37501a190205080e03c2fcb1fc836fd64528",
+      "gzipBytes": 87974,
+      "gzipSha256": "927f9338f2f63ba40e5ebe40631de5a14f60d241c1c047cff366b93f0d809be3"
+    },
+    "package-after.log.gz": {
+      "rawBytes": 1143,
+      "rawSha256": "51c44f72b82d9cef938145f59070d9f99fe5e682b13786ae41c170ce941eee9c",
+      "gzipBytes": 471,
+      "gzipSha256": "32c52dc752ff85e45473606915406bd0fd0ca6d51342d01900b0506614af0fdf"
+    },
+    "full-sdk-corrected-before-new-tests.log.gz": {
+      "rawBytes": 350595,
+      "rawSha256": "06e43f7b8bebc94ab2b4963c154a86f7d68eaacf5abbc73263a7ac5e7c55c306",
+      "gzipBytes": 24451,
+      "gzipSha256": "240c68b6fa73371742649aef94dee0629566303bf0989220aaa18a8df4cafc88"
+    },
+    "legacy-recovery-after.log.gz": {
+      "rawBytes": 1971,
+      "rawSha256": "1327dd97c2f41ede724ecb226da509c0a62bf1beba9668b6f4b018f3a92d41f5",
+      "gzipBytes": 601,
+      "gzipSha256": "5959f56848793d329bad8169a77d31004e59902395289b3343b031a8ef451f64"
+    }
+  },
+  "fullSDKCorrectedBeforeNewTests": "964suites and19584assertions PASS,35existing skips; commandexit1 at existingpurepolicycoverage95%, before20additional metadata cases. This negative gate is retained.",
+  "composedCoverage": {
+    "kind": "composed-coverage",
+    "runtimeSourceUnchanged": true,
+    "instrumentedMapsEqual": true,
+    "fullSDK2AssertionsPassed": 19584,
+    "fullSDK2ExistingSkips": 35,
+    "fullSDK2Exit": 1,
+    "focalAssertions": 1402,
+    "focalSuites": 36,
+    "focalModules": 26,
+    "focalAllMetrics": 100,
+    "additionalLegacyControls": {
+      "passed": 120,
+      "failed": 0,
+      "isolatedCoverageCommandExit": 1,
+      "reason": "Unexecuted web and specification-publication owners absent from this targeted scope"
+    },
+    "repositoryBudgetsPassed": 67,
+    "singleFullExecutionCoveragePass": false,
+    "nativeCurrentHeadCoverageStillRequired": true,
+    "inputs": [
+      "/private/tmp/copilot-goal-998-final-full-coverage-attempt2/coverage-final.json",
+      "/private/tmp/copilot-goal-998-docs-package-cohort-coverage-attempt5/coverage-final.json",
+      "/private/tmp/copilot-goal-998-legacy-recovery-coverage-attempt1/coverage-final.json"
+    ]
+  },
+  "extension": "385testfiles/5291assertionsPASS;100%allcoverage metrics;main andextension typesPASS",
+  "localChangedPathEstimate": {
+    "incompleteExecutableChangedSpans": 0,
+    "typeOnlyFilesWithoutCoverageEntries": 5,
+    "typeOnlyErasureVerifiedWithTypeScript": true,
+    "basis": "Unchanged-source composed Istanbul measurements; actual uploaded Codecov/current-head native acceptance remain separate"
+  }
+}

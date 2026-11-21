@@ -1,3 +1,4 @@
+import { DeliverSetupInstallationUseCase } from '../deliver_setup_installation_use_case';
 import { ApplySetupBatchUseCase } from '../apply_setup_batch_use_case';
 import { beginSetupBatchOperation } from '../../../policies/setup_batch_policy';
 import type { SetupBatchOperation, SetupBatchPlan } from '../../../../domain/setup_batch';
@@ -14,7 +15,7 @@ function fixture(count = 2) {
     labels: jest.fn(async () => undefined), issueTypes: jest.fn(async () => undefined), prepareCommit: jest.fn(async () => 'c'.repeat(40)),
     branch: jest.fn(async () => undefined), pullRequest: jest.fn(async (_plan: SetupBatchPlan['targets'][number]) => 31) };
   const presentation = { review: jest.fn(async () => true), active: jest.fn(() => true), progress: jest.fn() };
-  const useCase = new ApplySetupBatchUseCase({ journal, writer, presentation });
+  const useCase = new ApplySetupBatchUseCase({ coordinator: new DeliverSetupInstallationUseCase(), journal, writer, presentation });
   return { plan, journal, writer, presentation, unlock, useCase, saved: () => saved };
 }
 describe('sequential reviewed batch Apply', () => {
@@ -65,6 +66,26 @@ describe('sequential reviewed batch Apply', () => {
     expect(f.writer.branch).toHaveBeenCalledTimes(3);
     expect(f.writer.pullRequest).toHaveBeenCalledTimes(2);
   });
+  it('recovers an uncertain legacy PR by inspection without repeating resources, objects or its ref', async () => {
+    const f = fixture(1); f.writer.pullRequest.mockRejectedValueOnce(new Error('lost PR response'));
+    const first = await f.useCase.execute(f.plan, 'fixture');
+    expect(first.targets[0]).toMatchObject({ status: 'partial', preparedCommit: 'c'.repeat(40),
+      effects: ['access', 'variables', 'labels', 'issue-types', 'branch'] });
+    const recovered = await f.useCase.execute(f.plan, 'fixture');
+    expect(recovered.targets[0]).toMatchObject({ status: 'waiting-for-merge', pullRequestNumber: 31 });
+    expect(f.writer.prepareCommit).toHaveBeenCalledTimes(1); expect(f.writer.branch).toHaveBeenCalledTimes(1);
+    expect(f.writer.variables).toHaveBeenCalledTimes(1);
+    expect(f.writer.pullRequest).toHaveBeenLastCalledWith(f.plan.targets[0], f.plan.operationId, 'c'.repeat(40), 'fixture', true);
+  });
+  it('finishes a retained legacy PR receipt after an interrupted final status save without new effects', async () => {
+    const f = fixture(1), first = await f.useCase.execute(f.plan, 'fixture');
+    f.journal.load.mockResolvedValue({ ...first, targets: [{ ...first.targets[0], status: 'applying' }] });
+    f.writer.prepareCommit.mockClear(); f.writer.branch.mockClear(); f.writer.pullRequest.mockClear(); f.writer.variables.mockClear();
+    const recovered = await f.useCase.execute(f.plan, 'fixture');
+    expect(recovered.targets[0]).toMatchObject({ status: 'waiting-for-merge', pullRequestNumber: 31, preparedCommit: 'c'.repeat(40) });
+    expect(f.writer.prepareCommit).not.toHaveBeenCalled(); expect(f.writer.branch).not.toHaveBeenCalled();
+    expect(f.writer.pullRequest).not.toHaveBeenCalled(); expect(f.writer.variables).not.toHaveBeenCalled();
+  });
   it('persists a prepared commit before publishing its ref', async () => {
     const f = fixture(1);
     f.writer.branch.mockImplementation(async () => {
@@ -114,5 +135,15 @@ describe('sequential reviewed batch Apply', () => {
     f.journal.load.mockResolvedValue({ ...prior, targets: prior.targets.map(target => ({ ...target, planDigest: 'f'.repeat(64) })) });
     await expect(f.useCase.execute(f.plan, 'fixture')).rejects.toThrow('does not match');
     expect(f.presentation.review).not.toHaveBeenCalled(); expect(f.writer.variables).not.toHaveBeenCalled();
+  });
+  it('retains the strict v1 shape and does not repeat unknown prepared-object creation on resume', async () => {
+    const f = fixture(1); f.writer.prepareCommit.mockRejectedValue(new Error('unknown object outcome'));
+    const first = await f.useCase.execute(f.plan, 'fixture');
+    expect(first.targets[0]).toMatchObject({ status: 'partial', effects: ['access', 'variables', 'labels', 'issue-types'] });
+    expect(first.targets[0].cleanupPending).toBeUndefined();
+    f.writer.prepareCommit.mockResolvedValue('c'.repeat(40));
+    const resumed = await f.useCase.execute(f.plan, 'fixture');
+    expect(resumed.targets[0].status).toBe('partial'); expect(f.writer.prepareCommit).toHaveBeenCalledTimes(1);
+    expect(f.writer.branch).not.toHaveBeenCalled(); expect(f.writer.pullRequest).not.toHaveBeenCalled();
   });
 });

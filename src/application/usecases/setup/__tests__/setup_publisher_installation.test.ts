@@ -1,0 +1,105 @@
+import { DeliverSetupInstallationUseCase, SetupInstallationDeliveryError } from '../deliver_setup_installation_use_case';
+import type { SetupInstallationDeliveryState } from '../../../contracts/setup_installation_delivery';
+import { SetupInstallationSnapshotChanged } from '../../../ports/setup_installation_delivery_ports';
+
+const commit = 'c'.repeat(40);
+const initial = (): SetupInstallationDeliveryState => ({ effects: [] });
+function fixture() {
+  const states: SetupInstallationDeliveryState[] = [], order: string[] = [];
+  const commands = {
+    prepareCommit: jest.fn(async () => { order.push('prepare'); return commit; }),
+    branch: jest.fn(async (_commit: string, _inspectOnly: boolean) => { order.push('branch'); }),
+    pullRequest: jest.fn(async (_commit: string, _inspectOnly: boolean) => { order.push('pull-request'); return 42; }),
+  };
+  const control = { active: jest.fn(() => true), revalidate: jest.fn(async () => true),
+    retain: jest.fn(async (state: SetupInstallationDeliveryState) => { states.push(JSON.parse(JSON.stringify(state))); }) };
+  const useCase = new DeliverSetupInstallationUseCase();
+  const execute = (state = initial()) => useCase.execute(commands, control, state);
+  return { commands, control, states, order, execute };
+}
+
+describe('shared approved-file delivery and retained effects', () => {
+  it('retains each intent before its command and exact terminal facts afterward', async () => {
+    const f = fixture();
+    f.commands.prepareCommit.mockImplementation(async () => {
+      expect(f.states.at(-1)?.uncertain).toBe('prepared-objects'); f.order.push('prepare'); return commit;
+    });
+    f.commands.branch.mockImplementation(async (sha, inspectOnly) => {
+      expect(sha).toBe(commit); expect(inspectOnly).toBe(false); expect(f.states.at(-1)?.uncertain).toBe('branch'); f.order.push('branch');
+    });
+    f.commands.pullRequest.mockImplementation(async (sha, inspectOnly) => {
+      expect(sha).toBe(commit); expect(inspectOnly).toBe(false); expect(f.states.at(-1)?.uncertain).toBe('pull-request'); f.order.push('pull-request'); return 42;
+    });
+    expect(await f.execute()).toEqual({ preparedCommit: commit, pullRequestNumber: 42, effects: ['branch', 'pull-request'], uncertain: undefined });
+    expect(f.order).toEqual(['prepare', 'branch', 'pull-request']); expect(f.control.revalidate).toHaveBeenCalledTimes(3);
+  });
+  it('cancellation before effects performs no file command or journal write', async () => {
+    const f = fixture(); f.control.active.mockReturnValue(false);
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'cancelled', retained: initial() });
+    expect(f.order).toEqual([]); expect(f.states).toEqual([]); expect(f.control.revalidate).not.toHaveBeenCalled();
+  });
+  it('drift before effects performs no file command or journal write', async () => {
+    const f = fixture(); f.control.revalidate.mockResolvedValue(false);
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'drift' }); expect(f.order).toEqual([]); expect(f.states).toEqual([]);
+  });
+  it('cancellation after a known prepared commit retains it and stops branch creation', async () => {
+    const f = fixture(); f.control.active.mockReturnValueOnce(true).mockReturnValue(false);
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'cancelled', retained: { preparedCommit: commit } });
+    expect(f.order).toEqual(['prepare']); expect(f.states.at(-1)?.preparedCommit).toBe(commit);
+  });
+  it('drift after the branch stops PR creation without deleting or rolling back the branch', async () => {
+    const f = fixture(); f.control.revalidate.mockResolvedValueOnce(true).mockResolvedValueOnce(true).mockResolvedValue(false);
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'drift', retained: { preparedCommit: commit, effects: ['branch'] } });
+    expect(f.order).toEqual(['prepare', 'branch']); expect(f.commands.pullRequest).not.toHaveBeenCalled();
+  });
+  it('an unknown prepared-object outcome cannot automatically launch another preparation', async () => {
+    const f = fixture(); f.commands.prepareCommit.mockRejectedValue(new Error('lost POST response'));
+    let failure: SetupInstallationDeliveryError | undefined;
+    try { await f.execute(); } catch (error) { failure = error as SetupInstallationDeliveryError; }
+    expect(failure?.retained.uncertain).toBe('prepared-objects');
+    await expect(f.execute(failure!.retained)).rejects.toMatchObject({ reason: 'uncertain-preparation' });
+    expect(f.commands.prepareCommit).toHaveBeenCalledTimes(1); expect(f.commands.branch).not.toHaveBeenCalled();
+  });
+  it('a known prepared commit is reused and an uncertain branch is inspected without another POST', async () => {
+    const f = fixture(); await f.execute({ preparedCommit: commit, effects: [], uncertain: 'branch' });
+    expect(f.commands.prepareCommit).not.toHaveBeenCalled(); expect(f.commands.branch).toHaveBeenCalledWith(commit, true);
+  });
+  it('an uncertain PR is inspected without preparing objects, recreating the ref or blindly posting', async () => {
+    const f = fixture(); await f.execute({ preparedCommit: commit, effects: ['branch'], uncertain: 'pull-request' });
+    expect(f.order).toEqual(['pull-request']); expect(f.commands.pullRequest).toHaveBeenCalledWith(commit, true);
+  });
+  it('a retained completed delivery starts no additional command', async () => {
+    const f = fixture(), state = { preparedCommit: commit, pullRequestNumber: 42, effects: ['branch', 'pull-request'] as const };
+    expect(await f.execute(state)).toEqual(state); expect(f.order).toEqual([]); expect(f.states).toEqual([]);
+  });
+  it('a malformed prepared commit cannot reach branch creation', async () => {
+    const f = fixture(); f.commands.prepareCommit.mockResolvedValue('unreviewed-ref');
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'provider' }); expect(f.commands.branch).not.toHaveBeenCalled();
+  });
+  it.each([0, -1, Number.MAX_SAFE_INTEGER + 1])('a malformed PR number %s cannot become a completed receipt', async number => {
+    const f = fixture(); f.commands.pullRequest.mockResolvedValue(number);
+    await expect(f.execute()).rejects.toMatchObject({ retained: { preparedCommit: commit, effects: ['branch'], uncertain: 'pull-request' } });
+    expect(f.states.at(-1)?.effects).toEqual(['branch']);
+  });
+  it('a journal failure before preparation prevents all provider writes', async () => {
+    const f = fixture(); f.control.retain.mockRejectedValue(new Error('private store unavailable'));
+    await expect(f.execute()).rejects.toMatchObject({ retained: { uncertain: 'prepared-objects' } }); expect(f.order).toEqual([]);
+  });
+  it('a journal failure after a confirmed branch retains in-memory facts and prevents PR creation', async () => {
+    const f = fixture(), original = f.control.retain.getMockImplementation()!;
+    f.control.retain.mockImplementation(async state => {
+      if (state.effects.includes('branch')) throw new Error('lost journal write'); await original(state);
+    });
+    await expect(f.execute()).rejects.toMatchObject({ retained: { preparedCommit: commit, effects: ['branch'] } });
+    expect(f.order).toEqual(['prepare', 'branch']); expect(f.commands.pullRequest).not.toHaveBeenCalled();
+  });
+  it('a failed branch call preserves its uncertain identity for read-only recovery', async () => {
+    const f = fixture(); f.commands.branch.mockRejectedValue(new Error('response unavailable'));
+    await expect(f.execute({ preparedCommit: commit, effects: [] })).rejects.toMatchObject({ retained: { preparedCommit: commit, effects: [], uncertain: 'branch' } });
+    expect(f.commands.pullRequest).not.toHaveBeenCalled();
+  });
+  it('a provider-confirmed snapshot change retains the drift meaning through common delivery', async () => {
+    const f = fixture(); f.commands.prepareCommit.mockRejectedValue(new SetupInstallationSnapshotChanged());
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'drift' }); expect(f.commands.branch).not.toHaveBeenCalled();
+  });
+});

@@ -549,6 +549,37 @@ after review, inspect the credential-health workflow too. Its installation or
 removal changes required bootstrap permissions. Prepare and approve a fresh plan
 instead of applying a previously audited permission set.
 
+## Recover a publisher proposal operation
+
+Use the explicit `--publisher-manifest <path>` route for publisher operations.
+The ordinary batch route retains its own records and cannot adopt this purpose.
+
+| Result | Next action |
+|---|---|
+| Invalid proposal/options | Use a regular nonsymlink UTF-8 closed-schema proposal no larger than 128 KiB. Remove generic setup, web, batch and automation options. No transport or generic setup has started. |
+| Credentials/authority unverified | Supply a current credential with provable repository/PR/workflow authority; do not infer grants from a required-permissions header. Preview requires authenticated reads too. |
+| Unsupported/foreign installation | Inspect the manifest, complete guidance and workflow inventory. Preserve customized/renamed publishers; this route cannot overwrite them or fabricate a baseline. |
+| Source/default/base changed | Retain prior effects, refresh the proposal and inspect a new complete preview. Previous approval cannot authorize changed bytes or identities. |
+| Resume required/missing | Supply the exact operation ID together with the same proposal. A missing, future, foreign-purpose or legacy journal is not a new publisher approval. |
+| Partial / uncertain | Preserve the private receipt and any known prepared object, ref and PR. Inspect those exact identities before recovery; an unknown tree/commit POST is never blindly repeated. |
+| Waiting for merge | Review the linked installer PR. Default installation and native verification remain pending. |
+| Unchanged / verification pending | No empty PR is created. Inspect the actual installed default revision and separately authorized native run. |
+
+Resume with current credentials and fresh review:
+
+```bash
+copilot setup --publisher-manifest /absolute/path/publisher-proposal.json --resume-operation <operation-id>
+```
+
+Cancellation stops later effects and retains completed/uncertain work; it is not
+a rollback. An unexpected human branch head blocks recovery. Do not delete the
+journal, lock, branch or PR to bypass the check. The shared
+[orphan-lock procedure](#recover-an-orphaned-batch-operation-lock) requires all
+owners stopped and preservation of the matching receipt; resume afterward using
+the publisher command above. Locale controls display only. Unsupported/invalid
+locale or an incomplete catalog selects complete English, not mixed-language
+approval text. Raw provider errors and credentials are not printed.
+
 ## Unsupported stored configuration
 
 An issue or PR with an invalid stored Copilot block stops with

@@ -1,9 +1,22 @@
+import { DeliverSetupInstallationUseCase } from '../../application/usecases/setup/deliver_setup_installation_use_case';
 import { SetupBatchGithubApplyAdapter } from '../setup_batch_github_apply_adapter';
 import { SetupBatchGithubReadAdapter, SetupBatchGithubTransport, SetupBatchProviderError } from '../setup_batch_github_read_adapter';
 import { setupBatchBranch, setupBatchMarker } from '../../application/policies/setup_batch_policy';
 import { createDefaultSetupConfiguration } from '../../application/policies/setup_configuration_defaults';
 import type { SetupBatchTargetPlan } from '../../domain/setup_batch';
 import type { SetupRemoteConfiguration } from '../../domain/setup';
+import { createHash } from 'node:crypto';
+import { setupInstallationTreeFixture } from './fixtures/setup_installation_tree_fixture';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { ApplySetupBatchUseCase } from '../../application/usecases/setup/apply_setup_batch_use_case';
+import { ApplySetupPublisherUseCase } from '../../application/usecases/setup/apply_setup_publisher_use_case';
+import { ReviewSetupPublisherUseCase } from '../../application/usecases/setup/review_setup_publisher_use_case';
+import { InstallSetupPublisherUseCase } from '../../application/usecases/setup/install_setup_publisher_use_case';
+import { setupPublisherFixture } from '../../application/policies/__tests__/fixtures/setup_publisher_fixture';
+import { SetupBatchJournalAdapter } from '../setup_batch_journal_adapter';
+import { SetupPublisherJournalAdapter } from '../setup_publisher_journal_adapter';
 const operation = 'a67c8e40-93be-43ed-a7ed-e07378c7e773';
 const base = 'a'.repeat(40); const prepared = 'c'.repeat(40);
 function fixture() {
@@ -16,13 +29,24 @@ function fixture() {
   const plan: SetupBatchTargetPlan = { target, remote, configuration: createDefaultSetupConfiguration(), digest: 'b'.repeat(64),
     blocked: [], files: [{ path: 'AGENTS.md', content: 'generated guidance' }], repositoryVariables: [], grants: [], sharedSnapshot: [] };
   let branch: string | undefined; let pulls: unknown[] = [];
-  let installation: unknown = { schemaVersion: 1, operationId: operation, repositoryId: 7, baseSha: base, planDigest: plan.digest };
+  const installation = { schemaVersion: 1, operationId: operation, repositoryId: 7, baseSha: base, planDigest: plan.digest };
+  const baseFiles = new Map([['.github/workflows/obsolete.yml', 'old fixture']]);
+  const preparedFiles = new Map([...baseFiles, ['AGENTS.md', plan.files[0].content!], ['.copilot/setup-manifest.json', JSON.stringify({ schemaVersion: 2,
+    generator: { name: '@vypdev/copilot', contractVersion: 1 }, artifacts: {}, profileDigest: createHash('sha256').update('').digest('hex'), installation }, null, 2) + '\n']]);
+  const baseTree = setupInstallationTreeFixture(baseFiles);
   const request = jest.fn(async (route: string, parameters: Record<string, unknown>): Promise<{ data: unknown }> => {
     if (route === 'GET /repos/{owner}/{repo}/git/commits/{commit_sha}') return { data: parameters.commit_sha === base
-      ? { tree: { sha: 'd'.repeat(40) } } : { parents: [{ sha: base }], tree: { sha: 'e'.repeat(40) } } };
+      ? { sha: base, tree: { sha: baseTree.root } } : { sha: prepared, parents: [{ sha: base }], tree: { sha: setupInstallationTreeFixture(preparedFiles).root } } };
+    if (route === 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}') return { data: baseTree.trees.get(String(parameters.tree_sha))
+      ?? setupInstallationTreeFixture(preparedFiles).trees.get(String(parameters.tree_sha)) };
     if (route === 'GET /repos/{owner}/{repo}/contents/{path}') return { data: { encoding: 'base64',
-      content: Buffer.from(JSON.stringify({ installation })).toString('base64') } };
-    if (route === 'POST /repos/{owner}/{repo}/git/trees') return { data: { sha: 'e'.repeat(40) } };
+      content: Buffer.from(preparedFiles.get('.copilot/setup-manifest.json')!).toString('base64') } };
+    if (route === 'POST /repos/{owner}/{repo}/git/trees') {
+      for (const file of parameters.tree as { path: string; content?: string; sha?: null }[]) {
+        if (file.sha === null) preparedFiles.delete(file.path); else preparedFiles.set(file.path, file.content!);
+      }
+      return { data: { sha: setupInstallationTreeFixture(preparedFiles).root } };
+    }
     if (route === 'POST /repos/{owner}/{repo}/git/commits') return { data: { sha: prepared } };
     if (route === 'GET /repos/{owner}/{repo}/git/ref/{ref}') {
       if (!branch) throw new SetupBatchProviderError('not-found'); return { data: { object: { sha: branch } } };
@@ -42,12 +66,64 @@ function fixture() {
   const resources = { labels: jest.fn(async () => undefined), issueTypes: jest.fn(async () => undefined) };
   const writer = new SetupBatchGithubApplyAdapter(read, variableWriter, resources);
   function pull() { return { number: 31, state: 'open', body: setupBatchMarker(operation, 7),
-    head: { ref: setupBatchBranch(operation), sha: prepared, repo: { id: 7 } }, base: { ref: 'master' } }; }
-  return { plan, writer, request, read, shared, variableWriter, resources, pull,
+    head: { ref: setupBatchBranch(operation), sha: prepared, repo: { id: 7 } }, base: { ref: 'master', repo: { id: 7 } } }; }
+  return { plan, writer, request, read, shared, variableWriter, resources, pull, baseTree,
     setBranch: (sha: string | undefined) => { branch = sha; }, setPulls: (values: unknown[]) => { pulls = values; },
-    setReceipt: (value: unknown) => { installation = value; } };
+    setReceipt: (value: unknown) => { preparedFiles.set('.copilot/setup-manifest.json', JSON.stringify({ installation: value })); } };
 }
 describe('installer-owned GitHub write boundaries', () => {
+  it('rejects malformed legacy manifest JSON before Git delivery without echoing its content', async () => {
+    const f = fixture(), plan = { ...f.plan, files: [{ path: '.copilot/setup-manifest.json', content: '{untrusted-manifest-payload' }] };
+    await expect(f.writer.branch(plan, operation, prepared, 'fixture')).rejects.toThrow('malformed');
+    expect(f.request).not.toHaveBeenCalled(); expect(f.resources.labels).not.toHaveBeenCalled();
+    expect(f.variableWriter.createMissing).not.toHaveBeenCalled();
+  });
+  it('publisher977-C60: preserves ordinary resource delivery and Secrets while the publisher cannot adopt its real v1 operation', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'publisher-cross-route-'));
+    try {
+      const f = fixture();
+      const remote: SetupRemoteConfiguration = { ...f.plan.remote, repositorySecrets: ['LOCAL_PAT'],
+        repositorySecretRevisions: [{ name: 'LOCAL_PAT', updatedAt: '2026-11-21T00:00:00Z' }] };
+      const effective = { ...remote, repositoryVariables: [...remote.repositoryVariables] };
+      jest.spyOn(f.read, 'effective').mockImplementation(async () => effective);
+      const variable = { name: 'EXAMPLE_SETTING', value: 'reviewed-value' };
+      f.variableWriter.createMissing.mockImplementation(async () => {
+        effective.repositoryVariables.push(variable); return { created: 1, updated: 0, errors: [] };
+      });
+      const target = { ...f.plan, remote, repositoryVariables: [variable] };
+      const batchJournal = new SetupBatchJournalAdapter(directory);
+      const result = await new ApplySetupBatchUseCase({ coordinator: new DeliverSetupInstallationUseCase(), writer: f.writer, journal: batchJournal,
+        presentation: { review: async () => true, active: () => true, progress: () => undefined } })
+        .execute({ operationId: operation, organization: 'acme', targets: [target] }, 'private-cross-route-fixture');
+      expect(result.targets[0]).toMatchObject({ status: 'waiting-for-merge', pullRequestNumber: 31,
+        effects: ['access', 'variables', 'labels', 'issue-types', 'branch', 'pull-request'] });
+      expect(f.variableWriter.createMissing).toHaveBeenCalledWith('acme', 'repo', 'private-cross-route-fixture', [variable]);
+      expect(f.variableWriter.upsert).not.toHaveBeenCalled(); expect(f.variableWriter.upsertScopedVariables).not.toHaveBeenCalled();
+      expect(f.resources.labels).toHaveBeenCalledTimes(1); expect(f.resources.issueTypes).toHaveBeenCalledTimes(1);
+      expect(remote.repositorySecrets).toEqual(['LOCAL_PAT']); expect(remote.organizationSecrets).toEqual(['PAT']);
+      expect(f.request.mock.calls.filter(([route]) => !route.startsWith('GET ')).map(([route]) => route)).toEqual([
+        'POST /repos/{owner}/{repo}/git/trees', 'POST /repos/{owner}/{repo}/git/commits',
+        'POST /repos/{owner}/{repo}/git/refs', 'POST /repos/{owner}/{repo}/pulls',
+      ]);
+      const receiptPath = join(directory, operation + '.json'), before = await readFile(receiptPath, 'utf8');
+      expect(JSON.parse(before)).toMatchObject({ schemaVersion: 1, targets: [{ status: 'waiting-for-merge' }] });
+      expect(before).not.toMatch(/private-cross-route-fixture|reviewed-value|LOCAL_PAT/u);
+      const data = setupPublisherFixture(), publisherJournal = new SetupPublisherJournalAdapter(directory);
+      const inspect = jest.fn(async () => ({ inspection: data.inspection, session: {} }));
+      const confirm = jest.fn(async () => 'approve' as const), present = jest.fn(async () => undefined);
+      const delivery = jest.fn(() => { throw new Error('Cross-purpose delivery must never start.'); });
+      const publisher = new InstallSetupPublisherUseCase(new ReviewSetupPublisherUseCase({ inspect, confirm, present, active: () => true }),
+        new ApplySetupPublisherUseCase({ coordinator: new DeliverSetupInstallationUseCase(), journal: publisherJournal, active: () => true, delivery }), publisherJournal);
+      const requests = f.request.mock.calls.length;
+      await expect(publisher.execute({ proposal: data.proposal, operationId: operation, dryRun: false, resume: true }))
+        .rejects.toMatchObject({ reason: 'journal' });
+      expect(inspect).not.toHaveBeenCalled(); expect(present).not.toHaveBeenCalled();
+      expect(confirm).not.toHaveBeenCalled(); expect(delivery).not.toHaveBeenCalled();
+      expect(f.request).toHaveBeenCalledTimes(requests); expect(await readFile(receiptPath, 'utf8')).toBe(before);
+      expect(await readdir(directory)).toEqual([operation + '.json']);
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  });
+
   it('snapshots a shared runner profile without granting registry or group access and blocks drift', async () => {
     const f = fixture(); const profile = { id: 'shared', group: 'vypdev', labels: ['self-hosted', 'Linux'], validation: 'hosted' as const };
     const value = JSON.stringify({ schemaVersion: 1, profiles: [profile] });
@@ -172,7 +248,7 @@ describe('installer-owned GitHub write boundaries', () => {
   it('prepares a complete tree on the exact base and embeds a secret-free receipt before creating a ref', async () => {
     const f = fixture(); expect(await f.writer.prepareCommit(f.plan, operation, 'fixture-token')).toBe(prepared);
     const tree = f.request.mock.calls.find(([route]) => route === 'POST /repos/{owner}/{repo}/git/trees')![1];
-    expect(tree.base_tree).toBe('d'.repeat(40));
+    expect(tree.base_tree).toBe(f.baseTree.root);
     expect(tree.tree).toEqual(expect.arrayContaining([expect.objectContaining({ path: '.copilot/setup-manifest.json', content: expect.stringContaining('installation') })]));
     expect(JSON.stringify(tree)).not.toContain('fixture-token');
     expect(f.request).toHaveBeenCalledWith('POST /repos/{owner}/{repo}/git/commits', expect.objectContaining({ parents: [base] }));

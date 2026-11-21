@@ -929,3 +929,40 @@ must enable the approval feature and prove preservation even when the comparator
 proposes a replacement. Operator documentation distinguishes completed path
 coverage from installation/runtime verification. Report measured local diff
 coverage and the uploaded current-head Codecov report separately.
+
+
+### Reviewed publisher-purpose delivery (#998, 2026-11-21)
+
+The officially published [publisher companion](./setup-bugbot-publisher-manifest-route.md)
+adds one explicit CLI route to this capability. It changes only the canonical
+status publisher workflow and the existing manifest receipt, with complete
+preview, independently inspected identities/grants and fresh interactive approval.
+Ordinary one-to-25-target resource setup, Secret retention, permission probes and
+its legacy v1 records retain their own policy. Publisher composition has no such
+writers or probes and requires a compatible existing manifest/guidance baseline.
+
+Both routes MUST use the common application file-delivery coordinator and GitHub
+delivery adapter, plus the same private UUID store/nonce lock. Complete tree proof
+checks every unapproved sibling and approved leaf, exact parent/receipt and owned
+ref/PR identities. Publisher v2 records contain only purpose-bound metadata/file
+effects, never credentials or configuration values, and cannot adopt v1 records.
+Unknown POST outcomes and partial receipts survive cancellation/failure; no blind
+replay, force, deletion or human-head overwrite is authorized. A completed PR is
+waiting for merge, never evidence of default installation or native verification.
+
+The additional minimum is **64 distinct cases**: 16 pure, eight read/freshness,
+12 application/recovery, ten provider/delivery, 12 CLI/content and six packaged/
+security. Preserve the companion's C01–C64 IDs, all earlier numeric budgets and
+100% pure policy. The executable publisher budget lists six exhaustive pure
+modules and 19 runtime modules at 95% lines/statements and 90% branches/functions.
+The final uploaded report still requires no incomplete executable changed lines;
+passing a private focused cohort is not that report. All four static catalogs and
+atomic English fallback must preserve approved bytes and authority.
+
+CLI help, how-to/configuration, provisioning/recovery, Bugbot failure guidance and
+architecture documentation describe this same contract. The companion records
+actual source paths and pending final acceptance. Source integration does not
+install a workflow, activate verification, qualify a model profile or complete
+#977's separately authorized default/native acceptance. Human accessibility and
+platform observations keep their independent status; no source test substitutes
+for them.

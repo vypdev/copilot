@@ -1,0 +1,153 @@
+import { DeliverSetupInstallationUseCase } from '../../application/usecases/setup/deliver_setup_installation_use_case';
+import { mkdtemp, rm, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { ReviewSetupPublisherUseCase } from '../../application/usecases/setup/review_setup_publisher_use_case';
+import { ApplySetupPublisherUseCase } from '../../application/usecases/setup/apply_setup_publisher_use_case';
+import { setupPublisherFixture } from '../../application/policies/__tests__/fixtures/setup_publisher_fixture';
+import { setupBatchMarker, setupBatchBranch } from '../../application/policies/setup_batch_policy';
+import { planSetupPublisherInstallation } from '../../application/policies/setup_publisher_plan_policy';
+import { SetupPublisherJournalAdapter } from '../setup_publisher_journal_adapter';
+import { SetupInstallationGithubDeliveryAdapter } from '../setup_installation_github_delivery_adapter';
+import { SetupBatchProviderError } from '../setup_batch_github_read_adapter';
+import type { SetupPublisherPlan, SetupPublisherOperation } from '../../domain/setup_publisher_installation';
+import { setupInstallationTreeFixture } from './fixtures/setup_installation_tree_fixture';
+
+const id = '12345678-1234-4234-8234-123456789abc', commit = 'c'.repeat(40);
+let root: string;
+beforeEach(async () => { root = await mkdtemp(join(tmpdir(), 'publisher-composed-')); });
+afterEach(async () => { await rm(root, { recursive: true, force: true }); });
+function fixture() {
+  const data = setupPublisherFixture(), session = {}, journal = new SetupPublisherJournalAdapter(root);
+  const baseFiles = new Map([['README.md', 'Human source'], ...data.inspection.installation.guidance.map(file => [file.path, file.content] as const),
+    ...data.inspection.installation.workflows.map(file => [file.path, file.content] as const),
+    [data.inspection.installation.manifest!.path, data.inspection.installation.manifest!.content]]);
+  const baseTree = setupInstallationTreeFixture(baseFiles), prepared = new Map(baseFiles), active = jest.fn(() => true);
+  let branch: string | undefined, pulls: unknown[] = [], plan: SetupPublisherPlan | undefined;
+  let transform = (_route: string, value: unknown, _parameters: Record<string, unknown>): unknown => value;
+  const transport = { call: jest.fn(async (token: string, route: string, parameters: Record<string, unknown>): Promise<unknown> => {
+    expect(token).toBe('private-fixture-token'); expect(parameters).toMatchObject({ owner: 'owner', repo: 'project' });
+    let value: unknown;
+    if (route === 'GET /repos/{owner}/{repo}/git/commits/{commit_sha}') value = parameters.commit_sha === data.inspection.target.baseSha
+      ? { sha: data.inspection.target.baseSha, tree: { sha: baseTree.root } }
+      : { sha: commit, parents: [{ sha: data.inspection.target.baseSha }], tree: { sha: setupInstallationTreeFixture(prepared).root } };
+    else if (route === 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}') value = baseTree.trees.get(String(parameters.tree_sha))
+      ?? setupInstallationTreeFixture(prepared).trees.get(String(parameters.tree_sha));
+    else if (route === 'GET /repos/{owner}/{repo}/contents/{path}') value = { encoding: 'base64', content: Buffer.from(prepared.get('.copilot/setup-manifest.json')!).toString('base64') };
+    else if (route === 'POST /repos/{owner}/{repo}/git/trees') {
+      expect(parameters.base_tree).toBe(baseTree.root);
+      expect(parameters.tree).toEqual(plan!.files.map(file => ({ ...file, type: 'blob', mode: '100644' })));
+      for (const file of parameters.tree as { path: string; content: string }[]) prepared.set(file.path, file.content);
+      value = { sha: setupInstallationTreeFixture(prepared).root };
+    } else if (route === 'POST /repos/{owner}/{repo}/git/commits') {
+      expect(parameters.parents).toEqual([data.inspection.target.baseSha]); expect(parameters.tree).toBe(setupInstallationTreeFixture(prepared).root); value = { sha: commit };
+    } else if (route === 'GET /repos/{owner}/{repo}/git/ref/{ref}') {
+      expect(parameters.ref).toBe(`heads/${setupBatchBranch(id)}`); if (!branch) throw new SetupBatchProviderError('not-found'); value = { object: { sha: branch } };
+    } else if (route === 'POST /repos/{owner}/{repo}/git/refs') {
+      expect(parameters.ref).toBe(`refs/heads/${setupBatchBranch(id)}`); expect(parameters.sha).toBe(commit); branch = commit; value = {};
+    } else if (route === 'GET /repos/{owner}/{repo}/pulls') value = pulls;
+    else if (route === 'POST /repos/{owner}/{repo}/pulls') {
+      expect(parameters.head).toBe(setupBatchBranch(id)); expect(parameters.base).toBe('main');
+      pulls = [{ state: 'open', number: 73, body: parameters.body, head: { ref: setupBatchBranch(id), sha: commit, repo: { id: 42 } },
+        base: { ref: 'main', repo: { id: 42 } } }]; value = pulls[0];
+    } else throw new Error('Unexpected provider route outside approved file delivery.');
+    return transform(route, value, parameters);
+  }) };
+  const confirm = jest.fn(async (): Promise<'approve' | 'decline'> => 'approve');
+  const present = jest.fn(async (value: SetupPublisherPlan) => { plan = value; });
+  const execute = (reviewed?: SetupPublisherOperation, dryRun = false) => new ReviewSetupPublisherUseCase({
+    inspect: async () => ({ inspection: data.inspection, session }), present, confirm, active,
+  }).execute({ proposal: data.proposal, operationId: id, dryRun }, (approved, actualSession, fresh) => {
+    expect(actualSession).toBe(session);
+    return new ApplySetupPublisherUseCase({ coordinator: new DeliverSetupInstallationUseCase(), journal, active,
+      delivery: (value, identity, revalidate) => {
+        expect(value).toBe(approved); expect(identity).toBe(session);
+        return new SetupInstallationGithubDeliveryAdapter(transport, { target: value.target, operationId: value.operationId,
+          digest: value.digest, files: value.files, title: 'Install reviewed publisher', body: setupBatchMarker(id, value.target.id) }, 'private-fixture-token', revalidate);
+      },
+    }).execute(approved, actualSession, fresh, reviewed);
+  });
+  const posts = () => transport.call.mock.calls.filter(([, route]) => route.startsWith('POST ')).map(([, route]) => route);
+  return { ...data, journal, transport, active, confirm, present, execute, posts, prepared,
+    transform: (next: typeof transform) => { transform = next; }, setBranch: (sha: string) => { branch = sha; } };
+}
+
+it('keeps the credential out of the concrete delivery object exposed through the semantic application port', () => {
+  const f = setupPublisherFixture(), plan = planSetupPublisherInstallation(f.proposal, f.inspection, id);
+  const writer = new SetupInstallationGithubDeliveryAdapter({ call: async () => undefined }, {
+    target: plan.target, operationId: plan.operationId, digest: plan.digest, files: plan.files,
+    title: 'Install reviewed publisher', body: setupBatchMarker(id, plan.target.id),
+  }, 'private-port-credential-fixture', async () => true);
+  expect(JSON.stringify(writer)).not.toContain('private-port-credential-fixture');
+  expect(Object.values(writer)).not.toContain('private-port-credential-fixture');
+});
+
+it('composes complete immutable review, actual private storage and shared exact-tree/ref/PR delivery', async () => {
+  const f = fixture(); expect(await f.execute()).toMatchObject({ stage: 'apply', result: { status: 'waiting-for-merge', pullRequestNumber: 73 } });
+  const saved = await f.journal.load(id); expect(saved?.effects).toEqual(['tree', 'commit', 'branch', 'pull-request']);
+  expect(f.posts()).toEqual(['POST /repos/{owner}/{repo}/git/trees', 'POST /repos/{owner}/{repo}/git/commits',
+    'POST /repos/{owner}/{repo}/git/refs', 'POST /repos/{owner}/{repo}/pulls']);
+  expect(await readdir(root)).toEqual([`${id}.json`]); expect(JSON.stringify(saved)).not.toContain('private-fixture-token');
+  expect(f.present.mock.calls[0][0].nativeVerification).toBe('pending');
+});
+it.each(['dry-run', 'decline'])('a composed %s creates neither a journal nor a provider request', async mode => {
+  const f = fixture(); if (mode === 'decline') f.confirm.mockResolvedValue('decline');
+  expect(await f.execute(undefined, mode === 'dry-run')).toMatchObject({ stage: mode === 'dry-run' ? 'dry-run' : 'declined' });
+  expect(f.transport.call).not.toHaveBeenCalled(); expect(await readdir(root)).toEqual([]);
+});
+it('retains a known tree after cancellation before the commit POST and resumes without another tree POST', async () => {
+  const f = fixture(); f.transform((route, value) => { if (route === 'POST /repos/{owner}/{repo}/git/trees') f.active.mockReturnValue(false); return value; });
+  await expect(f.execute()).rejects.toMatchObject({ reason: 'cancelled', retained: { status: 'partial', effects: ['tree'] } });
+  const retained = await f.journal.load(id); expect(retained?.preparedTree).toBeTruthy(); expect(retained?.uncertain).toBeUndefined();
+  f.transform((_route, value) => value); f.active.mockReturnValue(true); await f.execute(retained);
+  expect(f.posts().filter(route => route.endsWith('/git/trees'))).toHaveLength(1); expect(f.posts().filter(route => route.endsWith('/git/commits'))).toHaveLength(1);
+});
+it('does not claim an unknown commit outcome when the provider adapter stopped before issuing its POST', async () => {
+  const f = fixture(); f.transform((route, value) => { if (route === 'POST /repos/{owner}/{repo}/git/trees') f.active.mockReturnValue(false); return value; });
+  await expect(f.execute()).rejects.toMatchObject({ retained: { effects: ['tree'] } });
+  expect(f.posts()).toEqual(['POST /repos/{owner}/{repo}/git/trees']);
+  expect((await f.journal.load(id))?.uncertain).toBeUndefined();
+});
+it.each(['tree', 'commit'] as const)('an actually unknown %s POST outcome remains uncertain and is never replayed', async kind => {
+  const f = fixture(), route = kind === 'tree' ? 'POST /repos/{owner}/{repo}/git/trees' : 'POST /repos/{owner}/{repo}/git/commits';
+  f.transform((actual, value) => { if (actual === route) throw new SetupBatchProviderError('transient'); return value; });
+  await expect(f.execute()).rejects.toMatchObject({ retained: { uncertain: kind } }); const retained = await f.journal.load(id), posts = f.posts().length;
+  await expect(f.execute(retained)).rejects.toMatchObject({ reason: 'uncertain-preparation' }); expect(f.posts()).toHaveLength(posts);
+});
+it('a failed base read before any POST retains a blocked operation without inventing an unknown tree creation', async () => {
+  const f = fixture(); f.transform((route, value) => { if (route.includes('/git/commits/')) throw new SetupBatchProviderError('unknown'); return value; });
+  await expect(f.execute()).rejects.toMatchObject({ reason: 'delivery', retained: { status: 'blocked', effects: [] } });
+  expect(f.posts()).toEqual([]); const retained = await f.journal.load(id); expect(retained?.uncertain).toBeUndefined();
+  f.transform((_route, value) => value); await f.execute(retained); expect(f.posts().filter(route => route.endsWith('/git/trees'))).toHaveLength(1);
+});
+it.each(['tree', 'commit', 'branch', 'pull-request'] as const)('publisher977-C41: a denied %s write retains partial facts without escalation, probes or POST replay', async kind => {
+  const f = fixture(), effects = ['tree', 'commit', 'branch', 'pull-request'];
+  const routes = ['POST /repos/{owner}/{repo}/git/trees', 'POST /repos/{owner}/{repo}/git/commits',
+    'POST /repos/{owner}/{repo}/git/refs', 'POST /repos/{owner}/{repo}/pulls'];
+  const index = effects.indexOf(kind), original = f.transport.call.getMockImplementation()!;
+  f.transport.call.mockImplementation(async (token, route, parameters) => {
+    if (route === routes[index]) throw new SetupBatchProviderError('forbidden');
+    return original(token, route, parameters);
+  });
+  await expect(f.execute()).rejects.toMatchObject({ reason: 'delivery', retained: {
+    status: 'partial', effects: effects.slice(0, index), uncertain: kind,
+  } });
+  expect(f.posts()).toEqual(routes.slice(0, index + 1));
+  const saved = await f.journal.load(id), count = f.posts().length;
+  await expect(f.execute(saved)).rejects.toBeDefined(); expect(f.posts()).toHaveLength(count);
+  expect(JSON.stringify(saved)).not.toContain('private-fixture-token');
+});
+it('a complete journal re-proves the current exact ref and PR without a new POST', async () => {
+  const f = fixture(); await f.execute(); const retained = await f.journal.load(id), count = f.posts().length;
+  expect(await f.execute(retained)).toMatchObject({ result: { status: 'waiting-for-merge', pullRequestNumber: 73 } }); expect(f.posts()).toHaveLength(count);
+  f.setBranch('f'.repeat(40)); await expect(f.execute(retained)).rejects.toMatchObject({ reason: 'delivery' }); expect(f.posts()).toHaveLength(count);
+});
+it('an extra prepared sibling is retained as an unapproved known tree and cannot become a commit', async () => {
+  const f = fixture(); f.transform((route, value) => {
+    if (route !== 'POST /repos/{owner}/{repo}/git/trees') return value;
+    f.prepared.set('README.md', 'Unapproved change'); return { sha: setupInstallationTreeFixture(f.prepared).root };
+  });
+  await expect(f.execute()).rejects.toMatchObject({ retained: { status: 'partial', effects: ['tree'] } });
+  const retained = await f.journal.load(id), count = f.posts().length; await expect(f.execute(retained)).rejects.toMatchObject({ reason: 'delivery' });
+  expect(f.posts()).toHaveLength(count); expect(f.posts().some(route => route.endsWith('/git/commits'))).toBe(false);
+});

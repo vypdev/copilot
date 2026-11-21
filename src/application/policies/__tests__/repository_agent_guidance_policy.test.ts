@@ -1,6 +1,9 @@
 import { createDefaultSetupConfiguration } from '../setup_configuration_defaults';
 import {
   buildRepositoryAgentProfile,
+  parseRepositoryAgentGuidanceManifest,
+  validRepositoryAgentProfile,
+  REPOSITORY_AGENT_PROFILE_PATH,
   renderRepositoryAgentArtifacts,
   renderRepositoryAgentGuide,
   renderRepositoryAgentPointerBlock,
@@ -9,6 +12,46 @@ import {
 } from '../repository_agent_guidance_policy';
 
 describe('repository agent guidance policy', () => {
+  it.each([
+    ['missing inventory', undefined], ['null inventory', null], ['array inventory', []], ['text inventory', 'unknown'],
+    ['unmanaged path', { '../outside.json': { role: 'profile', sha256: 'a'.repeat(64) } }],
+    ['null record', { [REPOSITORY_AGENT_PROFILE_PATH]: null }],
+    ['array record', { [REPOSITORY_AGENT_PROFILE_PATH]: [] }],
+    ['text record', { [REPOSITORY_AGENT_PROFILE_PATH]: 'untrusted' }],
+    ['unknown record field', { [REPOSITORY_AGENT_PROFILE_PATH]: { role: 'profile', sha256: 'a'.repeat(64), approved: true } }],
+    ['unknown role', { [REPOSITORY_AGENT_PROFILE_PATH]: { role: 'foreign', sha256: 'a'.repeat(64) } }],
+    ['invalid digest', { [REPOSITORY_AGENT_PROFILE_PATH]: { role: 'profile', sha256: 'short' } }],
+    ['wrong path role', { [REPOSITORY_AGENT_PROFILE_PATH]: { role: 'guide', sha256: 'a'.repeat(64) } }],
+  ])('rejects malformed or out-of-scope guidance metadata: %s', (_name, artifacts) => {
+    const input = { schemaVersion: 2, generator: { name: '@vypdev/copilot', contractVersion: 1 },
+      profileDigest: 'a'.repeat(64), artifacts };
+    expect(parseRepositoryAgentGuidanceManifest(JSON.stringify(input))).toBeUndefined();
+  });
+
+  it.each([
+    ['null installation', null], ['unknown owner', { lifecycleOwner: 'github-action' }],
+    ['foreign branch namespace', { branchNamespace: 'arbitrary/branch' }], ['issue authority', { requiresIssue: true }],
+    ['automatic merge', { automaticMerge: true }], ['unknown field', { approved: true }],
+  ])('does not certify unsupported installed profile authority: %s', (_name, change) => {
+    const original = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
+    const installation = change === null ? null : { ...original.installation, ...change };
+    expect(validRepositoryAgentProfile(JSON.stringify({ ...original, installation }))).toBe(false);
+  });
+
+  it('rejects pre-branch SDD authority when the otherwise consistent profile disables managed branches', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.issueManagedBranches = false; configuration.repository.preBranchSdd = true;
+    const profile = buildRepositoryAgentProfile(configuration);
+    expect(Object.values(profile.issueWorkflows.forms).every(fact => !fact.createsManagedBranch)).toBe(true);
+    expect(validRepositoryAgentProfile(JSON.stringify(profile))).toBe(false);
+  });
+
+  it('rejects unknown workflow-profile approval metadata instead of silently importing it', () => {
+    const profile = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
+    const input = { ...profile, issueWorkflows: { ...profile.issueWorkflows, approved: true } };
+    expect(validRepositoryAgentProfile(JSON.stringify(input))).toBe(false);
+  });
+
   it('explains operator-owned runtime preparation without silently installing Java', () => {
     const guide = renderRepositoryAgentGuide(buildRepositoryAgentProfile(createDefaultSetupConfiguration()));
     expect(guide).toContain('every job');

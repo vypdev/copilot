@@ -584,3 +584,14 @@ preflight, Windows coverage and provisioning checks still apply. Setup
 templates and installation defaults retain their existing contract.
 See the [operator guide](../docs/security-operations/security/self-hosted-runners.mdx)
 for prerequisites and queued checks.
+
+
+### Publisher-route coordination (#998, 2026-11-21)
+
+The narrowly scoped publisher path preserves compatible installed manifest/guidance, all other workflows and existing runner selections. It adds no runner selector, customized-YAML migration, new default installer or consumer-template change. Broader runner/parity acceptance keeps its existing status; foreign or renamed publisher workflows block this maintenance route.
+
+The officially published [publisher companion](./setup-bugbot-publisher-manifest-route.md)
+and [batch delivery owner](./organization-configuration-reuse-and-batch-setup.md#reviewed-publisher-purpose-delivery-998-2026-11-21)
+own the additional 64-case contract and shared delivery changes. This coordination
+note does not complete this SDD's existing external or prospective gates. Actual
+#977 installation/native evidence and #981/#982 observations remain separate.

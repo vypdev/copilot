@@ -63,3 +63,66 @@ that a new setup or recovery path was exercised. Changed-path validation also
 covers exact request ceilings, malformed metadata, missing package assets,
 receipt cleanup failure and source workflow preservation. Installation and runtime
 verification still require the separate reviewed receipts and workflow evidence.
+
+## Reviewed Bugbot publisher proposals
+
+`copilot setup --publisher-manifest <path>` updates one existing installation
+through a reviewed two-file PR. It inspects GitHub directly and can run outside
+a checkout. It neither initializes local Git nor creates Variables, Secrets,
+access grants, labels, issue types or permission probes.
+
+Use the complete review-only proposal for the selected repository and source.
+Setup independently verifies the authenticated actor, actual relevant grants,
+repository/default/base, compatible manifest/guidance, complete workflow inventory,
+merged maintainer source and source blob hashes. It pins the canonical workflow's
+local Action invocation to that verified source commit. A maintainer merge
+establishes this source review boundary; it is not independent attestation of
+the producer's executable code.
+
+The credential needs repository contents/PR write access and workflow-editing
+authority, including for preview because that authority forms part of the review.
+Classic credentials need applicable `repo` (or public-repository `public_repo`)
+and `workflow` scopes plus actual repository push permission. Unknown grant
+evidence blocks. Required-permissions headers do not prove granted authority;
+fine-grained credentials whose actual grants cannot be established by this reader
+remain unsupported. No write probe guesses permission. Prefer the environment
+or hidden prompt over a token argument that could enter shell history.
+
+```bash
+copilot setup --publisher-manifest /absolute/path/publisher-proposal.json --dry-run
+```
+
+Review the complete `.github/workflows/copilot_bugbot_status_card.yml` and
+`.copilot/setup-manifest.json` contents, source/default/base and retained effects.
+Displayed untrusted content is escaped and prefixed to keep it inert. Dry-run,
+decline and inspection create no journal, lock, object, ref or PR. Run again
+without `--dry-run` in an interactive terminal and enter the displayed approval
+word only for that exact preview. Credential, grant, source, default/base or file
+drift requires a new review.
+
+Approved delivery uses shared Setup Git delivery, proves the complete prepared
+tree difference, exact parent and nested receipt, then creates one
+`setup/copilot/<operation-id>` ref and one marked PR. It never force-pushes,
+deletes a ref, overwrites a human head, merges a PR or changes production settings.
+The result is **waiting for merge**; matching existing bytes remain
+**verification pending**. Neither proves native writer execution.
+
+Keep the proposal and private receipt to recover a publisher operation:
+
+```bash
+copilot setup --publisher-manifest /absolute/path/publisher-proposal.json --resume-operation <operation-id>
+```
+
+Resume needs current credentials and fresh review of the same purpose, actor,
+repository/default/base, source and approved bytes. Bare `--resume-operation`
+still selects ordinary batch recovery. Legacy v1 records cannot become publisher
+v2 authority. Completed facts and uncertainty appear before approval. If a
+tree/commit POST may have succeeded without returning its identity, preserve and
+inspect that uncertainty; Setup does not blindly replay it or invent an object
+to adopt. Known prepared objects/refs/PRs are reused only after exact proof. See
+[publisher recovery](/security-operations/operations/troubleshooting#recover-a-publisher-proposal-operation).
+
+After merge into trusted default, separately verify the installed revision and
+explicitly authorized native canary. Source integration, a packed CLI pass or a
+queued/skipped run does not complete installation. Rollback is a fresh reviewed
+normal change retaining prior receipts and newer human work.

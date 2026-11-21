@@ -448,6 +448,15 @@ describe('setup_files', () => {
       expect.objectContaining({ id: 'agent-guidance-manifest', status: 'warn' }),
     ]);
   });
+  it('reports an unreadable manifest as unknown ownership and preserves the existing guidance', () => {
+    const manifest = path.join(tmpDir, '.copilot/setup-manifest.json');
+    fs.mkdirSync(manifest, { recursive: true });
+    const guide = path.join(tmpDir, '.copilot/AGENT_GUIDE.md'); fs.writeFileSync(guide, '# Unowned guide\n');
+    expect(inspectRepositoryAgentGuidance(tmpDir)).toEqual([
+      expect.objectContaining({ id: 'agent-guidance-manifest', status: 'warn' }),
+    ]);
+    expect(fs.statSync(manifest).isDirectory()).toBe(true); expect(fs.readFileSync(guide, 'utf8')).toBe('# Unowned guide\n');
+  });
 
   it('supports guidance without a generic AGENTS.md discovery pointer', () => {
     const configuration = createDefaultSetupConfiguration();

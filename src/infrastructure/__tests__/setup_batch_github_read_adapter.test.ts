@@ -14,6 +14,14 @@ function fixture() {
   return { request, remote, adapter, target, transport };
 }
 describe('bounded GitHub setup discovery and namespace inspection', () => {
+  it('ignores entries without string paths while retaining exact known legacy file bytes', async () => {
+    const f = fixture(), content = 'retained human instructions\n';
+    f.request.mockResolvedValueOnce({ data: { truncated: false, tree: [null, {}, { path: 42 },
+      { path: 'AGENTS.md', type: 'blob', mode: '100644', sha, size: Buffer.byteLength(content) }] } })
+      .mockResolvedValueOnce({ data: { encoding: 'base64', content: Buffer.from(content).toString('base64') } });
+    expect(await f.adapter.files(f.target, 'fixture')).toEqual([{ path: 'AGENTS.md', content }]);
+    expect(f.request).toHaveBeenCalledTimes(2); expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+  });
   it.each(['100644', '100755'])('VSO-10 inventories the existing consumer action with mode %s for preservation', async mode => {
     const f = fixture(); const content = 'custom\r\n';
     f.request.mockResolvedValueOnce({ data: { truncated: false, tree: [{ path: '.github/actions', type: 'tree', mode: '040000', sha },

@@ -33,9 +33,9 @@ export interface SetupBatchApplyPort {
   issueTypes(plan: SetupBatchTargetPlan, token: string): Promise<void>;
   prepareCommit(plan: SetupBatchTargetPlan, operationId: string, token: string): Promise<string>;
   /** Create once or inspect and adopt only the exact prepared commit and receipt. */
-  branch(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string): Promise<void>;
+  branch(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly?: boolean): Promise<void>;
   /** Inspect the exact marker before creation and after an uncertain response. */
-  pullRequest(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string): Promise<number>;
+  pullRequest(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly?: boolean): Promise<number>;
 }
 export interface SetupBatchPresentationPort {
   review(plan: SetupBatchPlan, operation: SetupBatchOperation): Promise<boolean>;
