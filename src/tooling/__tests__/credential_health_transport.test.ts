@@ -79,7 +79,10 @@ describe.each([
         expect(Object.keys(workflow.jobs).sort()).toEqual(fixtures.map(([id]) => id).sort());
         for (const [id, key, input] of fixtures) {
             expect(workflow.on.workflow_dispatch.inputs[input].default).toBe(false);
-            expect(workflow.jobs[id].if).toBe(`\${{ inputs.${input} }}`);
+            const expectedCondition = file.startsWith('.github/')
+                ? require('../../../scripts/credential-health-source-contract.cjs').sourceHealthCondition(input)
+                : `\${{ inputs.${input} }}`;
+            expect(workflow.jobs[id].if).toBe(expectedCondition);
             expect(workflow.jobs[id].steps).toHaveLength(1);
             expect(workflow.jobs[id].steps[0].env).toEqual({ [key]: `\${{ secrets.${key} }}` });
         }

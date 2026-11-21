@@ -728,6 +728,8 @@
         "src/infrastructure/github/github_bugbot_status_card_workflow.ts",
         "src/infrastructure/github/github_bugbot_status_card_dispatch.ts",
         "src/infrastructure/github/native_list_pagination.ts",
+        "src/infrastructure/github/github_bugbot_status_card_acknowledgment.ts",
+        "src/infrastructure/github/github_bugbot_status_card_handoff.ts",
         "quality/bugbot/evidence/issue-950/execution-provenance.cjs",
         "quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs",
         "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs",
@@ -1282,7 +1284,8 @@
         "src/cli/setup_config_file.ts",
         "src/domain/copilot_comment_workflow.ts",
         "src/infrastructure/copilot_comment_inputs.json",
-        "src/infrastructure/private_jvm_environment.ts"
+        "src/infrastructure/private_jvm_environment.ts",
+        "scripts/credential-health-source-contract.cjs"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1416,7 +1419,8 @@
         "src/infrastructure/__tests__/verification_setup_configuration.test.ts",
         "src/domain/__tests__/copilot_comment_workflow.test.ts",
         "src/tooling/__tests__/credential_health_transport.test.ts",
-        "src/infrastructure/__tests__/private_jvm_environment.test.ts"
+        "src/infrastructure/__tests__/private_jvm_environment.test.ts",
+        "src/tooling/__tests__/credential_health_source_policy.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1441,7 +1445,8 @@
         "docs/guides/review-pull-requests.mdx",
         "docs/guides/work-with-the-bot.mdx",
         "docs/guides/releases-and-hotfixes.mdx",
-        "docs/agents/repository-collaboration.mdx"
+        "docs/agents/repository-collaboration.mdx",
+        "quality/bugbot/evidence/issue-979/README.md"
       ]
     },
     {
@@ -3412,7 +3417,8 @@
         "src/domain/bugbot/verification_artifact.ts",
         "src/data/repository/pull_request/approval_bugbot_artifact.ts",
         "src/data/repository/github/read_single_json_artifact.ts",
-        "src/infrastructure/github/github_bugbot_verification_artifact.ts"
+        "src/infrastructure/github/github_bugbot_verification_artifact.ts",
+        "quality/bugbot/evidence/issue-980/packaged-trust.cjs"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -3449,7 +3455,8 @@
         "src/domain/__tests__/pull_request_closing_reference.test.ts",
         "src/application/policies/__tests__/pull_request_description_content_policy.test.ts",
         "src/application/usecases/steps/pull_request/__tests__/update_pull_request_description_use_case.test.ts",
-        "src/infrastructure/github/__tests__/github_bugbot_verification_artifact.test.ts"
+        "src/infrastructure/github/__tests__/github_bugbot_verification_artifact.test.ts",
+        "quality/bugbot/evidence/issue-980/packaged-trust.test.cjs"
       ],
       "documentation": [
         "docs/authentication.mdx",
@@ -3460,7 +3467,8 @@
         "docs/pull-requests/workflow-setup.mdx",
         "docs/issues/comment-commands.mdx",
         "docs/bugbot/configuration.mdx",
-        "docs/development/architecture.mdx"
+        "docs/development/architecture.mdx",
+        "quality/bugbot/evidence/issue-980/README.md"
       ]
     },
     {

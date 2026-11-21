@@ -1,0 +1,21 @@
+{
+  "startedAt": "2026-11-20T19:37:49.148904+00:00",
+  "finishedAt": "2026-11-20T19:38:49.633257+00:00",
+  "head": "1b024481d9d86cb4d4b10eb7f8569f9c8e2f0981",
+  "headAfter": "1b024481d9d86cb4d4b10eb7f8569f9c8e2f0981",
+  "exitCode": 0,
+  "before": {
+    "build/cli/index.js": "4d014f14b2284dff2efb2a1c57b175b29cea4cbb",
+    "build/api/index.js": "de57ff8f5f958d5fd8379084b336001e0652b9b0",
+    "build/github_action/index.js": "f9b17b35177faccac40ac6e0b7facf688bfcd571"
+  },
+  "after": {
+    "build/cli/index.js": "4d014f14b2284dff2efb2a1c57b175b29cea4cbb",
+    "build/api/index.js": "de57ff8f5f958d5fd8379084b336001e0652b9b0",
+    "build/github_action/index.js": "f9b17b35177faccac40ac6e0b7facf688bfcd571"
+  },
+  "statusAfter": "",
+  "rawBytes": 433014,
+  "rawSha256": "f960198247323fe3de14dcad48247d5e226fcbd016f56b788e3a45bdf35d8de3",
+  "scope": "rebuild original976 only; no parent merge, remote synchronization or guard change"
+}
