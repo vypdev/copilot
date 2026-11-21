@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T08:00:44.307529+00:00",
+  "source": "d3062119abb402ba39b634c505a1c04ee3d2d931",
+  "parents": [
+    "6efac73417df179a3153b526ae6df9b0b53c976b",
+    "c7b7feb4cced42697a45f1624384dfba950c4fea"
+  ],
+  "officialSync": {
+    "run": 44879703468,
+    "job": 136772070614,
+    "outcome": "success",
+    "rawBytes": 3789871,
+    "rawSha256": "f40311b01e18178f245b66a3d75e901d063f9a6648732839cfdb95c867e79247",
+    "conflictsResolvedByAction": [
+      "docs/bugbot/quality-observability.mdx",
+      "package.json"
+    ],
+    "sdk": "944suites/18735PASS+35existing skips",
+    "extension": "385files/5291PASS",
+    "documentation": "120pages/routesPASS"
+  },
+  "packaged": {
+    "startedAt": "2026-11-21T07:49:42.660476+00:00",
+    "finishedAt": "2026-11-21T07:49:46.812381+00:00",
+    "head": "d3062119abb402ba39b634c505a1c04ee3d2d931",
+    "exitCode": 0,
+    "bundleSha256": "5d98f78435883214fcdd2c8e35aef0a3fece3b8f35ef24a76de7c435819d697b",
+    "driverSha256": "0dbef389c51fb188f6c17da2464bb7b4fa304debc529e932b2d3c8d891e68750",
+    "ledger": "/private/tmp/copilot-goal-980-d306-packaged-attempt1.jsonl",
+    "ledgerBytes": 18938,
+    "ledgerSha256": "c238bcd21884b501fa4035743b706d902f8284fac198376db914bb5c04df819e",
+    "log": "/private/tmp/copilot-goal-980-d306-packaged-attempt1.log",
+    "logSha256": "118e31a7d118b32ed8541151a95f9f26e441c45770df1886ae41a80171df01b9",
+    "cases": 14,
+    "finish": {
+      "event": "finish",
+      "passed": 14,
+      "cases": 14,
+      "actualProductionModeChanged": false,
+      "realGitHubWriteAttempts": 0,
+      "qualificationModelCalls": 0
+    },
+    "production": "disabled",
+    "qualificationModelCalls": 0
+  },
+  "driverUnchangedFromOriginal980": true,
+  "owningSddUnchangedFromOriginal980": {
+    "path": "specs/guarded-pull-request-approval.md",
+    "sha256": "7ab21a57f7a0ea5195d666ec0247d74bfe040d814547b7ffcd194aa032f49252"
+  },
+  "runtimeSourceAndBundlesEqualParentC7": true,
+  "packageControls": "every parent command operand preserved in order, plus exactly one existing issue980 packaged group",
+  "buildReproduction": {
+    "head": "d3062119abb402ba39b634c505a1c04ee3d2d931",
+    "before": {
+      "build/github_action/index.js": "5d98f78435883214fcdd2c8e35aef0a3fece3b8f35ef24a76de7c435819d697b",
+      "build/cli/index.js": "cf0eb00d7fc9b8a66cd6ce530edaf798140fd9591f59e4fc2e7a25756a9802d0",
+      "build/api/index.js": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "build/deployment_recovery/index.js": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    },
+    "after": {
+      "build/github_action/index.js": "5d98f78435883214fcdd2c8e35aef0a3fece3b8f35ef24a76de7c435819d697b",
+      "build/cli/index.js": "cf0eb00d7fc9b8a66cd6ce530edaf798140fd9591f59e4fc2e7a25756a9802d0",
+      "build/api/index.js": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "build/deployment_recovery/index.js": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    },
+    "allFourBundlesReproduce": true,
+    "status": ""
+  },
+  "independentProducerAttestation": "unverified; no new enforcement or trust grant",
+  "qualificationAcceptance": false,
+  "qualificationModelCalls": 0,
+  "realGitHubWriteAttempts": 0,
+  "production": "disabled",
+  "nativeFinalChecks": "pending at final evidence-delivery SHA"
+}

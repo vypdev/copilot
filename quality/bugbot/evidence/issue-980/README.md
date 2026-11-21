@@ -1,5 +1,13 @@
 # Approval receipt producer trust — #980
 
+## Current-parent integration and exact-bundle replay
+
+The Action merged exact parents6efac734+c7b7feb as d3062119 and resolved only the documentation/package conflicts. Its verification passes944 SDK suites/18,735 assertions (35 existing skips),385 extension files/5,291 tests and120 documentation pages/routes. The owning guarded-approval SDD and original driver remain byte-unchanged. Application source, scripts, workflows and four bundles match parentc7; the package command keeps every parent control in order and adds the one existing packaged group.
+
+All14 packaged producer-trust scenarios pass again against the actual d306 Action bundleSHA5d98f78435883214fcdd2c8e35aef0a3fece3b8f35ef24a76de7c435819d697b; the complete raw ledger is [retained](current-parent-d306/packaged.jsonl) with [acceptance and exact hashes](current-parent-d306/acceptance.json). All four bundles reproduce byte for byte in a normal local build. Real GitHub writes, evaluated-pilot writes and qualification model calls remain0. Native final-SHA checks are pending. These controls do not establish independent producer attestation, install a default workflow or qualify/activate a model profile.
+
+## Historical initial campaign
+
 The existing packaged approval consumer passes **14 controlled cases** against
 only a loopback fake GitHub service. This audit changes no production approval
 code or policy. The application baseline is ccefb27627cd627ccdb7d5666fd174c2ac1da07b;
