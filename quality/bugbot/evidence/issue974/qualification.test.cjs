@@ -806,3 +806,5 @@ test('ev974-C31 corpus collector failure aborts siblings and awaits their confir
 
 require('./review-driver-components.cjs');
 require('./component-coverage-gate-components.cjs');
+
+require('./stop-record-components.cjs');

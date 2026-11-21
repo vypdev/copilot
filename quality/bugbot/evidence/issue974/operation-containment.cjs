@@ -260,7 +260,9 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
             stopping = true;
             stopRequest = (async () => {
                 await inspect();
-                await record({ event: 'scope-stop-request', identity, scopeId: id, reason });
+                let recordFailure;
+                try { await record({ event: 'scope-stop-request', identity, scopeId: id, reason }); }
+                catch (cause) { recordFailure = { cause }; }
                 lifetime?.end();
                 // Escalation begins AFTER an actual termination request only.
                 // It never caps investigation/run/wait/heartbeat duration.
@@ -272,7 +274,11 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
                     if (startRequest) await startRequest.catch(() => undefined);
                     lifetime?.end();
                     if (starting) await api('POST', '/containers/' + id + '/wait?condition=not-running');
-                    return await confirmStopped();
+                    let proof;
+                    try { proof = await confirmStopped(); }
+                    catch (cause) { throw recordFailure ? recordFailure.cause : cause; }
+                    if (recordFailure) throw recordFailure.cause;
+                    return proof;
                 } finally {
                     clearTimeout(force); lifetime?.destroy();
                     // Settle any already-issued owned effect before cleanup.
