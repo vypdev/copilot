@@ -19,6 +19,7 @@ const controller = () => new AbortController();
 // SDK, not on Docker. Their synthetic confirmations are not native acceptance.
 const leases: { release(): void; done: Promise<unknown> }[] = [];
 const stopHooks = new Map<AbortSignal, () => Promise<void>>();
+const completedFixtureStops = new Set<AbortSignal>();
 let leaseId = 0;
 function inFixtureScope<T>(signal: AbortSignal, execute: () => T): T {
     if (signal.aborted) return execute();
@@ -29,7 +30,10 @@ function inFixtureScope<T>(signal: AbortSignal, execute: () => T): T {
     const held = new Promise<void>(resolve => { release = resolve; });
     const stopped = new Promise<QualificationOperationStopped>((resolve, reject) => { confirm = resolve; fail = reject; });
     const port: QualificationOperationScope = { identity, scopeId, signal, stopped, requestStop() {
-        void Promise.resolve().then(() => stopHooks.get(signal)?.()).then(() => confirm({ identity, scopeId, namespaceInitStopped: true }), fail);
+        void Promise.resolve().then(() => stopHooks.get(signal)?.()).then(() => {
+            completedFixtureStops.add(signal);
+            confirm({ identity, scopeId, namespaceInitStopped: true });
+        }, fail);
     } };
     let value!: T, failure: { error: unknown } | undefined;
     const done = withQualificationOperationScope(port, async () => {
@@ -65,7 +69,8 @@ async function until(predicate: () => boolean): Promise<void> {
 beforeAll(() => { f = sourceSnapshotFixture(); });
 afterEach(async () => {
     const current = leases.splice(0); for (const lease of current) lease.release(); await Promise.all(current.map(lease => lease.done));
-    stopHooks.clear(); for (const directory of owned.splice(0)) rmSync(directory, { recursive: true, force: true });
+    stopHooks.clear(); completedFixtureStops.clear();
+    for (const directory of owned.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
 afterAll(() => f.cleanup());
 
@@ -140,6 +145,7 @@ it('ev974-C02 retains canonical workspace, ordinary read-only Codex argv, native
         expect(existsSync(p.runtimeDirectory)).toBe(true);
         c.abort();
         expect(await outcome).toMatchObject({ category: 'cancelled' });
+        expect(completedFixtureStops.has(c.signal)).toBe(true);
         await until(() => existsSync(stopped));
         expect(existsSync(p.runtimeDirectory)).toBe(false);
         expect(readFileSync(stopped, 'utf8')).toBe('terminated');
@@ -155,10 +161,10 @@ it('ev974-C02 retains canonical workspace, ordinary read-only Codex argv, native
         try {
             await until(() => existsSync(ready)); pid = Number(readFileSync(ready, 'utf8'));
             other.abort(); expect(await running).toMatchObject({ category: 'cancelled' });
-            await until(() => {
-                try { process.kill(pid!, 0); return false; }
-                catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') return true; throw error; }
-            });
+            // The stop hook already observed this exact descendant's ESRCH
+            // before confirming. Require that ordering before SDK settlement;
+            // a later bare PID lookup cannot identify the completed operation.
+            expect(completedFixtureStops.has(other.signal)).toBe(true);
             pid = undefined;
             expect(existsSync(second.runtimeDirectory)).toBe(false);
         } finally {

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "priorHook": "943 suites/18743 assertions PASS; one C03 post-outcome bare-PID lookup did not reachESRCH within existing5s fixture bound",
+  "unchangedFocused": "one selected C03 PASS;14unselected tests skipped by testNamePattern, not a full suite proof",
+  "causeLimits": "The original failed process identity was not retained; PID reuse, zombie state or another exclusive cause is not independently established",
+  "preservedTerminationAssertion": "stopFixture still waits for the exact originally captured descendant ESRCH before completing its actual stop callback, for both graceful and TERM-ignoring child cases",
+  "orderingCorrection": "record callback completion immediately before synthetic scope confirmation; require that completion before SDK terminal settlement in both cases; remove redundant post-confirmation PID lookup which does not bind later PID identity",
+  "currentFocused": "all15admission/cancellation cases PASS,0fail/skip; same15s Jest/5s cleanup limits",
+  "productSourceTimeoutsOrSignalsChanged": false,
+  "nativeSdkAcceptanceClaimed": false,
+  "qualificationModelCalls": 0,
+  "production": "disabled"
+}
