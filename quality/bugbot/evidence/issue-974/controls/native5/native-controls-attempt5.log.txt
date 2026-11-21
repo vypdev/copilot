@@ -1,0 +1,12 @@
+✔ ev974-C32 actual contained SDK cancels escaped descendants (30999.572166ms)
+✔ ev974-C33 actual contained SDK cancels escaped descendants (31665.9695ms)
+✔ ev974-C34 actual outer SIGKILL closes Engine lifetime and retains incomplete evidence (31280.07325ms)
+✔ ev974-C35 actual completion/cancel races preserve identity and leave an unrelated owned scope running (65395.497708ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 159444.422833

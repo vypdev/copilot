@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "kind": "actual ordinary SDK model-free whole-operation native acceptance",
+  "implementation": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+  "planRevision": "13e31eb0b1ed9a260f00e78de13091c295b9520c",
+  "image": "sha256:d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+  "counts": {
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "exitCode": 0,
+  "logSha256": "007d105dc5a47e9268e470b9b832074f49881a39feaecb10aaadd785ebc3c78e",
+  "sameFrozenTuple": true,
+  "priorPartialResultsPooled": false,
+  "actualScopes": 6,
+  "allSixScopesConfirmedRemoved": true,
+  "cases": {
+    "ev974-C32": "quiet escaped new-session descendant; SDK settled; explicit abort confirms whole namespace stopped",
+    "ev974-C33": "double-fork reparented inherited pipes; SDK pending; explicit abort settles after namespace stopped",
+    "ev974-C34": "actual owned bootstrap SIGKILL; stdin lifetime ends namespace; incomplete evidence retained; positively owned stopped scope removed",
+    "ev974-C35": "normal completion and completion/cancel race preserve separate scope identities; unrelated owned sentinel remains running until own cleanup"
+  },
+  "qualificationModelCalls": 0,
+  "174": "unstarted",
+  "42": "unstarted",
+  "profileQualified": false,
+  "changedModuleGlobalCoverageSatisfied": false,
+  "full42ScientificComparisonAdmissionSatisfied": false,
+  "pilotWriteAttempts": 0,
+  "production": "disabled"
+}
