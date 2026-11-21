@@ -1,0 +1,21 @@
+{
+  "started": "2026-11-21T03:22:45.347787+00:00",
+  "finished": "2026-11-21T03:29:01.851009+00:00",
+  "exitCode": 0,
+  "parent": "25c41a97a658ab85ba9713d276e6d6e17c4e4858",
+  "headAfter": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+  "statusAfter": "",
+  "log": "/private/tmp/copilot-goal-974-engine-mount-commit.log",
+  "bytes": 536392,
+  "sha256": "e60ed5eba426319b1e37b75cb10dd81cd755bbd514ff7fb388e796431d471532",
+  "suites": [
+    "Test Suites: 944 passed, 944 total"
+  ],
+  "tests": [
+    "Tests:       35 skipped, 18716 passed, 18751 total"
+  ],
+  "pushed": false,
+  "qualificationModelCalls": 0,
+  "native4": "unexecuted",
+  "production": "disabled"
+}

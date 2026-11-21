@@ -1,5 +1,14 @@
 # EV-07 v2 detector qualification — issue #974
 
+Current preparation: implementation `e4bade2` is pushed and passes all 239 Node
+controls without failures, skips or cancellations, plus its normal SDK hooks.
+The corrected immutable SDK image and four new native-only plans are recorded
+in [the current tuple](../issue-974/native-controls/e4bade2/README.md).
+The two prior native commands failed admission before any SDK scope started;
+actual C32–C35 acceptance remains 0/4. Changed-module coverage and the complete
+scientific/comparison gates remain unmet. All174/42 model measurements are
+unstarted and production remains disabled.
+
 **Implementation in progress; the corpus and paired full reviews are unstarted.**
 No detector measurement or qualified profile is recorded here. Production
 verification stays disabled and evaluated PR write attempts remain zero.
