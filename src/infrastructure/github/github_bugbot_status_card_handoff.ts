@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
     isBugbotStatusCardSource, readBugbotStatusCardHead, type BugbotStatusCardWakeup,
 } from '../../application/policies/bugbot_status_card_publication_policy';
@@ -47,4 +48,10 @@ export function encodeGithubBugbotStatusCardHandoff(request: CardRequest): { pul
     const { pullNumber } = request.source;
     const work = JSON.stringify({ version: 1, ...request });
     return decodeGithubBugbotStatusCardHandoff({ pullNumber, work }) ? { pull_number: String(pullNumber), work } : undefined;
+}
+
+/** A correlation key binds bytes; the worker still validates publication authority. */
+export function githubBugbotStatusCardOperation(work: string, sequence?: number): string {
+    if (sequence !== undefined && (!Number.isSafeInteger(sequence) || sequence < 0)) throw new Error('Invalid progress correlation sequence.');
+    return (sequence === undefined ? '' : String(sequence) + ':') + createHash('sha256').update(work).digest('hex');
 }

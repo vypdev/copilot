@@ -728,6 +728,8 @@
         "src/infrastructure/github/github_bugbot_status_card_workflow.ts",
         "src/infrastructure/github/github_bugbot_status_card_dispatch.ts",
         "src/infrastructure/github/native_list_pagination.ts",
+        "src/infrastructure/github/github_bugbot_status_card_acknowledgment.ts",
+        "src/infrastructure/github/github_bugbot_status_card_handoff.ts",
         "quality/bugbot/evidence/issue-950/execution-provenance.cjs",
         "quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs",
         "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs",

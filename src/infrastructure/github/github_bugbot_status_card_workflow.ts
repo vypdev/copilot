@@ -5,7 +5,7 @@ import { canonicalGitObjectId } from '../../domain/git_object_id';
 import { PullRequestLifecycleRepository } from '../../data/repository/pull_request/pull_request_lifecycle_repository';
 import { createPullRequestLifecycleClient } from '../composition/github_pull_request_client_factory';
 import { createBugbotCompositionRoot } from '../composition/bugbot_composition_root';
-import { decodeGithubBugbotStatusCardHandoff } from './github_bugbot_status_card_handoff';
+import { decodeGithubBugbotStatusCardHandoff, githubBugbotStatusCardOperation } from './github_bugbot_status_card_handoff';
 import { runAdmittedGithubBugbotStatusCardJob } from './github_bugbot_status_card_lane';
 import { nativeBugbotAnalysisPath, readNativeBugbotStatusCardReview, type NativeGithubRun, type NativeGithubCheck } from './github_bugbot_status_card_observation';
 import { bugbotStatusCardPath } from './github_bugbot_status_card_installation';
@@ -21,12 +21,18 @@ const sourceEvents = new Map([
 export async function runGithubBugbotStatusCardWorkflow(binding: {
     owner: string; repository: string; event: string; ref: string; workflowRef: string;
     actor: string; token: string; evidenceToken: string; server: string;
-    locale: string; policy: string; inputs: { pullNumber: unknown; work: unknown };
+    locale: string; policy: string; inputs: { pullNumber: unknown; work: unknown; operation: unknown };
 }) {
     const request = decodeGithubBugbotStatusCardHandoff(binding.inputs);
+    const correlation = typeof binding.inputs.operation === 'string'
+        ? binding.inputs.operation.match(/^(0|[1-9]\d*):[a-f0-9]{64}$/u)?.[1] : undefined;
+    const sequence = correlation === undefined ? undefined : Number(correlation);
     const repository = binding.owner + '/' + binding.repository;
     if (binding.event !== 'workflow_dispatch' || binding.workflowRef !== repository + '/' + bugbotStatusCardPath + '@' + binding.ref
-        || !/^https:\/\/[a-z0-9.-]+(?::\d+)?$/iu.test(binding.server) || !request) return 'skipped';
+        || !/^https:\/\/[a-z0-9.-]+(?::\d+)?$/iu.test(binding.server) || !request
+        || request.kind === 'progress' && (sequence === undefined || !Number.isSafeInteger(sequence))
+        || typeof binding.inputs.work !== 'string'
+        || binding.inputs.operation !== githubBugbotStatusCardOperation(binding.inputs.work, request.kind === 'progress' ? sequence : undefined)) return 'skipped';
     const api = getOctokit(binding.evidenceToken);
     const scope = { owner: binding.owner, repo: binding.repository };
     const [authenticated, repo] = await Promise.all([

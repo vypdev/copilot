@@ -1,5 +1,5 @@
 import { runGithubBugbotStatusCardWorkflow } from '../github_bugbot_status_card_workflow';
-import { encodeGithubBugbotStatusCardHandoff } from '../github_bugbot_status_card_handoff';
+import { encodeGithubBugbotStatusCardHandoff, githubBugbotStatusCardOperation } from '../github_bugbot_status_card_handoff';
 import { buildBugbotProgressCheckMarker } from '../../../application/policies/bugbot_progress_check_observation_policy';
 import { buildBugbotReviewProjection } from '../../../domain/bugbot/review_projection';
 import { renderBugbotStatusCard } from '../../../application/policies/bugbot_review_presentation_policy';
@@ -54,7 +54,7 @@ const progress = { source, runId: 23, attempt: 2, kind: 'progress' as const };
 function invoke(request: Parameters<typeof encodeGithubBugbotStatusCardHandoff>[0] = progress,
     overrides: Partial<typeof base> = {}) {
     const wire = encodeGithubBugbotStatusCardHandoff(request)!;
-    return runGithubBugbotStatusCardWorkflow({ ...base, ...overrides, inputs: { pullNumber: wire.pull_number, work: wire.work } });
+    return runGithubBugbotStatusCardWorkflow({ ...base, ...overrides, inputs: { pullNumber: wire.pull_number, work: wire.work, operation: githubBugbotStatusCardOperation(wire.work, request.kind === 'progress' ? 0 : undefined) } });
 }
 
 beforeEach(() => {
@@ -143,4 +143,13 @@ it('preserves active native progress when an independent authorized recheck refr
     await expect(invoke({ source, runId: 24, attempt: 1, kind: 'state-refresh', verifiedBody })).resolves.toBe('updated');
     expect(mockUpdate.mock.calls[0][2]).toContain('18/50 partitions validated');
     expect(mockUpdate.mock.calls[0][2].endsWith(verifiedBody)).toBe(true);
+});
+
+it.each([undefined, 'f'.repeat(64)])('refuses a missing or forged operation correlation before provider reads (%s)', async operation => {
+    const wire = encodeGithubBugbotStatusCardHandoff(progress)!;
+    await expect(runGithubBugbotStatusCardWorkflow({ ...base, inputs: { pullNumber: wire.pull_number, work: wire.work, operation } }))
+        .resolves.toBe('skipped');
+    expect(mockApi.rest.repos.get).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockAdd).not.toHaveBeenCalled();
 });
