@@ -244,3 +244,21 @@ The selected SDD remains byte-identical. Normal hooks, publication and fresh
 final-head native review/gates are still required for these new source bytes.
 No installation, native canary, actual174/42 campaign or qualified profile is
 claimed. Production remains disabled; qualification and pilot writes remain0.
+
+
+### Lossless second-review evidence transport correction
+
+The b82ec8c native Commit/Verification route stops before model assessment with
+`validation.evidence-unavailable`, Retryable:No. The new generated coverage and
+report archives used `.json.gz`, outside the existing generated-artifact path
+contract. Their exact compressed and decompressed bytes now use `.json.log.gz`,
+matching the unchanged prior archive format. The prior Git objects remain
+reachable and every raw/compressed hash is verified; the policy is unchanged.
+The original native failure and verification output are also retained, bringing
+the current archive count to92. See `review-round2/evidence-transport-correction.json`.
+
+No runtime source, SDK test, selected SDD, metadata/I/O limit, workflow or bundle
+changes for this correction. The preceding normal hooks passed966 SDK
+suites/19,667 assertions,35 historical skips/build/lint; those results are
+retained. Fresh final-head native checks/review remain mandatory. The failed
+run is not retried. Production remains disabled and pilot writes0.
