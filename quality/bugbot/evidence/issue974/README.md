@@ -282,3 +282,17 @@ its ancestor, then advertises HEAD and excludes implementation X's objects.
 C27 fetches that delta by exact Y SHA into a separate repository containing only
 X, verifies its plan bytes, and rejects a moved HEAD or occupied output. This
 is model-free Git protocol evidence, not an SDK image or kernel observation.
+
+The first explicit four-test native command at plan revision `3d53cdb` failed
+all four controls at host dependency byte admission, before probes or SDK scope
+creation. The intervening normal hook changed the development dependency tree.
+The [retained negative and frozen-host correction](../issue-974/native-controls/1f20e9-frozen-host/README.md)
+separate that refusal from actual SDK cancellation acceptance. The corrected
+plans use a complete physical dependency copy in a separate owned qualification
+checkout; development hooks do not run there. They retain the same image,
+worker tuple, drivers and strict byte checks. No model call has occurred.
+
+The current owning SDD is restored to the exact Action-published `8d443500`
+bytes. Implementation status and additional path evidence live in these
+receipts; changing those notes inside the selected publication caused the real
+Commit validation failure. No approved requirement or numerical gate changed.
