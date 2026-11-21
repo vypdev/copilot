@@ -38,18 +38,18 @@ async function run(campaign) {
     };
     process.once('SIGINT', cancel);
     process.once('SIGTERM', cancel);
-    record({ event: 'start', at: new Date().toISOString(), planned: slots.length, concurrency, implementation, provenance,
-        plan: preregistration.sha256, preregistration });
-    for (const slot of slots) record({ event: 'slot-planned', ...slot, status: 'not-started' });
     try {
+        record({ event: 'start', at: new Date().toISOString(), planned: slots.length, concurrency, implementation, provenance,
+            plan: preregistration.sha256, preregistration });
+        for (const slot of slots) record({ event: 'slot-planned', ...slot, status: 'not-started' });
         async function worker() {
             while (next < slots.length && !scopeCancel.signal.aborted && !blocked()) {
                 const slot = slots[next++];
                 const name = slot.id + '-' + slot.repetition;
                 const destination = path.join(output, name + '.jsonl');
                 const log = fs.openSync(path.join(output, name + '.log'), 'wx', 0o600);
-                record({ event: 'slot-start', ...slot });
                 try {
+                    record({ event: 'slot-start', ...slot });
                     if (plan.containment) {
                         const exit = await runContainedReview(campaign, slot, destination, record, scopeCancel.signal);
                         if (exit.code !== 0) { failed = true; scopeCancel.abort(); }
