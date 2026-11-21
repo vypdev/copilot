@@ -111,3 +111,91 @@ The executable map is `specs/setup-publisher-installation-acceptance.json`. `pnp
 The fixed 64-case IDs and distribution in section14 remain the acceptance contract. Component counts supplement the named map. Incomplete-catalog fallback, source/default drift, unknown POST outcomes, full PR pagination, real shared-journal cross-purpose recovery and ordinary Commander defaults have explicit regression controls. Retain counterfactual failures and distinguish focused passes from the final full SDK/module/changed-path and native source checks. None establishes default installation or canary acceptance.
 
 The operational #977 evidence packet is maintained on its own retained branch after actual source integration; it is not an existing file at this immutable source-feature base. Its prepared source is [the historical review packet](https://github.com/vypdev/copilot/blob/c7d6d6a2eb0db6d02376df8348707e5795a36999/quality/bugbot/evidence/issue-977/README.md). This link is history, not installation authority.
+
+## Local batch recovery review corrections
+
+Two review findings were reproduced against the published runtime using the real
+closed-v1 disk journal, the common delivery coordinator and the GitHub adapters.
+Seven of nine new controls failed before correction; the two unknown-object POST
+controls already passed. After correction all nine pass. The final expanded
+cohort passes 177 assertions in four suites; its isolated coverage command still
+exits 1 because unrelated global owners are not run. All three changed runtime
+modules are 100% in statements, lines, branches and functions in that report.
+
+Batch preparation now forwards the semantic object observer. Confirmed no-POST
+failures retain the existing `preflight` reason, while unknown tree/commit
+creation without an ID remains uncertain, including after cancellation. A known
+commit is retained before subsequent proof reads. A fresh reviewed batch Apply
+explicitly permits inspect-first creation of a confirmed absent ref/PR; common
+delivery otherwise defaults to inspect-only recovery. The publisher's completed
+operation remains read-only. The v1 parser/fields and publisher v2 shape are
+unchanged. The selected companion SDD is byte-identical to its official seed.
+
+These measurements were captured before publication. They are not final native
+acceptance, resolution of the review threads, installation, or qualification.
+The later corrections below and final new-head checks still apply.
+
+## Cancellation, C02 mapping and transport review
+
+The cancellation cohort reproduces13 failures with131 passes before correction,
+then144 passes afterward. Hidden token/approval cancellation and cancelled Apply
+errors now return130; explicit decline remains successful. Cancellation during
+post-approval or initial Apply freshness reads is reported as cancellation,
+including a rejected read after interruption. Active-session credential/fact
+mismatches still report stale and the approval callback remains revocable.
+
+C02 now maps to four dedicated URL/contradictory ID/name/default assertions,
+rather than reusing the C21 inspected-coordinate drift assertion. Its complete
+planning suite passes95 tests. The C01–C64 IDs, scenario text, requirements and
+distribution are unchanged; a fresh complete execution map is still required.
+
+Four real child-process transport controls do not reproduce the claimed Undici
+bypass. Captured native fetch deliberately bypasses the global-fetch replacement;
+the actual Octokit dependency's Undici fetch is tested separately. Each unguarded
+positive control makes one connection/request to an ephemeral loopback server.
+With the unchanged guard loaded, each request reaches the observational Undici
+diagnostic and is rejected at `Socket.prototype.connect`: zero server connections
+and zero HTTP requests. Diagnostics remain observational and never throw. This
+tests the existing pre-dispatch socket fence; it does not claim a diagnostics
+counter alone prevents dispatch or establish an actual installation.
+
+## Final local inventory and proof-retention corrections
+
+The unresolved-local-reference finding is confirmed: the same classifier cohort
+moves from42PASS/3FAIL to45PASS; combined reader/application controls pass111.
+The reader now treats literal local Action/reusable references as unknown. An
+actual pinned20-workflow default-tree counterfactual changes `absent` to `unknown`
+at12 paths. This intentionally supersedes the historical49GET preview: the
+current #977 destination is unsupported until its local execution inventory is
+reconciled. No default/template write or installation exception was introduced.
+
+The first complete local coverage attempt passes965 suites/19,653 assertions,
+with35 historical skips, but loses one existing SDK-contract suite to worker
+SIGSEGV before its assertions run. A privately retained macOS report places the
+fault in V8 GC. A [matching Node issue](https://github.com/nodejs/node/issues/62393)
+is a diagnostic lead; causality here remains unproven. The two missing assertions
+pass in isolation. Exactly one technical full retry, with identical source,
+Node/Jest configuration and flags, then passes966 suites/19,655 assertions,
+all repository budgets,60/60 mapped publisher Jest cases and385 extension
+files/5,291 assertions. The original failure is retained. This is not a
+qualification campaign or a runtime/configuration change.
+
+Subsequent manual review reproduces two ways an early read/cancellation discarded
+an already confirmed no-POST proof. The small follow-up preserves that fact until
+the coordinator journals a new preparation intent. Both private-baseline controls
+fail before this refinement; the expanded four-suite cohort then passes179
+assertions and the changed Apply module remains100% allmetrics. Its isolated
+whole-coverage command exits1 for unrun global owners. The full retry above is
+explicitly the preceding source snapshot; normal hooks and fresh final-head
+native coverage/review remain required for the refinement. No full result is
+silently carried across the changed runtime bytes.
+
+The first normal Git-commit hook then loses a different existing two-case suite
+to SIGSEGV before creating a commit:965 suites/19,655 passes,35 historical skips,
+no assertion failure. Its second private macOS report has the same first six V8
+GC frames. The negative is retained. A separate local validation control selects
+the same installed Node24.20.0 with the reported `--no-sparkplug` mitigation via
+a temporary process-only executable wrapper. Build, test and lint hooks remain
+configured unchanged; generated bundle bytes must match. This snapshot precedes
+that control's outcome. Repository/CI configuration, production and qualification
+runtime are unchanged; default final-head native gates remain mandatory.

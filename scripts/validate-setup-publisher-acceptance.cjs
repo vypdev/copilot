@@ -12,7 +12,13 @@ const published = new Map(specification.split('\n').filter(line => line.startsWi
   return [id, { area, requirements: requirements.split(', '), assertion }];
 }));
 const reportPath = process.argv[2];
-const report = reportPath ? JSON.parse(readFileSync(resolve(reportPath), 'utf8')) : undefined;
+const reportSupplied = reportPath !== undefined;
+const report = reportSupplied ? JSON.parse(readFileSync(resolve(reportPath), 'utf8')) : undefined;
+if (reportSupplied && (report === null || typeof report !== 'object' || Array.isArray(report)
+  || !Array.isArray(report.testResults))) {
+  console.error('Publisher acceptance: supplied report must contain a testResults array.');
+  process.exit(1);
+}
 const executed = new Map();
 for (const suite of report?.testResults ?? []) {
   const file = relativeJestSuitePath(root, suite.name);
@@ -45,12 +51,12 @@ for (const item of cases) {
     evidenceOwners.set(key, item.id);
     if (packaged && (evidence.file !== 'scripts/smoke-packaged-setup-publisher.cjs' || evidence.test !== item.id)) errors.push(`${item.id}: wrong package smoke control.`);
     if (!packaged && (!evidence.file.startsWith('src/') || !evidence.file.endsWith('.test.ts'))) errors.push(`${item.id}: wrong Jest boundary.`);
-    if (!packaged && report && (!executed.has(key) || executed.get(key).some(status => status !== 'passed'))) {
+    if (!packaged && reportSupplied && (!executed.has(key) || executed.get(key).some(status => status !== 'passed'))) {
       errors.push(`${item.id}: named assertion absent, failed or skipped in the supplied run: ${key}`);
     }
   }
 }
 if (jestCases !== 60) errors.push('Exactly 60 cases must use Jest; four require the extracted package.');
 if (errors.length) { errors.forEach(error => console.error(error)); process.exitCode = 1; }
-else if (report) console.log('Publisher acceptance: 60/60 mapped Jest cases passed. C55–C58 require the separate extracted npm-package smoke gate.');
+else if (reportSupplied) console.log('Publisher acceptance: 60/60 mapped Jest cases passed. C55–C58 require the separate extracted npm-package smoke gate.');
 else console.log('Publisher acceptance: 64 cases registered; execution is not established by ledger validation.');

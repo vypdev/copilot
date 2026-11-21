@@ -32,10 +32,10 @@ export class ApplySetupBatchUseCase {
         const retainedReceipt = receipt;
         if (['waiting-for-merge', 'verification-pending', 'unchanged', 'blocked'].includes(receipt.status)) continue;
         if (!this.ports.presentation.active()) {
-          await update(index, { ...receipt, status: 'cancelled', reason: 'cancelled' });
+          await update(index, { ...receipt, status: 'cancelled', reason: receipt.reason === 'preflight' ? 'preflight' : 'cancelled' });
           continue;
         }
-        receipt = { ...receipt, status: 'applying', reason: undefined };
+        receipt = { ...receipt, status: 'applying', reason: receipt.reason === 'preflight' ? 'preflight' : undefined };
         await update(index, receipt);
         const effect = async (name: SetupBatchTargetReceipt['effects'][number], work: () => Promise<void>): Promise<void> => {
           if (receipt.effects.includes(name)) return;
@@ -59,20 +59,24 @@ export class ApplySetupBatchUseCase {
           if (!targetPlan.files.length) {
             await update(index, { ...receipt, status: 'verification-pending' }); continue;
           }
-          const interrupted = ['partial', 'applying'].includes(retainedReceipt.status);
+          // The existing v1 preflight reason records a confirmed stop before
+          // object creation. Other interrupted receipts stay conservative.
+          const interrupted = ['partial', 'applying', 'cancelled'].includes(retainedReceipt.status) && retainedReceipt.reason !== 'preflight';
           const uncertain = interrupted && !retainedReceipt.preparedCommit
             && ['access', 'variables', 'labels', 'issue-types'].every(name => retainedReceipt.effects.includes(name as SetupBatchTargetReceipt['effects'][number]))
             ? 'prepared-objects' as const : interrupted && retainedReceipt.preparedCommit
               ? !retainedReceipt.effects.includes('branch') ? 'branch' as const : !retainedReceipt.effects.includes('pull-request') ? 'pull-request' as const : undefined : undefined;
           await this.ports.coordinator.execute({
-            prepareCommit: () => this.ports.writer.prepareCommit(targetPlan, plan.operationId, token),
+            prepareCommit: observe => this.ports.writer.prepareCommit(targetPlan, plan.operationId, token, observe),
             branch: (commit, inspectOnly) => this.ports.writer.branch(targetPlan, plan.operationId, commit, token, inspectOnly),
             pullRequest: (commit, inspectOnly) => this.ports.writer.pullRequest(targetPlan, plan.operationId, commit, token, inspectOnly),
           }, {
             active: () => this.ports.presentation.active(),
             revalidate: () => this.ports.writer.revalidate(targetPlan, token, receipt.effects),
+            recovery: 'reviewed-create-if-absent',
             retain: async state => {
               receipt = { ...receipt, preparedCommit: state.preparedCommit, pullRequestNumber: state.pullRequestNumber,
+                reason: !state.preparedCommit && state.uncertain === undefined ? 'preflight' : undefined,
                 effects: [...receipt.effects.filter(name => name !== 'branch' && name !== 'pull-request'), ...state.effects] };
               await update(index, receipt);
             },
@@ -82,8 +86,10 @@ export class ApplySetupBatchUseCase {
         } catch (error) {
           const stale = error instanceof StaleSetupApply || error instanceof SetupInstallationDeliveryError && error.reason === 'drift';
           const cancelled = error instanceof CancelledSetupApply || error instanceof SetupInstallationDeliveryError && error.reason === 'cancelled';
+          const beforePreparation = !receipt.preparedCommit && (receipt.reason === 'preflight'
+            || error instanceof SetupInstallationDeliveryError && !error.retained.preparedCommit && error.retained.uncertain === undefined);
           await update(index, { ...receipt, status: stale ? 'blocked' : cancelled ? 'cancelled' : 'partial',
-          reason: stale ? 'drift' : cancelled ? 'cancelled' : 'provider' });
+          reason: stale ? 'drift' : beforePreparation ? 'preflight' : cancelled ? 'cancelled' : 'provider' });
         }
       }
       return operation;

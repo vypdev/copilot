@@ -2,7 +2,7 @@ import type { SetupInstallationDeliveryState } from '../contracts/setup_installa
 
 /** Bound to one immutable approved plan and its private credential session by composition. */
 export interface SetupInstallationDeliveryCommands {
-  prepareCommit(): Promise<string>;
+  prepareCommit(observe?: SetupInstallationObjectObserver): Promise<string>;
   branch(commit: string, inspectOnly: boolean): Promise<void>;
   pullRequest(commit: string, inspectOnly: boolean): Promise<number>;
 }
@@ -10,6 +10,8 @@ export interface SetupInstallationDeliveryControl {
   active(): boolean;
   revalidate(): Promise<boolean>;
   retain(state: SetupInstallationDeliveryState): Promise<void>;
+  /** Only after renewed review: inspect exact ownership and create a confirmed absent ref/PR. */
+  readonly recovery?: 'reviewed-create-if-absent';
 }
 
 /** Stateless common file phases supplied by a composition root, never constructed by an application caller. */

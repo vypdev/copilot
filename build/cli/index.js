@@ -78690,10 +78690,10 @@ class ApplySetupBatchUseCase {
                 if (['waiting-for-merge', 'verification-pending', 'unchanged', 'blocked'].includes(receipt.status))
                     continue;
                 if (!this.ports.presentation.active()) {
-                    await update(index, { ...receipt, status: 'cancelled', reason: 'cancelled' });
+                    await update(index, { ...receipt, status: 'cancelled', reason: receipt.reason === 'preflight' ? 'preflight' : 'cancelled' });
                     continue;
                 }
-                receipt = { ...receipt, status: 'applying', reason: undefined };
+                receipt = { ...receipt, status: 'applying', reason: receipt.reason === 'preflight' ? 'preflight' : undefined };
                 await update(index, receipt);
                 const effect = async (name, work) => {
                     if (receipt.effects.includes(name))
@@ -78723,20 +78723,24 @@ class ApplySetupBatchUseCase {
                         await update(index, { ...receipt, status: 'verification-pending' });
                         continue;
                     }
-                    const interrupted = ['partial', 'applying'].includes(retainedReceipt.status);
+                    // The existing v1 preflight reason records a confirmed stop before
+                    // object creation. Other interrupted receipts stay conservative.
+                    const interrupted = ['partial', 'applying', 'cancelled'].includes(retainedReceipt.status) && retainedReceipt.reason !== 'preflight';
                     const uncertain = interrupted && !retainedReceipt.preparedCommit
                         && ['access', 'variables', 'labels', 'issue-types'].every(name => retainedReceipt.effects.includes(name))
                         ? 'prepared-objects' : interrupted && retainedReceipt.preparedCommit
                         ? !retainedReceipt.effects.includes('branch') ? 'branch' : !retainedReceipt.effects.includes('pull-request') ? 'pull-request' : undefined : undefined;
                     await this.ports.coordinator.execute({
-                        prepareCommit: () => this.ports.writer.prepareCommit(targetPlan, plan.operationId, token),
+                        prepareCommit: observe => this.ports.writer.prepareCommit(targetPlan, plan.operationId, token, observe),
                         branch: (commit, inspectOnly) => this.ports.writer.branch(targetPlan, plan.operationId, commit, token, inspectOnly),
                         pullRequest: (commit, inspectOnly) => this.ports.writer.pullRequest(targetPlan, plan.operationId, commit, token, inspectOnly),
                     }, {
                         active: () => this.ports.presentation.active(),
                         revalidate: () => this.ports.writer.revalidate(targetPlan, token, receipt.effects),
+                        recovery: 'reviewed-create-if-absent',
                         retain: async (state) => {
                             receipt = { ...receipt, preparedCommit: state.preparedCommit, pullRequestNumber: state.pullRequestNumber,
+                                reason: !state.preparedCommit && state.uncertain === undefined ? 'preflight' : undefined,
                                 effects: [...receipt.effects.filter(name => name !== 'branch' && name !== 'pull-request'), ...state.effects] };
                             await update(index, receipt);
                         },
@@ -78747,8 +78751,10 @@ class ApplySetupBatchUseCase {
                 catch (error) {
                     const stale = error instanceof StaleSetupApply || error instanceof deliver_setup_installation_use_case_1.SetupInstallationDeliveryError && error.reason === 'drift';
                     const cancelled = error instanceof CancelledSetupApply || error instanceof deliver_setup_installation_use_case_1.SetupInstallationDeliveryError && error.reason === 'cancelled';
+                    const beforePreparation = !receipt.preparedCommit && (receipt.reason === 'preflight'
+                        || error instanceof deliver_setup_installation_use_case_1.SetupInstallationDeliveryError && !error.retained.preparedCommit && error.retained.uncertain === undefined);
                     await update(index, { ...receipt, status: stale ? 'blocked' : cancelled ? 'cancelled' : 'partial',
-                        reason: stale ? 'drift' : cancelled ? 'cancelled' : 'provider' });
+                        reason: stale ? 'drift' : beforePreparation ? 'preflight' : cancelled ? 'cancelled' : 'provider' });
                 }
             }
             return operation;
@@ -78837,7 +78843,7 @@ class ApplySetupPublisherUseCase {
                 throw fail('cancelled');
             const fresh = async () => this.ports.active() && await revalidate() && this.ports.active();
             if (!await fresh())
-                throw fail('stale');
+                throw fail(this.ports.active() ? 'stale' : 'cancelled');
             if (operation.uncertain === 'tree' || operation.uncertain === 'commit')
                 throw fail('uncertain-preparation');
             const writer = this.ports.delivery(plan, session, fresh);
@@ -78905,7 +78911,7 @@ class ApplySetupPublisherUseCase {
         catch (error) {
             if (error instanceof SetupPublisherApplyError)
                 throw error;
-            throw fail('delivery');
+            throw fail(this.ports.active() ? 'delivery' : 'cancelled');
         }
         finally {
             await journal(release);
@@ -79100,7 +79106,21 @@ class DeliverSetupInstallationUseCase {
             if (!state.preparedCommit) {
                 await fresh();
                 await retain({ ...state, uncertain: 'prepared-objects' });
-                const commit = await commands.prepareCommit();
+                let treeCreated = false;
+                const commit = await commands.prepareCommit(async (event) => {
+                    if (event.effect === 'tree' && event.state === 'completed')
+                        treeCreated = true;
+                    // Legacy batch journals cannot retain a tree ID. A known tree without
+                    // a commit remains uncertain; only proof of no object POST clears it.
+                    if (event.effect === 'tree' && event.state === 'not-started' && !treeCreated) {
+                        await retain({ ...state, uncertain: undefined });
+                    }
+                    if (event.effect === 'commit' && event.state === 'completed') {
+                        if (!/^[a-f0-9]{40}$/u.test(event.sha))
+                            throw new SetupInstallationDeliveryError('provider', state);
+                        await retain({ ...state, preparedCommit: event.sha, uncertain: undefined });
+                    }
+                });
                 if (!/^[a-f0-9]{40}$/u.test(commit))
                     throw new SetupInstallationDeliveryError('provider', state);
                 await retain({ ...state, preparedCommit: commit, uncertain: undefined });
@@ -79110,7 +79130,7 @@ class DeliverSetupInstallationUseCase {
                 if (state.effects.includes(name))
                     return;
                 await fresh();
-                const inspectOnly = state.uncertain === name;
+                const inspectOnly = state.uncertain === name && control.recovery !== 'reviewed-create-if-absent';
                 await retain({ ...state, uncertain: name });
                 await work(inspectOnly);
                 await retain({ ...state, effects: [...state.effects, name], uncertain: undefined });
@@ -80357,7 +80377,7 @@ class ReviewSetupPublisherUseCase {
         };
         try {
             if (!await revalidate())
-                throw new SetupPublisherReviewError('stale');
+                throw new SetupPublisherReviewError(this.ports.active() ? 'stale' : 'cancelled');
             return { plan, stage: 'apply', result: await apply(plan, session, revalidate) };
         }
         finally {
@@ -95579,6 +95599,7 @@ async function executeSetupPublisherCommand(input) {
                 throw new PublisherCommandError('tokenRequired');
             const entered = await terminal.readSecret(catalog.message('tokenPrompt'));
             if (entered.kind !== 'value') {
+                process.exitCode = 130;
                 write(catalog.message('cancelled') + '\n');
                 return;
             }
@@ -95607,6 +95628,8 @@ async function executeSetupPublisherCommand(input) {
         }, catalog.locale);
         token = undefined;
         const result = await installation.execute({ proposal, operationId, dryRun, resume });
+        if (result.stage === 'cancelled')
+            process.exitCode = 130;
         if (result.stage === 'apply')
             presenter.delivered(result.result);
         else
@@ -95625,6 +95648,8 @@ async function executeSetupPublisherCommand(input) {
             message = error.reason === 'destination-changed' ? 'stale'
                 : error.reason === 'authority-unverified' ? 'authority' : error.reason === 'source-unverified' ? 'sourceUnverified' : 'unsupported';
         else if (error instanceof review_setup_publisher_use_case_1.SetupPublisherReviewError)
+            message = error.reason === 'cancelled' ? 'cancelled' : error.reason === 'stale' ? 'stale' : 'blocked';
+        else if (error instanceof apply_setup_publisher_use_case_1.SetupPublisherApplyError)
             message = error.reason === 'cancelled' ? 'cancelled' : error.reason === 'stale' ? 'stale' : 'blocked';
         else if (error instanceof install_setup_publisher_use_case_1.SetupPublisherInstallationError)
             message = error.reason === 'resume-missing' ? 'resumeMissing'
@@ -125928,10 +125953,19 @@ class SetupBatchGithubApplyAdapter {
     }
     labels(plan, token) { return this.resources.labels(plan, token); }
     issueTypes(plan, token) { return this.resources.issueTypes(plan, token); }
-    async prepareCommit(plan, operationId, token) {
-        if (!await this.revalidate(plan, token, []))
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
-        return (await this.fileDelivery(plan, operationId, token)).prepareCommit();
+    async prepareCommit(plan, operationId, token, observe) {
+        let delivery;
+        try {
+            if (!await this.revalidate(plan, token, []))
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+            delivery = await this.fileDelivery(plan, operationId, token);
+        }
+        catch (error) {
+            // These reads precede delegation, so neither Git-object POST can have started.
+            await observe?.({ effect: 'tree', state: 'not-started' });
+            throw error;
+        }
+        return delivery.prepareCommit(observe);
     }
     async branch(plan, operationId, commit, token, inspectOnly = false) {
         return (await this.fileDelivery(plan, operationId, token)).branch(commit, inspectOnly);
@@ -129507,6 +129541,10 @@ function meaning(content) {
                     unknown = true;
                 else if (/(?:^|\/)copilot_bugbot_status_card\.ya?ml(?:@|$)/iu.test(scope.uses))
                     publisher = true;
+                // This inventory does not resolve local action metadata or reusable
+                // execution. A literal local path cannot prove publisher absence.
+                else if (scope.uses.startsWith('./'))
+                    unknown = true;
             }
             if (own(scope, 'with')) {
                 if (!object(scope.with))

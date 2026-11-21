@@ -291,6 +291,17 @@ describe('shared CLI/web batch session', () => {
     expect(f.ports.presentation.review).toHaveBeenCalledTimes(2); expect(f.ports.writer.variables).toHaveBeenCalledTimes(2);
     expect(f.ports.writer.branch).toHaveBeenCalledTimes(3); expect(f.ports.audit).toHaveBeenCalledTimes(3);
   });
+  it('preserves confirmed pre-POST recovery across renewed review and the mandatory permission audit', async () => {
+    const f = await sessionFixture(), prior = beginSetupBatchOperation(f.plan);
+    f.save({ ...prior, targets: [{ ...prior.targets[0], status: 'partial', reason: 'preflight',
+      effects: ['access', 'variables', 'labels', 'issue-types'] }, { ...prior.targets[1], status: 'verification-pending' }] });
+    f.ports.audit.mockImplementation(async () => {
+      expect(f.ports.presentation.review).toHaveBeenCalledTimes(1); return { ready: true };
+    });
+    const result = await f.session.execute({ ...f.request, resumeOperationId: id });
+    expect(result.outcome).toBe('complete'); expect(f.ports.audit).toHaveBeenCalledTimes(1);
+    expect(f.ports.writer.prepareCommit).toHaveBeenCalledTimes(1); expect(f.ports.writer.variables).not.toHaveBeenCalled();
+  });
   it('does not offer unlimited retries for repeatedly incomplete work', async () => {
     const f = await sessionFixture(); f.ports.writer.branch.mockRejectedValue(new Error('timeout')); f.ports.result.mockResolvedValue('retry');
     expect((await f.session.execute(f.request)).outcome).toBe('partial'); expect(f.ports.presentation.review).toHaveBeenCalledTimes(2);

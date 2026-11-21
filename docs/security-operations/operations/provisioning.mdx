@@ -56,6 +56,20 @@ capabilities after plan confirmation; reuse never skips that installation gate.
 Incomplete Secret revision metadata blocks a target during planning, before its
 questionnaire or rendered files are offered for approval.
 
+If preparation stops before any Git object is submitted, resume can retry the
+remaining file work after a new review and permission audit. Completed resource
+effects stay retained. A known commit is re-proved rather than recreated. For an
+unfinished ref or PR, recovery checks the exact owned identity and complete PR
+inventory first; a fresh approved attempt can create a confirmed absent target.
+An unknown tree or commit creation without its object ID remains blocked. A
+completed publisher-purpose operation continues to inspect its retained PR
+without creating another ref or PR.
+
+Cancelling publisher token entry or approval returns exit status130. An explicit
+decline returns success without applying. Cancellation during a post-approval
+read stays a cancellation; a changed credential session or inspected identity
+still requires a fresh review.
+
 Setup changes are checked against both the repository coverage budgets and the
 coverage of changed paths, including permission denial, cancellation, incomplete
 inventory and partial recovery. A passing global percentage alone does not prove
@@ -78,6 +92,12 @@ merged maintainer source and source blob hashes. It pins the canonical workflow'
 local Action invocation to that verified source commit. A maintainer merge
 establishes this source review boundary; it is not independent attestation of
 the producer's executable code.
+
+A local Action or reusable-workflow reference that this reader cannot inspect
+keeps publisher inventory unknown and blocks the proposal. A local path or a
+non-publisher selector alone cannot prove that no publisher already exists.
+Resolve that inventory before preparing a new preview; an older preview cannot
+authorize Apply after this result changes.
 
 The credential needs repository contents/PR write access and workflow-editing
 authority, including for preview because that authority forms part of the review.

@@ -83,3 +83,51 @@ and64 case rows retain their exact content. Current paths and implementation
 refinements live in [implementation-notes.md](implementation-notes.md); the prior
 as-built version remains in Git. The guard, runtime source and four bundles are
 unchanged. See sdd-selection-restoration.json and the retained native failure.
+
+Review found that a supplied JSON null/false/zero/empty string selected registration
+mode instead of verifying executed assertions. The local correction distinguishes
+argument presence and rejects invalid report envelopes. The same14-case parser
+regression moves from6PASS/8FAIL to14PASS; a complete synthetic parser fixture is
+not actual feature execution. The retained real named-Jest report still passes
+the reader. See review-corrections/report-guard-receipt.json and its raw archives.
+The previous real report predates the dedicated C02 assertions and cannot prove
+the corrected map. A fresh complete named-Jest execution remains required.
+
+Further local review corrections reproduce both batch recovery gaps (2PASS/7FAIL
+before,9PASS after; expanded four-suite cohort177PASS with isolated wholecoverage
+exit1 for unrun owners). The three changed recovery modules are100% allmetrics.
+Cancellation controls reproduce131PASS/13FAIL before and144PASS after; explicit
+decline stays successful and cancellation returns130. C02 now has four dedicated
+destination URL/ID/name/default controls, with95PASS in the planning suite.
+Four real native/dependency-Undici controls do not reproduce the proposed socket bypass:
+each unguarded control connects once; the unchanged guard blocks both before any
+loopback connection or HTTP request. The diagnostic remains observational.
+
+The local-reference gap is also corrected:42PASS/3FAIL before,45PASS after;
+combined reader/application controls111PASS. The actual pinned20-workflow default
+tree now classifies unknown at12 local-reference paths, superseding its older
+absence/preview result. #977 remains unsupported until that inventory is
+reconciled. No installation exception or default/template write was introduced.
+
+The full local coverage command initially passes965 suites/19,653 assertions but
+loses one existing suite before its assertions to a V8-GC SIGSEGV. Its two tests
+pass isolated. One technical retry with identical source/runtime/flags passes
+966 SDK suites/19,655 assertions,35 historical skips, all budgets,60 mapped Jest
+cases and385 extension files/5,291 assertions. The failure and a sanitized crash
+selection remain retained; the matching Node issue is a lead, not proven cause.
+
+Two later proof-retention regressions both fail before the final small refinement;
+the expanded four-suite cohort then passes179 assertions with Apply100% allmetrics.
+Its isolated whole-coverage command exits1 for unrun owners. The full retry above
+explicitly precedes those last runtime bytes; fresh final-head gates remain
+required. See review-corrections/final-local-review-receipt.json and all67 verified
+archives. All seven valid findings have local corrections; the Undici hypothesis
+is not reproduced. All eight threads stay open pending publication and review.
+No installation, native canary or model qualification is claimed.
+
+The first normal commit hook also stops before commit on a different existing
+suite's SIGSEGV, with the same V8 GC signature. Its raw negative is retained.
+`review-corrections/local-node-validation-profile.json` records a temporary
+same-binary `--no-sparkplug` control for local hook execution. Build/test/lint and
+all budgets remain configured; the control's outcome and default final-head
+native acceptance are not established by this pre-commit packet.

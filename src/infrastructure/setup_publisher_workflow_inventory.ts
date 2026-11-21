@@ -54,6 +54,9 @@ function meaning(content: string): Meaning {
       if (own(scope, 'uses')) {
         if (typeof scope.uses !== 'string' || scope.uses.includes('${{')) unknown = true;
         else if (/(?:^|\/)copilot_bugbot_status_card\.ya?ml(?:@|$)/iu.test(scope.uses)) publisher = true;
+        // This inventory does not resolve local action metadata or reusable
+        // execution. A literal local path cannot prove publisher absence.
+        else if (scope.uses.startsWith('./')) unknown = true;
       }
       if (own(scope, 'with')) {
         if (!object(scope.with)) unknown = true;

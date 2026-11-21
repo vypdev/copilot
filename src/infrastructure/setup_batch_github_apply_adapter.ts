@@ -9,6 +9,7 @@ import { setupRunnerProfileIsFresh } from '../application/policies/setup_runner_
 import { setupRunnerInstallationSummary } from '../application/policies/setup_runner_installation_summary_policy';
 import { setupInstallationFiles } from '../application/policies/setup_installation_receipt_policy';
 import type { SetupInstallationDeliveryPlan } from '../application/contracts/setup_installation_delivery';
+import type { SetupInstallationObjectObserver } from '../application/ports/setup_installation_delivery_ports';
 import { SetupInstallationGithubDeliveryAdapter } from './setup_installation_github_delivery_adapter';
 
 /** Reused shared resources have an additive access command only. No shared value or Secret writer is injected. */
@@ -95,9 +96,17 @@ export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
   }
   labels(plan: SetupBatchTargetPlan, token: string) { return this.resources.labels(plan, token); }
   issueTypes(plan: SetupBatchTargetPlan, token: string) { return this.resources.issueTypes(plan, token); }
-  async prepareCommit(plan: SetupBatchTargetPlan, operationId: string, token: string): Promise<string> {
-    if (!await this.revalidate(plan, token, [])) throw new SetupBatchProviderError('unknown');
-    return (await this.fileDelivery(plan, operationId, token)).prepareCommit();
+  async prepareCommit(plan: SetupBatchTargetPlan, operationId: string, token: string, observe?: SetupInstallationObjectObserver): Promise<string> {
+    let delivery: SetupInstallationGithubDeliveryAdapter;
+    try {
+      if (!await this.revalidate(plan, token, [])) throw new SetupBatchProviderError('unknown');
+      delivery = await this.fileDelivery(plan, operationId, token);
+    } catch (error) {
+      // These reads precede delegation, so neither Git-object POST can have started.
+      await observe?.({ effect: 'tree', state: 'not-started' });
+      throw error;
+    }
+    return delivery.prepareCommit(observe);
   }
   async branch(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly = false): Promise<void> {
     return (await this.fileDelivery(plan, operationId, token)).branch(commit, inspectOnly);

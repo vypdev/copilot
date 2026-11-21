@@ -28,7 +28,19 @@ export class DeliverSetupInstallationUseCase implements SetupInstallationDeliver
       if (!state.preparedCommit) {
         await fresh();
         await retain({ ...state, uncertain: 'prepared-objects' });
-        const commit = await commands.prepareCommit();
+        let treeCreated = false;
+        const commit = await commands.prepareCommit(async event => {
+          if (event.effect === 'tree' && event.state === 'completed') treeCreated = true;
+          // Legacy batch journals cannot retain a tree ID. A known tree without
+          // a commit remains uncertain; only proof of no object POST clears it.
+          if (event.effect === 'tree' && event.state === 'not-started' && !treeCreated) {
+            await retain({ ...state, uncertain: undefined });
+          }
+          if (event.effect === 'commit' && event.state === 'completed') {
+            if (!/^[a-f0-9]{40}$/u.test(event.sha)) throw new SetupInstallationDeliveryError('provider', state);
+            await retain({ ...state, preparedCommit: event.sha, uncertain: undefined });
+          }
+        });
         if (!/^[a-f0-9]{40}$/u.test(commit)) throw new SetupInstallationDeliveryError('provider', state);
         await retain({ ...state, preparedCommit: commit, uncertain: undefined });
       }
@@ -36,7 +48,7 @@ export class DeliverSetupInstallationUseCase implements SetupInstallationDeliver
       const effect = async (name: SetupInstallationRefEffect, work: (inspectOnly: boolean) => Promise<void>): Promise<void> => {
         if (state.effects.includes(name)) return;
         await fresh();
-        const inspectOnly = state.uncertain === name;
+        const inspectOnly = state.uncertain === name && control.recovery !== 'reviewed-create-if-absent';
         await retain({ ...state, uncertain: name });
         await work(inspectOnly);
         await retain({ ...state, effects: [...state.effects, name], uncertain: undefined });

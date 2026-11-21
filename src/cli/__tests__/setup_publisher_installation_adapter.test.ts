@@ -91,6 +91,7 @@ it('uses hidden credential entry and closes the owned terminal after the preview
 it.each(['cancel', 'end-of-input'] as const)('a %s while entering a hidden token starts no provider', async kind => {
   const f = fixture(); delete process.env.PERSONAL_ACCESS_TOKEN; jest.mocked(createInteractiveTerminalDriver).mockReturnValue(f.terminal); f.readSecret.mockResolvedValue({ kind });
   await f.run(); expect(createSetupPublisherInstallationCompositionRoot).not.toHaveBeenCalled(); expect(f.text()).toContain('Installation stopped');
+  expect(process.exitCode).toBe(130); expect(f.close).toHaveBeenCalled();
 });
 it('rejects an invalid hidden credential instead of inventing authority', async () => {
   const f = fixture(); delete process.env.PERSONAL_ACCESS_TOKEN; jest.mocked(createInteractiveTerminalDriver).mockReturnValue(f.terminal); f.readSecret.mockResolvedValue({ kind: 'value', value: '' });
@@ -105,10 +106,27 @@ it.each(['en-US', 'es-ES', 'fr-FR', 'pt-BR'])('approves exact files only with th
 it.each(['DECLINE', '', 'yes', 'approve'])('handles %s without an implicit approval', async value => {
   const f = fixture(); jest.mocked(createInteractiveTerminalDriver).mockReturnValue(f.terminal); f.readText.mockResolvedValue({ kind: 'value', value });
   await f.run({ dryRun: false }); expect(f.confirmed()).toBe(value === 'DECLINE' ? 'decline' : 'cancel');
+  expect(process.exitCode ?? 0).toBe(value === 'DECLINE' ? 0 : 130);
 });
-it('explicit terminal cancellation during approval never becomes a completed delivery', async () => {
-  const f = fixture(); jest.mocked(createInteractiveTerminalDriver).mockReturnValue(f.terminal); f.readText.mockResolvedValue({ kind: 'cancel' });
+it.each(['cancel', 'end-of-input'] as const)('a %s during approval exits130 without a completed delivery', async kind => {
+  const f = fixture(); jest.mocked(createInteractiveTerminalDriver).mockReturnValue(f.terminal); f.readText.mockResolvedValue({ kind });
   await f.run({ dryRun: false }); expect(f.confirmed()).toBe('cancel'); expect(f.text()).not.toContain('ready for review:');
+  expect(process.exitCode).toBe(130); expect(f.close).toHaveBeenCalled();
+});
+it('preserves cancellation status from Apply and displays its retained effects', async () => {
+  const f = fixture(); jest.mocked(createSetupPublisherInstallationCompositionRoot).mockImplementation(() => {
+    throw new SetupPublisherApplyError('cancelled', f.operation, f.operation);
+  });
+  await f.run(); expect(process.exitCode).toBe(130); expect(f.text()).toContain('Installation stopped');
+  expect(f.text()).toContain(f.operation.preparedCommit!); expect(f.text()).not.toContain('ready for review:');
+});
+it.each(['stale', 'delivery'] as const)('keeps an active-session %s Apply failure separate from cancellation', async reason => {
+  const f = fixture(); jest.mocked(createSetupPublisherInstallationCompositionRoot).mockImplementation(() => {
+    throw new SetupPublisherApplyError(reason, f.operation, f.operation);
+  });
+  await f.run(); expect(process.exitCode).toBe(1);
+  expect(f.text()).toContain(resolveStaticSetupPublisherCatalog().message(reason === 'stale' ? 'stale' : 'blocked'));
+  expect(f.text()).not.toContain('Installation stopped');
 });
 it('validates explicit resume identity before transport and passes a valid selection through', async () => {
   const f = fixture(); await f.run({ explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation: 7 }); expect(f.execute).not.toHaveBeenCalled();

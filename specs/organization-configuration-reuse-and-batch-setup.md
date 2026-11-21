@@ -966,3 +966,34 @@ install a workflow, activate verification, qualify a model profile or complete
 #977's separately authorized default/native acceptance. Human accessibility and
 platform observations keep their independent status; no source test substitutes
 for them.
+
+Review corrections retain the closed legacy v1 format. A confirmed stop before
+any Git-object POST uses the existing `preflight` reason on the incomplete
+receipt, allowing a newly reviewed and audited resume. Every new preparation
+intent clears that proof before its POST. Once a tree may exist without a known
+commit, recovery remains uncertain; a known commit is retained before later
+proof reads and must pass the complete tree/receipt check again.
+
+The common delivery coordinator defaults to inspect-only recovery. Only a batch
+Apply that has obtained fresh review selects the explicit create-if-absent
+recovery policy. The adapter still proves the exact prepared commit, checks the
+owned ref and complete PR inventory, and revalidates before any permitted create.
+Completed publisher-purpose recovery retains its read-only contract. Add at least
+**19 regressions** across the real private-v1 journal and reconstructed GitHub
+adapter (nine), common object-observer/recovery decisions (six), cancelled
+unknown-preparation retention (one), mandatory reviewed/audited resume (one), and
+retention of confirmed pre-POST proof across another early read/cancellation (two).
+All previous budgets, changed-path requirements and C01–C64 identities remain.
+
+Publisher interruption during token entry, approval or post-approval inspection
+MUST preserve cancellation and CLI status130. Explicit decline remains a normal
+no-Apply result. A credential-session change while still active remains stale;
+cancellation must not relabel that authority mismatch.
+
+Literal local Action or reusable-workflow references are unresolved by this
+reader. They MUST classify the workflow inventory as unknown rather than prove
+publisher absence, even with a non-publisher selector. Three additional cases
+cover local composites, local root Actions and reusable workflow paths. The
+reader does not add an implicit exception for this repository's own workflows.
+An unsupported inventory blocks preview/Apply until reconciled; a historical
+preview taken before this correction cannot authorize installation.

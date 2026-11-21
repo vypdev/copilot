@@ -24,7 +24,6 @@ it('finds a semantically equivalent renamed publisher rather than matching a dis
 it.each([
   'name: CI\n# COPILOT_BUGBOT_STATUS_CARD_WORKFLOW: write-v1\non: push\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@v5\n',
   'name: Copilot - Bugbot Status Card\non: push\njobs:\n  test:\n    steps:\n      - run: echo harmless\n',
-  'on: push\njobs:\n  test:\n    uses: ./.github/workflows/ci.yml\n',
   'on: push\njobs:\n  test:\n    steps:\n      - uses: vypdev/copilot@sha\n        with:\n          single-action: another_action\n',
   'on: push\njobs:\n  test:\n    steps:\n      - uses: vypdev/copilot@sha\n        with:\n          token: ${{ secrets.PAT }}\n',
   'on: push\njobs:\n  test:\n    steps: &ordinary\n      - run: echo harmless\n  other:\n    steps: *ordinary\n',
@@ -55,6 +54,9 @@ it.each(['', '[]', 'jobs: null', 'jobs: {}', 'jobs: {invalid: null}', 'jobs: {in
   expect(inspectSetupPublisherWorkflows([workflow(content)], expected).kind).toBe('unknown');
 });
 it.each([
+  'on: push\njobs:\n  ci:\n    steps:\n      - uses: ./.github/actions/status-publisher\n',
+  'on: push\njobs:\n  ci:\n    steps:\n      - uses: ./\n        with:\n          single-action: another_action\n',
+  'on: push\njobs:\n  ci:\n    uses: ./.github/workflows/ci.yml\n',
   'on: push\njobs:\n  ci:\n    steps:\n      - uses: ${{ matrix.action }}\n',
   'on: push\njobs:\n  ci:\n    steps:\n      - uses: 7\n',
   'on: push\nenv: ${{ inputs.environment }}\njobs:\n  ci:\n    steps: []\n',

@@ -1,13 +1,14 @@
 import { DeliverSetupInstallationUseCase, SetupInstallationDeliveryError } from '../deliver_setup_installation_use_case';
 import type { SetupInstallationDeliveryState } from '../../../contracts/setup_installation_delivery';
 import { SetupInstallationSnapshotChanged } from '../../../ports/setup_installation_delivery_ports';
+import type { SetupInstallationObjectObserver } from '../../../ports/setup_installation_delivery_ports';
 
 const commit = 'c'.repeat(40);
 const initial = (): SetupInstallationDeliveryState => ({ effects: [] });
 function fixture() {
   const states: SetupInstallationDeliveryState[] = [], order: string[] = [];
   const commands = {
-    prepareCommit: jest.fn(async () => { order.push('prepare'); return commit; }),
+    prepareCommit: jest.fn<Promise<string>, [SetupInstallationObjectObserver?]>(async () => { order.push('prepare'); return commit; }),
     branch: jest.fn(async (_commit: string, _inspectOnly: boolean) => { order.push('branch'); }),
     pullRequest: jest.fn(async (_commit: string, _inspectOnly: boolean) => { order.push('pull-request'); return 42; }),
   };
@@ -19,6 +20,47 @@ function fixture() {
 }
 
 describe('shared approved-file delivery and retained effects', () => {
+  it('clears preparation uncertainty only after an observed stop before the tree POST', async () => {
+    const f = fixture();
+    f.commands.prepareCommit.mockImplementation(async observe => {
+      await observe?.({ effect: 'tree', state: 'not-started' }); throw new Error('base read unavailable');
+    });
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'provider', retained: { uncertain: undefined } });
+    expect(f.states.at(-1)).toEqual({ effects: [], uncertain: undefined });
+    expect(f.commands.branch).not.toHaveBeenCalled();
+  });
+  it('does not clear unknown preparation when a tree exists but commit creation never started', async () => {
+    const f = fixture();
+    f.commands.prepareCommit.mockImplementation(async observe => {
+      await observe?.({ effect: 'tree', state: 'completed', sha: 'd'.repeat(40) });
+      await observe?.({ effect: 'commit', state: 'not-started' }); throw new Error('tree proof unavailable');
+    });
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'provider', retained: { uncertain: 'prepared-objects' } });
+    expect(f.states).toEqual([{ effects: [], uncertain: 'prepared-objects' }]);
+  });
+  it('retains the observed commit identity even if its subsequent proof read fails', async () => {
+    const f = fixture();
+    f.commands.prepareCommit.mockImplementation(async observe => {
+      await observe?.({ effect: 'commit', state: 'completed', sha: commit }); throw new Error('commit proof unavailable');
+    });
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'provider', retained: { preparedCommit: commit, uncertain: undefined } });
+    expect(f.commands.branch).not.toHaveBeenCalled();
+  });
+  it('rejects an invalid observed commit identity without clearing preparation uncertainty', async () => {
+    const f = fixture();
+    f.commands.prepareCommit.mockImplementation(async observe => {
+      await observe?.({ effect: 'commit', state: 'completed', sha: 'HEAD' }); return commit;
+    });
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'provider', retained: { uncertain: 'prepared-objects' } });
+    expect(f.commands.branch).not.toHaveBeenCalled();
+  });
+  it.each(['branch', 'pull-request'] as const)('allows reviewed create-if-absent recovery only through an explicit %s policy', async uncertain => {
+    const f = fixture();
+    await new DeliverSetupInstallationUseCase().execute(f.commands, { ...f.control, recovery: 'reviewed-create-if-absent' },
+      { preparedCommit: commit, effects: uncertain === 'branch' ? [] : ['branch'], uncertain });
+    const command = uncertain === 'branch' ? f.commands.branch : f.commands.pullRequest;
+    expect(command).toHaveBeenCalledWith(commit, false); expect(f.control.revalidate).toHaveBeenCalled();
+  });
   it('retains each intent before its command and exact terminal facts afterward', async () => {
     const f = fixture();
     f.commands.prepareCommit.mockImplementation(async () => {

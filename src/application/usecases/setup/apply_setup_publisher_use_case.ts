@@ -44,7 +44,7 @@ export class ApplySetupPublisherUseCase {
       if (current) { operation = parseSetupPublisherOperation(current); lastPersisted = operation; }
       if (!this.ports.active()) throw fail('cancelled');
       const fresh = async (): Promise<boolean> => this.ports.active() && await revalidate() && this.ports.active();
-      if (!await fresh()) throw fail('stale');
+      if (!await fresh()) throw fail(this.ports.active() ? 'stale' : 'cancelled');
       if (operation.uncertain === 'tree' || operation.uncertain === 'commit') throw fail('uncertain-preparation');
       const writer = this.ports.delivery(plan, session, fresh);
       // A completed journal is metadata, never fresh proof that its ref/PR still match.
@@ -101,7 +101,7 @@ export class ApplySetupPublisherUseCase {
       }
     } catch (error) {
       if (error instanceof SetupPublisherApplyError) throw error;
-      throw fail('delivery');
+      throw fail(this.ports.active() ? 'delivery' : 'cancelled');
     } finally { await journal(release); }
   }
 }

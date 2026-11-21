@@ -3,7 +3,7 @@ import { SetupBatchGithubApplyAdapter } from '../setup_batch_github_apply_adapte
 import { SetupBatchGithubReadAdapter, SetupBatchGithubTransport, SetupBatchProviderError } from '../setup_batch_github_read_adapter';
 import { setupBatchBranch, setupBatchMarker } from '../../application/policies/setup_batch_policy';
 import { createDefaultSetupConfiguration } from '../../application/policies/setup_configuration_defaults';
-import type { SetupBatchTargetPlan } from '../../domain/setup_batch';
+import type { SetupBatchOperation, SetupBatchTargetPlan } from '../../domain/setup_batch';
 import type { SetupRemoteConfiguration } from '../../domain/setup';
 import { createHash } from 'node:crypto';
 import { setupInstallationTreeFixture } from './fixtures/setup_installation_tree_fixture';
@@ -71,6 +71,93 @@ function fixture() {
     setBranch: (sha: string | undefined) => { branch = sha; }, setPulls: (values: unknown[]) => { pulls = values; },
     setReceipt: (value: unknown) => { preparedFiles.set('.copilot/setup-manifest.json', JSON.stringify({ installation: value })); } };
 }
+async function recoveryFixture() {
+  const f = fixture(), directory = await mkdtemp(join(tmpdir(), 'batch-reviewed-recovery-'));
+  const journal = new SetupBatchJournalAdapter(directory), review = jest.fn(async () => true);
+  const plan = { operationId: operation, organization: 'acme', targets: [f.plan] };
+  // Reconstruct the writer and use the real closed-v1 journal on each reviewed resume.
+  const execute = () => new ApplySetupBatchUseCase({ coordinator: new DeliverSetupInstallationUseCase(), journal,
+    writer: new SetupBatchGithubApplyAdapter(f.read, f.variableWriter, f.resources),
+    presentation: { review, active: () => true, progress: () => undefined } }).execute(plan, 'private-recovery-fixture');
+  const receipt = async (): Promise<SetupBatchOperation> => JSON.parse(await readFile(join(directory, operation + '.json'), 'utf8'));
+  const posts = (route: string) => f.request.mock.calls.filter(([actual]) => actual === `POST /repos/{owner}/{repo}/${route}`);
+  return { ...f, execute, review, receipt, posts, cleanup: () => rm(directory, { recursive: true, force: true }) };
+}
+describe('freshly reviewed legacy batch recovery through real Git delivery', () => {
+  it.each(['manifest-read', 'base-commit-read'] as const)('retries a confirmed pre-POST %s failure without repeating resources', async failure => {
+    const f = await recoveryFixture();
+    try {
+      if (failure === 'manifest-read') jest.mocked(f.read.files).mockRejectedValueOnce(new Error('inventory unavailable'));
+      else {
+        const original = f.request.getMockImplementation()!; let failed = false;
+        f.request.mockImplementation(async (route, parameters) => {
+          if (!failed && route === 'GET /repos/{owner}/{repo}/git/commits/{commit_sha}') {
+            failed = true; throw new SetupBatchProviderError('unknown');
+          }
+          return original(route, parameters);
+        });
+      }
+      const first = await f.execute();
+      expect(first.targets[0]).toMatchObject({ status: 'partial', reason: 'preflight',
+        effects: ['access', 'variables', 'labels', 'issue-types'] });
+      expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+      expect(await f.receipt()).toEqual(JSON.parse(JSON.stringify(first)));
+      expect((await f.execute()).targets[0]).toMatchObject({ status: 'waiting-for-merge', preparedCommit: prepared, pullRequestNumber: 31 });
+      expect(f.review).toHaveBeenCalledTimes(2); expect(f.resources.labels).toHaveBeenCalledTimes(1);
+      expect(f.resources.issueTypes).toHaveBeenCalledTimes(1);
+      for (const route of ['git/trees', 'git/commits', 'git/refs', 'pulls']) expect(f.posts(route)).toHaveLength(1);
+      expect(JSON.stringify(await f.receipt())).not.toContain('private-recovery-fixture');
+    } finally { await f.cleanup(); }
+  });
+  it('retains a known commit when its later proof read fails and never repeats object creation', async () => {
+    const f = await recoveryFixture();
+    try {
+      const original = f.request.getMockImplementation()!; let failed = false;
+      f.request.mockImplementation(async (route, parameters) => {
+        if (!failed && route === 'GET /repos/{owner}/{repo}/git/commits/{commit_sha}' && parameters.commit_sha === prepared) {
+          failed = true; throw new SetupBatchProviderError('unknown');
+        }
+        return original(route, parameters);
+      });
+      expect((await f.execute()).targets[0]).toMatchObject({ status: 'partial', preparedCommit: prepared });
+      expect((await f.execute()).targets[0].status).toBe('waiting-for-merge');
+      expect(f.posts('git/trees')).toHaveLength(1); expect(f.posts('git/commits')).toHaveLength(1);
+    } finally { await f.cleanup(); }
+  });
+  it.each([
+    ['ref-read', 'GET /repos/{owner}/{repo}/git/ref/{ref}', 'git/refs', 1],
+    ['ref-create', 'POST /repos/{owner}/{repo}/git/refs', 'git/refs', 2],
+    ['PR-read', 'GET /repos/{owner}/{repo}/pulls', 'pulls', 1],
+    ['PR-create', 'POST /repos/{owner}/{repo}/pulls', 'pulls', 2],
+  ] as const)('reinspects and creates a confirmed absent target after %s failure and fresh review', async (_name, failedRoute, createdRoute, attempts) => {
+    const f = await recoveryFixture();
+    try {
+      const original = f.request.getMockImplementation()!; let failed = false;
+      f.request.mockImplementation(async (route, parameters) => {
+        if (!failed && route === failedRoute) { failed = true; throw new SetupBatchProviderError('unknown'); }
+        return original(route, parameters);
+      });
+      expect((await f.execute()).targets[0]).toMatchObject({ status: 'partial', preparedCommit: prepared });
+      expect((await f.execute()).targets[0]).toMatchObject({ status: 'waiting-for-merge', pullRequestNumber: 31 });
+      expect(f.review).toHaveBeenCalledTimes(2); expect(f.resources.labels).toHaveBeenCalledTimes(1);
+      expect(f.posts('git/trees')).toHaveLength(1); expect(f.posts('git/commits')).toHaveLength(1);
+      expect(f.posts(createdRoute)).toHaveLength(attempts);
+    } finally { await f.cleanup(); }
+  });
+  it.each(['git/trees', 'git/commits'] as const)('never repeats an unknown %s POST without its object identity', async failedRoute => {
+    const f = await recoveryFixture();
+    try {
+      const original = f.request.getMockImplementation()!;
+      f.request.mockImplementation(async (route, parameters) => {
+        if (route === `POST /repos/{owner}/{repo}/${failedRoute}`) throw new SetupBatchProviderError('unknown');
+        return original(route, parameters);
+      });
+      expect((await f.execute()).targets[0]).toMatchObject({ status: 'partial', reason: 'provider' });
+      expect((await f.execute()).targets[0]).toMatchObject({ status: 'partial', reason: 'provider' });
+      expect(f.posts(failedRoute)).toHaveLength(1); expect(f.posts('git/refs')).toHaveLength(0); expect(f.posts('pulls')).toHaveLength(0);
+    } finally { await f.cleanup(); }
+  });
+});
 describe('installer-owned GitHub write boundaries', () => {
   it('rejects malformed legacy manifest JSON before Git delivery without echoing its content', async () => {
     const f = fixture(), plan = { ...f.plan, files: [{ path: '.copilot/setup-manifest.json', content: '{untrusted-manifest-payload' }] };

@@ -124,11 +124,13 @@ it.each(['actor', 'authority', 'default', 'source', 'manifest', 'inventory', 'un
     await expect(f.execute()).rejects.toEqual(new SetupPublisherReviewError('stale')); expect(f.apply).not.toHaveBeenCalled();
   },
 );
-it('blocks cancellation that arrives while the post-approval read is pending', async () => {
+it.each(['resolved', 'rejected'] as const)('preserves cancellation while a post-approval read is %s', async outcome => {
   const f = fixture(); f.ports.inspect.mockResolvedValueOnce(f.snapshot()).mockImplementation(async () => {
-    f.ports.active.mockReturnValue(false); return f.snapshot();
+    f.ports.active.mockReturnValue(false);
+    if (outcome === 'rejected') throw new Error('read interrupted');
+    return f.snapshot();
   });
-  await expect(f.execute()).rejects.toEqual(new SetupPublisherReviewError('stale')); expect(f.apply).not.toHaveBeenCalled();
+  await expect(f.execute()).rejects.toEqual(new SetupPublisherReviewError('cancelled')); expect(f.apply).not.toHaveBeenCalled();
 });
 it('revalidates during Apply and expires that private callback as soon as the action finishes', async () => {
   const f = fixture(); let retained: (() => Promise<boolean>) | undefined;

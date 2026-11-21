@@ -72,7 +72,7 @@ export class ReviewSetupPublisherUseCase {
       } catch { live = false; return false; }
     };
     try {
-      if (!await revalidate()) throw new SetupPublisherReviewError('stale');
+      if (!await revalidate()) throw new SetupPublisherReviewError(this.ports.active() ? 'stale' : 'cancelled');
       return { plan, stage: 'apply', result: await apply(plan, session, revalidate) };
     } finally { live = false; }
   }

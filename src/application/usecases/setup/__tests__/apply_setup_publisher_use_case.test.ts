@@ -72,11 +72,16 @@ it('rejects post-preview file changes before locking or writing a journal', asyn
 });
 it('cancellation immediately before the first freshness read starts no read or effect', async () => {
   const f = fixture(); f.active.mockReturnValueOnce(true).mockReturnValue(false);
-  await expect(f.execute()).rejects.toMatchObject({ reason: 'stale' }); expect(f.revalidate).not.toHaveBeenCalled(); expect(f.states).toEqual([]);
+  await expect(f.execute()).rejects.toMatchObject({ reason: 'cancelled' }); expect(f.revalidate).not.toHaveBeenCalled(); expect(f.states).toEqual([]);
 });
 it('cancellation while freshness is pending prevents all effects despite unchanged facts', async () => {
   const f = fixture(); f.revalidate.mockImplementation(async () => { f.active.mockReturnValue(false); return true; });
-  await expect(f.execute()).rejects.toMatchObject({ reason: 'stale' }); expect(f.states).toEqual([]); expect(f.writes).toEqual([]);
+  await expect(f.execute()).rejects.toMatchObject({ reason: 'cancelled' }); expect(f.states).toEqual([]); expect(f.writes).toEqual([]);
+});
+it('preserves cancellation when the initial freshness read rejects after interruption', async () => {
+  const f = fixture(); f.revalidate.mockImplementation(async () => { f.active.mockReturnValue(false); throw new Error('read interrupted'); });
+  await expect(f.execute()).rejects.toMatchObject({ reason: 'cancelled' });
+  expect(f.states).toEqual([]); expect(f.writes).toEqual([]); expect(f.delivery).not.toHaveBeenCalled();
 });
 it('does not overwrite an existing operation that was absent from review', async () => {
   const f = fixture(); f.retain(f.empty);

@@ -1,4 +1,5 @@
 import type { SetupConfiguration, SetupRemoteConfiguration } from '../../domain/setup';
+import type { SetupInstallationObjectObserver } from './setup_installation_delivery_ports';
 import type { SetupBatchFile, SetupBatchGrant, SetupBatchOperation, SetupBatchPlan, SetupBatchSharedResource,
   SetupBatchTarget, SetupBatchCandidate, SetupBatchTargetPlan, SetupBatchTargetReceipt } from '../../domain/setup_batch';
 
@@ -31,7 +32,7 @@ export interface SetupBatchApplyPort {
   variables(plan: SetupBatchTargetPlan, token: string): Promise<void>;
   labels(plan: SetupBatchTargetPlan, token: string): Promise<void>;
   issueTypes(plan: SetupBatchTargetPlan, token: string): Promise<void>;
-  prepareCommit(plan: SetupBatchTargetPlan, operationId: string, token: string): Promise<string>;
+  prepareCommit(plan: SetupBatchTargetPlan, operationId: string, token: string, observe?: SetupInstallationObjectObserver): Promise<string>;
   /** Create once or inspect and adopt only the exact prepared commit and receipt. */
   branch(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly?: boolean): Promise<void>;
   /** Inspect the exact marker before creation and after an uncertain response. */

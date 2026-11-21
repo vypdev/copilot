@@ -58,6 +58,17 @@ const pinWorkflow = (f: Fixture) => {
 };
 
 describe('publisher immutable two-file planning', () => {
+  it('publisher977-C02 rejects an arbitrary destination URL before deriving a plan', () => {
+    const f = fixture(); f.proposal.destination.repository = 'https://example.invalid/owner/project';
+    expect(() => plan(f)).toThrow('invalid or unsupported');
+  });
+  it.each(['repositoryId', 'repository', 'defaultBranch'] as const)('publisher977-C02 rejects contradictory destination %s declarations', key => {
+    const f = fixture();
+    if (key === 'repositoryId') f.proposal.destination.repositoryId = f.inspection.target.id + 1;
+    if (key === 'repository') f.proposal.destination.repository = 'other/project';
+    if (key === 'defaultBranch') f.proposal.destination.defaultBranch = 'other-default';
+    expect(() => plan(f)).toThrow(new SetupPublisherPlanError('destination-changed'));
+  });
   it('publisher977-C09 derives the plan before its receipt and then binds both final files', () => {
     const f = fixture(), result = plan(f);
     expect(result.status).toBe('review');

@@ -30,7 +30,19 @@
       "evidence": [
         {
           "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
-          "test": "publisher independently read snapshot admission publisher977-C21 blocks a changed or unavailable destination: coordinate"
+          "test": "publisher immutable two-file planning publisher977-C02 rejects an arbitrary destination URL before deriving a plan"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C02 rejects contradictory destination repositoryId declarations"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C02 rejects contradictory destination repository declarations"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C02 rejects contradictory destination defaultBranch declarations"
         }
       ]
     },

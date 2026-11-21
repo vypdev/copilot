@@ -75,7 +75,7 @@ describe('sequential reviewed batch Apply', () => {
     expect(recovered.targets[0]).toMatchObject({ status: 'waiting-for-merge', pullRequestNumber: 31 });
     expect(f.writer.prepareCommit).toHaveBeenCalledTimes(1); expect(f.writer.branch).toHaveBeenCalledTimes(1);
     expect(f.writer.variables).toHaveBeenCalledTimes(1);
-    expect(f.writer.pullRequest).toHaveBeenLastCalledWith(f.plan.targets[0], f.plan.operationId, 'c'.repeat(40), 'fixture', true);
+    expect(f.writer.pullRequest).toHaveBeenLastCalledWith(f.plan.targets[0], f.plan.operationId, 'c'.repeat(40), 'fixture', false);
   });
   it('finishes a retained legacy PR receipt after an interrupted final status save without new effects', async () => {
     const f = fixture(1), first = await f.useCase.execute(f.plan, 'fixture');
@@ -145,5 +145,37 @@ describe('sequential reviewed batch Apply', () => {
     const resumed = await f.useCase.execute(f.plan, 'fixture');
     expect(resumed.targets[0].status).toBe('partial'); expect(f.writer.prepareCommit).toHaveBeenCalledTimes(1);
     expect(f.writer.branch).not.toHaveBeenCalled(); expect(f.writer.pullRequest).not.toHaveBeenCalled();
+  });
+  it('does not erase unknown preparation when an interrupted operation is marked cancelled', async () => {
+    const f = fixture(1), prior = beginSetupBatchOperation(f.plan);
+    f.journal.load.mockResolvedValue({ ...prior, targets: [{ ...prior.targets[0], status: 'cancelled', reason: 'cancelled',
+      effects: ['access', 'variables', 'labels', 'issue-types'] }] });
+    expect((await f.useCase.execute(f.plan, 'fixture')).targets[0]).toMatchObject({ status: 'partial', reason: 'provider' });
+    expect(f.writer.prepareCommit).not.toHaveBeenCalled(); expect(f.writer.branch).not.toHaveBeenCalled();
+  });
+});
+
+describe('confirmed preflight proof survives', () => {
+  async function readyForRetry() {
+    const f = fixture(1), prior = beginSetupBatchOperation(f.plan);
+    await f.journal.save({ ...prior, targets: [{ ...prior.targets[0], status: 'partial', reason: 'preflight',
+      effects: ['access', 'variables', 'labels', 'issue-types'] }] });
+    return f;
+  }
+  it('another read failure before preparation retains its no-POST proof for the next reviewed retry', async () => {
+    const f = await readyForRetry(); f.writer.revalidate.mockRejectedValueOnce(new Error('read unavailable'));
+    const first = await f.useCase.execute(f.plan, 'fixture');
+    expect(first.targets[0]).toMatchObject({ status: 'partial', reason: 'preflight' });
+    expect(f.writer.prepareCommit).not.toHaveBeenCalled();
+    expect((await f.useCase.execute(f.plan, 'fixture')).targets[0].status).toBe('waiting-for-merge');
+    expect(f.writer.prepareCommit).toHaveBeenCalledTimes(1); expect(f.writer.variables).not.toHaveBeenCalled();
+  });
+  it('cancellation before target revalidation retains its no-POST proof for the next reviewed retry', async () => {
+    const f = await readyForRetry(); f.presentation.active.mockReturnValueOnce(true).mockReturnValueOnce(false).mockReturnValue(true);
+    const first = await f.useCase.execute(f.plan, 'fixture');
+    expect(first.targets[0]).toMatchObject({ status: 'cancelled', reason: 'preflight' });
+    expect(f.writer.revalidate).not.toHaveBeenCalled(); expect(f.writer.prepareCommit).not.toHaveBeenCalled();
+    expect((await f.useCase.execute(f.plan, 'fixture')).targets[0].status).toBe('waiting-for-merge');
+    expect(f.writer.prepareCommit).toHaveBeenCalledTimes(1); expect(f.writer.variables).not.toHaveBeenCalled();
   });
 });

@@ -51,7 +51,7 @@ export async function executeSetupPublisherCommand(input: SetupPublisherCommandI
     if (token === undefined || token === '') {
       if (!terminal) throw new PublisherCommandError('tokenRequired');
       const entered = await terminal.readSecret(catalog.message('tokenPrompt'));
-      if (entered.kind !== 'value') { write(catalog.message('cancelled') + '\n'); return; }
+      if (entered.kind !== 'value') { process.exitCode = 130; write(catalog.message('cancelled') + '\n'); return; }
       token = entered.value;
     }
     if (typeof token !== 'string' || !isSetupTokenValueValid(token)) throw new PublisherCommandError('tokenRequired');
@@ -72,6 +72,7 @@ export async function executeSetupPublisherCommand(input: SetupPublisherCommandI
     }, catalog.locale);
     token = undefined;
     const result = await installation.execute({ proposal, operationId, dryRun, resume });
+    if (result.stage === 'cancelled') process.exitCode = 130;
     if (result.stage === 'apply') presenter.delivered(result.result);
     else write(catalog.message(result.stage === 'dry-run' ? 'dryRun' : result.stage === 'unchanged' ? 'unchanged'
       : result.stage === 'declined' ? 'declined' : 'cancelled') + '\n');
@@ -83,6 +84,7 @@ export async function executeSetupPublisherCommand(input: SetupPublisherCommandI
     else if (error instanceof SetupPublisherPlanError) message = error.reason === 'destination-changed' ? 'stale'
       : error.reason === 'authority-unverified' ? 'authority' : error.reason === 'source-unverified' ? 'sourceUnverified' : 'unsupported';
     else if (error instanceof SetupPublisherReviewError) message = error.reason === 'cancelled' ? 'cancelled' : error.reason === 'stale' ? 'stale' : 'blocked';
+    else if (error instanceof SetupPublisherApplyError) message = error.reason === 'cancelled' ? 'cancelled' : error.reason === 'stale' ? 'stale' : 'blocked';
     else if (error instanceof SetupPublisherInstallationError) message = error.reason === 'resume-missing' ? 'resumeMissing'
       : error.reason === 'resume-required' ? 'resumeRequired' : error.reason === 'invalid' ? 'invalid' : 'blocked';
     else if (error instanceof SetupBatchProviderError && error.code === 'forbidden') message = 'authority';
