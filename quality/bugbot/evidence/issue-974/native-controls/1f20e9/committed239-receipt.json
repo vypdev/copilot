@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "committed-source-deterministic-controls",
+  "implementation": "1f20e9c5b46a7b3fdd761fbc07051058bb0dc699",
+  "log": "/private/tmp/copilot-goal-974-1f20e9-committed239-attempt1.log",
+  "logBytes": 25903,
+  "logSha256": "07b8a59b03c47648e0f3d844fae4969539ba4cdbf7d10997cba0518250ed3a00",
+  "counts": {
+    "tests": 239,
+    "pass": 239,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "durationMs": 396620.310166,
+  "ptyExitCode": null,
+  "exitCodeObservation": "PTY session handle was lost across context compaction; exact completed Node test summary retained; no duplicate execution.",
+  "modelCalls": 0,
+  "nativeSdkAcceptance": false,
+  "production": "disabled"
+}

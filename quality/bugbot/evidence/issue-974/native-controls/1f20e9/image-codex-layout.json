@@ -1,0 +1,242 @@
+[
+  {
+    "name": "@openai/codex/README.md",
+    "bytes": 3334,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex/bin/codex.js",
+    "bytes": 9154,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex/package.json",
+    "bytes": 1082,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/README.md",
+    "bytes": 3334,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/package.json",
+    "bytes": 515,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex",
+    "bytes": 290331928,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex-code-mode-host",
+    "bytes": 72018272,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-package.json",
+    "bytes": 206,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-path/rg",
+    "bytes": 4506992,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/bwrap",
+    "bytes": 529168,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/NOTICE.md",
+    "bytes": 2403,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/bin/codex-voice-host",
+    "bytes": 41556192,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/gstreamer-1.0/libgstapp.so",
+    "bytes": 7280,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/gstreamer-1.0/libgstaudioconvert.so",
+    "bytes": 43000,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/gstreamer-1.0/libgstaudioresample.so",
+    "bytes": 36520,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/gstreamer-1.0/libgstcoreelements.so",
+    "bytes": 489544,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/gstreamer-1.0/libgstopus.so",
+    "bytes": 73176,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/gstreamer-1.0/libgstrtp.so",
+    "bytes": 789912,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/gstreamer-1.0/libgstrtpmanager.so",
+    "bytes": 587632,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libffi.so.8",
+    "bytes": 96960,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgio-2.0.so.0",
+    "bytes": 2673512,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libglib-2.0.so.0",
+    "bytes": 1638232,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgmodule-2.0.so.0",
+    "bytes": 16656,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgobject-2.0.so.0",
+    "bytes": 512144,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgstallocators-1.0.so.0",
+    "bytes": 33952,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgstapp-1.0.so.0",
+    "bytes": 114744,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgstaudio-1.0.so.0",
+    "bytes": 625544,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgstbase-1.0.so.0",
+    "bytes": 593264,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgstnet-1.0.so.0",
+    "bytes": 78864,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgstpbutils-1.0.so.0",
+    "bytes": 358688,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgstreamer-1.0.so.0",
+    "bytes": 1764960,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgstrtp-1.0.so.0",
+    "bytes": 232400,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgsttag-1.0.so.0",
+    "bytes": 287296,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libgstvideo-1.0.so.0",
+    "bytes": 1108800,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libintl.so.8",
+    "bytes": 6920,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libopus.so.0",
+    "bytes": 501592,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libpcre2-8.so.0",
+    "bytes": 413336,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/lib/libz.so.1",
+    "bytes": 113168,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/licenses/LGPL-2.1.txt",
+    "bytes": 26431,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/licenses/Opus.txt",
+    "bytes": 1945,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/licenses/PCRE2.md",
+    "bytes": 4011,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/licenses/libffi.txt",
+    "bytes": 1132,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/licenses/proxy-libintl.txt",
+    "bytes": 25292,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/licenses/sljit.txt",
+    "bytes": 1444,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/licenses/zlib.txt",
+    "bytes": 1002,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/manifest.json",
+    "bytes": 4770,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/runtime.json",
+    "bytes": 14536,
+    "type": "0"
+  },
+  {
+    "name": "@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/codex-resources/voice/sources.json",
+    "bytes": 4911,
+    "type": "0"
+  }
+]

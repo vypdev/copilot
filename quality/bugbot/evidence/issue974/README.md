@@ -165,11 +165,11 @@ Its selected receipt and exact retained-owner proof are linked from the existing
 [published SDD card](https://github.com/vypdev/copilot/issues/974#issuecomment-7052572620).
 The old owning document remains an exact prefix; the appendix adds six Node
 cases (`C26`–`C31`) and four actual native SDK cases (`C32`–`C35`). The six new
-Node cases pass on the local WIP; the four native cases remain unexecuted.
+Node cases pass on committed implementation `1f20e9`; the four native cases remain unexecuted.
 The combined Node floor is
 239, and the complete campaign-specific floor is 35 including the retained 25.
 
-Local implementation currently adds semantic operation ownership/stop ports,
+The implementation adds semantic operation ownership/stop ports,
 a pure identity/complete-ledger policy and a process-local plan/signal binding.
 Their component controls cover copied/foreign authority, missing or orphaned
 terminals, stopped-namespace correlation, interrupted quiet work, unknown stop
@@ -178,10 +178,12 @@ these decisions; they do not prove a real namespace stopped.
 
 The engine adapter, PID1 supervisor and runtime-image recipe are connected in
 source to the authenticated public bootstrap and ordinary executor. This source
-is local WIP, not native acceptance. They are not supported standalone
+is committed and pushed, with native acceptance still pending. They are not supported standalone
 entrypoints. The recipe requires a sanitized,
 credential-free implementation checkout and explicit immutable base-image and
-CLI version selection. No image has yet been built or admitted for this route.
+CLI version selection. The immutable SDK image and actual byte/version observations
+are retained in [native preparation](../issue-974/native-controls/1f20e9/README.md);
+the four actual native SDK controls have not yet run.
 The existing unrelated-image mechanism prototypes remain separate evidence.
 
 The selected runtime uses one dedicated Linux PID namespace per complete outer
@@ -254,22 +256,24 @@ aborts siblings and settles all dispatched operations before returning failure.
 
 Current local checks: C26–C31 (6/6), retained scorer controls (11/11), SDK/verifier
 controls (32 tests), and live scope/pure policy coverage (127 statements,
-107 branches, 29 functions, 100 lines; 100% each). The full 239-control
-committed-source run, changed-module coverage, immutable image, four actual native
-controls and final native PR checks remain pending. No implementation commit,
-actual model call or measurement preregistration is claimed by these WIP checks.
+107 branches, 29 functions, 100 lines; 100% each). The complete committed-source
+Node command at `1f20e9` passes all 239 controls, with zero failures, skips or
+cancellations. The SDK image is built and its source/runtime/CLI bytes and
+versions observed. Changed-module coverage, four actual native controls and final
+native PR checks remain pending. No actual model call, measurement preregistration
+or qualified profile is claimed by this preparation.
 
 Implementation preparation [`63628bb2`](https://github.com/vypdev/copilot/commit/63628bb2ea01b2d9aafb589e3b1245dae54d4778)
 passed its normal build, 944 SDK suites/18,716 tests (35 existing skips) and lint
-locally; it has not been pushed. Its complete committed-source Node run retained
+locally; it was subsequently pushed as an ancestor of `1f20e9`. Its first complete committed-source Node run retained
 236/239 passing, three compatibility failures and zero skips/cancellations.
 The failed controls assumed the former verifier source layout or earlier denial
 wording. The corrected three controls pass while preserving byte/import and
 arbitrary-IPC-parent rejection. A new C30 negative also reproduced acceptance of
 empty copied runtime projections; the scorer now requires the complete observed
 runtime fields, source identity and bootstrap correlation. Six deterministic
-controls pass after that correction. The final committed-source 239 run remains
-pending for these follow-up bytes, and actual native SDK acceptance is unexecuted.
+controls pass after that correction. The later committed-source 239 run at
+`1f20e9` passes in full; actual native SDK acceptance remains unexecuted.
 
 The later-plan transport also has an actual local Git regression: a bundle
 created with a raw commit alone exits 128 (`Refusing to create empty bundle`).
