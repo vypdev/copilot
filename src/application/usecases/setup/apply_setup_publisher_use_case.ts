@@ -79,7 +79,7 @@ export class ApplySetupPublisherUseCase {
           branch: (commit, inspectOnly) => writer.branch(commit, inspectOnly),
           pullRequest: (commit, inspectOnly) => writer.pullRequest(commit, inspectOnly),
         }, {
-          active: () => this.ports.active(), revalidate: fresh,
+          active: () => this.ports.active(), revalidate: fresh, recovery: 'reviewed-create-if-absent',
           retain: async state => {
             if (state.preparedCommit !== undefined && state.preparedCommit !== operation.preparedCommit) throw fail('delivery');
             const uncertain = state.uncertain === 'prepared-objects'

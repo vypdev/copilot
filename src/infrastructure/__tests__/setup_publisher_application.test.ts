@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { ReviewSetupPublisherUseCase } from '../../application/usecases/setup/review_setup_publisher_use_case';
 import { ApplySetupPublisherUseCase } from '../../application/usecases/setup/apply_setup_publisher_use_case';
+import { InstallSetupPublisherUseCase } from '../../application/usecases/setup/install_setup_publisher_use_case';
 import { setupPublisherFixture } from '../../application/policies/__tests__/fixtures/setup_publisher_fixture';
 import { setupBatchMarker, setupBatchBranch } from '../../application/policies/setup_batch_policy';
 import { planSetupPublisherInstallation } from '../../application/policies/setup_publisher_plan_policy';
@@ -54,23 +55,95 @@ function fixture() {
     return transform(route, value, parameters);
   }) };
   const confirm = jest.fn(async (): Promise<'approve' | 'decline'> => 'approve');
-  const present = jest.fn(async (value: SetupPublisherPlan) => { plan = value; });
-  const execute = (reviewed?: SetupPublisherOperation, dryRun = false) => new ReviewSetupPublisherUseCase({
+  const present = jest.fn(async (value: SetupPublisherPlan, _retained?: SetupPublisherOperation) => { plan = value; });
+  const review = () => new ReviewSetupPublisherUseCase({
     inspect: async () => ({ inspection: data.inspection, session }), present, confirm, active,
-  }).execute({ proposal: data.proposal, operationId: id, dryRun }, (approved, actualSession, fresh) => {
-    expect(actualSession).toBe(session);
-    return new ApplySetupPublisherUseCase({ coordinator: new DeliverSetupInstallationUseCase(), journal, active,
+  });
+  const apply = () => new ApplySetupPublisherUseCase({ coordinator: new DeliverSetupInstallationUseCase(), journal, active,
       delivery: (value, identity, revalidate) => {
-        expect(value).toBe(approved); expect(identity).toBe(session);
+        expect(value).toBe(plan); expect(identity).toBe(session);
         return new SetupInstallationGithubDeliveryAdapter(transport, { target: value.target, operationId: value.operationId,
           digest: value.digest, files: value.files, title: 'Install reviewed publisher', body: setupBatchMarker(id, value.target.id) }, 'private-fixture-token', revalidate);
       },
-    }).execute(approved, actualSession, fresh, reviewed);
-  });
+    });
+  const execute = (reviewed?: SetupPublisherOperation, dryRun = false) => review()
+    .execute({ proposal: data.proposal, operationId: id, dryRun }, (approved, actualSession, fresh) => {
+      expect(actualSession).toBe(session);
+      return apply().execute(approved, actualSession, fresh, reviewed);
+    });
+  const executeInstalled = (resume: boolean) => new InstallSetupPublisherUseCase(review(), apply(), journal)
+    .execute({ proposal: data.proposal, operationId: id, dryRun: false, resume });
   const posts = () => transport.call.mock.calls.filter(([, route]) => route.startsWith('POST ')).map(([, route]) => route);
-  return { ...data, journal, transport, active, confirm, present, execute, posts, prepared,
-    transform: (next: typeof transform) => { transform = next; }, setBranch: (sha: string) => { branch = sha; } };
+  return { ...data, journal, transport, active, confirm, present, execute, executeInstalled, posts, prepared,
+    transform: (next: typeof transform) => { transform = next; }, setBranch: (sha: string | undefined) => { branch = sha; },
+    setPulls: (value: unknown[]) => { pulls = value; } };
 }
+
+it.each(['branch', 'pull-request'] as const)('publisher977-C45: fresh reviewed resume creates a confirmed-absent uncertain %s without replaying Git objects', async kind => {
+  const f = fixture(), route = kind === 'branch' ? 'POST /repos/{owner}/{repo}/git/refs' : 'POST /repos/{owner}/{repo}/pulls';
+  const original = f.transport.call.getMockImplementation()!;
+  let interrupted = false;
+  f.transport.call.mockImplementation(async (token, actual, parameters) => {
+    if (!interrupted && actual === route) { interrupted = true; throw new SetupBatchProviderError('transient'); }
+    return original(token, actual, parameters);
+  });
+  await expect(f.executeInstalled(false)).rejects.toMatchObject({ reason: 'delivery', retained: { uncertain: kind } });
+  const retained = await f.journal.load(id), before = f.transport.call.mock.calls.length;
+  expect(retained?.effects).toEqual(kind === 'branch' ? ['tree', 'commit'] : ['tree', 'commit', 'branch']);
+  expect(await f.executeInstalled(true)).toMatchObject({ stage: 'apply', result: { status: 'waiting-for-merge', pullRequestNumber: 73 } });
+  expect(f.confirm).toHaveBeenCalledTimes(2); expect(f.present.mock.calls[1][1]).toEqual(retained);
+  const resumed = f.transport.call.mock.calls.slice(before).map(([, actual]) => actual);
+  const inspection = kind === 'branch' ? 'GET /repos/{owner}/{repo}/git/ref/{ref}' : 'GET /repos/{owner}/{repo}/pulls';
+  expect(resumed.indexOf(inspection)).toBeGreaterThanOrEqual(0);
+  expect(resumed.indexOf(inspection)).toBeLessThan(resumed.indexOf(route));
+  expect(f.posts().filter(actual => actual.endsWith('/git/trees'))).toHaveLength(1);
+  expect(f.posts().filter(actual => actual.endsWith('/git/commits'))).toHaveLength(1);
+  expect(f.posts().filter(actual => actual === route)).toHaveLength(2);
+  expect((await f.journal.load(id))?.uncertain).toBeUndefined();
+});
+
+it.each(['branch', 'pull-request'] as const)('publisher977-C45: reviewed resume adopts an existing uncertain %s after a lost response without repeating its POST', async kind => {
+  const f = fixture(), route = kind === 'branch' ? 'POST /repos/{owner}/{repo}/git/refs' : 'POST /repos/{owner}/{repo}/pulls';
+  const inspection = kind === 'branch' ? 'GET /repos/{owner}/{repo}/git/ref/{ref}' : 'GET /repos/{owner}/{repo}/pulls';
+  let responseLost = false;
+  f.transform((actual, value) => {
+    if (actual === route) { responseLost = true; throw new SetupBatchProviderError('transient'); }
+    if (responseLost && actual === inspection) throw new SetupBatchProviderError('unknown');
+    return value;
+  });
+  await expect(f.executeInstalled(false)).rejects.toMatchObject({ retained: { uncertain: kind } });
+  f.transform((_actual, value) => value);
+  expect(await f.executeInstalled(true)).toMatchObject({ result: { status: 'waiting-for-merge', pullRequestNumber: 73 } });
+  expect(f.posts().filter(actual => actual === route)).toHaveLength(1);
+  expect(f.posts().filter(actual => actual.endsWith('/git/trees'))).toHaveLength(1);
+  expect(f.posts().filter(actual => actual.endsWith('/git/commits'))).toHaveLength(1);
+  expect(f.confirm).toHaveBeenCalledTimes(2);
+});
+
+it.each(['branch', 'pull-request'] as const)('publisher977-C47: reviewed uncertain %s recovery refuses a conflicting identity without a replacement POST', async kind => {
+  const f = fixture(), route = kind === 'branch' ? 'POST /repos/{owner}/{repo}/git/refs' : 'POST /repos/{owner}/{repo}/pulls';
+  const inspection = kind === 'branch' ? 'GET /repos/{owner}/{repo}/git/ref/{ref}' : 'GET /repos/{owner}/{repo}/pulls';
+  let responseLost = false;
+  f.transform((actual, value) => {
+    if (actual === route) { responseLost = true; throw new SetupBatchProviderError('transient'); }
+    if (responseLost && actual === inspection) throw new SetupBatchProviderError('unknown');
+    return value;
+  });
+  await expect(f.executeInstalled(false)).rejects.toMatchObject({ retained: { uncertain: kind } });
+  const before = f.posts().length;
+  if (kind === 'branch') { f.setBranch('f'.repeat(40)); f.transform((_actual, value) => value); }
+  else f.transform((actual, value) => actual === 'GET /repos/{owner}/{repo}/pulls'
+    ? (value as { head: Record<string, unknown> }[]).map(pull => ({ ...pull, head: { ...pull.head, sha: 'f'.repeat(40) } })) : value);
+  await expect(f.executeInstalled(true)).rejects.toMatchObject({ reason: 'delivery', retained: { uncertain: kind } });
+  expect(f.posts()).toHaveLength(before); expect(f.confirm).toHaveBeenCalledTimes(2);
+});
+
+it.each(['branch', 'pull-request'] as const)('publisher977-C47: a completed publisher receipt never recreates a missing %s', async kind => {
+  const f = fixture(); await f.executeInstalled(false); const saved = await f.journal.load(id), before = f.posts().length;
+  if (kind === 'branch') f.setBranch(undefined); else f.setPulls([]);
+  await expect(f.executeInstalled(true)).rejects.toMatchObject({ reason: 'delivery', lastPersisted: saved });
+  expect(f.posts()).toHaveLength(before); expect(await f.journal.load(id)).toEqual(saved);
+});
 
 it('keeps the credential out of the concrete delivery object exposed through the semantic application port', () => {
   const f = setupPublisherFixture(), plan = planSetupPublisherInstallation(f.proposal, f.inspection, id);
@@ -120,7 +193,7 @@ it('a failed base read before any POST retains a blocked operation without inven
   expect(f.posts()).toEqual([]); const retained = await f.journal.load(id); expect(retained?.uncertain).toBeUndefined();
   f.transform((_route, value) => value); await f.execute(retained); expect(f.posts().filter(route => route.endsWith('/git/trees'))).toHaveLength(1);
 });
-it.each(['tree', 'commit', 'branch', 'pull-request'] as const)('publisher977-C41: a denied %s write retains partial facts without escalation, probes or POST replay', async kind => {
+it.each(['tree', 'commit', 'branch', 'pull-request'] as const)('publisher977-C41: a denied %s write retains partial facts without escalation, probes or blind POST replay', async kind => {
   const f = fixture(), effects = ['tree', 'commit', 'branch', 'pull-request'];
   const routes = ['POST /repos/{owner}/{repo}/git/trees', 'POST /repos/{owner}/{repo}/git/commits',
     'POST /repos/{owner}/{repo}/git/refs', 'POST /repos/{owner}/{repo}/pulls'];
@@ -133,8 +206,15 @@ it.each(['tree', 'commit', 'branch', 'pull-request'] as const)('publisher977-C41
     status: 'partial', effects: effects.slice(0, index), uncertain: kind,
   } });
   expect(f.posts()).toEqual(routes.slice(0, index + 1));
-  const saved = await f.journal.load(id), count = f.posts().length;
-  await expect(f.execute(saved)).rejects.toBeDefined(); expect(f.posts()).toHaveLength(count);
+  const saved = await f.journal.load(id), count = f.posts().length, before = f.transport.call.mock.calls.length;
+  await expect(f.execute(saved)).rejects.toBeDefined();
+  expect(f.posts()).toHaveLength(count + (kind === 'branch' || kind === 'pull-request' ? 1 : 0));
+  if (kind === 'branch' || kind === 'pull-request') {
+    const resumed = f.transport.call.mock.calls.slice(before).map(([, actual]) => actual);
+    const inspect = kind === 'branch' ? 'GET /repos/{owner}/{repo}/git/ref/{ref}' : 'GET /repos/{owner}/{repo}/pulls';
+    expect(resumed.indexOf(inspect)).toBeGreaterThanOrEqual(0);
+    expect(resumed.indexOf(inspect)).toBeLessThan(resumed.indexOf(routes[index]));
+  }
   expect(JSON.stringify(saved)).not.toContain('private-fixture-token');
 });
 it('a complete journal re-proves the current exact ref and PR without a new POST', async () => {

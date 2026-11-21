@@ -413,6 +413,144 @@
       "rawSha256": "5b758d1a7065b5d5f0c892b35c9de9234e0ed55d8cb5bd905243107a399eef1b",
       "gzipBytes": 49787,
       "gzipSha256": "a4ea20844b92f6b4492f2f6c986f304a5a6c36b8548b72165eb251f5bb6ae635"
+    },
+    "review-round2/reproduced-before.log.gz": {
+      "rawBytes": 5414,
+      "rawSha256": "68693557578d93c5f61ccf870214f801065bfafdbe612d578b00330a7f98a09a",
+      "gzipBytes": 1217,
+      "gzipSha256": "321bf5457b1afdd119bc30f2031feadd448709688dba396c94fed8395e68ce6f"
+    },
+    "review-round2/reproduced-before-results.json.gz": {
+      "rawBytes": 42153,
+      "rawSha256": "8419154d7c72cc24cd5e441643ad5d32087e0c89273d463c496cbe706eece816",
+      "gzipBytes": 3912,
+      "gzipSha256": "1b2b6a434ca34ac7e5fe14cf053a2033240e034fc01a690fe925e840cae6ffe7"
+    },
+    "review-round2/initial-corrected.log.gz": {
+      "rawBytes": 461,
+      "rawSha256": "16ed3f4ea93cd6e68202a44abc8615c62694dcc25b5e2eb12514db8c68545602",
+      "gzipBytes": 266,
+      "gzipSha256": "9dfc38af3ba3add4afee32dbe47fda6f0744565ff7d0bd3e2d3105d9cb742445"
+    },
+    "review-round2/initial-corrected-results.json.gz": {
+      "rawBytes": 48867,
+      "rawSha256": "e2d6a1e3680ec5dd9dd6b198bea745b61b5ce512e1155bf1bd3e5bb8e112ed38",
+      "gzipBytes": 3930,
+      "gzipSha256": "91685025679d157b6eccdff2e79a3702af570743fca23774f48e5b0f25ea9388"
+    },
+    "review-round2/expanded-fixture-negative.log.gz": {
+      "rawBytes": 194034,
+      "rawSha256": "2f4f84b907892ccde6b8b68f8fd10a07b1b197dab7d0835aef6b146f40f945eb",
+      "gzipBytes": 18643,
+      "gzipSha256": "1eaf97a8e093748eaaa34f7fe05d4d3d2e4fa8bf60bc91d722b80c7685e82af7"
+    },
+    "review-round2/expanded-fixture-negative-results.json.gz": {
+      "rawBytes": 9562460,
+      "rawSha256": "a472e12d826f0bc9b79fd83ba06ec7582209c17c4259a3dcf863529ec816afc9",
+      "gzipBytes": 1058886,
+      "gzipSha256": "e1dd986909b8f613c767d40b6131cf536461596f0cfd4301f81160707616cd0f"
+    },
+    "review-round2/expanded-corrected.log.gz": {
+      "rawBytes": 177240,
+      "rawSha256": "53257720c710f2e809c8d3150ee6a859e02628b77ae5a773b9aaf3ef38b2f75d",
+      "gzipBytes": 16596,
+      "gzipSha256": "31a61dd8768f304decd72a437879b64e5d3409960170e9c3af317b23e87ab8a7"
+    },
+    "review-round2/expanded-corrected-results.json.gz": {
+      "rawBytes": 9508464,
+      "rawSha256": "fd2ff84a29db8c7d31edbc01df5d820f11e3374d37a3e10428884a562fb2a37d",
+      "gzipBytes": 1058186,
+      "gzipSha256": "98c3ae935a24a5224e1fd63ce6c6bb280b53d21d6019b589276c57e11f067212"
+    },
+    "review-round2/expanded-corrected-coverage-final.json.gz": {
+      "rawBytes": 9459090,
+      "rawSha256": "6237ae101810785d7e3f60646bf17f6c5cae2c06456e6091813a37e8b31d8e0e",
+      "gzipBytes": 1052784,
+      "gzipSha256": "85c4747435013cd8e1ccb709761e5ae87fd4cc03b419e1a5e95bb6a8ba35cfba"
+    },
+    "review-round2/build.log.gz": {
+      "rawBytes": 442111,
+      "rawSha256": "bd147b2aa209591eacebe35af5bfb910885845e9bd5ee4378e17ac0882ef137a",
+      "gzipBytes": 46530,
+      "gzipSha256": "e3b182ca321c645d600a2a32b0f32d22a5fcab8072047146524bac3fd9077645"
+    },
+    "review-round2/typecheck.log.gz": {
+      "rawBytes": 555,
+      "rawSha256": "96e50bba6ba77c1b37b6fc8d1c6205f02288d7bd8a3161e5af2e0fbe68d5623e",
+      "gzipBytes": 252,
+      "gzipSha256": "f18703251ced998328dee03fbe39fbea198a515268c80f52e59017f6ad4c814a"
+    },
+    "review-round2/specifications.log.gz": {
+      "rawBytes": 2463,
+      "rawSha256": "a3ab855d56fe321727cd1553329fe8e8901dc6cab6c2ff0a9c470c2331238f4e",
+      "gzipBytes": 1091,
+      "gzipSha256": "b280e5664ac4fcb59f9a651718dc4916faf541bcd9523dc029ecba8a2cb3074b"
+    },
+    "review-round2/graphify.log.gz": {
+      "rawBytes": 3619,
+      "rawSha256": "cea7cb219abd1d0beb0446990559081ccff44bea5f52c32aedc3983f092aaebe",
+      "gzipBytes": 929,
+      "gzipSha256": "2436e3db58d25fa6111df1d8c8ff8ea9cbdf119ab714f5b5ebf696a49984f3df"
+    },
+    "review-round2/prestage-build-validator-negative.log.gz": {
+      "rawBytes": 273,
+      "rawSha256": "c3e518a8549d9f38cefc5dcfc5aa2f5a0ffe59679a2cba68dbd7b49dff2a39a9",
+      "gzipBytes": 227,
+      "gzipSha256": "dd01830c1dfa4998d996d277b039446d5f1cac918b48cd5a2298bfe8e351cade"
+    },
+    "review-round2/package-smoke.log.gz": {
+      "rawBytes": 1143,
+      "rawSha256": "51c44f72b82d9cef938145f59070d9f99fe5e682b13786ae41c170ce941eee9c",
+      "gzipBytes": 471,
+      "gzipSha256": "32c52dc752ff85e45473606915406bd0fd0ca6d51342d01900b0506614af0fdf"
+    },
+    "review-round2/parent-native-static.log.gz": {
+      "rawBytes": 88836,
+      "rawSha256": "d2c8174b4fc547776fae205ee24f4a4fcd76747c4ded1c762614877fee2e3703",
+      "gzipBytes": 19624,
+      "gzipSha256": "f577a50bd607790d31c671af2e36559ef04b2c6d9b498c40c8a9e453b9d177ff"
+    },
+    "review-round2/parent-native-build.log.gz": {
+      "rawBytes": 407530,
+      "rawSha256": "f19050bb3aed55877b795dce9bb7906d6902586453dd8caafd0234dcc1be66e3",
+      "gzipBytes": 54845,
+      "gzipSha256": "cb7754965083439da2efd6edc65d980b6c3c4e8698e6ef4a46ad478c4aefef2b"
+    },
+    "review-round2/parent-native-coverage.log.gz": {
+      "rawBytes": 3332147,
+      "rawSha256": "b08b0a1cf0f59477387a5ef5fa65c1a9b0f02d6075ff467ddbec39bb8ee9c487",
+      "gzipBytes": 604867,
+      "gzipSha256": "bffe94de24041cda6b0862cba0e3f633d020a934092aa7debb2eeb0a8c19e706"
+    },
+    "review-round2/parent-native-commit.log.gz": {
+      "rawBytes": 49908,
+      "rawSha256": "5716f71d1f958fa325ef2c3ebba9882175f37b11d4b47b8c9193dd53303f663d",
+      "gzipBytes": 11762,
+      "gzipSha256": "939045f66ce6dc6b4f5b0c8dec98ff93ee42d1a44507caaa9102ab2e2bf93b47"
+    },
+    "review-round2/parent-native-ci-terminal.json.gz": {
+      "rawBytes": 34541,
+      "rawSha256": "8f5d8f1798139049c4712b91de6203b369866d3e87c0d409a4428f611a8a71e0",
+      "gzipBytes": 3276,
+      "gzipSha256": "b928b0bc1dc335dcde61abfb83d6e8d0f4f817d4dd175b62e5a18638cb572a4f"
+    },
+    "review-round2/parent-native-verification.json.gz": {
+      "rawBytes": 25216,
+      "rawSha256": "78fc17ef8ae9d9664616b957052122f0abdc15e38d79b6ba91d384d7df9d746d",
+      "gzipBytes": 4906,
+      "gzipSha256": "627d934c3cfcad294076faea5e877e8d6d1829063d7ebc130a0c85d15c3f054d"
+    },
+    "review-round2/parent-codecov.json.gz": {
+      "rawBytes": 8798,
+      "rawSha256": "0ad306b5515d1631391cd05bdee1bcebf6e0d43abcf518bd7662d20b9bcdbec9",
+      "gzipBytes": 2088,
+      "gzipSha256": "62150ab503d64a09383fe8bed172d917f17406b99420031e28811fd0d1e76865"
+    },
+    "review-round2/parent-addressed-eight-threads.json.gz": {
+      "rawBytes": 4672,
+      "rawSha256": "bfc0d81db8b0c4ff19cd3af943ed5bd3b49a0fdb84122ca5615d2d3723382226",
+      "gzipBytes": 485,
+      "gzipSha256": "8d68ca770317038f2a4bf1f760701528a56ed6b9e2634db075b4df18730dc007"
     }
   },
   "fullSDKCorrectedBeforeNewTests": "964suites and19584assertions PASS,35existing skips; commandexit1 at existingpurepolicycoverage95%, before20additional metadata cases. This negative gate is retained.",
@@ -724,5 +862,79 @@
       "defaultFinalHeadNativeGatesStillRequired": true,
       "outcome": "prepared, not yet executed"
     }
+  },
+  "reviewRound2": {
+    "schemaVersion": 1,
+    "at": "2026-11-21T17:21:43.235948+00:00",
+    "sourceParent": "6b5092e5616ade565dd6063dbbbaa8d24bdeb44e",
+    "findings": [
+      "PRRT_kwDONSeBW866Zvr-",
+      "PRRT_kwDONSeBW866ZvsM"
+    ],
+    "reproduction": {
+      "passed": 60,
+      "failed": 4,
+      "namedCases": "two actual composed Install/review/private-journal/delivery absent-phase controls and two inventory reusable-reference controls"
+    },
+    "initialCorrection": {
+      "passed": 118,
+      "failed": 0,
+      "suites": 3
+    },
+    "expanded": {
+      "passed": 124,
+      "failed": 0,
+      "suites": 3,
+      "commandExit": 1,
+      "reason": "Targeted command leaves web/specification-publication/global owners unexecuted; this is not full-coverage acceptance.",
+      "changedRuntimeAllMetrics": 100
+    },
+    "extraTestBudget": {
+      "actualComposedPublisherRecovery": 8,
+      "remoteReusableInventory": 2,
+      "fixedScenarioIds": 64,
+      "idsOrRequirementsChanged": false
+    },
+    "fixtureNegative": {
+      "passed": 120,
+      "failed": 4,
+      "cause": "The actual adapter immediately recovered matching effects after a lost POST response. The fixture was corrected to also deny its followup reads, producing a retained uncertain operation for a later reviewed resume. No extra runtime correction was made for this fixture error."
+    },
+    "prestageBuildValidatorNegative": "Compares worktree against Git index, so it correctly rejected the freshly generated unstaged CLI bundle. Validate after staging; no compiler nondeterminism inferred.",
+    "sourceHashes": {
+      "src/application/usecases/setup/apply_setup_publisher_use_case.ts": "e8ad51395a31b25b3d770db3f1e1ba2b40ba4abd2ab843d3995c0bcafe26daed",
+      "src/infrastructure/setup_publisher_workflow_inventory.ts": "bc5a100cfb5bd4bac2caee4de1ad1be02087d1ccc1a36218c9c3a224754a2f62",
+      "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts": "18a9c512edd33755185f8832474f9d40b5a46801b5760d2f6a307e8b76fc5903",
+      "src/infrastructure/__tests__/setup_publisher_application.test.ts": "3fef7e092abbe0af2b54593550821bb5e53d343d4a0367bdbcbad4dd62d2410a",
+      "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts": "8690b0906eb5d34ecaf371ab791994e28fb989224db8491357ff0c5c89b56f02"
+    },
+    "bundles": {
+      "api": {
+        "bytes": 1127424,
+        "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+      },
+      "cli": {
+        "bytes": 8466815,
+        "sha256": "22da5bff2a903f2b9720559faa74ee1abec52ddb6b5d9ce07bb353f8d3bfd191"
+      },
+      "deployment_recovery": {
+        "bytes": 2035151,
+        "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+      },
+      "github_action": {
+        "bytes": 11093575,
+        "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+      }
+    },
+    "selectedSddSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+    "parentNative": "All4CIjobs/defaultprofile,Commit,Verification,BranchSync andPRexecutionPASS; exact6b modifiedlinescovered, Codecovbase352commitsstale. Eight previous review threads replied/resolved. Review neutral with these two new findings.",
+    "newSourceAcceptance": "Normal hooks, publication and fresh final-head native gates/review still required. Parent results are history, not acceptance of these changed bytes.",
+    "installationEffects": 0,
+    "qualificationModelCalls": 0,
+    "actual174": "unstarted",
+    "actual42": "unstarted",
+    "qualifiedProfile": null,
+    "pilotWriteAttempts": 0,
+    "production": "disabled"
   }
 }

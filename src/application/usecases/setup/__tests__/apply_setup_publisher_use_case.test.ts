@@ -120,10 +120,11 @@ it('reuses a known exact prepared commit through the shared coordinator', async 
   const f = fixture(), existing = f.completed(); f.retain(existing); await f.execute(existing);
   expect(f.writer.prepareCommit).not.toHaveBeenCalled(); expect(f.writes).toEqual(['branch', 'pull-request']);
 });
-it.each(['branch', 'pull-request'] as const)('recovers an uncertain %s with inspection only', async uncertain => {
+it.each(['branch', 'pull-request'] as const)('enables freshly reviewed create-if-absent recovery for an uncertain %s', async uncertain => {
   const f = fixture(), existing = { ...f.completed(uncertain === 'branch' ? ['tree', 'commit'] : ['tree', 'commit', 'branch']), uncertain }; f.retain(existing);
   await f.execute(existing); expect(f.writer.prepareCommit).not.toHaveBeenCalled();
-  expect(f.reads).toEqual([uncertain]); expect(f.writes).toEqual(uncertain === 'branch' ? ['pull-request'] : []);
+  expect(f.writer[uncertain === 'branch' ? 'branch' : 'pullRequest']).toHaveBeenCalledWith(commit, false);
+  expect(f.reads).toEqual([]); expect(f.writes).toEqual(uncertain === 'branch' ? ['branch', 'pull-request'] : ['pull-request']);
 });
 it('a completed journal revalidates the exact ref and PR with no new writes or journal rewrite', async () => {
   const f = fixture(), existing = f.completed(['tree', 'commit', 'branch', 'pull-request']); f.retain(existing);

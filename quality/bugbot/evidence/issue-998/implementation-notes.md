@@ -199,3 +199,48 @@ a temporary process-only executable wrapper. Build, test and lint hooks remain
 configured unchanged; generated bundle bytes must match. This snapshot precedes
 that control's outcome. Repository/CI configuration, production and qualification
 runtime are unchanged; default final-head native gates remain mandatory.
+
+
+### Second review: publisher partial recovery and reusable workflow inventory
+
+The parent6b5092e native runner passes all four CI jobs under its default profile:
+966 SDK suites/19,657 assertions plus35 historical skips, all budgets/60 mapped
+publisher cases and385 extension files/5,291 assertions. Its native build passes
+104 packaged files,11 actual C55–C58 CLI invocations with zero effects and the
+typed API/local web smoke. Exact-head Codecov covers modified lines while
+warning that its comparison base is352 commits stale. Eight prior threads have
+public evidence/replies and are resolved. These facts are retained parent history.
+
+Fresh review then finds two further defects. Four named assertions reproduce
+them:60 pass/4 fail before correction, then118 pass across three suites. Partial
+publisher recovery now enables the common reviewed create-if-absent policy,
+after the explicit Install/review/approval flow. The real adapter inspects exact
+identities, reuses matching effects, creates only after proven absence and
+revalidation, and blocks conflicts. Completed receipts remain inspection-only;
+unknown tree/commit POSTs are never replayed. Uninspected remote job-level
+reusable workflows now classify UNKNOWN, like unresolved local execution. A
+remote pin cannot prove what the called workflow does. No resolver or trust
+exception is introduced.
+
+The ten additional regressions comprise eight composed Install/review/private
+disk journal/actual delivery controls (absent, matching lost-response, conflicting
+and completed-missing effects for ref/PR) and two remote workflow controls. All
+64 acceptance IDs and requirements stay unchanged. The expanded three-suite
+cohort passes124 assertions; both changed runtime modules reach100% statement,
+line, branch and function coverage. The isolated whole-coverage command still
+exits1 for unrun global owners. This is not full-repository coverage acceptance.
+
+The first expanded fixture incorrectly expected a lost POST response to remain
+partial even though the adapter immediately re-inspects and adopts its own
+matching effect. That120-pass/4-fail result is retained. Denying the immediate
+followup reads produces the intended uncertain receipt; later reviewed recovery
+then exercises the real condition. No runtime change was made for that fixture
+error. The pre-staging build-validator failure is also retained: it compares
+against the Git index and detects the newly emitted unstaged CLI bundle.
+
+See review-round2/receipt.json and its23 lossless archives. Types, build,
+specification validation, Graphify and the extracted-package smoke pass locally.
+The selected SDD remains byte-identical. Normal hooks, publication and fresh
+final-head native review/gates are still required for these new source bytes.
+No installation, native canary, actual174/42 campaign or qualified profile is
+claimed. Production remains disabled; qualification and pilot writes remain0.

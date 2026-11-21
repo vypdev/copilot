@@ -571,6 +571,12 @@ Resume with current credentials and fresh review:
 copilot setup --publisher-manifest /absolute/path/publisher-proposal.json --resume-operation <operation-id>
 ```
 
+For a partial operation with an uncertain ref or PR, Setup first inspects its
+exact operation/target/commit identity. It reuses a matching effect without a
+POST; fresh approval permits creation only when inspection proves absence and
+revalidation still passes. Conflicting identities block. Completed receipts
+remain inspection-only, even when their recorded ref or PR is missing.
+
 Cancellation stops later effects and retains completed/uncertain work; it is not
 a rollback. An unexpected human branch head blocks recovery. Do not delete the
 journal, lock, branch or PR to bypass the check. The shared

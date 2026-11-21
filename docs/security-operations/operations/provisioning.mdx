@@ -93,8 +93,9 @@ local Action invocation to that verified source commit. A maintainer merge
 establishes this source review boundary; it is not independent attestation of
 the producer's executable code.
 
-A local Action or reusable-workflow reference that this reader cannot inspect
-keeps publisher inventory unknown and blocks the proposal. A local path or a
+A local Action or any reusable-workflow reference that this reader cannot inspect
+keeps publisher inventory unknown and blocks the proposal. A local path, remote
+workflow pin or a
 non-publisher selector alone cannot prove that no publisher already exists.
 Resolve that inventory before preparing a new preview; an older preview cannot
 authorize Apply after this result changes.
@@ -139,7 +140,11 @@ still selects ordinary batch recovery. Legacy v1 records cannot become publisher
 v2 authority. Completed facts and uncertainty appear before approval. If a
 tree/commit POST may have succeeded without returning its identity, preserve and
 inspect that uncertainty; Setup does not blindly replay it or invent an object
-to adopt. Known prepared objects/refs/PRs are reused only after exact proof. See
+to adopt. Known prepared objects/refs/PRs are reused only after exact proof.
+For a partial operation, fresh approval permits creating an uncertain ref or PR
+only after inspection confirms its exact owned identity is absent and current
+authority and snapshot still match. A completed operation only rechecks its
+recorded ref and PR; it never recreates either. See
 [publisher recovery](/security-operations/operations/troubleshooting#recover-a-publisher-proposal-operation).
 
 After merge into trusted default, separately verify the installed revision and

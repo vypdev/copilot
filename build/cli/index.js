@@ -78884,7 +78884,7 @@ class ApplySetupPublisherUseCase {
                     branch: (commit, inspectOnly) => writer.branch(commit, inspectOnly),
                     pullRequest: (commit, inspectOnly) => writer.pullRequest(commit, inspectOnly),
                 }, {
-                    active: () => this.ports.active(), revalidate: fresh,
+                    active: () => this.ports.active(), revalidate: fresh, recovery: 'reviewed-create-if-absent',
                     retain: async (state) => {
                         if (state.preparedCommit !== undefined && state.preparedCommit !== operation.preparedCommit)
                             throw fail('delivery');
@@ -129542,8 +129542,8 @@ function meaning(content) {
                 else if (/(?:^|\/)copilot_bugbot_status_card\.ya?ml(?:@|$)/iu.test(scope.uses))
                     publisher = true;
                 // This inventory does not resolve local action metadata or reusable
-                // execution. A literal local path cannot prove publisher absence.
-                else if (scope.uses.startsWith('./'))
+                // workflow contents. Neither can prove publisher absence uninspected.
+                else if (!step || scope.uses.startsWith('./'))
                     unknown = true;
             }
             if (own(scope, 'with')) {
