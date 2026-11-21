@@ -1,0 +1,10 @@
+{
+  "currentDriverSha256": "0dbef389c51fb188f6c17da2464bb7b4fa304debc529e932b2d3c8d891e68750",
+  "countercontrolDriverSha256": "9705d1469cca92574e423b451bbab4357100865d1dc3d716df7cdd3491185cc0",
+  "recipe": "Copy current driver outside the checkout. Remove exactly the contiguous block starting assert.equal(result.publication and ending immediately before assert.equal(approvals. Retain all case definitions and local --refuse-blocked-assessment flag. Run both copies against the same pinned bundle with new output ledgers.",
+  "causalInput": "Only the local fake assessment POST for foreign-artifact-run returns 403. Both have the same blocked decision and exit 1.",
+  "oldOutcome": "false pass: finish.passed14 while foreign-artifact-run publication failed",
+  "newOutcome": "expected assertion failure: failed differs from published; no passing finish",
+  "realGitHubWriteAttempts": 0,
+  "qualificationModelCalls": 0
+}
