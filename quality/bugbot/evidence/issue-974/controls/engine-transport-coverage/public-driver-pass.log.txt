@@ -1,0 +1,10 @@
+✔ ev974-C27 closed containment refuses ambient grants, mutable images, arbitrary mounts/flags and unsafe namespace configuration (7772.567125ms)
+ALL_CJS_COMPONENT_COVERAGE [{"file":"quality/bugbot/evidence/issue974/operation-containment.cjs","statements":98.82,"lines":100,"branches":93.08,"functions":93.61,"gate":true}]
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8026.632667

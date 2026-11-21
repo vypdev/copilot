@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "observed": "two C27 executions fail after assertions at rmSync cleanup with ENOTEMPTY; retained fixture contents include bundle-target/.git/info/refs",
+  "leftovers": [
+    {
+      "ownedFixture": "/private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/ev974-control-BXaw4f",
+      "remainingRegularFiles": [
+        {
+          "path": "bundle-target/.git/info/refs",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "bundle-target/.git/objects/pack/multi-pack-index",
+          "bytes": 1336,
+          "sha256": "66a4b8d73f8bf14a0ec31d689c343b2fdea10926376c87b77841c223042cd0a4"
+        },
+        {
+          "path": "bundle-target/.git/objects/info/packs",
+          "bytes": 1,
+          "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        }
+      ]
+    },
+    {
+      "ownedFixture": "/private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/ev974-control-HHJIw0",
+      "remainingRegularFiles": [
+        {
+          "path": "bundle-target/.git/objects/pack/pack-0650e2c891ebd9a728c9c58f4a092372f7081ce9.rev",
+          "bytes": 76,
+          "sha256": "2a9c2f695ee6505fa8ae60ab5bf18a5520344e040d329da7b15847eb0d7a9975"
+        }
+      ]
+    }
+  ],
+  "causeLimits": "Git post-fetch background housekeeping is consistent with the surviving refs file; writer PID and exclusive root cause were not captured",
+  "correction": "disable maintenance.auto and gc.auto in the owned gitAt fixture command only; keep every transport/configuration/ownership assertion and fail on cleanup errors",
+  "runtimeGitOrResearchBudgetChanged": false,
+  "publicDriverAfterCorrection": "1PASS0fail/skip/cancel exit0; same engine coverage98.82stmt100line93.08branch93.61func",
+  "qualificationModelCalls": 0,
+  "production": "disabled"
+}

@@ -1,0 +1,32 @@
+✖ ev974-C27 closed containment refuses ambient grants, mutable images, arbitrary mounts/flags and unsafe namespace configuration (7106.006416ms)
+ALL_CJS_COMPONENT_COVERAGE [{"file":"quality/bugbot/evidence/issue974/operation-containment.cjs","statements":98.82,"lines":100,"branches":93.08,"functions":93.61,"gate":true}]
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7406.922084
+
+✖ failing tests:
+
+test at quality/bugbot/evidence/issue974/qualification.test.cjs:214:1
+✖ ev974-C27 closed containment refuses ambient grants, mutable images, arbitrary mounts/flags and unsafe namespace configuration (7106.006416ms)
+  Error: ENOTEMPTY, Directory not empty: /var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/ev974-control-BXaw4f '/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/ev974-control-BXaw4f'
+      at Object.rmSync (node:fs:1283:18)
+      at TestContext.<anonymous> (/private/tmp/copilot-goal-974/quality/bugbot/evidence/issue974/qualification.test.cjs:27:22)
+      at TestHook.runInAsyncScope (node:async_hooks:227:14)
+      at TestHook.run (node:internal/test_runner/test:1397:25)
+      at TestHook.run (node:internal/test_runner/test:1741:18)
+      at TestHook.run (node:internal/util:581:20)
+      at Test.runHook (node:internal/test_runner/test:1284:20)
+      at after (node:internal/test_runner/test:1337:20)
+      at Test.run (node:internal/test_runner/test:1423:13)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    errno: 66,
+    code: 'ENOTEMPTY',
+    path: '/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/ev974-control-BXaw4f',
+    syscall: 'rm'
+  }

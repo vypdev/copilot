@@ -1,0 +1,10 @@
+✔ exact-source engine component covers owned Unix transport lifecycle and refusal faults (5082.461125ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5085.762708
+ENGINE_COMPONENT_COVERAGE {"lines":{"total":262,"covered":247,"skipped":0,"pct":94.27},"functions":{"total":47,"covered":44,"skipped":0,"pct":93.61},"statements":{"total":341,"covered":319,"skipped":0,"pct":93.54},"branches":{"total":159,"covered":126,"skipped":0,"pct":79.24}}
