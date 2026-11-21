@@ -1283,7 +1283,8 @@
         "src/cli/setup_config_file.ts",
         "src/domain/copilot_comment_workflow.ts",
         "src/infrastructure/copilot_comment_inputs.json",
-        "src/infrastructure/private_jvm_environment.ts"
+        "src/infrastructure/private_jvm_environment.ts",
+        "scripts/credential-health-source-contract.cjs"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1417,7 +1418,8 @@
         "src/infrastructure/__tests__/verification_setup_configuration.test.ts",
         "src/domain/__tests__/copilot_comment_workflow.test.ts",
         "src/tooling/__tests__/credential_health_transport.test.ts",
-        "src/infrastructure/__tests__/private_jvm_environment.test.ts"
+        "src/infrastructure/__tests__/private_jvm_environment.test.ts",
+        "src/tooling/__tests__/credential_health_source_policy.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1442,7 +1444,8 @@
         "docs/guides/review-pull-requests.mdx",
         "docs/guides/work-with-the-bot.mdx",
         "docs/guides/releases-and-hotfixes.mdx",
-        "docs/agents/repository-collaboration.mdx"
+        "docs/agents/repository-collaboration.mdx",
+        "quality/bugbot/evidence/issue-979/README.md"
       ]
     },
     {

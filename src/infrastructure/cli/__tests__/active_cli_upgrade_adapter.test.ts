@@ -319,7 +319,7 @@ describe('active CLI upgrade', () => {
         rmSync(join(f.npmBin, commandName('npm')));
         await expect(new ActiveCliUpgradeAdapter(f).upgrade()).rejects.toThrow('Restore its original package manager');
         expect(f.readVersion(f.pnpmPackage)).toBe('3.7.0');
-    });
+    }, 30_000); // Real filesystem/process I/O exceeded Jest's default in native CI.
 
     it('does not resolve a directory as an executable or silently use a missing command', () => {
         const f = fixture();

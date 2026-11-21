@@ -103,3 +103,19 @@ platform fixtures remain separate and do not invoke real Codex. CLI or
 model success is distinct from a verified tool read, edit, or command. A model
 reply and a setup marker cannot certify sandbox tools. No new Windows-service
 Codex acceptance run is required or scheduled.
+
+## Credential-health source selection
+
+The source policy selected for integration in [#979](https://github.com/vypdev/copilot/issues/979)
+explicitly routes source health jobs to group `vypdev` with `self-hosted`, `codex`
+and `Linux` labels. Its default-ref/workflow and actor selector runs before a
+job receives a runner; unselected checks stay disabled. Preserve the existing
+hosted exceptions for event admission/npm OIDC and all consumer runner defaults.
+
+This routing does not establish runner isolation or externally enforced workflow
+access. Organization runner-group evidence is unavailable (403). A collaborator
+who can change workflow code can remove its local condition; the policy review
+must treat that privilege explicitly. The inspected default revision still has
+the old hosted health workflow, so neither a develop change nor this source decision
+proves adoption. Inspect native actor/ref and selected checks when a run skips;
+use an explicit default-branch retry after reviewing the missing condition.

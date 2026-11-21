@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { assertSourceHealthPolicy } = require('./credential-health-source-contract.cjs');
 const replacementContract = require('./deployment-replacement-contract.cjs');
 
 const { readFileSync, readdirSync } = require('node:fs');
@@ -430,6 +431,7 @@ function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (path.basename(file) === commentContract.RUNTIME) return assertCommentWorkflowRuntime(file, workflow);
   if (commentContract.CALLBACKS.includes(path.basename(file))) return assertCommentWorkflowCaller(file, workflow);
+  if (relativeFile === '.github/workflows/copilot_credential_health.yml') assertSourceHealthPolicy(workflow);
   const isSourceCi = relativeFile === '.github/workflows/ci_check.yml';
   if (isSourceCi) assertSourceCiJobs(relativeFile, workflow);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {

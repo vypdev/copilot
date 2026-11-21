@@ -1,14 +1,33 @@
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdtempSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { BugbotShadowCandidate } from '../../../application/ports/bugbot_shadow_verification_ports';
+import type { BugbotShadowCandidate, BugbotShadowResult } from '../../../application/ports/bugbot_shadow_verification_ports';
 import type { AgentConfiguration } from '../../../domain/agent';
 import { createPinnedBugbotShadowVerifier } from '../shadow_verification_adapter';
 import { inspectCursorVerifierCatalog, inspectOpenCodeVerifierCatalog } from '../verifier_model_catalog';
 import { createInstalledBugbotShadowVerifier } from '../installed_bugbot_shadow_adapter';
 
+jest.mock('node:child_process', () => {
+    const actual = jest.requireActual<typeof import('node:child_process')>('node:child_process');
+    return { ...actual, spawnSync: jest.fn(actual.spawnSync) };
+});
+
 const configuration: AgentConfiguration = { provider: 'codex', modelProvider: 'openai', model: 'gpt-6.1-sol', effort: 'xhigh' };
+
+function expectSourceVerdict(result: BugbotShadowResult): void {
+    const nativeGitFailures = jest.mocked(spawnSync).mock.results.flatMap((entry, index) => {
+        if (jest.mocked(spawnSync).mock.calls[index][0] !== 'git' || entry.type !== 'return') return [];
+        const { error, status, signal } = entry.value;
+        if (!error && status === 0 && !signal) return [];
+        const args = jest.mocked(spawnSync).mock.calls[index][1];
+        const operation = Array.isArray(args) ? args.find(value =>
+            ['rev-parse', 'remote', 'init', 'ls-tree', 'cat-file'].includes(value)) ?? 'other' : 'other';
+        return [{ operation, status, signal, errorCode: error && 'code' in error ? error.code : null }];
+    });
+    expect({ status: result.status, technicalReason: result.status === 'technical-failure' ? result.reason : null,
+        nativeGitFailures }).toEqual({ status: 'verdict', technicalReason: null, nativeGitFailures: [] });
+}
 
 describe('pinned Bugbot verifier adapter', () => {
     let repo: string;
@@ -26,6 +45,7 @@ describe('pinned Bugbot verifier adapter', () => {
     });
 
     afterAll(() => { if (repo) rmSync(repo, { recursive: true, force: true }); });
+    beforeEach(() => { jest.mocked(spawnSync).mockClear(); });
 
     it('passes the effective configuration and accepts only evidence read from the bound source', async () => {
         const onTurn = jest.fn();
@@ -134,7 +154,9 @@ describe('pinned Bugbot verifier adapter', () => {
             } };
         });
         try {
-            await expect(adapter.verify({ candidate, configuration: verifier })).resolves.toMatchObject({
+            const result = await adapter.verify({ candidate, configuration: verifier });
+            expectSourceVerdict(result);
+            expect(result).toMatchObject({
                 status: 'verdict', verdict: 'refuted', citations: [{ path: 'setting.ts', sha: candidate.headSha }],
             });
             await expect(adapter.verify({ candidate: { ...candidate, repository: { ...candidate.repository, name: 'other' } },
@@ -186,12 +208,30 @@ describe('pinned Bugbot verifier adapter', () => {
                     missing: 'The operations and the mechanism that orders them.', dependencies: [], premises: [],
                 } };
             });
-            await expect(adapter.verify({ candidate, configuration })).resolves.toMatchObject({
+            const result = await adapter.verify({ candidate, configuration });
+            expectSourceVerdict(result);
+            expect(result).toMatchObject({
                 status: 'verdict', verdict: 'inconclusive', investigation: { closureRepairs: 1 },
             });
             expect(turn).toBe(2);
         },
     );
+
+    it('fails closed when the installed checkout loses its Git metadata before a provider turn', async () => {
+        const transport = jest.fn();
+        const adapter = createInstalledBugbotShadowVerifier(candidate.repository, repo, transport);
+        const metadata = join(repo, '.git');
+        const retainedMetadata = join(repo, '.git-fixture-backup');
+        renameSync(metadata, retainedMetadata);
+        try {
+            await expect(adapter.verify({ candidate, configuration })).resolves.toEqual({
+                status: 'technical-failure', reason: 'shadow-source-unavailable',
+            });
+            expect(transport).not.toHaveBeenCalled();
+        } finally {
+            renameSync(retainedMetadata, metadata);
+        }
+    });
 
     it('rejects an unauthorized source and an untrusted revision without opening a provider session', async () => {
         const transport = jest.fn();
