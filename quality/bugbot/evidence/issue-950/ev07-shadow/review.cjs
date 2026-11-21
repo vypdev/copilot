@@ -1,31 +1,18 @@
 'use strict';
 
+if (require.main === module) throw new Error('Use the independently reviewed immutable bootstrap; direct qualification runners are unsupported.');
+
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
-const { getOctokit } = require('@actions/github');
-const { requirePinnedImplementation, requirePinnedExecution, requirePinnedDrivers, selectedPlanProvenance } = require('./implementation.cjs');
-require('./load.cjs');
-
-const { Ai } = require('../../../../../src/data/model/ai');
-const { AgentCliClient } = require('../../../../../src/data/repository/agent_cli_client');
-const { AgentExecutionPlanner } = require('../../../../../src/infrastructure/agents/agent_execution_planner');
-const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
-const { composeBugbotReview } = require('../../../../../src/infrastructure/composition/bugbot_review_composition');
-const { createFindingsQueryPort } = require('../../../../../src/infrastructure/composition/agent_capability_composition_root');
-const { readGithubActionAiInputs } = require('../../../../../src/actions/github_action_ai_inputs');
-const { projectBugbotReviewOperationContext } = require('../../../../../src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context');
-const { createInstalledBugbotShadowVerifier } = require('../../../../../src/infrastructure/bugbot/installed_bugbot_shadow_adapter');
-const { createGitHubBugbotCiReader } = require('../../../../../src/infrastructure/bugbot/github_bugbot_ci_reader');
-const { askManagedBugbotShadowTurn } = require('../../../../../src/infrastructure/bugbot/shadow_verification_adapter');
+const { pinnedGit, admitQualificationModules } = require('../execution-provenance.cjs');
+const { qualificationProvenance, requirePinnedExecution, preparePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
 const hash = input => createHash('sha256').update(input).digest('hex');
-const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, '-c', 'core.quotePath=true', ...args], {
-    encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
-});
+const git = (cwd, ...args) => pinnedGit(cwd)('-c', 'core.quotePath=true', ...args).toString('utf8');
 const snapshot = (source, value, count = 0) => ({
     value, coverage: { source, status: 'complete', pagesFetched: 1, itemsFetched: count, itemsRetained: count,
         omittedItems: 0, truncatedItems: 0, limitReached: false },
@@ -34,9 +21,14 @@ const args = ['diff', '--no-ext-diff', '--no-textconv', '--no-renames'];
 const originalPullNumbers = { X1: 24, P1: 28, J1: 28 };
 
 function prepareDetector(planner, request, log, selected = plan) {
-    const execution = planner.prepare(request);
+    const execution = preparePinnedExecution(planner, request, selected.runtime);
+    return admitPreparedDetector(execution, log, selected);
+}
+
+function admitPreparedDetector(execution, log, selected = plan) {
     try {
         const runtimeProof = requirePinnedExecution(execution, selected.runtime);
+        const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
         const flags = codexInvocation(execution.argv);
         assert.deepEqual(flags, { model: selected.detector.model, modelProvider: selected.detector.modelProvider,
             reasoningEffort: selected.detector.effort, sandbox: 'read-only' });
@@ -90,8 +82,25 @@ function readSubject(id, checkout) {
 }
 
 async function run(checkout, id, repetition, output, preflight = false) {
-    requirePinnedDrivers(plan);
-    const implementation = requirePinnedImplementation();
+    require('../execution-provenance.cjs').requireBootstrapAdmission(path.resolve(__dirname, '../../../../..'));
+    const provenance = qualificationProvenance(plan);
+    const implementation = provenance.implementation;
+    admitQualificationModules(path.resolve(__dirname, '../../../../..'));
+    const { getOctokit } = require('@actions/github');
+    require('./load.cjs');
+
+    const { Ai } = require('../../../../../src/data/model/ai');
+    const { AgentCliClient } = require('../../../../../src/data/repository/agent_cli_client');
+    const { AgentExecutionPlanner } = require('../../../../../src/infrastructure/agents/agent_execution_planner');
+    const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
+    const { composeBugbotReview } = require('../../../../../src/infrastructure/composition/bugbot_review_composition');
+    const { createFindingsQueryPort } = require('../../../../../src/infrastructure/composition/agent_capability_composition_root');
+    const { readGithubActionAiInputs } = require('../../../../../src/actions/github_action_ai_inputs');
+    const { projectBugbotReviewOperationContext } = require('../../../../../src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context');
+    const { createInstalledBugbotShadowVerifier } = require('../../../../../src/infrastructure/bugbot/installed_bugbot_shadow_adapter');
+    const { createGitHubBugbotCiReader } = require('../../../../../src/infrastructure/bugbot/github_bugbot_ci_reader');
+    const { askManagedBugbotShadowTurn } = require('../../../../../src/infrastructure/bugbot/shadow_verification_adapter');
+
     assert(checkout && plan.repositoryCohort.order.includes(id) && [1, 2, 3].includes(repetition) && output);
     checkout = fs.realpathSync(checkout);
     output = path.resolve(output);
@@ -100,7 +109,7 @@ async function run(checkout, id, repetition, output, preflight = false) {
     fs.writeFileSync(output, '', { flag: 'wx', mode: 0o600 });
     const log = row => fs.appendFileSync(output, JSON.stringify(row) + '\n');
     const preregistration = selectedPlanProvenance();
-    log({ event: 'start', subject, repetition, implementation, plan: preregistration.sha256, preregistration, startedAt: new Date().toISOString() });
+    log({ event: 'start', subject, repetition, implementation, provenance, plan: preregistration.sha256, preregistration, startedAt: new Date().toISOString() });
     const repository = { owner: 'vypdev', name: id.startsWith('U') ? 'ha-ui' : 'domus' };
     const number = originalPullNumbers[id] ?? 1;
     const branch = 'feature/reviewed-source';
@@ -156,8 +165,10 @@ async function run(checkout, id, repetition, output, preflight = false) {
     const cancel = new AbortController();
     process.once('SIGINT', () => cancel.abort());
     process.once('SIGTERM', () => cancel.abort());
+    const evidenceToken = process.env.COPILOT_EVIDENCE_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+    assert(preflight || evidenceToken, 'read-only GitHub evidence credential unavailable');
     const ci = preflight ? undefined : createGitHubBugbotCiReader({ owner: repository.owner, repo: repository.name },
-        getOctokit(execFileSync('gh', ['auth', 'token', '--hostname', 'github.com'], { encoding: 'utf8' }).trim()).rest.actions);
+        getOctokit(evidenceToken).rest.actions);
     const verifier = createInstalledBugbotShadowVerifier(repository, checkout, async turn => {
         assert.deepEqual(turn.configuration, plan.verifier);
         const result = await askManagedBugbotShadowTurn(turn);
@@ -177,9 +188,5 @@ async function run(checkout, id, repetition, output, preflight = false) {
     if (preflight) assert.equal(result.payload.bugbotShadowVerification.publicationSimulation.status, 'complete');
 }
 
-if (require.main === module) {
-    run(process.argv[2], process.argv[3], Number(process.argv[4]), process.argv[5], process.argv[6] === '--preflight')
-        .catch(error => { console.error(error.code ?? error.name, error.message); process.exitCode = 1; });
-}
-
-module.exports = { prepareDetector };
+module.exports = { run: (checkout, id, repetition, destination, flag) =>
+    run(checkout, id, Number(repetition), destination, flag === '--preflight'), prepareDetector, admitPreparedDetector };

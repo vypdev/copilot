@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { assertSourceHealthPolicy } = require('./credential-health-source-contract.cjs');
 const replacementContract = require('./deployment-replacement-contract.cjs');
 
 const { readFileSync, readdirSync } = require('node:fs');
@@ -36,6 +37,19 @@ const SOURCE_CI_WORKERS = {
   'build-package': 'BUILD_RESULT',
   coverage: 'COVERAGE_RESULT',
 };
+// This exact executable contract is deliberately pinned independently of the YAML.
+// Never execute a candidate workflow command while validating it.
+const SOURCE_CI_GATE_RUN = String.raw`printf '%s\n' '| Job | Result |' '| --- | --- |' \
+  "| Static checks | $STATIC_RESULT |" \
+  "| Build and package | $BUILD_RESULT |" \
+  "| Tests and coverage | $COVERAGE_RESULT |" | tee -a "$GITHUB_STEP_SUMMARY"
+[[ "$STATIC_RESULT" == success && "$BUILD_RESULT" == success && "$COVERAGE_RESULT" == success ]]`;
+
+function assertSourceCiPredicate(run) {
+  if (typeof run !== 'string' || run.replaceAll('\r\n', '\n').trim() !== SOURCE_CI_GATE_RUN) {
+    throw new Error('CI Check must retain the executable all-worker success predicate.');
+  }
+}
 const SOURCE_CI_GATE_CONDITION = SOURCE_CI_CONDITION.replace(
   '${{ ', '${{ always() && (',
 ).replace(' }}', ') }}');
@@ -410,12 +424,14 @@ function assertSourceCiJobs(file, workflow) {
     || workers.some(id => step.env?.[SOURCE_CI_WORKERS[id]] !== '${{ needs.' + id + '.result }}')) {
     throw new Error(`${file} must check the result of every CI job without credentials or checkout.`);
   }
+  assertSourceCiPredicate(step.run);
 }
 
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (path.basename(file) === commentContract.RUNTIME) return assertCommentWorkflowRuntime(file, workflow);
   if (commentContract.CALLBACKS.includes(path.basename(file))) return assertCommentWorkflowCaller(file, workflow);
+  if (relativeFile === '.github/workflows/copilot_credential_health.yml') assertSourceHealthPolicy(workflow);
   const isSourceCi = relativeFile === '.github/workflows/ci_check.yml';
   if (isSourceCi) assertSourceCiJobs(relativeFile, workflow);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
@@ -1647,6 +1663,7 @@ function main() {
 if (require.main === module) main();
 
 module.exports = {
+  assertSourceCiPredicate,
   issueAdmissionConfigurationExpression,
   assertNativeVerificationWorkflow,
   QUEUE_WAIT_MINUTES,

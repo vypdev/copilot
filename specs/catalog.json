@@ -664,9 +664,9 @@
       "id": "bugbot-review-state-reconciliation",
       "title": "Bugbot review-state reconciliation",
       "status": "implemented",
-      "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
+      "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions; bind qualification execution to independently reviewed external bootstrap code with complete public admission in every process and bounded executable version health probes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-19",
+      "lastVerified": "2026-11-20",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
@@ -727,7 +727,17 @@
         "src/application/policies/bugbot_status_card_publication_policy.ts",
         "src/infrastructure/github/github_bugbot_status_card_workflow.ts",
         "src/infrastructure/github/github_bugbot_status_card_dispatch.ts",
-        "src/infrastructure/github/native_list_pagination.ts"
+        "src/infrastructure/github/native_list_pagination.ts",
+        "src/infrastructure/github/github_bugbot_status_card_acknowledgment.ts",
+        "src/infrastructure/github/github_bugbot_status_card_handoff.ts",
+        "quality/bugbot/evidence/issue-950/execution-provenance.cjs",
+        "quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs",
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/run.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/full-review.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",
@@ -773,7 +783,12 @@
         "src/infrastructure/github/__tests__/github_bugbot_status_card_lane.test.ts",
         "src/infrastructure/github/__tests__/github_bugbot_status_card_dispatch.test.ts",
         "src/infrastructure/github/__tests__/github_bugbot_status_card_observation.test.ts",
-        "src/infrastructure/github/__tests__/github_bugbot_status_card_handoff.test.ts"
+        "src/infrastructure/github/__tests__/github_bugbot_status_card_handoff.test.ts",
+        "quality/bugbot/evidence/issue-950/qualification-bootstrap.test.cjs",
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/paths.test.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/review-runtime.test.cjs",
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs",
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated-fixture.cjs"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",
@@ -784,7 +799,9 @@
         "docs/bugbot/how-it-works.mdx",
         "docs/bugbot/programmatic-api.mdx",
         "docs/pull-requests/workflow-setup.mdx",
-        "docs/issues/comment-commands.mdx"
+        "docs/issues/comment-commands.mdx",
+        "docs/development/testing.mdx",
+        "quality/bugbot/evidence/issue-972/README.md"
       ]
     },
     {
@@ -1266,7 +1283,8 @@
         "src/cli/setup_config_file.ts",
         "src/domain/copilot_comment_workflow.ts",
         "src/infrastructure/copilot_comment_inputs.json",
-        "src/infrastructure/private_jvm_environment.ts"
+        "src/infrastructure/private_jvm_environment.ts",
+        "scripts/credential-health-source-contract.cjs"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1400,7 +1418,8 @@
         "src/infrastructure/__tests__/verification_setup_configuration.test.ts",
         "src/domain/__tests__/copilot_comment_workflow.test.ts",
         "src/tooling/__tests__/credential_health_transport.test.ts",
-        "src/infrastructure/__tests__/private_jvm_environment.test.ts"
+        "src/infrastructure/__tests__/private_jvm_environment.test.ts",
+        "src/tooling/__tests__/credential_health_source_policy.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1425,7 +1444,8 @@
         "docs/guides/review-pull-requests.mdx",
         "docs/guides/work-with-the-bot.mdx",
         "docs/guides/releases-and-hotfixes.mdx",
-        "docs/agents/repository-collaboration.mdx"
+        "docs/agents/repository-collaboration.mdx",
+        "quality/bugbot/evidence/issue-979/README.md"
       ]
     },
     {
@@ -2446,7 +2466,10 @@
         "src/application/ports/pull_request_review_errors.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_review_freshness.ts",
         "src/application/usecases/steps/commit/bugbot/verify_bugbot_publication_policy.ts",
-        "src/application/policies/bugbot_mutation_cancellation_policy.ts"
+        "src/application/policies/bugbot_mutation_cancellation_policy.ts",
+        "quality/bugbot/corpus.v2.json",
+        "quality/bugbot/evidence/issue-985/derivation.json",
+        "quality/bugbot/evidence/issue-985/historical-hashes.json"
       ],
       "tests": [
         "src/application/policies/__tests__/bugbot_shadow_configuration_policy.test.ts",
@@ -2568,7 +2591,8 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/verify_bugbot_publication_paths.test.ts",
         "quality/bugbot/evidence/issue-950/ev07-shadow/plan.test.cjs",
         "src/application/policies/__tests__/bugbot_mutation_cancellation_policy.test.ts",
-        "src/application/usecases/steps/commit/bugbot/__tests__/observe_bugbot_base.test.ts"
+        "src/application/usecases/steps/commit/bugbot/__tests__/observe_bugbot_base.test.ts",
+        "quality/bugbot/evidence/issue-985/corpus-revision.test.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -2587,7 +2611,8 @@
         "quality/bugbot/evidence/issue-950/traceability.md",
         "quality/bugbot/evidence/issue-950/ev07-shadow/preregistration.md",
         "quality/bugbot/evidence/issue-950/shadow-verification/README.md",
-        "quality/bugbot/evidence/issue-950/review-progress-follow-up.md"
+        "quality/bugbot/evidence/issue-950/review-progress-follow-up.md",
+        "quality/bugbot/evidence/issue-985/README.md"
       ]
     },
     {

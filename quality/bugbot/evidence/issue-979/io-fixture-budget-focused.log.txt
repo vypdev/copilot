@@ -1,0 +1,9 @@
+[command]/private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/copilot-upgrade-v6JUoA/npm prefix/bin/npm install --global --prefix /private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/copilot-upgrade-v6JUoA/npm prefix @vypdev/copilot@3.8.0
+[command]/private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/copilot-upgrade-m2HARZ/npm prefix/npm.cmd install --global --prefix /private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/copilot-upgrade-m2HARZ/npm prefix @vypdev/copilot@3.8.0
+[command]/private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/copilot-upgrade-g7160H/pnpm home/pnpm.cmd add --global --global-dir /private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/copilot-upgrade-g7160H/pnpm home/global --global-bin-dir /private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/copilot-upgrade-g7160H/pnpm home @vypdev/copilot@3.8.0
+[command]/private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/copilot-upgrade-Nr1N6m/pnpm home/pnpm add --global --global-dir /private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/copilot-upgrade-Nr1N6m/pnpm home/global --global-bin-dir /private/var/folders/cz/wncm_zcx4758jw4x3565kdz40000gp/T/copilot-upgrade-Nr1N6m/pnpm home @vypdev/copilot@3.8.0
+Test Suites: 3 passed, 3 total
+Tests:       141 passed, 141 total
+Snapshots:   0 total
+Time:        11.803 s, estimated 12 s
+Ran all test suites within paths "src/infrastructure/cli/__tests__/active_cli_upgrade_adapter.test.ts", "src/infrastructure/__tests__/setup_token_permission_query_adapter.test.ts", "src/tooling/__tests__/specification_catalog_publication.test.ts".

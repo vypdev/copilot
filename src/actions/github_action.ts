@@ -59,7 +59,7 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
             event: eventName, ref, actor, server: serverUrl, workflowRef: process.env.GITHUB_WORKFLOW_REF ?? '',
             locale: readGithubActionLocaleInputs(getGithubActionInput).pullRequest,
             policy: verificationAuthority?.policyDigest ?? 'default',
-            inputs: { pullNumber: payload.inputs?.pull_number, work: payload.inputs?.work },
+            inputs: { pullNumber: payload.inputs?.pull_number, work: payload.inputs?.work, operation: payload.inputs?.operation },
         });
         if (effect === 'skipped') core.setFailed('No current Bugbot status card publication was authorized.');
         else logInfo('Bugbot status card publication ' + effect + '.');

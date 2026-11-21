@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "implementation": "03f8e6e33047333797ea37ad5e85bc756db223fa",
+  "mode": "shadow",
+  "publication": "dry-run",
+  "production": "disabled",
+  "detector": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "effort": "xhigh"
+  },
+  "verifier": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6.1-sol",
+    "effort": "xhigh"
+  },
+  "evidence": "installed exact Git head and permitted base, official release catalog, matching native CI step metadata",
+  "repositoryCohort": {
+    "manifestSha256": "dab7d62b0419c2da63eae3387be6222e77c114ed32b22dc9a2a9af35fb6afe85",
+    "oracleSha256": "c79302cb376519f60d69e0a080cd65dc29ff35ab256ce17b0e4b218fe69e239a",
+    "order": [
+      "U1",
+      "U2",
+      "F1",
+      "F2",
+      "S1",
+      "S2",
+      "X1",
+      "X2",
+      "M1",
+      "M2",
+      "P1",
+      "P2",
+      "J1",
+      "J2"
+    ],
+    "repetitions": 3,
+    "baselineMinimumAlerts": 3,
+    "baselineMinimumPremises": 2,
+    "minimumStrictlyBetterRepetitions": 2,
+    "maximumAddedP95Ms": 90000,
+    "requireAllExactPositiveControls": true
+  },
+  "corpus": {
+    "sha256": "640c3355aeb65c1b15454bd7f9242fa36acc12b8b3f5ef284ee06af8af36c6c6",
+    "cases": 174,
+    "concurrency": 6,
+    "outerAttemptsPerCase": 1,
+    "gates": {
+      "precision": 0.9,
+      "recall": 0.85,
+      "f1": 0.87,
+      "exactLocation": 0.8,
+      "severity": 0.8,
+      "category": 0.8,
+      "maxBrier": 0.16
+    }
+  },
+  "sourceTree": "a349b2c1271a326f8dae64ef26de8f0f9c890d22",
+  "frozenAt": "2026-11-18T05:18:51.328Z",
+  "runtime": {
+    "codex": "codex-cli 0.169.1",
+    "node": "v24.20.0",
+    "git": "git version 2.54.0 (Apple Git-157)",
+    "python": "Python 3.14.6",
+    "sqlite": "3.53.3\n2026-06-26 20:14:12 d4c0e51e4aeb96955b99185ab9cde75c339e2c29c3f3f12428d364a10d782c62",
+    "transpilationTarget": "ES2020"
+  },
+  "inspectedArtifacts": {
+    "review": "0a77da33d7a4c021c394075773a8d39f1be88b37930105eca98ded5bf8604fd6",
+    "corpus": "728e8c6dcd5e6c771d99db471d46284e5364c70977fc645e0ac86f5c6345d95a",
+    "scheduler": "d9eb8a42ab966af183a00451e6926ef2283e2fece9d05e2b7d47ac8bda64149a",
+    "launcher": "e7be56f70ac324de14d963d6e6875e5615bfc6d10adb0fcde654aef450ab91d2",
+    "scorer": "a4ad32cfdfc90492ffab6a12e5a403ac64ce87d2033cf37efa0c9cdd6b2496cb",
+    "transpilations": "27394f21c5eb54773b98b7da777d7f3c3439746030e7cc2aa4c267745e730ada",
+    "preregisteredCohort": "dab7d62b0419c2da63eae3387be6222e77c114ed32b22dc9a2a9af35fb6afe85",
+    "dependencyLock": "b6f18c67cdf3d837074d5b6d9439d29d686ec7a8e99a5a7e0686b210b267c87b"
+  },
+  "admission": {
+    "noGitHubWrites": true,
+    "stopNewWorkOnlyOnIrreversibleGateFailure": true,
+    "explicitCancellation": true
+  }
+}

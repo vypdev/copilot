@@ -57,6 +57,61 @@ Tests MUST isolate environment variables such as `AGENT_PROVIDER`, `AGENT_MODEL_
 
 `copilot bugbot-analytics` aggregates content-free telemetry exported by the Action. Do not add prompt, diff, source, comment, response, credential, or rule content to the telemetry schema.
 
+## Qualification source and runtime admission
+
+New Bugbot qualification runs use an explicit committed implementation pin.
+Before loading application modules, the corpus and review entrypoints compare
+the physical `src/`, lockfile, compiler configuration and package manifest with
+that commit's regular Git blobs. Ignored files, JavaScript shadows, symlinks,
+staged differences and Git's assume-unchanged hints cannot conceal another
+executed source. The reusable check strips inherited `GIT_*` variables, anchors
+the Git directory and worktree explicitly, disables replacement objects and
+fsmonitor, and excludes global/system configuration. It also supports linked
+local worktrees.
+
+```text
+Committed plan -> physical source proof -> driver/runtime proof -> import -> dispatch
+```
+
+Text equivalent: prove the actual source, evaluation drivers, Node executable
+and TypeScript compiler before importing the application; prove the prepared
+model executable and any launcher again before dispatch. The start record
+retains the implementation commit/tree, source inventory digest, lockfile and
+compiler digests, driver hashes and runtime identities. A version string alone
+does not establish executable identity.
+
+Preregister a **new** plan after reviewing the corrections. Include the current
+`qualificationDrivers` inventory exported by `ev07-shadow/implementation.cjs`,
+including the shared `execution-provenance.cjs`. Record the `node`,
+`nodeSha256`, `typescript`, `typescriptSha256`, `git`, `gitExecutable` and
+`gitSha256` observations returned by
+`runtimeIdentity(root)` alongside the existing exact CLI/launcher identities.
+Git proof commands use the trusted operating-system executable, never `PATH`.
+Linux uses `/usr/bin/git`; macOS resolves the actual developer-tools Git with
+`/usr/bin/xcrun` in a clean environment. The supported qualification bootstrap
+is Linux/macOS and does not claim Windows qualification or Setup acceptance.
+Commit the completed plan before measurement. The normal-flow diagnostic's
+selected subject manifest similarly requires `implementation`, `runtime` and
+`drivers` from its exported `normalFlowDrivers` inventory; its direct runtime
+uses an absolute `runtime.executable` and optional absolute `runtime.launcher`.
+These are local evaluation artifacts, with no new public Action setting.
+
+Run `pnpm run test:bugbot-shadow-verification` for the deterministic admission
+controls. They use temporary Git repositories and blocked model/write paths.
+An admission error means no application/model work was admitted. Inspect the
+named source, staged inventory, driver or runtime mismatch, then restore the
+selected bytes or prepare a separately reviewed and committed preregistration.
+Do not regenerate expected hashes merely to suppress a failure.
+
+Historical manifests, ledgers, scores and unsuccessful campaigns retain their
+original bytes and reproduce through their frozen commits. Their old plans
+cannot admit a run through the corrected drivers. Passing deterministic
+admission neither passes the 174-case corpus nor admits the 42 paired reviews.
+Keep `BUGBOT_VERIFICATION_MODE=disabled`, evaluated-PR write attempts at zero,
+explicit cancellation, optional usage telemetry and the existing score floors.
+Latency is measured after investigation; admission introduces no research
+deadline, turn count or token budget.
+
 Workflow queue tests inject a clock, random source, and scheduler/delay port. They
 cover workflow-scoped active-status traversals and later-page matches, strict
 lower-ID/workflow-file filtering, malformed responses, fail-closed provider errors, 429 and
@@ -274,3 +329,176 @@ Inspect the run's individual platform jobs before claiming full success. A
 queued, canceled or failed job is missing evidence, even if other jobs passed.
 The platform fixtures exercise local paths. Authenticated agent tool execution
 has separate acceptance.
+
+## Qualification runtime and bootstrap
+
+Qualification runtime admission also pins `dependencyTreeSha256` and
+`dependencyEntries` for the physical installed dependency closure. Capture the
+expected identity only from a reviewed isolated frozen-lockfile installation
+with package integrity checked and lifecycle scripts disabled, before committing
+the new preregistration. At launch compare every file/mode and internal link,
+including absent platform-optional targets. External dependency links and
+nested driver dependency shadows are not admitted. The normal unused portal to
+this repository browser-extension workspace is inventoried as unadmitted; the
+entrypoint registers synchronous Node hooks that block its real path for both
+require and import. Use a separate lab rather than changing a contributor's
+working dependency tree. The reviewed Node/package
+manager/OS bootstrap remains a trust prerequisite, not an independently attested
+claim derived from the lockfile or an inventory alone.
+
+External package imports wait for admission. The corpus version probe additionally
+requires `runtime.executable` and optional `runtime.launcher`, validates their
+existing digest pins before executing `--version`, uses the absolute invocation
+under a clean environment, then compares the version. PATH cannot select this
+probe. These are integrity checks, not model research time/turn/read/token caps.
+
+Supply read-only GitHub evidence credentials through `COPILOT_EVIDENCE_TOKEN`,
+`GH_TOKEN` or `GITHUB_TOKEN` as appropriate for the private fixtures; the review
+driver does not launch a PATH-resolved credential helper. Do not persist tokens
+in a plan or evidence record. An absent credential blocks the required CI reader.
+
+
+### Start qualification from a reviewed bootstrap
+
+Extract `quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs` from an
+independently reviewed commit using trusted operating-system Git into a private
+file outside the checkout. Verify its independently reviewed SHA-256 before
+launching trusted Node with NODE_OPTIONS and NODE_PATH unset. Do not run the
+working-tree corpus, normal-flow or full-review entrypoint directly for measured
+qualification; those CLIs refuse before importing checkout code.
+
+The positional arguments are repository, reviewed plan commit, relative plan
+path, reviewed plan SHA-256, reviewed bootstrap SHA-256, mode, then mode arguments.
+`corpus` takes a new output directory and optional `--preflight`; `full-review`
+takes the campaign directory; `normal-flow` takes lab, PR number and a new ledger
+path. The selected plan must be a committed regular blob containing the complete
+current driver/runtime pins. Its revision must contain the exact reviewed
+bootstrap. Treat the reviewed digests and trusted Node/Git/package installation
+as operator trust anchors; a checkout's own receipt is insufficient.
+
+The launcher authenticates and materializes drivers before loading its verifier,
+checks original and private source/dependency/runtime bytes, forwards explicit
+signals and removes its private source after exit. It records stable bootstrap
+and plan identities without private temporary paths. Normal-flow authenticates
+the manifest before selecting even a `--version` executable. Production stays
+disabled and publication stays dry-run. Existing frozen campaigns replay with
+their frozen historical drivers; this route needs a new reviewed preregistration.
+
+
+The bootstrap also binds later application evidence reads to that admitted Git.
+Its child PATH starts with a private directory containing only a link to the
+verified OS Git executable; the remaining PATH and normal Node/Codex selection
+are preserved. This routing is part of the reviewed bootstrap identity, rather
+than a new user-configurable executable override. The actual application adapter
+is included in a causal shim/no-shim deterministic control.
+
+
+Qualification also checks the ordinarily selected CLI before calling the normal
+planner: that planner probes --version during preparation. Admission uses its
+production resolution/validation helpers, then delegates to the unchanged planner
+and checks the final prepared runtime/profile as before. A matching version
+reported by an unregistered executable cannot execute even during preparation.
+
+Qualification drivers now refuse direct CLI execution before importing a checkout
+helper. A `.qualification-admission.json` file, even with matching hashes, supplies
+no execution authority. Use the independently materialized external bootstrap
+above. It performs the complete validation/materialization and calls the driver
+in that same bootstrap process. The internal --admitted-worker endpoint and IPC
+message handler have been removed: a parent message cannot initialize admission.
+Each nested scheduler/review process enters the complete public launch again with
+the same explicit reviewed plan/bootstrap pins and repeats all private byte and
+runtime checks. The final review slot verifies its exact parent corpus campaign.
+
+Ordinary corpus/full-review/normal-flow arguments are unchanged. Nested launches
+also use full-review-runner with one campaign argument, or review with campaign,
+checkout, subject ID, repetition and output. Every mode requires the same explicit
+reviewed plan/bootstrap identities and complete proof; there is no worker shortcut.
+Explicit cancellation reaches the executing admitted driver and preserves its exit.
+There are no new consumer settings or investigation limits. Seven additional
+receipt/direct-entry/arbitrary-IPC/nested-mutation/cancellation cases use real Git
+and owned fakes, with zero model calls and evaluated-PR writes. The frozen previous
+bootstrap demonstrates the IPC bypass before the new rejection. Fixture cleanup
+timeouts never bound a model investigation. Context is not independent host or
+human-review accreditation: retain the external digest check before starting Node
+and freeze new driver hashes before measuring.
+
+
+The pinned `--version` metadata probe uses the ordinary production reader's
+15-second health timeout and kills a stalled probe with SIGKILL, including a
+launcher that ignores SIGTERM. ETIMEDOUT is a preflight failure: retain that
+attempt, repair the pinned installation and review a new plan when its bytes
+change. No model call or clean verdict is produced by a stalled version probe.
+This timeout applies only to executable metadata, before investigation; model
+research and explicit cancellation retain their existing contract. It adds no
+consumer setting or automatic retry. Production source is unchanged.
+
+The real-process controls cover both direct and optional-launcher stalls, exact
+--version arguments, timeout failure and absence of a surviving CLI. Their owned
+30-second fixture cleanup never bounds research. Node's synchronous subprocess
+API otherwise continues waiting if a timed-out child handles SIGTERM; see the
+[pinned Node v24.20.0 subprocess documentation](https://nodejs.org/download/release/v24.20.0/docs/api/child_process.html#child_processexecfilesyncfile-args-options).
+
+## CI aggregate predicate
+
+The source repository's `CI Check` gate requires success from all three independent
+workers. `validate:workflows` binds its command to the executable contract in
+`scripts/validate-workflow-contract.cjs`; it compares the complete command without
+executing candidate YAML. Changing that command requires reviewing the contract
+and its execution fixtures together. CRLF line endings and outer whitespace are
+normalized; additional commands or alternate predicates are rejected.
+
+The workflow tests execute the current gate in Bash with controlled result
+values: all-success passes, each worker failure fails, and canceled, skipped or
+missing results fail. Separate validator mutations reject no-op, partial and
+masked predicates, missing bindings, and step/job `continue-on-error`. Runner
+placement, fork exclusion, public check identity, parallel jobs and consumer
+installation templates retain their existing contracts.
+
+## Normal-flow shadow cancellation
+
+The local normal-flow shadow runner forwards its explicit cancellation signal
+into the ordinary review operation, detector and verifier. An interrupted run
+records `workflow-result.status=interrupted`, retains its started/pending request
+observations, and exits with status 130. It cannot report successful ordinary
+completion or issue a completed verification receipt. A matched experimental
+arm that is canceled does not start its inherited comparison arm.
+
+Run `pnpm run test:bugbot-shadow-verification` for the model-free stage controls:
+before detection, during detection, after preparation, during verification,
+after a technical provider interruption, and uninterrupted completion. The
+controlled programmatic ports exercise the actual runner and application with
+pinned temporary Git sources and fail-on-write SCM ports. They are synthetic
+controls, not model measurements or qualification evidence. The loader uses the
+shipping compiler options so the real progress/cancellation path is exercised.
+
+The post-provider control observes a settled `provider-turn-failed` result while
+the signal is still active, then explicitly cancels the enclosing operation.
+Its event-order assertions distinguish this boundary from cancellation inside
+the verifier. The retained counterfactual rejects the former fixture's early
+abort; the corrected control still requires interrupted status, blocked
+publication, empty writes and exit 130. See the exact logs and readable ledgers
+in `quality/bugbot/evidence/issue-972/post-provider-order-validation.json`.
+
+Use a new output destination for every actual attempt and retain the interrupted
+ledger. Old ledgers remain historical observations; replay needs the new driver
+pin and its applicable source/runtime admission. This adds no Action setting,
+elapsed-time cutoff, token budget or turn limit. Usage remains optional telemetry.
+
+After the #970/#972 integration, the cancellation controls enter through the
+external bootstrap too. Their disposable source snapshot and plan are committed
+before execution; a pinned owned wrapper supplies controlled providers while
+executing the actual runner. Its optional internal result observer exposes the
+post-provider boundary to the control without adding a CLI setting. The relative-lab case uses the
+same fixture. This does not add a production test mode or bypass source/runtime
+admission. Seven actual-operation cases and one matched-arm case distinguish
+interruption, completion and provider failure; the bootstrap exits 130, 0 and 1
+respectively. No model campaign or evaluated-PR write is performed by these
+controls.
+
+Some bound-corpus evaluator fixtures authenticate the real repository HEAD.
+After merging package or application changes locally, commit the candidate
+through the required repository hook before expecting those root-bound controls
+to pass. Run the complete shadow suite against that committed source before
+publishing it; retain an earlier staged-source rejection and keep its admission
+check intact. The owned normal-flow fixtures are synthetic and do not replace
+this committed-source verification or the later qualification preregistration.

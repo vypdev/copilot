@@ -1,0 +1,39 @@
+{
+  "sourceHead": "7901f915644c7a295426fa4d5c5bef6899032f5c",
+  "parents": [
+    "3b29fc14851596c2a610c8d909103b24aeaa71c7",
+    "c6590bd8e03aced19250d681788f53268dede600"
+  ],
+  "syncRun": 44739840949,
+  "syncJob": 136300414153,
+  "syncConclusion": "success",
+  "nativeJest": {
+    "suites": 943,
+    "passed": 18695,
+    "preExistingSkipped": 35,
+    "seconds": 458.032
+  },
+  "nativeExtension": {
+    "files": 385,
+    "passed": 5291
+  },
+  "nativeValidation": {
+    "build": "PASS",
+    "typecheck": "PASS",
+    "coverageBudgets": "PASS",
+    "lint": "PASS",
+    "specifications": "PASS",
+    "documentation": "PASS"
+  },
+  "preservedEarlierFailure": {
+    "head": "3b29fc14851596c2a610c8d909103b24aeaa71c7",
+    "run": 44729937683,
+    "job": 136266802599,
+    "nativeCoverage": "FAILURE",
+    "unchangedLocalDiagnostic": "25/25 in four suites; not a full native pass or proof of timing cause"
+  },
+  "qualificationCampaigns": 0,
+  "evaluatedPilotPrWriteAttempts": 0,
+  "productionVerificationMode": "disabled",
+  "remaining": "Bot-authored synchronization skipped Copilot - Commit; a normal contributor evidence commit requires its own final-head checks and finding review. No merge or qualification claimed."
+}

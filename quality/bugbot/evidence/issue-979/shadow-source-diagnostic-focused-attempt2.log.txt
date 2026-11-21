@@ -1,0 +1,5 @@
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        16.42 s
+Ran all test suites matching src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts.

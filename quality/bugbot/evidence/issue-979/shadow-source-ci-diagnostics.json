@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T06:36:58.474492+00:00",
+  "base": "abd9dabccb2c9c106d2e2a02ca1daf4098b459fa",
+  "nativeNegative": {
+    "run": 44873389663,
+    "job": 136752685928,
+    "url": "https://github.com/vypdev/copilot/actions/runs/44873389663/job/136752685928",
+    "rawBytes": 3048485,
+    "rawSha256": "4314f357b36b7c35ce0f1dadd7f34fd0383bdd249859fe0e734382ab133442c8",
+    "sdkPassSuites": 943,
+    "sdkPassAssertions": 18732,
+    "failedAssertions": 2,
+    "existingSkipped": 35,
+    "failures": [
+      "installed Action checkout/candidate brokered receipts returned technical-failure",
+      "structured order proof write then read returned technical-failure"
+    ],
+    "actualReason": "not present in original status-only assertion diff",
+    "underlyingCause": "unproven"
+  },
+  "testOnlyChanges": [
+    "native spawnSync is a jest call recorder delegating unchanged to the real implementation; filesystem and Git calls remain real",
+    "the two affected verdict assertions additionally show technical reason and sanitized failed Git operation/status/signal/error code, without command operands or process output",
+    "real owned fixture loses its Git metadata and must refuse before opening any provider turn, restoring metadata in finally"
+  ],
+  "runtimePolicyTimeoutsChanged": false,
+  "assertionsWeakened": false,
+  "sameShaRetryRequested": false,
+  "focused": [
+    {
+      "attempt": 1,
+      "log": "shadow-source-diagnostic-focused-attempt1.log.txt",
+      "bytes": 685,
+      "sha256": "9074bec7b776c34e8a467b4e19d4730b2a2ca9d2aadcb5d77b6448db7c56ea75",
+      "outcome": "TypeScript diagnostic rejected Error.code access before tests"
+    },
+    {
+      "attempt": 2,
+      "log": "shadow-source-diagnostic-focused-attempt2.log.txt",
+      "bytes": 208,
+      "sha256": "96e9b12591397e23670d36f6fa62a02a4601a69a5b93afa31fb42e67ab386720",
+      "outcome": "one suite /14 assertions PASS including real missing Git metadata refusal"
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "production": "disabled",
+  "nativeFinalChecksPending": true
+}

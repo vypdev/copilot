@@ -1,5 +1,5 @@
 name: Copilot - Bugbot Status Card
-run-name: Bugbot status · PR ${{ inputs.pull_number }}
+run-name: Bugbot status · PR ${{ inputs.pull_number }} · ${{ inputs.operation }}
 
 on:
   workflow_dispatch:
@@ -8,6 +8,10 @@ on:
         description: Pull request number
         required: true
         type: number
+      operation:
+        description: SHA-256 correlation of the versioned handoff; not publication authority
+        required: true
+        type: string
       work:
         description: Versioned publication handoff
         required: true

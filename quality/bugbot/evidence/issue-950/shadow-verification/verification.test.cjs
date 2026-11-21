@@ -95,6 +95,55 @@ const cite = (source, first = source.first, last = source.last) => ({ receipt: s
 const counter = value => ({ input_tokens: value, output_tokens: value, cached_input_tokens: value });
 const run = (transport, log = () => {}, signal, input = subject) => investigate(lab, input, finding, null, transport, log, signal);
 
+for (const scenario of [
+    { name: 'deletion-only hunk spanning both adjacent unchanged lines',
+        before: 'one\ntwo\nremoved\nfour\nfive\n', after: 'one\ntwo\nfour\nfive\n', first: 1, last: 2, changed: false, side: 'LEFT' },
+    { name: 'multiple deletion-only hunks', before: 'one\ntwo\nremoved-a\nfour\nfive\nremoved-b\nseven\n',
+        after: 'one\ntwo\nfour\nfive\nseven\n', first: 1, last: 5, changed: false, side: 'LEFT' },
+    { name: 'true addition', before: 'one\ntwo\nthree\n', after: 'one\ntwo\nadded\nthree\n', first: 3, last: 3, changed: true },
+    { name: 'mixed replacement hunk', before: 'one\ntwo\nremoved-a\nremoved-b\nfive\n',
+        after: 'one\ntwo\nadded\nfive\n', first: 3, last: 3, changed: true },
+    { name: 'unchanged boundary beside deletion and a separate addition', before: 'one\ntwo\nremoved\nfour\nfive\n',
+        after: 'one\ntwo\nfour\nfive\nadded\n', first: 1, last: 2, changed: false, anchorLine: 5 },
+    { name: 'legitimate LEFT deletion citation', before: 'one\ntwo\nremoved\nfour\nfive\n',
+        after: 'one\ntwo\nfour\nfive\n', first: 3, last: 3, changed: false, revision: 'base', side: 'LEFT' },
+]) {
+    test('citation change metadata preserves pinned receipts and anchors: ' + scenario.name, async () => {
+        const commit = (contents, parent) => {
+            const blob = git(['hash-object', '-w', '--stdin'], contents);
+            const tree = git(['mktree'], `100644 blob ${blob}\tchange.ts\n`);
+            const sha = git(['commit-tree', tree, ...(parent ? ['-p', parent] : []), '-m', 'fixed citation fixture']);
+            return { blob, tree, sha };
+        };
+        const before = commit(scenario.before), current = commit(scenario.after, before.sha);
+        const selected = { repository: 'local/fixture', head: current.sha, tree: current.tree,
+            base: before.sha, baseTree: before.tree };
+        const anchor = Object.freeze({ path: 'change.ts', line: scenario.anchorLine ?? 3,
+            end: scenario.anchorLine ?? 3, side: scenario.side ?? 'RIGHT' });
+        const candidate = Object.freeze({ ...finding, detectorLocation: anchor, allowBase: true });
+        const broker = makeBroker(lab, selected, candidate);
+        const revision = scenario.revision ?? 'head';
+        const result = await broker.inspect(query('read', 'change.ts', { revision,
+            first: scenario.first, last: scenario.last }));
+        assert.equal(result.status, 'provided');
+        const citation = cite(result.sources[0]);
+        const actual = broker.cite(citation);
+        assert.equal(actual.inChangedLines, scenario.changed);
+        assert.equal(actual.sha, revision === 'base' ? before.sha : current.sha);
+        assert.equal(actual.blob, revision === 'base' ? before.blob : current.blob);
+        assert.deepEqual([actual.first, actual.last], [scenario.first, scenario.last]);
+        assert.equal(candidate.detectorLocation, anchor);
+        const foreign = makeBroker(lab, selected, { ...candidate, id: 'foreign-candidate' });
+        assert.throws(() => foreign.cite(citation), /citation-unavailable/u);
+        assert.throws(() => broker.cite({ ...citation, last: scenario.last + 1 }), /range/u);
+        if (revision === 'base') {
+            const initial = broker.initialAnchor();
+            assert.equal(initial.result.sources[0].sha, before.sha);
+            assert.deepEqual(candidate.detectorLocation, { path: 'change.ts', line: 3, end: 3, side: 'LEFT' });
+        }
+    });
+}
+
 test('an empty Git blob has no citable first line', async () => {
     const broker = makeBroker(lab, subject, finding);
     assert.deepEqual(await broker.inspect(query('read', 'empty.txt', { first: 1, last: 1 })),

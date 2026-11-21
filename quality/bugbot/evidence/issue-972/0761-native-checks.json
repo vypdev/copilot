@@ -1,0 +1,57 @@
+{
+  "at": "2026-11-20T16:05:55.317196+00:00",
+  "pr": 988,
+  "head": "07613d5e91a8155b6357f5a065420be38b2e5c08",
+  "prState": "OPEN",
+  "mergeState": "DIRTY",
+  "checks": {
+    "CI / Static checks": {
+      "id": 136390382687,
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/vypdev/copilot/actions/runs/44765153848/job/136390382687"
+    },
+    "CI / Build and package": {
+      "id": 136390382997,
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/vypdev/copilot/actions/runs/44765153848/job/136390382997"
+    },
+    "CI / Tests and coverage": {
+      "id": 136390382288,
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/vypdev/copilot/actions/runs/44765153848/job/136390382288"
+    },
+    "CI Check": {
+      "id": 136404124097,
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/vypdev/copilot/actions/runs/44765153848/job/136404124097"
+    },
+    "Copilot - Commit": {
+      "id": 136387635512,
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/vypdev/copilot/actions/runs/44765144401/job/136387635512"
+    },
+    "Copilot / Verification": {
+      "id": 136393985728,
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/vypdev/copilot/runs/136393985728"
+    },
+    "Copilot / Review": {
+      "id": 136388386277,
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/vypdev/copilot/runs/136388386277"
+    },
+    "Copilot - Branch Sync": {
+      "id": 136387634428,
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/vypdev/copilot/actions/runs/44765144419/job/136387634428"
+    }
+  }
+}

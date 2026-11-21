@@ -1,0 +1,31 @@
+{
+  "at": "2026-11-20T19:45:30.695275+00:00",
+  "authorization": "User explicitly delegated all merges judged appropriate and said no further approval was needed. Applied here to the exact parent integration after the verified Action error; no remote branch lifecycle creation, rename, deletion, replacement, force or protection bypass.",
+  "exceptionBasis": "Explicit current-base Action branch-sync error44792755868/job136484403942; original and parent refs independently unchanged; diagnostic original build proves no omitted generated bundle.",
+  "issue": 976,
+  "pr": 989,
+  "exactRef": "bugfix/976-recover-a-uniquely-identifiable-accepted-bugbot-status-dispatch-without-a-returned-run-id",
+  "child": "1b024481d9d86cb4d4b10eb7f8569f9c8e2f0981",
+  "parent": "0ddac1011204db6dda45dff0f99e3ef91309c701",
+  "expectedConflicts": [
+    "build/github_action/index.js",
+    "specs/CATALOG.md",
+    "specs/bugbot-review-state-reconciliation.md",
+    "specs/catalog.json"
+  ],
+  "steps": [
+    "Prepare local ordinary no-ff/no-commit merge of exact parent into the existing managed ref; stop if conflict inventory differs.",
+    "Retain both implemented source closures and all historical evidence; reconcile only overlapping owning SDD/catalog content, regenerate catalog and all generated bundles.",
+    "Inspect full final diff, run owning focused cases, normal build/full Jest/lint hook, specifications, documentation and graphify when code changes.",
+    "Re-read exact remote child and develop immediately before normal same-ref fast-forward push; stop on drift.",
+    "Inspect every final native check and valid finding before protected ordinary PR merge; retain issue lifecycle and tested-tree proof."
+  ],
+  "preserveGuards": true,
+  "production": "disabled",
+  "qualificationCalls": 0,
+  "installation": false,
+  "remoteBranchCreated": false,
+  "force": false,
+  "defaultWrites": false,
+  "sourceFixtureOnlyOrPermissionBypass": false
+}

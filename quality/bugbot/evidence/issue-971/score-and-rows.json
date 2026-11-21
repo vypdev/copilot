@@ -1,0 +1,478 @@
+{
+  "schemaVersion": 1,
+  "method": "unchanged public evaluator; independent causal assessments remain separate",
+  "implementation": "d26d0d6cd633c3aa313ddd21235fe985860b4104",
+  "priorImplementation": "03f8e6e33047333797ea37ad5e85bc756db223fa",
+  "corpusSha256": "640c3355aeb65c1b15454bd7f9242fa36acc12b8b3f5ef284ee06af8af36c6c6",
+  "currentLedgerSha256": "68907c3ddcb72b71f76ea650011408e89f9714577eee33c6a66442e4257ebbf5",
+  "priorPredictionsSha256": "570881b101d42282aeb062be50d0aaf372b32f47a91aa0c94cc07b6713b53580",
+  "score": {
+    "metrics": {
+      "expected": 80,
+      "actual": 86,
+      "matched": 69,
+      "precision": 0.8023255813953488,
+      "recall": 0.8625,
+      "locationAccuracy": 0.9130434782608695,
+      "severityAccuracy": 0.9565217391304348,
+      "categoryAccuracy": 1,
+      "f1": 0.8313253012048193,
+      "falsePositives": 17,
+      "falseNegatives": 11,
+      "meanLineDistance": 0.08695652173913043,
+      "confidenceBrierScore": 0.18831162790697673
+    },
+    "violations": [
+      "precision 0.802 is below 0.900",
+      "f1 0.831 is below 0.870",
+      "confidenceBrierScore 0.188 exceeds 0.160"
+    ],
+    "missingCases": []
+  },
+  "priorScore": {
+    "metrics": {
+      "expected": 80,
+      "actual": 83,
+      "matched": 73,
+      "precision": 0.8795180722891566,
+      "recall": 0.9125,
+      "locationAccuracy": 0.9041095890410958,
+      "severityAccuracy": 0.9315068493150684,
+      "categoryAccuracy": 1,
+      "f1": 0.8957055214723926,
+      "falsePositives": 10,
+      "falseNegatives": 7,
+      "meanLineDistance": 0.1643835616438356,
+      "confidenceBrierScore": 0.11406506024096379
+    },
+    "violations": [
+      "precision 0.880 is below 0.900"
+    ],
+    "missingCases": []
+  },
+  "rows": [
+    {
+      "case": "sql-bounded-query",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "queries/audit.sql:4:non-deterministic-limit-order",
+      "findingSha256": "277c9a99666ae3f2ef13cfb577c5889303bfe152ce732cd98dad24c1e631bb4c",
+      "classification": "unresolved",
+      "reason": "The prediction needs tied created_at values and a required stable boundary. The scenario calls the order deterministic, but supplies no schema or uniqueness constraint to establish or refute ties. The conditional SQL concern is not independently proven for the declared fixture.",
+      "evidence": [
+        "No schema or tie witness is supplied; expected=[] is a scorer label, not independent proof."
+      ],
+      "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+      "nextAction": "Obtain the authored schema/ordering contract before proposing either a detector change or a corpus correction."
+    },
+    {
+      "case": "rust-unchecked-input",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "src/http/limit.rs:27:malformed-limit-panics",
+      "findingSha256": "57aec013e45c60dc529d7c03205e629c70442f0cfe73bbe614a9e69f7bc97b98",
+      "classification": "taxonomy-mismatch",
+      "reason": "The prediction identifies the supplied parse().unwrap() panic on malformed request input. The scorer rejects security versus reliability; the severity also differs (high versus medium). No Rust process was executed in this audit.",
+      "evidence": [
+        "Supplied request-controlled parse/unwrap line and the scenario's explicit service-panic contract."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "rust-unchecked-input",
+      "kind": "expected",
+      "index": 0,
+      "scorerLabel": "FN",
+      "id": "request-unwrap",
+      "findingSha256": "7a2d4e8889bf70b3a29826e015ed5c1c5e7f073049a906efab4ad7255b12ced6",
+      "classification": "taxonomy-mismatch",
+      "reason": "The prediction identifies the supplied parse().unwrap() panic on malformed request input. The scorer rejects security versus reliability; the severity also differs (high versus medium). No Rust process was executed in this audit.",
+      "evidence": [
+        "Supplied request-controlled parse/unwrap line and the scenario's explicit service-panic contract."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "actions-readonly-metadata",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": ".github/workflows/metadata.yml:4:steps-outside-job",
+      "findingSha256": "b110039152424ded9688b3c799069e24cb5eea1c6ccb5fd655709572dccacc79",
+      "classification": "actual-causal-defect",
+      "reason": "The supplied added YAML has root-level steps and no jobs mapping. Read-only metadata access does not repair that workflow shape. The prediction identifies a causal defect in the supplied fixture, separately from the scorer's empty expectation.",
+      "evidence": [
+        "Parsed YAML structure; GitHub workflow syntax places steps under jobs.<job_id>.steps (official documentation checked 2026-11-19)."
+      ],
+      "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+      "nextAction": "Submit the fixture/rubric inconsistency for separate review; do not relabel this completed campaign or suppress a supported workflow finding."
+    },
+    {
+      "case": "shell-unquoted-path",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "scripts/archive.sh:14:unquoted-upload-path",
+      "findingSha256": "57ad734230604e6e15c387e4a92d54bf7dd1dc22f6d1ffab69945695ff9b4a5a",
+      "classification": "taxonomy-mismatch",
+      "reason": "The prediction identifies unquoted word splitting at the exact changed command. Its proposed -- and quoting repair also addresses option interpretation. The frozen security expectation differs from correctness and high differs from medium.",
+      "evidence": [
+        "Fixed shell archive reproduction; original command and unchanged expected security taxonomy."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "shell-unquoted-path",
+      "kind": "expected",
+      "index": 0,
+      "scorerLabel": "FN",
+      "id": "unsafe-path-expansion",
+      "findingSha256": "fef3af872e4b7e50cae446ef9f8cffd84a16e840248178658a88a9fb64b6d77d",
+      "classification": "taxonomy-mismatch",
+      "reason": "The prediction identifies unquoted word splitting at the exact changed command. Its proposed -- and quoting repair also addresses option interpretation. The frozen security expectation differs from correctness and high differs from medium.",
+      "evidence": [
+        "Fixed shell archive reproduction; original command and unchanged expected security taxonomy."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "react-complete-dependencies",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "src/UserPanel.tsx:42:stale-user-response",
+      "findingSha256": "db447ef52ea00f459ef9dd5e21ab835c38818963fb29611a289e40d27173a05d",
+      "classification": "unresolved",
+      "reason": "The stale-response hypothesis is possible for an asynchronous loader, but the fixture supplies no loadUser implementation, scheduling guarantee, cleanup elsewhere, or interaction witness. Complete dependencies alone neither proves nor refutes that separate hypothesis.",
+      "evidence": [
+        "Only the three-line effect and its dependency intent are supplied; the actual loader contract is missing."
+      ],
+      "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+      "nextAction": "Request a frozen loader/interaction witness. Do not infer a production prompt defect solely from expected=[]."
+    },
+    {
+      "case": "csharp-contained-path",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "Controllers/DownloadController.cs:73:ordinal-path-comparison",
+      "findingSha256": "5b8cf4359a28c110d7e85b9a6abcb10c3a2205e2cd74817ebbf7a1ef8f0d6eca",
+      "classification": "unresolved",
+      "reason": "The prediction assumes Windows case-insensitive path resolution and a requirement to accept differently cased contained paths. Neither supported OS/filesystem policy nor that acceptance requirement is supplied. No .NET/Windows execution is available in this audit.",
+      "evidence": [
+        "Supplied ordinal containment check; absent target-platform and alternate-spelling contract."
+      ],
+      "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+      "nextAction": "Keep the platform premise unresolved; obtain the actual supported filesystem contract before a narrow correction."
+    },
+    {
+      "case": "py-coverage-config-branch",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "pyproject.toml:4:coverage-threshold-not-enforced",
+      "findingSha256": "e2a57ff5a07677d90712b7be8346bbe442eb8194ebc4a17e90388f4688ca59e2",
+      "classification": "unresolved",
+      "reason": "coverage run collects data while reporting applies fail_under, but the excerpt does not prove the complete job has no report step or that this change promises threshold enforcement. The separate threshold hypothesis cannot be resolved from this fragment alone.",
+      "evidence": [
+        "Supplied coverage command/configuration; no complete job or version-matched reporting observation."
+      ],
+      "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+      "nextAction": "Inspect the complete authored job and reporting requirement; retain the scorer FP without inventing a confirmed missed threshold defect."
+    },
+    {
+      "case": "py-short-circuit-unhashable",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "src/checkpoint.py:2:accepts-object-as-steps",
+      "findingSha256": "b4836360df32ef823e06f4e499584ac2e4d29215d957a3fda6337e04ce5b025e",
+      "classification": "unresolved",
+      "reason": "A fixed Python control proves a mapping with an allowed string key returns True. The prediction additionally requires the whole issue_steps value to be an array; the scenario describes arbitrary persisted JSON but does not specify that container-shape contract. The concrete behavior is proven; whether it violates the intended contract remains unresolved.",
+      "evidence": [
+        "Fixed Python mapping/list/short-circuit observations, with no consumer execution."
+      ],
+      "scope": "supplied fixture; independent repository truth remains separate from scorer labels",
+      "nextAction": "Obtain the checkpoint container-shape requirement. Only then propose a narrow boundary or corpus follow-up."
+    },
+    {
+      "case": "py-short-circuit-unsafe-order",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "src/checkpoint.py:2:unhashable-step-crashes-validation",
+      "findingSha256": "61467e2c5712f3bc6db05e83a5f3baa5e52bf77499a1a242cc267d9055ac0df8",
+      "classification": "taxonomy-mismatch",
+      "reason": "Membership runs before isinstance. A list/dict step reaches set membership and raises TypeError; the prediction describes that exact path. Reliability differs from the frozen correctness label, and severity differs.",
+      "evidence": [
+        "Fixed Python short-circuit control; supplied expression order."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "py-short-circuit-unsafe-order",
+      "kind": "expected",
+      "index": 0,
+      "scorerLabel": "FN",
+      "id": "unhashable-membership",
+      "findingSha256": "a6518d968ec42c0a7f3014d8b934461dc566625c0d6132556799f4ac73cdc8ed",
+      "classification": "taxonomy-mismatch",
+      "reason": "Membership runs before isinstance. A list/dict step reaches set membership and raises TypeError; the prediction describes that exact path. Reliability differs from the frozen correctness label, and severity differs.",
+      "evidence": [
+        "Fixed Python short-circuit control; supplied expression order."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "ts-viewport-version-without-cleanup",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "src/startup.ts:2:loading-indicator-remains",
+      "findingSha256": "dfffdc1d3999fca2bb5363c103f8e6a2433650e5f08487224943af0d37089cda",
+      "classification": "taxonomy-mismatch",
+      "reason": "The pinned 1.0 mount appends a child and preserves the loader; the removed caller cleanup is the missing operation. The prediction follows that same version and path. Reliability differs from correctness.",
+      "evidence": [
+        "Supplied immutable 1.0 mount source and index.html; no framework/browser execution is claimed."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "ts-viewport-version-without-cleanup",
+      "kind": "expected",
+      "index": 0,
+      "scorerLabel": "FN",
+      "id": "version-loader",
+      "findingSha256": "a61f95f7a54c37f539c7c13e80919cb3c816619e8a5c99a9b801b9035eff0f03",
+      "classification": "taxonomy-mismatch",
+      "reason": "The pinned 1.0 mount appends a child and preserves the loader; the removed caller cleanup is the missing operation. The prediction follows that same version and path. Reliability differs from correctness.",
+      "evidence": [
+        "Supplied immutable 1.0 mount source and index.html; no framework/browser execution is claimed."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "kt-broad-catch-swallows-cancellation",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "storage/ReadRows.kt:5:cancellation-swallowed",
+      "findingSha256": "b370aab0a367062978d5e478ac6b78b02f17061333790fc7e60a825b52313fc3",
+      "classification": "taxonomy-mismatch",
+      "reason": "The scenario requires cancellation propagation and supplies no other guard. The new Throwable catch wraps that cancellation in DatabaseException/Left. The prediction identifies this same cause; reliability differs from correctness. It also reports line 5 rather than frozen line 4.",
+      "evidence": [
+        "Separately authored Kotlin CancellationException mapping control; supplied try/catch and cancellation contract."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "kt-broad-catch-swallows-cancellation",
+      "kind": "expected",
+      "index": 0,
+      "scorerLabel": "FN",
+      "id": "swallowed-cancellation",
+      "findingSha256": "ac2985daeadf1e21c7316de43d8f7bd766b61b50f14514465c6ebd7e715d94ab",
+      "classification": "taxonomy-mismatch",
+      "reason": "The scenario requires cancellation propagation and supplies no other guard. The new Throwable catch wraps that cancellation in DatabaseException/Left. The prediction identifies this same cause; reliability differs from correctness. It also reports line 5 rather than frozen line 4.",
+      "evidence": [
+        "Separately authored Kotlin CancellationException mapping control; supplied try/catch and cancellation contract."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "test-delegate-bypasses-stub",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "test/SessionReturnedState.test.ts:22:public-reader-skips-participant-binding",
+      "findingSha256": "8bc2ebbace1d809780788cdfb306fdefbca2079c6b8d46ec98041e5db49f76c3",
+      "classification": "taxonomy-mismatch",
+      "reason": "The public reader returns right(row) and never invokes bindSession. The new assertion therefore fails with zero participant-projection calls. The prediction describes this exact route; reliability differs from correctness.",
+      "evidence": [
+        "observeCallPathFixture on its immutable owned fixture, independently of model output."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "test-delegate-bypasses-stub",
+      "kind": "expected",
+      "index": 0,
+      "scorerLabel": "FN",
+      "id": "test-delegate-bypasses-stub-defect",
+      "findingSha256": "c033f31825321ada1e07168745d8feea69c70ec98902ab28fd6287be8d9e4ae5",
+      "classification": "taxonomy-mismatch",
+      "reason": "The public reader returns right(row) and never invokes bindSession. The new assertion therefore fails with zero participant-projection calls. The prediction describes this exact route; reliability differs from correctness.",
+      "evidence": [
+        "observeCallPathFixture on its immutable owned fixture, independently of model output."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "action-old-input-on-new-version",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": ".github/actions/publish-package/action.yml:22:wrong-problem-matcher-input",
+      "findingSha256": "5b48554fe5f05e9d5dcaaf4cfb5b46e47a80fb5ea3254081395a3a981213ea9d",
+      "classification": "taxonomy-mismatch",
+      "reason": "The selected revision reads enable-problem-matcher; the added problem-matcher belongs to the older revision. The default remains enabled and the supplied absent-asset contract fails registration. Correctness differs from reliability.",
+      "evidence": [
+        "Supplied exact-revision manifest/runtime contract; this synthetic Action is not executed on GitHub."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "action-old-input-on-new-version",
+      "kind": "expected",
+      "index": 0,
+      "scorerLabel": "FN",
+      "id": "action-old-input-on-new-version-fault",
+      "findingSha256": "2d61be8109127807407db757d9fda7740bbe3cf0770b33aacaf9a953f95a0b57",
+      "classification": "taxonomy-mismatch",
+      "reason": "The selected revision reads enable-problem-matcher; the added problem-matcher belongs to the older revision. The default remains enabled and the supplied absent-asset contract fails registration. Correctness differs from reliability.",
+      "evidence": [
+        "Supplied exact-revision manifest/runtime contract; this synthetic Action is not executed on GitHub."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "request-transform-write",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "media/request.ts:1:private-image-cache-policy",
+      "findingSha256": "a211ebce8a9c756ba6cdb11f908aaeb616d7f718cc154645ab5d24f19084e006",
+      "classification": "taxonomy-mismatch",
+      "reason": "The real authored request path emits no-cache, preserves it, and reaches a test requiring no-store. The prediction identifies that actual value and failure; security differs from correctness.",
+      "evidence": [
+        "observeRequestTransform on the immutable owned write-policy fixture."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "request-transform-write",
+      "kind": "expected",
+      "index": 0,
+      "scorerLabel": "FN",
+      "id": "request-transform-write",
+      "findingSha256": "0c79092de7ac8e46e2644adaaddf1934a1015ccf138682205b05bb4a032db4c6",
+      "classification": "taxonomy-mismatch",
+      "reason": "The real authored request path emits no-cache, preserves it, and reaches a test requiring no-store. The prediction identifies that actual value and failure; security differs from correctness.",
+      "evidence": [
+        "observeRequestTransform on the immutable owned write-policy fixture."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "session-source-opaque-bootstrap",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "e2e/owned-session.spec.ts:30:opaque-token-rejected",
+      "findingSha256": "5cc0b4dfacc51a55c619282c0f1ebae2779f931304a03116befc8d6207b0067e",
+      "classification": "taxonomy-mismatch",
+      "reason": "Configured opaque.setup.ts persists the opaque token and its future expiry skips refresh. The compact-token assertion fails on that selected token. Reliability differs from correctness.",
+      "evidence": [
+        "observeInitialSessionSource with real Node HMAC/base64url and the immutable owned opaque fixture."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "session-source-opaque-bootstrap",
+      "kind": "expected",
+      "index": 0,
+      "scorerLabel": "FN",
+      "id": "session-source-opaque-bootstrap",
+      "findingSha256": "1a303247c98634bdfbeed22bb19d87ace956f75dd110322fea0eeafa31c61a91",
+      "classification": "taxonomy-mismatch",
+      "reason": "Configured opaque.setup.ts persists the opaque token and its future expiry skips refresh. The compact-token assertion fails on that selected token. Reliability differs from correctness.",
+      "evidence": [
+        "observeInitialSessionSource with real Node HMAC/base64url and the immutable owned opaque fixture."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "session-source-expired-refresh",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": "e2e/owned-session.spec.ts:30:refresh-token-shape-mismatch",
+      "findingSha256": "49eb76e680b16ba7c18608cefef15e2d20ea3fede05a64d0fbd2c58dbf626e7b",
+      "classification": "taxonomy-mismatch",
+      "reason": "The selected signed session expires before the fixed clock; the actual refresh response supplies an opaque token. The prediction follows that replacement and failed assertion. Reliability differs from correctness.",
+      "evidence": [
+        "observeInitialSessionSource with real Node HMAC/base64url and the immutable owned expired fixture."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "session-source-expired-refresh",
+      "kind": "expected",
+      "index": 0,
+      "scorerLabel": "FN",
+      "id": "session-source-expired-refresh",
+      "findingSha256": "80d6e8df16ffe1289e11590ff687426ed396432cf24824b3f92141e8b8aca87a",
+      "classification": "taxonomy-mismatch",
+      "reason": "The selected signed session expires before the fixed clock; the actual refresh response supplies an opaque token. The prediction follows that replacement and failed assertion. Reliability differs from correctness.",
+      "evidence": [
+        "observeInitialSessionSource with real Node HMAC/base64url and the immutable owned expired fixture."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "unittest-discovery-wrong-start-directory",
+      "kind": "prediction",
+      "index": 0,
+      "scorerLabel": "FP",
+      "id": ".github/scripts/tests/run_manifest_tests.py:9:omits-required-test-modules",
+      "findingSha256": "990d3b27ce89b5dc2c08a62086397803ff252cf6f6f0c69c0ce7f18ab586b779",
+      "classification": "taxonomy-mismatch",
+      "reason": "The selected start directory runs the unrelated health method and excludes both required manifest modules. The prediction explains that same actual selection. Reliability differs from correctness; the final location is the expected line 12 despite a stale line-9 string in its ID.",
+      "evidence": [
+        "Actual fixed owned Python unittest discovery: 1 health method, 0 export methods; passing control runs 19 methods including 5 export methods."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    },
+    {
+      "case": "unittest-discovery-wrong-start-directory",
+      "kind": "expected",
+      "index": 0,
+      "scorerLabel": "FN",
+      "id": "unittest-discovery-wrong-start-directory",
+      "findingSha256": "b92ba6d289918fe0bc52686904da915256f901a7487eab4c853cba73bf0ac20a",
+      "classification": "taxonomy-mismatch",
+      "reason": "The selected start directory runs the unrelated health method and excludes both required manifest modules. The prediction explains that same actual selection. Reliability differs from correctness; the final location is the expected line 12 despite a stale line-9 string in its ID.",
+      "evidence": [
+        "Actual fixed owned Python unittest discovery: 1 health method, 0 export methods; passing control runs 19 methods including 5 export methods."
+      ],
+      "scope": "supplied synthetic fixture; no claim about a private consumer",
+      "nextAction": "Retain original FP/FN and calibration contribution. No production correction follows from this taxonomy difference. Any rubric proposal requires independent review and a new preregistration."
+    }
+  ],
+  "modelCalls": 0,
+  "evaluatedPrWriteAttempts": 0,
+  "qualification": "not-qualified; no score, label, threshold, prompt or campaign was changed"
+}

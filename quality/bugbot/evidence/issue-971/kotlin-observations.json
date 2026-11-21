@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-19",
+  "compiler": "info: kotlinc-jvm 2.4.10 (JRE 26.0.1)",
+  "java": "openjdk version \"21.0.11\" 2026-04-21\nOpenJDK Runtime Environment JBR-21.0.11+10-1163.116-nomod (build 21.0.11+10-b1163.116)\nOpenJDK 64-Bit Server VM JBR-21.0.11+10-1163.116-nomod (build 21.0.11+10-b1163.116, mixed mode, sharing)",
+  "sourceSha256": "d15d5cb6a1acda155abe74752530ed909c8675177067fbe708b629600db3594b",
+  "observation": {
+    "narrowPropagates": true,
+    "broadMapsCancellationToDatabaseError": true
+  },
+  "scope": "separately authored exception mapping primitive; no JDBC, consumer or coroutine scheduler execution",
+  "modelCalls": 0,
+  "evaluatedPrWriteAttempts": 0
+}

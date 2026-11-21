@@ -1,0 +1,2959 @@
+{
+  "method": "public immutable bootstrap; actual normal-flow runner and ordinary operation; controlled providers",
+  "modelCalls": 0,
+  "evaluatedPrWriteAttempts": 0,
+  "attempts": [
+    {
+      "stage": "before-detection",
+      "pins": {
+        "revision": "5d69230c56311373b8caae4111de02c34dcef6eb",
+        "planSha256": "bb3744553db73247a799defc619e0a4bdc2428ffb1f6d48c607e39484fb36a08",
+        "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+      },
+      "pending": [],
+      "detectorCalls": 0,
+      "verifierCalls": 0,
+      "exitCode": 130,
+      "rows": [
+        {
+          "at": "2026-11-20T15:28:56.287Z",
+          "event": "plan",
+          "subject": {
+            "repository": "owner/project",
+            "number": 1,
+            "baseRef": "master",
+            "headRef": "review",
+            "head": "e742668e5356c57b79024c3a380d582cd9f25dc1",
+            "base": "a8095e10598b2fd1f557bac146f004fd54b9bb66",
+            "tree": "0f911f35ed5331207f612714640e0f1d06b153db",
+            "baseTree": "48479afc6120f8440951aa958a052b651ffbd699",
+            "model": "gpt-6-luna"
+          },
+          "files": 1,
+          "comparisonSha256": "7d9c84e6b7026144e1feb48ef741c9272017c88c1367b2205ab0be69683168d4",
+          "configuration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "verifierConfiguration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "reviewEffort": "default",
+          "effectiveDepth": "default",
+          "subjectsSha256": "bb3744553db73247a799defc619e0a4bdc2428ffb1f6d48c607e39484fb36a08",
+          "cli": "codex-cli fixture",
+          "implementation": "619403cdcbf2e27689504e5c854ada78189c0e54",
+          "provenance": {
+            "bootstrap": {
+              "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4",
+              "planCommit": "5d69230c56311373b8caae4111de02c34dcef6eb",
+              "planPath": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "planSha256": "bb3744553db73247a799defc619e0a4bdc2428ffb1f6d48c607e39484fb36a08"
+            },
+            "manifest": {
+              "commit": "5d69230c56311373b8caae4111de02c34dcef6eb",
+              "path": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "blob": "09984295bcdfd643f024a662110ace7d29965748",
+              "sha256": "bb3744553db73247a799defc619e0a4bdc2428ffb1f6d48c607e39484fb36a08"
+            },
+            "implementation": "619403cdcbf2e27689504e5c854ada78189c0e54",
+            "tree": "6781b52af2fa7c0552985b79338168a416b7950c",
+            "sourceSha256": "27fabfda9b318816eed0979b1dc4e22fb0e323d40008238b12814d8f9006be65",
+            "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+            "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1",
+            "drivers": {
+              "run.cjs": "2b063d15ec4de0f2764f1458541e869db7622af1ffbd249abd964159c508e398",
+              "../execution-provenance.cjs": "df4eea6fd1c2272392858db75a5456fe62efec761baf6d35558d2c7eb001a0b7",
+              "../ev07-shadow/load.cjs": "35a9e9b2219619dccb9ea7cebe9ceb14f49aa05a9bf036a29045cffbf4af2405",
+              "../ev07-shadow/implementation.cjs": "9018c56fc7439b031d7c5aadeb99cbfe6349c17973f15d4f520cc5a1ddb9803a",
+              "../ev07-shadow/configuration.cjs": "ff03c59a19d78e018d6d5a58e0b9aed018215ca323f781858d6ce27654464ffb",
+              "../qualification-bootstrap.cjs": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+            },
+            "runtime": {
+              "dependencyTreeSha256": "edbe72a52cd7e7d2aceb10bc9aabf11609ce35ab1da445c619b2346deed7324d",
+              "dependencyEntries": 26844,
+              "node": "v24.20.0",
+              "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+              "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+              "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+              "git": "git version 2.54.0 (Apple Git-157)",
+              "typescript": "5.9.3",
+              "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+            },
+            "cli": {
+              "executableSha256": "7e2e610fddb9ca378cfebe7ab21e9ceeabfa73bb72808be995082406d60e2096",
+              "version": "codex-cli fixture"
+            }
+          },
+          "runnerSha256": "2b063d15ec4de0f2764f1458541e869db7622af1ffbd249abd964159c508e398"
+        },
+        {
+          "at": "2026-11-20T15:28:56.393Z",
+          "event": "workflow-result",
+          "status": "interrupted",
+          "results": [
+            {
+              "id": "DetectPotentialProblemsUseCase",
+              "success": false,
+              "executed": true,
+              "steps": [],
+              "errors": [
+                {
+                  "name": "ApplicationError",
+                  "message": "Bugbot verification was canceled. The previous verified result was preserved.",
+                  "code": "workflow.failed",
+                  "kind": "workflow",
+                  "retryable": true,
+                  "impact": "The workflow could not complete the requested operation.",
+                  "action": "Inspect the current state and retry the failed step.",
+                  "retainedState": "Existing persisted state and completed external effects were preserved.",
+                  "correlationId": "131c6a90-bb8f-48bf-b547-8736ebf7fdb7"
+                }
+              ],
+              "payload": {
+                "bugbotPublicationBlocked": true,
+                "bugbotTelemetry": {
+                  "schemaVersion": 1,
+                  "reviewId": "owner:project:pr-1:1795188536289",
+                  "repository": "owner/project",
+                  "triggerKind": "pull_request",
+                  "pullRequestNumber": 1,
+                  "publicationMode": "dry-run",
+                  "configuredEffort": "default",
+                  "agentProvider": "codex",
+                  "agentModel": "gpt-6-luna",
+                  "startedAt": "2026-11-20T15:28:56.289Z",
+                  "elapsedMs": 1,
+                  "stagesMs": {},
+                  "promptCharacters": 0,
+                  "responseCharacters": 0,
+                  "estimatedInputTokens": 0,
+                  "estimatedOutputTokens": 0,
+                  "changedFiles": 0,
+                  "changedLines": 0,
+                  "rulesLoaded": 0,
+                  "contextLogicalProviderReads": 0,
+                  "contextRawProviderRequests": 0,
+                  "contextConcurrencyLimit": 2,
+                  "candidateFindings": 0,
+                  "publishedFindings": 0,
+                  "overflowFindings": 0,
+                  "resolvedFindings": 0,
+                  "outcome": "failed"
+                },
+                "dryRun": true
+              },
+              "reminders": [],
+              "stepFormat": "plain"
+            }
+          ],
+          "writes": [],
+          "checkoutUnchanged": true,
+          "wallMs": 3,
+          "verificationWallMs": 0,
+          "peakVerifierConcurrency": 0
+        }
+      ]
+    },
+    {
+      "stage": "during-detection",
+      "pins": {
+        "revision": "93f60ca6a6174a27a40eb0a3f99a465b2e547dbd",
+        "planSha256": "ff89ff14344a5501b45264ce8058a7b897200b7e2b2b7d6040d8c95ba7158ca1",
+        "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+      },
+      "pending": [
+        {
+          "stage": "detector",
+          "abortedAtEntry": false
+        }
+      ],
+      "detectorCalls": 1,
+      "verifierCalls": 0,
+      "exitCode": 130,
+      "rows": [
+        {
+          "at": "2026-11-20T15:30:09.898Z",
+          "event": "plan",
+          "subject": {
+            "repository": "owner/project",
+            "number": 1,
+            "baseRef": "master",
+            "headRef": "review",
+            "head": "4154c7e43b573ab7dae5fe4e03aa01beccd6f562",
+            "base": "31e96404523c3ede0453e82017a9a3839c840351",
+            "tree": "0f911f35ed5331207f612714640e0f1d06b153db",
+            "baseTree": "48479afc6120f8440951aa958a052b651ffbd699",
+            "model": "gpt-6-luna"
+          },
+          "files": 1,
+          "comparisonSha256": "7d9c84e6b7026144e1feb48ef741c9272017c88c1367b2205ab0be69683168d4",
+          "configuration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "verifierConfiguration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "reviewEffort": "default",
+          "effectiveDepth": "default",
+          "subjectsSha256": "ff89ff14344a5501b45264ce8058a7b897200b7e2b2b7d6040d8c95ba7158ca1",
+          "cli": "codex-cli fixture",
+          "implementation": "6898fa14014bd15996006e821b23a7626d0974bd",
+          "provenance": {
+            "bootstrap": {
+              "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4",
+              "planCommit": "93f60ca6a6174a27a40eb0a3f99a465b2e547dbd",
+              "planPath": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "planSha256": "ff89ff14344a5501b45264ce8058a7b897200b7e2b2b7d6040d8c95ba7158ca1"
+            },
+            "manifest": {
+              "commit": "93f60ca6a6174a27a40eb0a3f99a465b2e547dbd",
+              "path": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "blob": "5d6532070b6ba5cbceb5d8909fe8b86be2a68a3d",
+              "sha256": "ff89ff14344a5501b45264ce8058a7b897200b7e2b2b7d6040d8c95ba7158ca1"
+            },
+            "implementation": "6898fa14014bd15996006e821b23a7626d0974bd",
+            "tree": "7633139669ff4b80f239a3692dc5607d2492b859",
+            "sourceSha256": "27fabfda9b318816eed0979b1dc4e22fb0e323d40008238b12814d8f9006be65",
+            "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+            "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1",
+            "drivers": {
+              "run.cjs": "5edab349bb87dcdd37b80f02b2513f179840c3e4ee0cad7bea76f7d035845256",
+              "../execution-provenance.cjs": "df4eea6fd1c2272392858db75a5456fe62efec761baf6d35558d2c7eb001a0b7",
+              "../ev07-shadow/load.cjs": "35a9e9b2219619dccb9ea7cebe9ceb14f49aa05a9bf036a29045cffbf4af2405",
+              "../ev07-shadow/implementation.cjs": "9018c56fc7439b031d7c5aadeb99cbfe6349c17973f15d4f520cc5a1ddb9803a",
+              "../ev07-shadow/configuration.cjs": "ff03c59a19d78e018d6d5a58e0b9aed018215ca323f781858d6ce27654464ffb",
+              "../qualification-bootstrap.cjs": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+            },
+            "runtime": {
+              "dependencyTreeSha256": "edbe72a52cd7e7d2aceb10bc9aabf11609ce35ab1da445c619b2346deed7324d",
+              "dependencyEntries": 26844,
+              "node": "v24.20.0",
+              "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+              "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+              "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+              "git": "git version 2.54.0 (Apple Git-157)",
+              "typescript": "5.9.3",
+              "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+            },
+            "cli": {
+              "executableSha256": "7e2e610fddb9ca378cfebe7ab21e9ceeabfa73bb72808be995082406d60e2096",
+              "version": "codex-cli fixture"
+            }
+          },
+          "runnerSha256": "5edab349bb87dcdd37b80f02b2513f179840c3e4ee0cad7bea76f7d035845256"
+        },
+        {
+          "at": "2026-11-20T15:30:09.902Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "preparing",
+            "headSha": "4154c7e43b573ab7dae5fe4e03aa01beccd6f562",
+            "baseSha": "31e96404523c3ede0453e82017a9a3839c840351",
+            "pullNumber": 1,
+            "elapsedMs": 0,
+            "observedAt": "2026-11-20T15:30:09.902Z",
+            "sequence": 1,
+            "stageTimesMs": {}
+          }
+        },
+        {
+          "at": "2026-11-20T15:30:09.905Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "headSha": "4154c7e43b573ab7dae5fe4e03aa01beccd6f562",
+            "baseSha": "31e96404523c3ede0453e82017a9a3839c840351",
+            "baseRefSha": "31e96404523c3ede0453e82017a9a3839c840351",
+            "pullNumber": 1,
+            "elapsedMs": 3,
+            "observedAt": "2026-11-20T15:30:09.905Z",
+            "sequence": 2,
+            "stageTimesMs": {
+              "preparing": 3
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:30:09.905Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "partitions": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "4154c7e43b573ab7dae5fe4e03aa01beccd6f562",
+            "baseSha": "31e96404523c3ede0453e82017a9a3839c840351",
+            "baseRefSha": "31e96404523c3ede0453e82017a9a3839c840351",
+            "pullNumber": 1,
+            "elapsedMs": 3,
+            "observedAt": "2026-11-20T15:30:09.905Z",
+            "sequence": 3,
+            "stageTimesMs": {
+              "preparing": 3
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:30:09.907Z",
+          "event": "detector-start",
+          "turn": 1,
+          "resolvedModel": "gpt-6-luna",
+          "promptSha256": "79e57bc02796c7aba3077fd06512f33edec9ac87da26396626e47f403c64d245"
+        },
+        {
+          "at": "2026-11-20T15:30:09.908Z",
+          "event": "detector-result",
+          "turn": 1,
+          "findings": [
+            {
+              "id": "controlled-candidate",
+              "title": "Controlled candidate",
+              "file": "index.ts",
+              "line": 2
+            }
+          ],
+          "resolvedModel": "gpt-6-luna",
+          "reportedModel": null,
+          "wallMs": 1
+        },
+        {
+          "at": "2026-11-20T15:30:09.909Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "finished",
+            "partitions": {
+              "completed": 0,
+              "total": 1
+            },
+            "outcome": "failed",
+            "headSha": "4154c7e43b573ab7dae5fe4e03aa01beccd6f562",
+            "baseSha": "31e96404523c3ede0453e82017a9a3839c840351",
+            "baseRefSha": "31e96404523c3ede0453e82017a9a3839c840351",
+            "pullNumber": 1,
+            "elapsedMs": 7,
+            "observedAt": "2026-11-20T15:30:09.909Z",
+            "sequence": 4,
+            "stageTimesMs": {
+              "preparing": 3,
+              "analyzing": 4
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:30:09.946Z",
+          "event": "workflow-result",
+          "status": "interrupted",
+          "results": [
+            {
+              "id": "DetectPotentialProblemsUseCase",
+              "success": false,
+              "executed": true,
+              "steps": [],
+              "errors": [
+                {
+                  "name": "ApplicationError",
+                  "message": "Bugbot verification was canceled. The previous verified result was preserved.",
+                  "code": "workflow.failed",
+                  "kind": "workflow",
+                  "retryable": true,
+                  "impact": "The workflow could not complete the requested operation.",
+                  "action": "Inspect the current state and retry the failed step.",
+                  "retainedState": "Existing persisted state and completed external effects were preserved.",
+                  "correlationId": "e0468ded-178f-4930-b563-6f2e80474b3f"
+                }
+              ],
+              "payload": {
+                "bugbotPublicationBlocked": true,
+                "bugbotTelemetry": {
+                  "schemaVersion": 1,
+                  "reviewId": "owner:project:pr-1:4154c7e43b57",
+                  "repository": "owner/project",
+                  "triggerKind": "pull_request",
+                  "pullRequestNumber": 1,
+                  "headSha": "4154c7e43b573ab7dae5fe4e03aa01beccd6f562",
+                  "publicationMode": "dry-run",
+                  "configuredEffort": "default",
+                  "agentProvider": "codex",
+                  "agentModel": "gpt-6-luna",
+                  "startedAt": "2026-11-20T15:30:09.902Z",
+                  "elapsedMs": 7,
+                  "stagesMs": {
+                    "context-preflight": 0,
+                    "context": 3,
+                    "analysis": 3
+                  },
+                  "promptCharacters": 28545,
+                  "responseCharacters": 0,
+                  "estimatedInputTokens": 7137,
+                  "estimatedOutputTokens": 0,
+                  "changedFiles": 1,
+                  "changedLines": 1,
+                  "rulesLoaded": 0,
+                  "contextSelectionReason": "event",
+                  "contextCandidateBucket": "1",
+                  "contextCoverageStatus": "complete",
+                  "contextCoverage": {
+                    "selection": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "issue-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "pull-request-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "review-threads": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "diff": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "previous-findings": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "human-conversation": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "rules": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    }
+                  },
+                  "contextLogicalProviderReads": 5,
+                  "contextRawProviderRequests": 5,
+                  "contextConcurrencyLimit": 2,
+                  "analysisPartitions": 1,
+                  "completedAnalysisPartitions": 0,
+                  "analysisDiffFragments": 1,
+                  "analysisAssignedFiles": 1,
+                  "maximumAnalysisConcurrency": 1,
+                  "failedAnalysisPartitionOrdinal": 1,
+                  "failedAnalysisPartitionCategory": "aborterror",
+                  "candidateFindings": 0,
+                  "publishedFindings": 0,
+                  "overflowFindings": 0,
+                  "resolvedFindings": 0,
+                  "outcome": "failed"
+                },
+                "dryRun": true
+              },
+              "reminders": [],
+              "stepFormat": "plain"
+            }
+          ],
+          "writes": [],
+          "checkoutUnchanged": true,
+          "wallMs": 12,
+          "verificationWallMs": 0,
+          "peakVerifierConcurrency": 0
+        }
+      ]
+    },
+    {
+      "stage": "between-preparation-and-verification",
+      "pins": {
+        "revision": "e5414bc77db087ff28c018af1db4d00583aa12d3",
+        "planSha256": "47bf276d1e11d9693b344ac29e2ceeb5de3164e5437de4bf8573f43bd0153fcf",
+        "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+      },
+      "pending": [
+        {
+          "stage": "detector",
+          "abortedAtEntry": false
+        }
+      ],
+      "detectorCalls": 1,
+      "verifierCalls": 0,
+      "exitCode": 130,
+      "rows": [
+        {
+          "at": "2026-11-20T15:31:20.053Z",
+          "event": "plan",
+          "subject": {
+            "repository": "owner/project",
+            "number": 1,
+            "baseRef": "master",
+            "headRef": "review",
+            "head": "e8a38f3f410dcafc98d58b7df6fb64c953d42945",
+            "base": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2",
+            "tree": "0f911f35ed5331207f612714640e0f1d06b153db",
+            "baseTree": "48479afc6120f8440951aa958a052b651ffbd699",
+            "model": "gpt-6-luna"
+          },
+          "files": 1,
+          "comparisonSha256": "7d9c84e6b7026144e1feb48ef741c9272017c88c1367b2205ab0be69683168d4",
+          "configuration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "verifierConfiguration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "reviewEffort": "default",
+          "effectiveDepth": "default",
+          "subjectsSha256": "47bf276d1e11d9693b344ac29e2ceeb5de3164e5437de4bf8573f43bd0153fcf",
+          "cli": "codex-cli fixture",
+          "implementation": "2ba130988cd1b3fc707c41b00dd7d1f29ee62dd4",
+          "provenance": {
+            "bootstrap": {
+              "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4",
+              "planCommit": "e5414bc77db087ff28c018af1db4d00583aa12d3",
+              "planPath": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "planSha256": "47bf276d1e11d9693b344ac29e2ceeb5de3164e5437de4bf8573f43bd0153fcf"
+            },
+            "manifest": {
+              "commit": "e5414bc77db087ff28c018af1db4d00583aa12d3",
+              "path": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "blob": "767f058a1ee79d7137927ccc0339551921db5292",
+              "sha256": "47bf276d1e11d9693b344ac29e2ceeb5de3164e5437de4bf8573f43bd0153fcf"
+            },
+            "implementation": "2ba130988cd1b3fc707c41b00dd7d1f29ee62dd4",
+            "tree": "48ccf1fd62dd5e50322f72a19b2b41d59dcf17cd",
+            "sourceSha256": "27fabfda9b318816eed0979b1dc4e22fb0e323d40008238b12814d8f9006be65",
+            "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+            "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1",
+            "drivers": {
+              "run.cjs": "5b6f20fbdb0e0a01fc969b72d3a84a4a5a499638b66095034b97f55fb4de0f6c",
+              "../execution-provenance.cjs": "df4eea6fd1c2272392858db75a5456fe62efec761baf6d35558d2c7eb001a0b7",
+              "../ev07-shadow/load.cjs": "35a9e9b2219619dccb9ea7cebe9ceb14f49aa05a9bf036a29045cffbf4af2405",
+              "../ev07-shadow/implementation.cjs": "9018c56fc7439b031d7c5aadeb99cbfe6349c17973f15d4f520cc5a1ddb9803a",
+              "../ev07-shadow/configuration.cjs": "ff03c59a19d78e018d6d5a58e0b9aed018215ca323f781858d6ce27654464ffb",
+              "../qualification-bootstrap.cjs": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+            },
+            "runtime": {
+              "dependencyTreeSha256": "edbe72a52cd7e7d2aceb10bc9aabf11609ce35ab1da445c619b2346deed7324d",
+              "dependencyEntries": 26844,
+              "node": "v24.20.0",
+              "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+              "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+              "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+              "git": "git version 2.54.0 (Apple Git-157)",
+              "typescript": "5.9.3",
+              "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+            },
+            "cli": {
+              "executableSha256": "7e2e610fddb9ca378cfebe7ab21e9ceeabfa73bb72808be995082406d60e2096",
+              "version": "codex-cli fixture"
+            }
+          },
+          "runnerSha256": "5b6f20fbdb0e0a01fc969b72d3a84a4a5a499638b66095034b97f55fb4de0f6c"
+        },
+        {
+          "at": "2026-11-20T15:31:20.056Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "preparing",
+            "headSha": "e8a38f3f410dcafc98d58b7df6fb64c953d42945",
+            "baseSha": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2",
+            "pullNumber": 1,
+            "elapsedMs": 0,
+            "observedAt": "2026-11-20T15:31:20.055Z",
+            "sequence": 1,
+            "stageTimesMs": {}
+          }
+        },
+        {
+          "at": "2026-11-20T15:31:20.057Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "headSha": "e8a38f3f410dcafc98d58b7df6fb64c953d42945",
+            "baseSha": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2",
+            "baseRefSha": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2",
+            "pullNumber": 1,
+            "elapsedMs": 2,
+            "observedAt": "2026-11-20T15:31:20.057Z",
+            "sequence": 2,
+            "stageTimesMs": {
+              "preparing": 2
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:31:20.058Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "partitions": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "e8a38f3f410dcafc98d58b7df6fb64c953d42945",
+            "baseSha": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2",
+            "baseRefSha": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2",
+            "pullNumber": 1,
+            "elapsedMs": 3,
+            "observedAt": "2026-11-20T15:31:20.058Z",
+            "sequence": 3,
+            "stageTimesMs": {
+              "preparing": 2
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:31:20.059Z",
+          "event": "detector-start",
+          "turn": 1,
+          "resolvedModel": "gpt-6-luna",
+          "promptSha256": "3eafb5140c140b48154a48fe881db03726aaefa3fc5fe7e0fa8fc24e69fa734b"
+        },
+        {
+          "at": "2026-11-20T15:31:20.059Z",
+          "event": "detector-result",
+          "turn": 1,
+          "findings": [
+            {
+              "id": "controlled-candidate",
+              "title": "Controlled candidate",
+              "file": "index.ts",
+              "line": 2
+            }
+          ],
+          "resolvedModel": "gpt-6-luna",
+          "reportedModel": null,
+          "wallMs": 0
+        },
+        {
+          "at": "2026-11-20T15:31:20.061Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "verifying",
+            "partitions": {
+              "completed": 1,
+              "total": 1
+            },
+            "candidates": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "e8a38f3f410dcafc98d58b7df6fb64c953d42945",
+            "baseSha": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2",
+            "baseRefSha": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2",
+            "pullNumber": 1,
+            "elapsedMs": 6,
+            "observedAt": "2026-11-20T15:31:20.061Z",
+            "sequence": 4,
+            "stageTimesMs": {
+              "preparing": 2,
+              "analyzing": 4
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:31:20.062Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "finished",
+            "partitions": {
+              "completed": 1,
+              "total": 1
+            },
+            "candidates": {
+              "completed": 0,
+              "total": 1
+            },
+            "outcome": "failed",
+            "headSha": "e8a38f3f410dcafc98d58b7df6fb64c953d42945",
+            "baseSha": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2",
+            "baseRefSha": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2",
+            "pullNumber": 1,
+            "elapsedMs": 7,
+            "observedAt": "2026-11-20T15:31:20.062Z",
+            "sequence": 5,
+            "stageTimesMs": {
+              "preparing": 2,
+              "analyzing": 4,
+              "verifying": 1
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:31:20.097Z",
+          "event": "workflow-result",
+          "status": "interrupted",
+          "results": [
+            {
+              "id": "DetectPotentialProblemsUseCase",
+              "success": false,
+              "executed": true,
+              "steps": [],
+              "errors": [
+                {
+                  "name": "ApplicationError",
+                  "message": "Bugbot verification was canceled. The previous verified result was preserved.",
+                  "code": "workflow.failed",
+                  "kind": "workflow",
+                  "retryable": true,
+                  "impact": "The workflow could not complete the requested operation.",
+                  "action": "Inspect the current state and retry the failed step.",
+                  "retainedState": "Existing persisted state and completed external effects were preserved.",
+                  "correlationId": "b332e7f0-ea4f-4bfc-b74a-bf5899953c6e"
+                }
+              ],
+              "payload": {
+                "bugbotPublicationBlocked": true,
+                "bugbotShadowVerification": {
+                  "resolvedModel": "gpt-6-luna",
+                  "provider": "codex",
+                  "detectorModelProvider": "openai",
+                  "detectorEffort": "xhigh",
+                  "verifier": {
+                    "model": "gpt-6-luna",
+                    "provider": "codex",
+                    "modelProvider": "openai",
+                    "effort": "xhigh"
+                  },
+                  "review": {
+                    "repository": {
+                      "owner": "owner",
+                      "name": "project"
+                    },
+                    "pullRequest": 1,
+                    "headSha": "e8a38f3f410dcafc98d58b7df6fb64c953d42945",
+                    "baseSha": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2"
+                  },
+                  "detection": [
+                    {
+                      "partition": 1,
+                      "partitionId": "diff-1-of-1-f0177f310d0d2439f6e1b0776cc71983279d08da3b3c91068eb13630d4eccba6",
+                      "wallMs": 1,
+                      "status": "completed",
+                      "observed": 1
+                    }
+                  ],
+                  "origins": [
+                    {
+                      "origin": "1:1",
+                      "partition": 1,
+                      "position": 1,
+                      "disposition": "prepared",
+                      "anchor": {
+                        "path": "index.ts",
+                        "line": 2,
+                        "end": 2
+                      },
+                      "candidateId": "controlled-candidate"
+                    }
+                  ],
+                  "timing": {
+                    "detectionAndPreparationMs": 3,
+                    "verificationWallMs": 1,
+                    "concurrency": 1,
+                    "workflowWallMs": 7
+                  },
+                  "candidates": [
+                    {
+                      "status": "technical-failure",
+                      "reason": "investigation-canceled",
+                      "id": "controlled-candidate",
+                      "candidate": {
+                        "id": "controlled-candidate",
+                        "hypothesis": "Controlled candidate",
+                        "anchor": {
+                          "path": "index.ts",
+                          "line": 2,
+                          "end": 2,
+                          "side": "RIGHT"
+                        },
+                        "repository": {
+                          "owner": "owner",
+                          "name": "project"
+                        },
+                        "pullRequest": 1,
+                        "headSha": "e8a38f3f410dcafc98d58b7df6fb64c953d42945",
+                        "allowBase": false,
+                        "baseSha": "9aba9af8e98b2e5e8168a316ba63e694c94a47f2"
+                      },
+                      "wallMs": 0,
+                      "ordinaryPublication": "individual"
+                    }
+                  ]
+                },
+                "bugbotTelemetry": {
+                  "schemaVersion": 1,
+                  "reviewId": "owner:project:pr-1:e8a38f3f410d",
+                  "repository": "owner/project",
+                  "triggerKind": "pull_request",
+                  "pullRequestNumber": 1,
+                  "headSha": "e8a38f3f410dcafc98d58b7df6fb64c953d42945",
+                  "publicationMode": "dry-run",
+                  "configuredEffort": "default",
+                  "agentProvider": "codex",
+                  "agentModel": "gpt-6-luna",
+                  "startedAt": "2026-11-20T15:31:20.055Z",
+                  "elapsedMs": 7,
+                  "stagesMs": {
+                    "context-preflight": 0,
+                    "context": 1,
+                    "analysis": 2,
+                    "normalization": 1,
+                    "freshness": 0
+                  },
+                  "promptCharacters": 28545,
+                  "responseCharacters": 466,
+                  "estimatedInputTokens": 7137,
+                  "estimatedOutputTokens": 117,
+                  "changedFiles": 1,
+                  "changedLines": 1,
+                  "rulesLoaded": 0,
+                  "contextSelectionReason": "event",
+                  "contextCandidateBucket": "1",
+                  "contextCoverageStatus": "complete",
+                  "contextCoverage": {
+                    "selection": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "issue-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "pull-request-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "review-threads": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "diff": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "previous-findings": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "human-conversation": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "rules": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    }
+                  },
+                  "contextLogicalProviderReads": 5,
+                  "contextRawProviderRequests": 5,
+                  "contextConcurrencyLimit": 2,
+                  "analysisPartitions": 1,
+                  "completedAnalysisPartitions": 1,
+                  "analysisDiffFragments": 1,
+                  "analysisAssignedFiles": 1,
+                  "maximumAnalysisConcurrency": 1,
+                  "candidateFindings": 1,
+                  "publishedFindings": 0,
+                  "overflowFindings": 0,
+                  "resolvedFindings": 0,
+                  "findingStates": {
+                    "open": 1,
+                    "reopened": 0,
+                    "fixed": 0,
+                    "obsolete": 0,
+                    "dismissed": 0,
+                    "verification-required": 0,
+                    "unknown": 0
+                  },
+                  "outcome": "failed"
+                },
+                "dryRun": true
+              },
+              "reminders": [],
+              "stepFormat": "plain"
+            }
+          ],
+          "writes": [],
+          "checkoutUnchanged": true,
+          "wallMs": 10,
+          "verificationWallMs": 0,
+          "peakVerifierConcurrency": 0
+        }
+      ]
+    },
+    {
+      "stage": "during-verification",
+      "pins": {
+        "revision": "30d0a3dcb68d6d59cdb6d283194977d1abc1c733",
+        "planSha256": "38eb0358ba81b7df87ed3fa2688c67aad70d10fe46cccec98ad4fc81fbfdde69",
+        "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+      },
+      "pending": [
+        {
+          "stage": "detector",
+          "abortedAtEntry": false
+        },
+        {
+          "stage": "verifier",
+          "id": "controlled-candidate",
+          "abortedAtEntry": false,
+          "abortedAfterInterruption": true
+        }
+      ],
+      "detectorCalls": 1,
+      "verifierCalls": 1,
+      "exitCode": 130,
+      "rows": [
+        {
+          "at": "2026-11-20T15:32:25.664Z",
+          "event": "plan",
+          "subject": {
+            "repository": "owner/project",
+            "number": 1,
+            "baseRef": "master",
+            "headRef": "review",
+            "head": "880dcab56c86bcf48acf498f42563a730d0716c2",
+            "base": "d38607c10ecf91b1f8f8914fbe0612869f7739e0",
+            "tree": "0f911f35ed5331207f612714640e0f1d06b153db",
+            "baseTree": "48479afc6120f8440951aa958a052b651ffbd699",
+            "model": "gpt-6-luna"
+          },
+          "files": 1,
+          "comparisonSha256": "7d9c84e6b7026144e1feb48ef741c9272017c88c1367b2205ab0be69683168d4",
+          "configuration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "verifierConfiguration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "reviewEffort": "default",
+          "effectiveDepth": "default",
+          "subjectsSha256": "38eb0358ba81b7df87ed3fa2688c67aad70d10fe46cccec98ad4fc81fbfdde69",
+          "cli": "codex-cli fixture",
+          "implementation": "124990dc6efb12828038070218e19c4a0a0c8c58",
+          "provenance": {
+            "bootstrap": {
+              "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4",
+              "planCommit": "30d0a3dcb68d6d59cdb6d283194977d1abc1c733",
+              "planPath": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "planSha256": "38eb0358ba81b7df87ed3fa2688c67aad70d10fe46cccec98ad4fc81fbfdde69"
+            },
+            "manifest": {
+              "commit": "30d0a3dcb68d6d59cdb6d283194977d1abc1c733",
+              "path": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "blob": "8eabeac7f7ca322a131b38fdc1297984014d107b",
+              "sha256": "38eb0358ba81b7df87ed3fa2688c67aad70d10fe46cccec98ad4fc81fbfdde69"
+            },
+            "implementation": "124990dc6efb12828038070218e19c4a0a0c8c58",
+            "tree": "a0029e3c643c8574875185fb73a60e82e1d00219",
+            "sourceSha256": "27fabfda9b318816eed0979b1dc4e22fb0e323d40008238b12814d8f9006be65",
+            "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+            "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1",
+            "drivers": {
+              "run.cjs": "2cd63a9eb0b8a97eb0c1c497f31a1eb336fed920ee03e5ff8a661538c8f43089",
+              "../execution-provenance.cjs": "df4eea6fd1c2272392858db75a5456fe62efec761baf6d35558d2c7eb001a0b7",
+              "../ev07-shadow/load.cjs": "35a9e9b2219619dccb9ea7cebe9ceb14f49aa05a9bf036a29045cffbf4af2405",
+              "../ev07-shadow/implementation.cjs": "9018c56fc7439b031d7c5aadeb99cbfe6349c17973f15d4f520cc5a1ddb9803a",
+              "../ev07-shadow/configuration.cjs": "ff03c59a19d78e018d6d5a58e0b9aed018215ca323f781858d6ce27654464ffb",
+              "../qualification-bootstrap.cjs": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+            },
+            "runtime": {
+              "dependencyTreeSha256": "edbe72a52cd7e7d2aceb10bc9aabf11609ce35ab1da445c619b2346deed7324d",
+              "dependencyEntries": 26844,
+              "node": "v24.20.0",
+              "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+              "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+              "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+              "git": "git version 2.54.0 (Apple Git-157)",
+              "typescript": "5.9.3",
+              "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+            },
+            "cli": {
+              "executableSha256": "7e2e610fddb9ca378cfebe7ab21e9ceeabfa73bb72808be995082406d60e2096",
+              "version": "codex-cli fixture"
+            }
+          },
+          "runnerSha256": "2cd63a9eb0b8a97eb0c1c497f31a1eb336fed920ee03e5ff8a661538c8f43089"
+        },
+        {
+          "at": "2026-11-20T15:32:25.666Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "preparing",
+            "headSha": "880dcab56c86bcf48acf498f42563a730d0716c2",
+            "baseSha": "d38607c10ecf91b1f8f8914fbe0612869f7739e0",
+            "pullNumber": 1,
+            "elapsedMs": 0,
+            "observedAt": "2026-11-20T15:32:25.666Z",
+            "sequence": 1,
+            "stageTimesMs": {}
+          }
+        },
+        {
+          "at": "2026-11-20T15:32:25.668Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "headSha": "880dcab56c86bcf48acf498f42563a730d0716c2",
+            "baseSha": "d38607c10ecf91b1f8f8914fbe0612869f7739e0",
+            "baseRefSha": "d38607c10ecf91b1f8f8914fbe0612869f7739e0",
+            "pullNumber": 1,
+            "elapsedMs": 2,
+            "observedAt": "2026-11-20T15:32:25.668Z",
+            "sequence": 2,
+            "stageTimesMs": {
+              "preparing": 2
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:32:25.668Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "partitions": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "880dcab56c86bcf48acf498f42563a730d0716c2",
+            "baseSha": "d38607c10ecf91b1f8f8914fbe0612869f7739e0",
+            "baseRefSha": "d38607c10ecf91b1f8f8914fbe0612869f7739e0",
+            "pullNumber": 1,
+            "elapsedMs": 2,
+            "observedAt": "2026-11-20T15:32:25.668Z",
+            "sequence": 3,
+            "stageTimesMs": {
+              "preparing": 2
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:32:25.669Z",
+          "event": "detector-start",
+          "turn": 1,
+          "resolvedModel": "gpt-6-luna",
+          "promptSha256": "58e651f504e143b3a481a21fd1ad4dae23b8a890f0186cba1a889dd2b20446f3"
+        },
+        {
+          "at": "2026-11-20T15:32:25.669Z",
+          "event": "detector-result",
+          "turn": 1,
+          "findings": [
+            {
+              "id": "controlled-candidate",
+              "title": "Controlled candidate",
+              "file": "index.ts",
+              "line": 2
+            }
+          ],
+          "resolvedModel": "gpt-6-luna",
+          "reportedModel": null,
+          "wallMs": 0
+        },
+        {
+          "at": "2026-11-20T15:32:25.671Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "verifying",
+            "partitions": {
+              "completed": 1,
+              "total": 1
+            },
+            "candidates": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "880dcab56c86bcf48acf498f42563a730d0716c2",
+            "baseSha": "d38607c10ecf91b1f8f8914fbe0612869f7739e0",
+            "baseRefSha": "d38607c10ecf91b1f8f8914fbe0612869f7739e0",
+            "pullNumber": 1,
+            "elapsedMs": 5,
+            "observedAt": "2026-11-20T15:32:25.671Z",
+            "sequence": 4,
+            "stageTimesMs": {
+              "preparing": 2,
+              "analyzing": 3
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:32:25.671Z",
+          "event": "verifier-start",
+          "id": "controlled-candidate",
+          "active": 1,
+          "atMs": 8
+        },
+        {
+          "at": "2026-11-20T15:32:25.672Z",
+          "event": "verifier-finish",
+          "id": "controlled-candidate",
+          "active": 0,
+          "atMs": 9,
+          "wallMs": 1
+        },
+        {
+          "at": "2026-11-20T15:32:25.673Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "finished",
+            "partitions": {
+              "completed": 1,
+              "total": 1
+            },
+            "candidates": {
+              "completed": 0,
+              "total": 1
+            },
+            "outcome": "failed",
+            "headSha": "880dcab56c86bcf48acf498f42563a730d0716c2",
+            "baseSha": "d38607c10ecf91b1f8f8914fbe0612869f7739e0",
+            "baseRefSha": "d38607c10ecf91b1f8f8914fbe0612869f7739e0",
+            "pullNumber": 1,
+            "elapsedMs": 7,
+            "observedAt": "2026-11-20T15:32:25.673Z",
+            "sequence": 5,
+            "stageTimesMs": {
+              "preparing": 2,
+              "analyzing": 3,
+              "verifying": 2
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:32:25.702Z",
+          "event": "workflow-result",
+          "status": "interrupted",
+          "results": [
+            {
+              "id": "DetectPotentialProblemsUseCase",
+              "success": false,
+              "executed": true,
+              "steps": [],
+              "errors": [
+                {
+                  "name": "ApplicationError",
+                  "message": "Bugbot verification was canceled. The previous verified result was preserved.",
+                  "code": "workflow.failed",
+                  "kind": "workflow",
+                  "retryable": true,
+                  "impact": "The workflow could not complete the requested operation.",
+                  "action": "Inspect the current state and retry the failed step.",
+                  "retainedState": "Existing persisted state and completed external effects were preserved.",
+                  "correlationId": "75689fdf-6248-48cc-a8b8-e04a6f32ea2a"
+                }
+              ],
+              "payload": {
+                "bugbotPublicationBlocked": true,
+                "bugbotShadowVerification": {
+                  "resolvedModel": "gpt-6-luna",
+                  "provider": "codex",
+                  "detectorModelProvider": "openai",
+                  "detectorEffort": "xhigh",
+                  "verifier": {
+                    "model": "gpt-6-luna",
+                    "provider": "codex",
+                    "modelProvider": "openai",
+                    "effort": "xhigh"
+                  },
+                  "review": {
+                    "repository": {
+                      "owner": "owner",
+                      "name": "project"
+                    },
+                    "pullRequest": 1,
+                    "headSha": "880dcab56c86bcf48acf498f42563a730d0716c2",
+                    "baseSha": "d38607c10ecf91b1f8f8914fbe0612869f7739e0"
+                  },
+                  "detection": [
+                    {
+                      "partition": 1,
+                      "partitionId": "diff-1-of-1-b81bd31c016a087a1f78fa8365666a96c04d687fc8544f61711f3de57b141239",
+                      "wallMs": 1,
+                      "status": "completed",
+                      "observed": 1
+                    }
+                  ],
+                  "origins": [
+                    {
+                      "origin": "1:1",
+                      "partition": 1,
+                      "position": 1,
+                      "disposition": "prepared",
+                      "anchor": {
+                        "path": "index.ts",
+                        "line": 2,
+                        "end": 2
+                      },
+                      "candidateId": "controlled-candidate"
+                    }
+                  ],
+                  "timing": {
+                    "detectionAndPreparationMs": 3,
+                    "verificationWallMs": 1,
+                    "concurrency": 1,
+                    "workflowWallMs": 8
+                  },
+                  "candidates": [
+                    {
+                      "status": "technical-failure",
+                      "reason": "investigation-canceled",
+                      "id": "controlled-candidate",
+                      "candidate": {
+                        "id": "controlled-candidate",
+                        "hypothesis": "Controlled candidate",
+                        "anchor": {
+                          "path": "index.ts",
+                          "line": 2,
+                          "end": 2,
+                          "side": "RIGHT"
+                        },
+                        "repository": {
+                          "owner": "owner",
+                          "name": "project"
+                        },
+                        "pullRequest": 1,
+                        "headSha": "880dcab56c86bcf48acf498f42563a730d0716c2",
+                        "allowBase": false,
+                        "baseSha": "d38607c10ecf91b1f8f8914fbe0612869f7739e0"
+                      },
+                      "wallMs": 1,
+                      "ordinaryPublication": "individual"
+                    }
+                  ]
+                },
+                "bugbotTelemetry": {
+                  "schemaVersion": 1,
+                  "reviewId": "owner:project:pr-1:880dcab56c86",
+                  "repository": "owner/project",
+                  "triggerKind": "pull_request",
+                  "pullRequestNumber": 1,
+                  "headSha": "880dcab56c86bcf48acf498f42563a730d0716c2",
+                  "publicationMode": "dry-run",
+                  "configuredEffort": "default",
+                  "agentProvider": "codex",
+                  "agentModel": "gpt-6-luna",
+                  "startedAt": "2026-11-20T15:32:25.665Z",
+                  "elapsedMs": 8,
+                  "stagesMs": {
+                    "context-preflight": 0,
+                    "context": 2,
+                    "analysis": 2,
+                    "normalization": 0,
+                    "freshness": 0
+                  },
+                  "promptCharacters": 28545,
+                  "responseCharacters": 466,
+                  "estimatedInputTokens": 7137,
+                  "estimatedOutputTokens": 117,
+                  "changedFiles": 1,
+                  "changedLines": 1,
+                  "rulesLoaded": 0,
+                  "contextSelectionReason": "event",
+                  "contextCandidateBucket": "1",
+                  "contextCoverageStatus": "complete",
+                  "contextCoverage": {
+                    "selection": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "issue-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "pull-request-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "review-threads": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "diff": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "previous-findings": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "human-conversation": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "rules": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    }
+                  },
+                  "contextLogicalProviderReads": 5,
+                  "contextRawProviderRequests": 5,
+                  "contextConcurrencyLimit": 2,
+                  "analysisPartitions": 1,
+                  "completedAnalysisPartitions": 1,
+                  "analysisDiffFragments": 1,
+                  "analysisAssignedFiles": 1,
+                  "maximumAnalysisConcurrency": 1,
+                  "candidateFindings": 1,
+                  "publishedFindings": 0,
+                  "overflowFindings": 0,
+                  "resolvedFindings": 0,
+                  "findingStates": {
+                    "open": 1,
+                    "reopened": 0,
+                    "fixed": 0,
+                    "obsolete": 0,
+                    "dismissed": 0,
+                    "verification-required": 0,
+                    "unknown": 0
+                  },
+                  "outcome": "failed"
+                },
+                "dryRun": true
+              },
+              "reminders": [],
+              "stepFormat": "plain"
+            }
+          ],
+          "writes": [],
+          "checkoutUnchanged": true,
+          "wallMs": 10,
+          "verificationWallMs": 1,
+          "peakVerifierConcurrency": 1
+        }
+      ]
+    },
+    {
+      "stage": "after-provider-interruption",
+      "pins": {
+        "revision": "e8e375ee03d17bd235c015073773bb785f956663",
+        "planSha256": "4a73cea250a2b46d7f61f1d57d384eab060a325edbbdf47494b828fd0938a1ea",
+        "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+      },
+      "pending": [
+        {
+          "stage": "detector",
+          "abortedAtEntry": false
+        },
+        {
+          "stage": "verifier",
+          "id": "controlled-candidate",
+          "abortedAtEntry": false
+        },
+        {
+          "stage": "provider-result-observed",
+          "status": "technical-failure",
+          "reason": "provider-turn-failed",
+          "abortedAtObservation": false
+        },
+        {
+          "stage": "post-provider-cancellation",
+          "abortedAfterObservation": true
+        }
+      ],
+      "detectorCalls": 1,
+      "verifierCalls": 1,
+      "exitCode": 130,
+      "rows": [
+        {
+          "at": "2026-11-20T15:33:35.671Z",
+          "event": "plan",
+          "subject": {
+            "repository": "owner/project",
+            "number": 1,
+            "baseRef": "master",
+            "headRef": "review",
+            "head": "54d27ebcb51b0b818ba62a0794d9c7c74fde57bf",
+            "base": "cfa7e93d06d6532af00250781742b4adefed5abd",
+            "tree": "0f911f35ed5331207f612714640e0f1d06b153db",
+            "baseTree": "48479afc6120f8440951aa958a052b651ffbd699",
+            "model": "gpt-6-luna"
+          },
+          "files": 1,
+          "comparisonSha256": "7d9c84e6b7026144e1feb48ef741c9272017c88c1367b2205ab0be69683168d4",
+          "configuration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "verifierConfiguration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "reviewEffort": "default",
+          "effectiveDepth": "default",
+          "subjectsSha256": "4a73cea250a2b46d7f61f1d57d384eab060a325edbbdf47494b828fd0938a1ea",
+          "cli": "codex-cli fixture",
+          "implementation": "357c10e191086432b7180ccd24f2d75a9b952ab8",
+          "provenance": {
+            "bootstrap": {
+              "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4",
+              "planCommit": "e8e375ee03d17bd235c015073773bb785f956663",
+              "planPath": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "planSha256": "4a73cea250a2b46d7f61f1d57d384eab060a325edbbdf47494b828fd0938a1ea"
+            },
+            "manifest": {
+              "commit": "e8e375ee03d17bd235c015073773bb785f956663",
+              "path": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "blob": "c8f1b0cd0233c9a2dd1115ff765931a9624b3976",
+              "sha256": "4a73cea250a2b46d7f61f1d57d384eab060a325edbbdf47494b828fd0938a1ea"
+            },
+            "implementation": "357c10e191086432b7180ccd24f2d75a9b952ab8",
+            "tree": "b9e58b6c7891f52834b70574ebf1c258f31c5d73",
+            "sourceSha256": "27fabfda9b318816eed0979b1dc4e22fb0e323d40008238b12814d8f9006be65",
+            "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+            "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1",
+            "drivers": {
+              "run.cjs": "56ece38ecc77c73949582b24fa3c89a9b28e67629733957a07b94ac2dd854ca7",
+              "../execution-provenance.cjs": "df4eea6fd1c2272392858db75a5456fe62efec761baf6d35558d2c7eb001a0b7",
+              "../ev07-shadow/load.cjs": "35a9e9b2219619dccb9ea7cebe9ceb14f49aa05a9bf036a29045cffbf4af2405",
+              "../ev07-shadow/implementation.cjs": "9018c56fc7439b031d7c5aadeb99cbfe6349c17973f15d4f520cc5a1ddb9803a",
+              "../ev07-shadow/configuration.cjs": "ff03c59a19d78e018d6d5a58e0b9aed018215ca323f781858d6ce27654464ffb",
+              "../qualification-bootstrap.cjs": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+            },
+            "runtime": {
+              "dependencyTreeSha256": "edbe72a52cd7e7d2aceb10bc9aabf11609ce35ab1da445c619b2346deed7324d",
+              "dependencyEntries": 26844,
+              "node": "v24.20.0",
+              "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+              "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+              "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+              "git": "git version 2.54.0 (Apple Git-157)",
+              "typescript": "5.9.3",
+              "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+            },
+            "cli": {
+              "executableSha256": "7e2e610fddb9ca378cfebe7ab21e9ceeabfa73bb72808be995082406d60e2096",
+              "version": "codex-cli fixture"
+            }
+          },
+          "runnerSha256": "56ece38ecc77c73949582b24fa3c89a9b28e67629733957a07b94ac2dd854ca7"
+        },
+        {
+          "at": "2026-11-20T15:33:35.676Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "preparing",
+            "headSha": "54d27ebcb51b0b818ba62a0794d9c7c74fde57bf",
+            "baseSha": "cfa7e93d06d6532af00250781742b4adefed5abd",
+            "pullNumber": 1,
+            "elapsedMs": 0,
+            "observedAt": "2026-11-20T15:33:35.676Z",
+            "sequence": 1,
+            "stageTimesMs": {}
+          }
+        },
+        {
+          "at": "2026-11-20T15:33:35.680Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "headSha": "54d27ebcb51b0b818ba62a0794d9c7c74fde57bf",
+            "baseSha": "cfa7e93d06d6532af00250781742b4adefed5abd",
+            "baseRefSha": "cfa7e93d06d6532af00250781742b4adefed5abd",
+            "pullNumber": 1,
+            "elapsedMs": 4,
+            "observedAt": "2026-11-20T15:33:35.680Z",
+            "sequence": 2,
+            "stageTimesMs": {
+              "preparing": 4
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:33:35.681Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "partitions": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "54d27ebcb51b0b818ba62a0794d9c7c74fde57bf",
+            "baseSha": "cfa7e93d06d6532af00250781742b4adefed5abd",
+            "baseRefSha": "cfa7e93d06d6532af00250781742b4adefed5abd",
+            "pullNumber": 1,
+            "elapsedMs": 5,
+            "observedAt": "2026-11-20T15:33:35.681Z",
+            "sequence": 3,
+            "stageTimesMs": {
+              "preparing": 4
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:33:35.683Z",
+          "event": "detector-start",
+          "turn": 1,
+          "resolvedModel": "gpt-6-luna",
+          "promptSha256": "82473ef7a8a9b8f46e5fa14d601a6d1e91d7d24aee8540b20c214ad60f59dde1"
+        },
+        {
+          "at": "2026-11-20T15:33:35.684Z",
+          "event": "detector-result",
+          "turn": 1,
+          "findings": [
+            {
+              "id": "controlled-candidate",
+              "title": "Controlled candidate",
+              "file": "index.ts",
+              "line": 2
+            }
+          ],
+          "resolvedModel": "gpt-6-luna",
+          "reportedModel": null,
+          "wallMs": 1
+        },
+        {
+          "at": "2026-11-20T15:33:35.689Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "verifying",
+            "partitions": {
+              "completed": 1,
+              "total": 1
+            },
+            "candidates": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "54d27ebcb51b0b818ba62a0794d9c7c74fde57bf",
+            "baseSha": "cfa7e93d06d6532af00250781742b4adefed5abd",
+            "baseRefSha": "cfa7e93d06d6532af00250781742b4adefed5abd",
+            "pullNumber": 1,
+            "elapsedMs": 13,
+            "observedAt": "2026-11-20T15:33:35.689Z",
+            "sequence": 4,
+            "stageTimesMs": {
+              "preparing": 4,
+              "analyzing": 9
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:33:35.690Z",
+          "event": "verifier-start",
+          "id": "controlled-candidate",
+          "active": 1,
+          "atMs": 20
+        },
+        {
+          "at": "2026-11-20T15:33:35.690Z",
+          "event": "verifier-finish",
+          "id": "controlled-candidate",
+          "active": 0,
+          "atMs": 21,
+          "wallMs": 1
+        },
+        {
+          "at": "2026-11-20T15:33:35.691Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "finished",
+            "partitions": {
+              "completed": 1,
+              "total": 1
+            },
+            "candidates": {
+              "completed": 0,
+              "total": 1
+            },
+            "outcome": "failed",
+            "headSha": "54d27ebcb51b0b818ba62a0794d9c7c74fde57bf",
+            "baseSha": "cfa7e93d06d6532af00250781742b4adefed5abd",
+            "baseRefSha": "cfa7e93d06d6532af00250781742b4adefed5abd",
+            "pullNumber": 1,
+            "elapsedMs": 15,
+            "observedAt": "2026-11-20T15:33:35.691Z",
+            "sequence": 5,
+            "stageTimesMs": {
+              "preparing": 4,
+              "analyzing": 9,
+              "verifying": 2
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:33:35.752Z",
+          "event": "workflow-result",
+          "status": "interrupted",
+          "results": [
+            {
+              "id": "DetectPotentialProblemsUseCase",
+              "success": false,
+              "executed": true,
+              "steps": [],
+              "errors": [
+                {
+                  "name": "ApplicationError",
+                  "message": "Bugbot verification was canceled. The previous verified result was preserved.",
+                  "code": "workflow.failed",
+                  "kind": "workflow",
+                  "retryable": true,
+                  "impact": "The workflow could not complete the requested operation.",
+                  "action": "Inspect the current state and retry the failed step.",
+                  "retainedState": "Existing persisted state and completed external effects were preserved.",
+                  "correlationId": "f67a6ac6-1cd6-4775-a947-bb9134df583f"
+                }
+              ],
+              "payload": {
+                "bugbotPublicationBlocked": true,
+                "bugbotShadowVerification": {
+                  "resolvedModel": "gpt-6-luna",
+                  "provider": "codex",
+                  "detectorModelProvider": "openai",
+                  "detectorEffort": "xhigh",
+                  "verifier": {
+                    "model": "gpt-6-luna",
+                    "provider": "codex",
+                    "modelProvider": "openai",
+                    "effort": "xhigh"
+                  },
+                  "review": {
+                    "repository": {
+                      "owner": "owner",
+                      "name": "project"
+                    },
+                    "pullRequest": 1,
+                    "headSha": "54d27ebcb51b0b818ba62a0794d9c7c74fde57bf",
+                    "baseSha": "cfa7e93d06d6532af00250781742b4adefed5abd"
+                  },
+                  "detection": [
+                    {
+                      "partition": 1,
+                      "partitionId": "diff-1-of-1-95a8a76dc61355c29de84c17c278c3137a1a27d5ddcf92ce318a67ef16e2333c",
+                      "wallMs": 2,
+                      "status": "completed",
+                      "observed": 1
+                    }
+                  ],
+                  "origins": [
+                    {
+                      "origin": "1:1",
+                      "partition": 1,
+                      "position": 1,
+                      "disposition": "prepared",
+                      "anchor": {
+                        "path": "index.ts",
+                        "line": 2,
+                        "end": 2
+                      },
+                      "candidateId": "controlled-candidate"
+                    }
+                  ],
+                  "timing": {
+                    "detectionAndPreparationMs": 8,
+                    "verificationWallMs": 2,
+                    "concurrency": 1,
+                    "workflowWallMs": 17
+                  },
+                  "candidates": [
+                    {
+                      "status": "technical-failure",
+                      "reason": "provider-turn-failed",
+                      "id": "controlled-candidate",
+                      "candidate": {
+                        "id": "controlled-candidate",
+                        "hypothesis": "Controlled candidate",
+                        "anchor": {
+                          "path": "index.ts",
+                          "line": 2,
+                          "end": 2,
+                          "side": "RIGHT"
+                        },
+                        "repository": {
+                          "owner": "owner",
+                          "name": "project"
+                        },
+                        "pullRequest": 1,
+                        "headSha": "54d27ebcb51b0b818ba62a0794d9c7c74fde57bf",
+                        "allowBase": false,
+                        "baseSha": "cfa7e93d06d6532af00250781742b4adefed5abd"
+                      },
+                      "wallMs": 1,
+                      "ordinaryPublication": "individual"
+                    }
+                  ]
+                },
+                "bugbotTelemetry": {
+                  "schemaVersion": 1,
+                  "reviewId": "owner:project:pr-1:54d27ebcb51b",
+                  "repository": "owner/project",
+                  "triggerKind": "pull_request",
+                  "pullRequestNumber": 1,
+                  "headSha": "54d27ebcb51b0b818ba62a0794d9c7c74fde57bf",
+                  "publicationMode": "dry-run",
+                  "configuredEffort": "default",
+                  "agentProvider": "codex",
+                  "agentModel": "gpt-6-luna",
+                  "startedAt": "2026-11-20T15:33:35.675Z",
+                  "elapsedMs": 17,
+                  "stagesMs": {
+                    "context-preflight": 1,
+                    "context": 3,
+                    "analysis": 5,
+                    "normalization": 2,
+                    "freshness": 0
+                  },
+                  "promptCharacters": 28545,
+                  "responseCharacters": 466,
+                  "estimatedInputTokens": 7137,
+                  "estimatedOutputTokens": 117,
+                  "changedFiles": 1,
+                  "changedLines": 1,
+                  "rulesLoaded": 0,
+                  "contextSelectionReason": "event",
+                  "contextCandidateBucket": "1",
+                  "contextCoverageStatus": "complete",
+                  "contextCoverage": {
+                    "selection": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "issue-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "pull-request-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "review-threads": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "diff": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "previous-findings": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "human-conversation": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "rules": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    }
+                  },
+                  "contextLogicalProviderReads": 5,
+                  "contextRawProviderRequests": 5,
+                  "contextConcurrencyLimit": 2,
+                  "analysisPartitions": 1,
+                  "completedAnalysisPartitions": 1,
+                  "analysisDiffFragments": 1,
+                  "analysisAssignedFiles": 1,
+                  "maximumAnalysisConcurrency": 1,
+                  "candidateFindings": 1,
+                  "publishedFindings": 0,
+                  "overflowFindings": 0,
+                  "resolvedFindings": 0,
+                  "findingStates": {
+                    "open": 1,
+                    "reopened": 0,
+                    "fixed": 0,
+                    "obsolete": 0,
+                    "dismissed": 0,
+                    "verification-required": 0,
+                    "unknown": 0
+                  },
+                  "outcome": "failed"
+                },
+                "dryRun": true
+              },
+              "reminders": [],
+              "stepFormat": "plain"
+            }
+          ],
+          "writes": [],
+          "checkoutUnchanged": true,
+          "wallMs": 22,
+          "verificationWallMs": 1,
+          "peakVerifierConcurrency": 1
+        }
+      ]
+    },
+    {
+      "stage": "uninterrupted",
+      "pins": {
+        "revision": "b6761d6afbc4eb848274fcf3b5738b9788e12c72",
+        "planSha256": "6ad467ac2cb0260c799a1c23bf55f6a57038cd83a71c82b121dd721431de55bb",
+        "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+      },
+      "pending": [
+        {
+          "stage": "detector",
+          "abortedAtEntry": false
+        },
+        {
+          "stage": "verifier",
+          "id": "controlled-candidate",
+          "abortedAtEntry": false
+        }
+      ],
+      "detectorCalls": 1,
+      "verifierCalls": 1,
+      "exitCode": 0,
+      "rows": [
+        {
+          "at": "2026-11-20T15:34:57.736Z",
+          "event": "plan",
+          "subject": {
+            "repository": "owner/project",
+            "number": 1,
+            "baseRef": "master",
+            "headRef": "review",
+            "head": "9109b3e8c1d9d5dcc4ad0125edcc7635efc35ce6",
+            "base": "f125255a912b32fcbc6689aa402b4473a5c40868",
+            "tree": "0f911f35ed5331207f612714640e0f1d06b153db",
+            "baseTree": "48479afc6120f8440951aa958a052b651ffbd699",
+            "model": "gpt-6-luna"
+          },
+          "files": 1,
+          "comparisonSha256": "7d9c84e6b7026144e1feb48ef741c9272017c88c1367b2205ab0be69683168d4",
+          "configuration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "verifierConfiguration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "reviewEffort": "default",
+          "effectiveDepth": "default",
+          "subjectsSha256": "6ad467ac2cb0260c799a1c23bf55f6a57038cd83a71c82b121dd721431de55bb",
+          "cli": "codex-cli fixture",
+          "implementation": "7b91f9290a37714c07cf5aa916e7d83aab29b4e9",
+          "provenance": {
+            "bootstrap": {
+              "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4",
+              "planCommit": "b6761d6afbc4eb848274fcf3b5738b9788e12c72",
+              "planPath": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "planSha256": "6ad467ac2cb0260c799a1c23bf55f6a57038cd83a71c82b121dd721431de55bb"
+            },
+            "manifest": {
+              "commit": "b6761d6afbc4eb848274fcf3b5738b9788e12c72",
+              "path": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "blob": "45081e789e2cf05ba36457f1a0d7aadc0eead334",
+              "sha256": "6ad467ac2cb0260c799a1c23bf55f6a57038cd83a71c82b121dd721431de55bb"
+            },
+            "implementation": "7b91f9290a37714c07cf5aa916e7d83aab29b4e9",
+            "tree": "90b99b9e9b8a36010c1c92526d84bd26a0ee14cb",
+            "sourceSha256": "27fabfda9b318816eed0979b1dc4e22fb0e323d40008238b12814d8f9006be65",
+            "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+            "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1",
+            "drivers": {
+              "run.cjs": "91b8e937cc91ece3ea40259efb06abcbc5ea8cda19612cd04e6de6d8111f8577",
+              "../execution-provenance.cjs": "df4eea6fd1c2272392858db75a5456fe62efec761baf6d35558d2c7eb001a0b7",
+              "../ev07-shadow/load.cjs": "35a9e9b2219619dccb9ea7cebe9ceb14f49aa05a9bf036a29045cffbf4af2405",
+              "../ev07-shadow/implementation.cjs": "9018c56fc7439b031d7c5aadeb99cbfe6349c17973f15d4f520cc5a1ddb9803a",
+              "../ev07-shadow/configuration.cjs": "ff03c59a19d78e018d6d5a58e0b9aed018215ca323f781858d6ce27654464ffb",
+              "../qualification-bootstrap.cjs": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+            },
+            "runtime": {
+              "dependencyTreeSha256": "edbe72a52cd7e7d2aceb10bc9aabf11609ce35ab1da445c619b2346deed7324d",
+              "dependencyEntries": 26844,
+              "node": "v24.20.0",
+              "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+              "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+              "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+              "git": "git version 2.54.0 (Apple Git-157)",
+              "typescript": "5.9.3",
+              "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+            },
+            "cli": {
+              "executableSha256": "7e2e610fddb9ca378cfebe7ab21e9ceeabfa73bb72808be995082406d60e2096",
+              "version": "codex-cli fixture"
+            }
+          },
+          "runnerSha256": "91b8e937cc91ece3ea40259efb06abcbc5ea8cda19612cd04e6de6d8111f8577"
+        },
+        {
+          "at": "2026-11-20T15:34:57.740Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "preparing",
+            "headSha": "9109b3e8c1d9d5dcc4ad0125edcc7635efc35ce6",
+            "baseSha": "f125255a912b32fcbc6689aa402b4473a5c40868",
+            "pullNumber": 1,
+            "elapsedMs": 0,
+            "observedAt": "2026-11-20T15:34:57.740Z",
+            "sequence": 1,
+            "stageTimesMs": {}
+          }
+        },
+        {
+          "at": "2026-11-20T15:34:57.744Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "headSha": "9109b3e8c1d9d5dcc4ad0125edcc7635efc35ce6",
+            "baseSha": "f125255a912b32fcbc6689aa402b4473a5c40868",
+            "baseRefSha": "f125255a912b32fcbc6689aa402b4473a5c40868",
+            "pullNumber": 1,
+            "elapsedMs": 4,
+            "observedAt": "2026-11-20T15:34:57.744Z",
+            "sequence": 2,
+            "stageTimesMs": {
+              "preparing": 4
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:34:57.744Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "partitions": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "9109b3e8c1d9d5dcc4ad0125edcc7635efc35ce6",
+            "baseSha": "f125255a912b32fcbc6689aa402b4473a5c40868",
+            "baseRefSha": "f125255a912b32fcbc6689aa402b4473a5c40868",
+            "pullNumber": 1,
+            "elapsedMs": 4,
+            "observedAt": "2026-11-20T15:34:57.744Z",
+            "sequence": 3,
+            "stageTimesMs": {
+              "preparing": 4
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:34:57.748Z",
+          "event": "detector-start",
+          "turn": 1,
+          "resolvedModel": "gpt-6-luna",
+          "promptSha256": "c89645a132c708aefd8ab8b77a82bacbd8b058c8f13017afe8c1793aec229210"
+        },
+        {
+          "at": "2026-11-20T15:34:57.748Z",
+          "event": "detector-result",
+          "turn": 1,
+          "findings": [
+            {
+              "id": "controlled-candidate",
+              "title": "Controlled candidate",
+              "file": "index.ts",
+              "line": 2
+            }
+          ],
+          "resolvedModel": "gpt-6-luna",
+          "reportedModel": null,
+          "wallMs": 0
+        },
+        {
+          "at": "2026-11-20T15:34:57.751Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "verifying",
+            "partitions": {
+              "completed": 1,
+              "total": 1
+            },
+            "candidates": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "9109b3e8c1d9d5dcc4ad0125edcc7635efc35ce6",
+            "baseSha": "f125255a912b32fcbc6689aa402b4473a5c40868",
+            "baseRefSha": "f125255a912b32fcbc6689aa402b4473a5c40868",
+            "pullNumber": 1,
+            "elapsedMs": 11,
+            "observedAt": "2026-11-20T15:34:57.751Z",
+            "sequence": 4,
+            "stageTimesMs": {
+              "preparing": 4,
+              "analyzing": 7
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:34:57.752Z",
+          "event": "verifier-start",
+          "id": "controlled-candidate",
+          "active": 1,
+          "atMs": 17
+        },
+        {
+          "at": "2026-11-20T15:34:57.752Z",
+          "event": "verifier-finish",
+          "id": "controlled-candidate",
+          "active": 0,
+          "atMs": 17,
+          "wallMs": 0
+        },
+        {
+          "at": "2026-11-20T15:34:57.753Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "finished",
+            "partitions": {
+              "completed": 1,
+              "total": 1
+            },
+            "candidates": {
+              "completed": 1,
+              "total": 1
+            },
+            "outcome": "dry-run",
+            "headSha": "9109b3e8c1d9d5dcc4ad0125edcc7635efc35ce6",
+            "baseSha": "f125255a912b32fcbc6689aa402b4473a5c40868",
+            "baseRefSha": "f125255a912b32fcbc6689aa402b4473a5c40868",
+            "pullNumber": 1,
+            "elapsedMs": 13,
+            "observedAt": "2026-11-20T15:34:57.753Z",
+            "sequence": 5,
+            "stageTimesMs": {
+              "preparing": 4,
+              "analyzing": 7,
+              "verifying": 2
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:34:57.804Z",
+          "event": "workflow-result",
+          "status": "completed",
+          "results": [
+            {
+              "id": "DetectPotentialProblemsUseCase",
+              "success": true,
+              "executed": true,
+              "steps": [
+                "Bugbot dry-run completed after atomically completing 1 diff partition with 1 accepted finding; no SCM mutations performed."
+              ],
+              "errors": [],
+              "payload": {
+                "dryRun": true,
+                "findings": [
+                  {
+                    "id": "controlled-candidate",
+                    "title": "Controlled candidate",
+                    "description": "An owned cancellation fixture hypothesis.",
+                    "file": "index.ts",
+                    "line": 2,
+                    "severity": "medium",
+                    "confidence": 0.99,
+                    "category": "correctness",
+                    "codeSnippet": "export const added = 2;",
+                    "fingerprint": "fp-c50ff98d",
+                    "semanticFingerprint": "sf-9233a5a9"
+                  }
+                ],
+                "overflowCount": 0,
+                "resolvedFindingIds": [],
+                "findingStates": {
+                  "open": 1,
+                  "reopened": 0,
+                  "fixed": 0,
+                  "obsolete": 0,
+                  "dismissed": 0,
+                  "verification-required": 0,
+                  "unknown": 0
+                },
+                "ruleSources": [],
+                "contextCoverage": {
+                  "status": "complete",
+                  "sources": [
+                    {
+                      "source": "selection",
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "issue-comments",
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "pull-request-comments",
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "review-threads",
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "diff",
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "previous-findings",
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "human-conversation",
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    {
+                      "source": "rules",
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    }
+                  ]
+                },
+                "bugbotShadowVerification": {
+                  "resolvedModel": "gpt-6-luna",
+                  "provider": "codex",
+                  "detectorModelProvider": "openai",
+                  "detectorEffort": "xhigh",
+                  "verifier": {
+                    "model": "gpt-6-luna",
+                    "provider": "codex",
+                    "modelProvider": "openai",
+                    "effort": "xhigh"
+                  },
+                  "review": {
+                    "repository": {
+                      "owner": "owner",
+                      "name": "project"
+                    },
+                    "pullRequest": 1,
+                    "headSha": "9109b3e8c1d9d5dcc4ad0125edcc7635efc35ce6",
+                    "baseSha": "f125255a912b32fcbc6689aa402b4473a5c40868"
+                  },
+                  "detection": [
+                    {
+                      "partition": 1,
+                      "partitionId": "diff-1-of-1-e327901a201c6dabc150baf66d649df9bbb483d5a73f46e641e235af81f76eab",
+                      "wallMs": 2,
+                      "status": "completed",
+                      "observed": 1
+                    }
+                  ],
+                  "origins": [
+                    {
+                      "origin": "1:1",
+                      "partition": 1,
+                      "position": 1,
+                      "disposition": "prepared",
+                      "anchor": {
+                        "path": "index.ts",
+                        "line": 2,
+                        "end": 2
+                      },
+                      "candidateId": "controlled-candidate"
+                    }
+                  ],
+                  "timing": {
+                    "detectionAndPreparationMs": 6,
+                    "verificationWallMs": 2,
+                    "concurrency": 1,
+                    "workflowWallMs": 14
+                  },
+                  "candidates": [
+                    {
+                      "status": "verdict",
+                      "verdict": "inconclusive",
+                      "reason": "Controlled missing evidence.",
+                      "missing": "A test-only source gap.",
+                      "citations": [],
+                      "premises": [],
+                      "id": "controlled-candidate",
+                      "candidate": {
+                        "id": "controlled-candidate",
+                        "hypothesis": "Controlled candidate",
+                        "anchor": {
+                          "path": "index.ts",
+                          "line": 2,
+                          "end": 2,
+                          "side": "RIGHT"
+                        },
+                        "repository": {
+                          "owner": "owner",
+                          "name": "project"
+                        },
+                        "pullRequest": 1,
+                        "headSha": "9109b3e8c1d9d5dcc4ad0125edcc7635efc35ce6",
+                        "allowBase": false,
+                        "baseSha": "f125255a912b32fcbc6689aa402b4473a5c40868"
+                      },
+                      "wallMs": 0,
+                      "ordinaryPublication": "individual"
+                    }
+                  ],
+                  "publicationSimulation": {
+                    "status": "incomplete",
+                    "individual": [],
+                    "overflow": 0,
+                    "resolutions": [],
+                    "inconclusive": [
+                      {
+                        "id": "controlled-candidate",
+                        "missing": "A test-only source gap."
+                      }
+                    ]
+                  }
+                },
+                "bugbotTelemetry": {
+                  "schemaVersion": 1,
+                  "reviewId": "owner:project:pr-1:9109b3e8c1d9",
+                  "repository": "owner/project",
+                  "triggerKind": "pull_request",
+                  "pullRequestNumber": 1,
+                  "headSha": "9109b3e8c1d9d5dcc4ad0125edcc7635efc35ce6",
+                  "publicationMode": "dry-run",
+                  "configuredEffort": "default",
+                  "agentProvider": "codex",
+                  "agentModel": "gpt-6-luna",
+                  "startedAt": "2026-11-20T15:34:57.739Z",
+                  "elapsedMs": 14,
+                  "stagesMs": {
+                    "context-preflight": 1,
+                    "context": 3,
+                    "analysis": 5,
+                    "normalization": 1,
+                    "freshness": 0
+                  },
+                  "promptCharacters": 28545,
+                  "responseCharacters": 466,
+                  "estimatedInputTokens": 7137,
+                  "estimatedOutputTokens": 117,
+                  "changedFiles": 1,
+                  "changedLines": 1,
+                  "rulesLoaded": 0,
+                  "contextSelectionReason": "event",
+                  "contextCandidateBucket": "1",
+                  "contextCoverageStatus": "complete",
+                  "contextCoverage": {
+                    "selection": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "issue-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "pull-request-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "review-threads": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "diff": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "previous-findings": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "human-conversation": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "rules": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    }
+                  },
+                  "contextLogicalProviderReads": 5,
+                  "contextRawProviderRequests": 5,
+                  "contextConcurrencyLimit": 2,
+                  "analysisPartitions": 1,
+                  "completedAnalysisPartitions": 1,
+                  "analysisDiffFragments": 1,
+                  "analysisAssignedFiles": 1,
+                  "maximumAnalysisConcurrency": 1,
+                  "candidateFindings": 1,
+                  "publishedFindings": 0,
+                  "overflowFindings": 0,
+                  "resolvedFindings": 0,
+                  "findingStates": {
+                    "open": 1,
+                    "reopened": 0,
+                    "fixed": 0,
+                    "obsolete": 0,
+                    "dismissed": 0,
+                    "verification-required": 0,
+                    "unknown": 0
+                  },
+                  "outcome": "dry-run"
+                }
+              },
+              "reminders": [],
+              "stepFormat": "plain"
+            }
+          ],
+          "writes": [],
+          "checkoutUnchanged": true,
+          "wallMs": 18,
+          "verificationWallMs": 0,
+          "peakVerifierConcurrency": 1
+        }
+      ]
+    },
+    {
+      "stage": "provider-failure",
+      "pins": {
+        "revision": "fb11c80a794806bb9ad425b6519761d6c8869766",
+        "planSha256": "6867bf3419f69415968484c3e665ea153681bf8fb3f37df407f20a0300a5920e",
+        "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+      },
+      "pending": [
+        {
+          "stage": "detector",
+          "abortedAtEntry": false
+        },
+        {
+          "stage": "detector",
+          "abortedAtEntry": false
+        },
+        {
+          "stage": "detector",
+          "abortedAtEntry": false
+        }
+      ],
+      "detectorCalls": 3,
+      "verifierCalls": 0,
+      "exitCode": 1,
+      "rows": [
+        {
+          "at": "2026-11-20T15:36:15.270Z",
+          "event": "plan",
+          "subject": {
+            "repository": "owner/project",
+            "number": 1,
+            "baseRef": "master",
+            "headRef": "review",
+            "head": "30ce82d8f9a474ab032f285e304cea2264bdd87c",
+            "base": "5aff3604cb9ab2c2adce9511e94fda4a20727fbb",
+            "tree": "0f911f35ed5331207f612714640e0f1d06b153db",
+            "baseTree": "48479afc6120f8440951aa958a052b651ffbd699",
+            "model": "gpt-6-luna"
+          },
+          "files": 1,
+          "comparisonSha256": "7d9c84e6b7026144e1feb48ef741c9272017c88c1367b2205ab0be69683168d4",
+          "configuration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "verifierConfiguration": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "xhigh"
+          },
+          "reviewEffort": "default",
+          "effectiveDepth": "default",
+          "subjectsSha256": "6867bf3419f69415968484c3e665ea153681bf8fb3f37df407f20a0300a5920e",
+          "cli": "codex-cli fixture",
+          "implementation": "d8c377196d094ce48ead05bfb9458e555a253fc8",
+          "provenance": {
+            "bootstrap": {
+              "bootstrapSha256": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4",
+              "planCommit": "fb11c80a794806bb9ad425b6519761d6c8869766",
+              "planPath": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "planSha256": "6867bf3419f69415968484c3e665ea153681bf8fb3f37df407f20a0300a5920e"
+            },
+            "manifest": {
+              "commit": "fb11c80a794806bb9ad425b6519761d6c8869766",
+              "path": "quality/bugbot/evidence/issue-950/normal-flow-shadow/authenticated.fixture.json",
+              "blob": "838d08885a07b90d19598f78033a7d7330b8635d",
+              "sha256": "6867bf3419f69415968484c3e665ea153681bf8fb3f37df407f20a0300a5920e"
+            },
+            "implementation": "d8c377196d094ce48ead05bfb9458e555a253fc8",
+            "tree": "27a345571852f690a5b28211c0b8b6331ecb258a",
+            "sourceSha256": "27fabfda9b318816eed0979b1dc4e22fb0e323d40008238b12814d8f9006be65",
+            "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+            "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1",
+            "drivers": {
+              "run.cjs": "6f645dcb24c179f09ac07b88920d2a63ccf492e234f0912775a21721437a4a2c",
+              "../execution-provenance.cjs": "df4eea6fd1c2272392858db75a5456fe62efec761baf6d35558d2c7eb001a0b7",
+              "../ev07-shadow/load.cjs": "35a9e9b2219619dccb9ea7cebe9ceb14f49aa05a9bf036a29045cffbf4af2405",
+              "../ev07-shadow/implementation.cjs": "9018c56fc7439b031d7c5aadeb99cbfe6349c17973f15d4f520cc5a1ddb9803a",
+              "../ev07-shadow/configuration.cjs": "ff03c59a19d78e018d6d5a58e0b9aed018215ca323f781858d6ce27654464ffb",
+              "../qualification-bootstrap.cjs": "f12026b16901bcefdcbeb9e8ab13ecff002bd6965ff0348e3d91c52503439ef4"
+            },
+            "runtime": {
+              "dependencyTreeSha256": "edbe72a52cd7e7d2aceb10bc9aabf11609ce35ab1da445c619b2346deed7324d",
+              "dependencyEntries": 26844,
+              "node": "v24.20.0",
+              "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+              "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+              "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+              "git": "git version 2.54.0 (Apple Git-157)",
+              "typescript": "5.9.3",
+              "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+            },
+            "cli": {
+              "executableSha256": "7e2e610fddb9ca378cfebe7ab21e9ceeabfa73bb72808be995082406d60e2096",
+              "version": "codex-cli fixture"
+            }
+          },
+          "runnerSha256": "6f645dcb24c179f09ac07b88920d2a63ccf492e234f0912775a21721437a4a2c"
+        },
+        {
+          "at": "2026-11-20T15:36:15.273Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "preparing",
+            "headSha": "30ce82d8f9a474ab032f285e304cea2264bdd87c",
+            "baseSha": "5aff3604cb9ab2c2adce9511e94fda4a20727fbb",
+            "pullNumber": 1,
+            "elapsedMs": 0,
+            "observedAt": "2026-11-20T15:36:15.273Z",
+            "sequence": 1,
+            "stageTimesMs": {}
+          }
+        },
+        {
+          "at": "2026-11-20T15:36:15.276Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "headSha": "30ce82d8f9a474ab032f285e304cea2264bdd87c",
+            "baseSha": "5aff3604cb9ab2c2adce9511e94fda4a20727fbb",
+            "baseRefSha": "5aff3604cb9ab2c2adce9511e94fda4a20727fbb",
+            "pullNumber": 1,
+            "elapsedMs": 3,
+            "observedAt": "2026-11-20T15:36:15.276Z",
+            "sequence": 2,
+            "stageTimesMs": {
+              "preparing": 3
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:36:15.276Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "analyzing",
+            "partitions": {
+              "completed": 0,
+              "total": 1
+            },
+            "headSha": "30ce82d8f9a474ab032f285e304cea2264bdd87c",
+            "baseSha": "5aff3604cb9ab2c2adce9511e94fda4a20727fbb",
+            "baseRefSha": "5aff3604cb9ab2c2adce9511e94fda4a20727fbb",
+            "pullNumber": 1,
+            "elapsedMs": 3,
+            "observedAt": "2026-11-20T15:36:15.276Z",
+            "sequence": 3,
+            "stageTimesMs": {
+              "preparing": 3
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:36:15.278Z",
+          "event": "detector-start",
+          "turn": 1,
+          "resolvedModel": "gpt-6-luna",
+          "promptSha256": "e3d79a603741ddf5267dbe494fa40890b0cf08af5063f13bfa463313f3ca966b"
+        },
+        {
+          "at": "2026-11-20T15:36:15.278Z",
+          "event": "detector-failure",
+          "turn": 1,
+          "code": "Error",
+          "wallMs": 1
+        },
+        {
+          "at": "2026-11-20T15:36:15.278Z",
+          "event": "detector-start",
+          "turn": 2,
+          "resolvedModel": "gpt-6-luna",
+          "promptSha256": "e3d79a603741ddf5267dbe494fa40890b0cf08af5063f13bfa463313f3ca966b"
+        },
+        {
+          "at": "2026-11-20T15:36:15.278Z",
+          "event": "detector-failure",
+          "turn": 2,
+          "code": "Error",
+          "wallMs": 0
+        },
+        {
+          "at": "2026-11-20T15:36:15.279Z",
+          "event": "detector-start",
+          "turn": 3,
+          "resolvedModel": "gpt-6-luna",
+          "promptSha256": "e3d79a603741ddf5267dbe494fa40890b0cf08af5063f13bfa463313f3ca966b"
+        },
+        {
+          "at": "2026-11-20T15:36:15.279Z",
+          "event": "detector-failure",
+          "turn": 3,
+          "code": "Error",
+          "wallMs": 0
+        },
+        {
+          "at": "2026-11-20T15:36:15.280Z",
+          "event": "operation-progress",
+          "progress": {
+            "stage": "finished",
+            "partitions": {
+              "completed": 0,
+              "total": 1
+            },
+            "retries": 2,
+            "failureCode": "provider.unavailable",
+            "outcome": "failed",
+            "headSha": "30ce82d8f9a474ab032f285e304cea2264bdd87c",
+            "baseSha": "5aff3604cb9ab2c2adce9511e94fda4a20727fbb",
+            "baseRefSha": "5aff3604cb9ab2c2adce9511e94fda4a20727fbb",
+            "pullNumber": 1,
+            "elapsedMs": 7,
+            "observedAt": "2026-11-20T15:36:15.280Z",
+            "sequence": 4,
+            "stageTimesMs": {
+              "preparing": 3,
+              "analyzing": 4
+            }
+          }
+        },
+        {
+          "at": "2026-11-20T15:36:15.334Z",
+          "event": "workflow-result",
+          "status": "failed",
+          "results": [
+            {
+              "id": "DetectPotentialProblemsUseCase",
+              "success": false,
+              "executed": true,
+              "steps": [],
+              "errors": [
+                {
+                  "name": "ApplicationError",
+                  "message": "Error in DetectPotentialProblemsUseCase: Unable to detect potential problems.",
+                  "code": "provider.unavailable",
+                  "kind": "provider",
+                  "retryable": true,
+                  "impact": "The provider was temporarily unavailable.",
+                  "action": "Retry when the provider is available.",
+                  "retainedState": "Existing persisted state and completed external effects were preserved.",
+                  "correlationId": "19c613f0-62b0-4e82-b58c-3b1ef1ab3018"
+                }
+              ],
+              "payload": {
+                "bugbotShadowVerification": {
+                  "resolvedModel": "gpt-6-luna",
+                  "provider": "codex",
+                  "candidates": [],
+                  "detectionUnavailable": true,
+                  "detection": [
+                    {
+                      "partition": 1,
+                      "partitionId": "diff-1-of-1-60109dcd49e399cdbd299642916f6de6ca2463702fe8a859a90c39149cd425f9",
+                      "wallMs": 2,
+                      "status": "failed",
+                      "observed": 0
+                    }
+                  ],
+                  "origins": []
+                },
+                "bugbotTelemetry": {
+                  "schemaVersion": 1,
+                  "reviewId": "owner:project:pr-1:30ce82d8f9a4",
+                  "repository": "owner/project",
+                  "triggerKind": "pull_request",
+                  "pullRequestNumber": 1,
+                  "headSha": "30ce82d8f9a474ab032f285e304cea2264bdd87c",
+                  "publicationMode": "dry-run",
+                  "configuredEffort": "default",
+                  "agentProvider": "codex",
+                  "agentModel": "gpt-6-luna",
+                  "startedAt": "2026-11-20T15:36:15.273Z",
+                  "elapsedMs": 8,
+                  "stagesMs": {
+                    "context-preflight": 0,
+                    "context": 1,
+                    "analysis": 3
+                  },
+                  "promptCharacters": 85635,
+                  "responseCharacters": 0,
+                  "estimatedInputTokens": 21409,
+                  "estimatedOutputTokens": 0,
+                  "changedFiles": 1,
+                  "changedLines": 1,
+                  "rulesLoaded": 0,
+                  "contextSelectionReason": "event",
+                  "contextCandidateBucket": "1",
+                  "contextCoverageStatus": "complete",
+                  "contextCoverage": {
+                    "selection": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "issue-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "pull-request-comments": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "review-threads": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "diff": {
+                      "status": "complete",
+                      "pagesFetched": 1,
+                      "itemsFetched": 1,
+                      "itemsRetained": 1,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "previous-findings": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "human-conversation": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    },
+                    "rules": {
+                      "status": "complete",
+                      "pagesFetched": 0,
+                      "itemsFetched": 0,
+                      "itemsRetained": 0,
+                      "omittedItems": 0,
+                      "truncatedItems": 0,
+                      "limitReached": false
+                    }
+                  },
+                  "contextLogicalProviderReads": 5,
+                  "contextRawProviderRequests": 5,
+                  "contextConcurrencyLimit": 2,
+                  "analysisPartitions": 1,
+                  "completedAnalysisPartitions": 0,
+                  "analysisDiffFragments": 1,
+                  "analysisAssignedFiles": 1,
+                  "maximumAnalysisConcurrency": 1,
+                  "failedAnalysisPartitionOrdinal": 1,
+                  "failedAnalysisPartitionCategory": "error",
+                  "candidateFindings": 0,
+                  "publishedFindings": 0,
+                  "overflowFindings": 0,
+                  "resolvedFindings": 0,
+                  "outcome": "failed",
+                  "errorCategory": "error"
+                },
+                "dryRun": true
+              },
+              "reminders": [],
+              "stepFormat": "plain"
+            }
+          ],
+          "writes": [],
+          "checkoutUnchanged": true,
+          "wallMs": 11,
+          "verificationWallMs": 0,
+          "peakVerifierConcurrency": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "encoding": "gzip",
+  "lossless": true,
+  "records": [
+    {
+      "file": "official-sync-verification-failure.log.gz",
+      "rawBytes": 3751363,
+      "rawSha256": "2b6ec18136b82a087a195a782124322e2b170295e54e7f7e084afddf8217d299"
+    },
+    {
+      "file": "safari-resource-isolated.log.gz",
+      "rawBytes": 189,
+      "rawSha256": "56c313116b76d5c93336cb627a073f2557fe725452eec3b2f49f9a0bfbd0690c"
+    },
+    {
+      "file": "c659-official-sync-verification-failure.log.gz",
+      "rawBytes": 3676290,
+      "rawSha256": "c00ce5a6291c44c85cd480f42649cf898ec5e8a7b174d68caf92c6ff0d766d46",
+      "compressedSha256": "d1dc9813ac7305e4c1ef8621335cc67f78421f78d49d69a543d181a297a61e5b"
+    },
+    {
+      "file": "c659-operator-actions-isolated.log.gz",
+      "rawBytes": 297,
+      "rawSha256": "c65a4f3106f692df309a547b213e730f37c45de016d2c897301a857fd45a2909",
+      "compressedSha256": "b48c1ec00de12f4138f2cf717ad34641c633df550197148cc8d76db0862a66d0"
+    }
+  ],
+  "postmergeCausalControls": {
+    "file": "postmerge-causal-controls.log.gz",
+    "rawBytes": 664,
+    "rawSha256": "9a4a03e0e849a60d9051c99b94d0bfe7aecc6e5acf7084d0201a5e6eaf053bd3",
+    "result": "6/6 PASS; same v1/v2 bytes, labels and order"
+  }
+}

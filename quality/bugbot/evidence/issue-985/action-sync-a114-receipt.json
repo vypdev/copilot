@@ -1,0 +1,83 @@
+{
+  "recordedAt": "2026-11-20T14:57:16.654430+00:00",
+  "sourceHead": "a114134011b98904b4806ddd58ec9f780d27ab60",
+  "parents": [
+    "fa92ca94079ed31edada346a5fb5d5d604864ac0",
+    "25eaba3a641abb05d1ac2847917c97863e5a714f"
+  ],
+  "syncRun": 44753257593,
+  "syncJob": 136346272617,
+  "syncConclusion": "success",
+  "conflict": {
+    "path": "docs/bugbot/quality-observability.mdx",
+    "resolutionOwner": "GitHub Action",
+    "result": "Both the inherited deletion-hunk provenance description and the versioned corpus amendment retained."
+  },
+  "sourceIdentity": {
+    "srcAndBuildAndLockfileMatchParent": true,
+    "onlyPackageDifference": "Append the six v2 corpus controls to the inherited shadow command",
+    "v1V2AndIssue985ControlsUnchangedFromPriorChild": true,
+    "frozen950HistoryUnchanged": true
+  },
+  "nativeJest": {
+    "suites": 943,
+    "passed": 18695,
+    "preExistingSkipped": 35,
+    "seconds": 478.322
+  },
+  "nativeExtension": {
+    "files": 385,
+    "passed": 5291
+  },
+  "nativeValidation": {
+    "build": "PASS",
+    "typecheck": "PASS",
+    "coverageBudgets": "PASS",
+    "lint": "PASS",
+    "specifications": "PASS",
+    "documentation": "PASS"
+  },
+  "preservedEarlierFailure": {
+    "head": "fa92ca94079ed31edada346a5fb5d5d604864ac0",
+    "run": 44748313315,
+    "job": 136329289763,
+    "nativeCoverage": "FAILURE",
+    "firstFailure": "Unchanged first English SetupManagementPanel SSR render exceeded the existing 5000ms timeout.",
+    "passedSuites": 942,
+    "passedTests": 18694,
+    "failedTests": 1,
+    "preExistingSkipped": 35,
+    "downstreamExtensionRun": false,
+    "unchangedLocalDiagnostic": "32/32 PASS in 9.762s; no full native pass, root timing cause or actual browser/Setup acceptance established."
+  },
+  "archives": [
+    {
+      "file": "action-sync-44753257593.log.gz",
+      "rawBytes": 3788938,
+      "rawSha256": "6c52f7eea0a9350be73031f85f7a1d28e2d3f5c5156233b9606aae62996644fa",
+      "compressedSha256": "c4150a6e6b4c9c99e786e332912bed86a475a5e09ee110a76bdeae1eba6a0ed9"
+    },
+    {
+      "file": "fa92-native-coverage-failure.log.gz",
+      "rawBytes": 3044593,
+      "rawSha256": "7e30006aaf2cd1cf0a0bb2cf1149a22be25cf7b44abf6c1d2c2c6b63eb5ef8e0",
+      "compressedSha256": "d8ddcd1db292c9431e83cf4f0d1a4675a905aa7fd1d658983a74307ca80678e9"
+    },
+    {
+      "file": "fa92-management-components-isolated.log.gz",
+      "rawBytes": 291,
+      "rawSha256": "9eec13c5c0ecd659fc967f1e7c397c1ba1117b8fb142bc319a301f17141c0ffb",
+      "compressedSha256": "5fa18a4604ee967b3a269e73f388c34db9d3259ae13a284dbd7398cba93d1ca9"
+    },
+    {
+      "file": "fa92-committed-shadow-202.log.gz",
+      "rawBytes": 21353,
+      "rawSha256": "0b2717e7a25084f751b36783483a31f466fe9978dea9e0bf8cf9ad021def0969",
+      "compressedSha256": "6c3c44d2b495b19f7332d07700b855fcee60c6d9d83ad421f8e482556d3a1596"
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "evaluatedPilotPrWriteAttempts": 0,
+  "productionVerificationMode": "disabled",
+  "remaining": "Ordinary contributor evidence commit, committed-source controls and final-head native checks/findings. No qualification or installation claimed."
+}

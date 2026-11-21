@@ -1,0 +1,139 @@
+{
+  "at": "2026-11-20T19:50:43.864846+00:00",
+  "scope": "Prepared local exact-parent merge; not a final committed-source or native certification",
+  "originalHead": "1b024481d9d86cb4d4b10eb7f8569f9c8e2f0981",
+  "parent": "0ddac1011204db6dda45dff0f99e3ef91309c701",
+  "originalSourcePatchId": "5258c02e3c9035e7781c00129f01af81f5ef7ea8",
+  "sourcePatchPreserved": true,
+  "focused": {
+    "suites": 5,
+    "pass": 62,
+    "fail": 0,
+    "skip": 0
+  },
+  "validation": {
+    "head": "1b024481d9d86cb4d4b10eb7f8569f9c8e2f0981",
+    "parent": "0ddac1011204db6dda45dff0f99e3ef91309c701",
+    "results": [
+      {
+        "name": "generate-specifications",
+        "exitCode": 0,
+        "startedAt": "2026-11-20T19:48:10.781677+00:00",
+        "finishedAt": "2026-11-20T19:48:16.017602+00:00",
+        "rawBytes": 2460,
+        "rawSha256": "3e08c5d790184563d771354f9a1f38386a071bf2f4445615d7e0ccb55c2c5c8a"
+      },
+      {
+        "name": "build",
+        "exitCode": 0,
+        "startedAt": "2026-11-20T19:48:16.018023+00:00",
+        "finishedAt": "2026-11-20T19:49:09.539008+00:00",
+        "rawBytes": 433014,
+        "rawSha256": "1f633dc952142d961d04eea196cc3d97e94ef4884f7a9f636f572d70a98e0b3e"
+      },
+      {
+        "name": "focused",
+        "exitCode": 0,
+        "startedAt": "2026-11-20T19:49:09.539555+00:00",
+        "finishedAt": "2026-11-20T19:49:12.148326+00:00",
+        "rawBytes": 542,
+        "rawSha256": "5fa860eb5c8f7172cf5ce593690843569a2753cac2288a58708d898516256467"
+      },
+      {
+        "name": "validate-specifications",
+        "exitCode": 0,
+        "startedAt": "2026-11-20T19:49:12.148659+00:00",
+        "finishedAt": "2026-11-20T19:49:17.275765+00:00",
+        "rawBytes": 2459,
+        "rawSha256": "79e37253c8e15c9be1e807de0059960b6965c99cbbe3f4bec524d7014f91a251"
+      },
+      {
+        "name": "validate-documentation",
+        "exitCode": 0,
+        "startedAt": "2026-11-20T19:49:17.276112+00:00",
+        "finishedAt": "2026-11-20T19:49:17.612096+00:00",
+        "rawBytes": 306,
+        "rawSha256": "fe1772e67eeba92dfb01f0521fb30b530edf1ee985f7f93f938fafaf2d3fbb71"
+      },
+      {
+        "name": "validate-agent-docs",
+        "exitCode": 0,
+        "startedAt": "2026-11-20T19:49:17.612422+00:00",
+        "finishedAt": "2026-11-20T19:49:18.242648+00:00",
+        "rawBytes": 205,
+        "rawSha256": "6b88f43fb27c175b0d73363c9840f900117de93f137780880dffa51c99ce3b88"
+      },
+      {
+        "name": "graphify",
+        "exitCode": 0,
+        "startedAt": "2026-11-20T19:49:18.242979+00:00",
+        "finishedAt": "2026-11-20T19:50:01.891362+00:00",
+        "rawBytes": 3557,
+        "rawSha256": "865f227f0983fb9876b02929d593a0106fe02e30c518c27bd5950257c8bd9136"
+      }
+    ],
+    "allComplete": true,
+    "qualificationCalls": 0
+  },
+  "logs": [
+    {
+      "name": "official-current-parent-sync-failure",
+      "log": "exact-parent-official-current-parent-sync-failure.log.gz",
+      "rawBytes": 3788530,
+      "rawSha256": "740040442413668f40cf0ea3ee95198d1328281668194f2e4107925e1e35c22e",
+      "gzipSha256": "98f0614577f58849136fb38744867b8239b101f09737bd7c9a2486ce8d2f42ab"
+    },
+    {
+      "name": "generate-specifications",
+      "log": "exact-parent-generate-specifications.log.gz",
+      "rawBytes": 2460,
+      "rawSha256": "3e08c5d790184563d771354f9a1f38386a071bf2f4445615d7e0ccb55c2c5c8a",
+      "gzipSha256": "3b20dc2421ff2f5a05a32dd351fc3508ff5daa0ed67c45fe7467cdf33fd1fb03"
+    },
+    {
+      "name": "build",
+      "log": "exact-parent-build.log.gz",
+      "rawBytes": 433014,
+      "rawSha256": "1f633dc952142d961d04eea196cc3d97e94ef4884f7a9f636f572d70a98e0b3e",
+      "gzipSha256": "de9480f65fb35e317b5d6a735f0c0266d60470688ebcb3d17d69ad313f575c01"
+    },
+    {
+      "name": "focused",
+      "log": "exact-parent-focused.log.gz",
+      "rawBytes": 542,
+      "rawSha256": "5fa860eb5c8f7172cf5ce593690843569a2753cac2288a58708d898516256467",
+      "gzipSha256": "b030424e93969238c02039192bb00df5d4d7f8850f632df90b225779e1bcc924"
+    },
+    {
+      "name": "validate-specifications",
+      "log": "exact-parent-validate-specifications.log.gz",
+      "rawBytes": 2459,
+      "rawSha256": "79e37253c8e15c9be1e807de0059960b6965c99cbbe3f4bec524d7014f91a251",
+      "gzipSha256": "78685970b023cb213e542ecab27eaaa0db00d7aa661f7b00db6d2e7999c89d4d"
+    },
+    {
+      "name": "validate-documentation",
+      "log": "exact-parent-validate-documentation.log.gz",
+      "rawBytes": 306,
+      "rawSha256": "fe1772e67eeba92dfb01f0521fb30b530edf1ee985f7f93f938fafaf2d3fbb71",
+      "gzipSha256": "3b33b490a974660fec992d2992b5656d62a8730e27ac7069dcb74fc673c7c5aa"
+    },
+    {
+      "name": "validate-agent-docs",
+      "log": "exact-parent-validate-agent-docs.log.gz",
+      "rawBytes": 205,
+      "rawSha256": "6b88f43fb27c175b0d73363c9840f900117de93f137780880dffa51c99ce3b88",
+      "gzipSha256": "4a3f4427fd33ae93e0e4f660031722bbdd5761600ad3a50c39a1827d7b06fe95"
+    },
+    {
+      "name": "graphify",
+      "log": "exact-parent-graphify.log.gz",
+      "rawBytes": 3557,
+      "rawSha256": "865f227f0983fb9876b02929d593a0106fe02e30c518c27bd5950257c8bd9136",
+      "gzipSha256": "f6ffa9cff53315b336bb13766e0a62cc608924ebc3e4b48b75e406052e329845"
+    }
+  ],
+  "production": "disabled",
+  "qualificationCalls": 0,
+  "installation": false
+}
