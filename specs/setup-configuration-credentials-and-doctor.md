@@ -811,3 +811,64 @@ It adds public tutorial, first-workflow and recovery links to command help and
 presentations, with no setup decision, credential, configuration, durable-state
 or permission changes. The 15 cases are shared evidence, not counted again
 here; existing quality gates and human UX limitations remain.
+
+## Source credential-health operating policy proposal (#979)
+
+This source-only amendment is submitted for maintainer policy review; approval
+is not inferred from tests or this document. The current authenticated default
+snapshot remains master@ace49e4a7ce0f6a007fef5d11479eb9b7a5846e3 with the old
+hosted health workflow. The develop baseline uses self-hosted Linux. Preserve
+both observations; a prepared PR does not establish default installation.
+
+The proposed selector requires an explicit check, workflow_dispatch, repository
+vypdev/copilot, that repository's current default ref and the exact health
+workflow/ref identity. Original actor IDs 1783618 and 260864876 correspond to
+current administrators efraespada and vypbot; reruns also require triggering_actor
+in that named set. A changed actor/default/workflow selection skips before runner
+assignment. All eight jobs retain their existing secret-only environments,
+read-only endpoints, false defaults, names and transport behavior. Source jobs
+explicitly select group vypdev with self-hosted/codex/Linux. Consumer installation
+templates and their health/probe hashes remain unchanged. No public option,
+additional provider, Secret write or organization setting is introduced.
+
+```text
+Explicit check -> source actor/ref/workflow selector -> self-hosted job
+  -> existing value validation -> fake-tested HTTPS transport -> native result
+```
+
+The textual flow has two separate trust layers: GitHub requires repository write
+access for dispatch; the mutable source selector reduces accidental actor/ref
+selection. Neither it nor its editable validator independently constrains an
+actor who can replace workflow code. Such actors remain credential holders under
+the proposed trust assumption. The maintainer MUST explicitly approve that
+assumption and actor/ref policy, or request a different external design, before
+this proposal can be called accepted. Do not describe the selector as hardened
+against workflow editors. No organization controls or branch protections change
+in this delivery.
+
+Actual observed evidence is in issue-979/observed-baseline.json: two collaborator
+admins; default token write/approval capabilities narrowed by the health workflow
+to contents:read; only an npm environment, with none on health; effective strict
+CI Check rule and a separate classic-protection 404; organization runner-group
+metadata unavailable (403). Repository runner count zero cannot establish shared
+organization capacity. PAT/provider grants and OS isolation remain unknown.
+A successful authentication endpoint is not proof of complete credential scopes.
+
+Native UX keeps Verify PAT/provider identities and adds actor/ref to the run
+title. An unexpected skipped run directs the operator to inspect actor/ref and
+selected flags, then explicitly retry on default. Queued, skipped, failed or
+unavailable jobs are not successful health evidence. Existing readers retain
+exact default SHA/workflow and freshness checks and preserve unknown results.
+Rollback restores the prior source workflow under maintainer review; no consumer
+file is overwritten. No live dispatch is needed for this proposal.
+
+Test budget: **three new declarations / eleven executed cases**, comprising nine
+actor/ref/workflow/fork/event/opt-in rows, all-job selection/runner consistency,
+and a causal mutable-condition counter-control. Reuse, without double-counting,
+the 82 existing fake-curl cases and 58 trusted-health reader cases for missing
+credentials, denied reads, provider failure and immutable evidence boundaries.
+The focused four-suite set also retains 352 workflow tests. Documentation updates
+are trust-boundaries, self-hosted-runners and the review artifact. Register tests
+and the source contract in the catalog; run workflow/docs/specification checks,
+build/lint/type/coverage gates and final-SHA native review. Do not close the policy
+approval or unavailable external-evidence requirements merely because tests pass.
