@@ -104,6 +104,15 @@ describe('publisher acceptance report execution boundary', () => {
         expect(result.stderr).toContain('Every selected SDD and owning appendix case must remain registered');
     });
 
+    it('retains the cumulative floor when both appendix rows and matching ledger cases are removed', () => {
+        const f = extendedFixture(); f.ledger.cases = f.ledger.cases.slice(0, 64);
+        const path = join(f.runtimeRoot, 'specs/organization-configuration-reuse-and-batch-setup.md');
+        writeFileSync(path, readFileSync(path, 'utf8').split('\n').filter(line => !line.startsWith('| publisher977-C')).join('\n'));
+        const result = f.execute(); expect(result.status).toBe(1);
+        expect(result.stderr).toContain('Expected v1 ledger with at least');
+        expect(result.stdout).not.toContain('mapped Jest cases passed');
+    });
+
     it('rejects a duplicate published ID instead of allowing a contract override', () => {
         const f = extendedFixture(), path = join(f.runtimeRoot, 'specs/organization-configuration-reuse-and-batch-setup.md');
         const row = readFileSync(path, 'utf8').split('\n').find(line => line.startsWith('| publisher977-C65'))!;

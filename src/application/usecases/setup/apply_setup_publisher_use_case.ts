@@ -1,6 +1,7 @@
 import type { SetupPublisherFileEffect, SetupPublisherOperation, SetupPublisherPlan } from '../../../domain/setup_publisher_installation';
 import type { SetupInstallationDeliveryState } from '../../contracts/setup_installation_delivery';
 import type { SetupInstallationObjectObserver } from '../../ports/setup_installation_delivery_ports';
+import { SetupInstallationSnapshotChanged } from '../../ports/setup_installation_delivery_ports';
 import type { SetupPublisherApplyPorts } from '../../ports/setup_publisher_apply_ports';
 import { parseSetupPublisherOperation, setupPublisherOperationMatchesPlan } from '../../policies/setup_publisher_installation_policy';
 import { setupPublisherApprovalMatches } from '../../policies/setup_publisher_plan_policy';
@@ -102,7 +103,7 @@ export class ApplySetupPublisherUseCase {
       }
     } catch (error) {
       if (error instanceof SetupPublisherApplyError) throw error;
-      throw fail(this.ports.active() ? 'delivery' : 'cancelled');
+      throw fail(!this.ports.active() ? 'cancelled' : error instanceof SetupInstallationSnapshotChanged ? 'stale' : 'delivery');
     } finally { await journal(release); }
   }
 }

@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T22:28:09.332980+00:00",
+  "parent": "7a0745e31587d8fdce0c4b6d76a55f0ec54e158f",
+  "findings": [
+    "PRRT_kwDONSeBW866c9ak",
+    "PRRT_kwDONSeBW866c9az",
+    "PRRT_kwDONSeBW866c9a7"
+  ],
+  "causalRed": {
+    "passed": 89,
+    "failed": 9,
+    "skipped": 0
+  },
+  "green": {
+    "passed": 98,
+    "failed": 0,
+    "skipped": 0
+  },
+  "fixtureNegative": "Initial15fail includes12 nonconfigurable TypeScript namespace spy failures; source retained. Corrected fixture uses jest.requireActual; actual unchanged production then89PASS9FAIL. No native timing cause inferred.",
+  "coherent": {
+    "files": 26,
+    "passed": 1214,
+    "failed": 0,
+    "skipped": 0,
+    "registered": 93,
+    "mappedJest": 89,
+    "coverageCommandExit": 1,
+    "changedModules": {
+      "src/infrastructure/setup_operation_journal_store.ts": {
+        "lines": {
+          "total": 51,
+          "covered": 51,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 13,
+          "covered": 13,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 70,
+          "covered": 70,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 36,
+          "covered": 36,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "src/application/usecases/setup/apply_setup_publisher_use_case.ts": {
+        "lines": {
+          "total": 71,
+          "covered": 71,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 19,
+          "covered": 19,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 97,
+          "covered": 97,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 80,
+          "covered": 80,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "scope": "Both changed runtime modules100allmetrics; focused command exits1 for unexecuted global owners. No global pass claimed."
+  },
+  "fixes": [
+    "Enforce cumulative93-case floor independently of appendix/ledger length, still allowing contiguous additions.",
+    "Capture created lock descriptor identity; after initialization/close failure preserve first error and unlink only matching regular non-symlink inode. Foreign/unverified/unremovable locks remain.",
+    "Map direct completed-recovery snapshot drift to stale; cancellation/journal errors retain precedence and durable receipt stays unchanged."
+  ],
+  "cases": "C92/C93 append two required application/recovery cases; all91 prior complete ledger objects unchanged.",
+  "selectedSddSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "allValidationStepsPassed": true,
+  "package": "104files/11actualextractedCLI0effects/API/webPASS",
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8470867,
+      "sha256": "3819818441d6154e6926b6384844491f2d24113b1f4779b9c801b74182fba8c0"
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "sourceHashes": {
+    "docs/security-operations/operations/provisioning.mdx": "32f3b2c3570430d126907e48b4551a2a829a7cca55cf8884230f42a24aad4987",
+    "scripts/validate-setup-publisher-acceptance.cjs": "94a4faacce08f82707256c5d98084a7dcefe967bce1acb1fd5f88221c89d356c",
+    "specs/CATALOG.md": "8cb38e4d9ac2b195a95a6efc52ce31aa0b9399972e87894b4f1ac6b489976770",
+    "specs/catalog.json": "0b8bff571ccf13f997ddc20d456481a460c8f5b27c7e06732134549b0b32282d",
+    "specs/organization-configuration-reuse-and-batch-setup.md": "8352944fdab5ba6e6399b162f763e09efd07e0ebd27d84dc342fb89ddb6de1af",
+    "specs/setup-publisher-installation-acceptance.json": "9c73bce6304b9e190971935f2c730a0866b7e089da65854dd3704cbffa215c27",
+    "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts": "4ae09613050eee1fb0318b26f8f797ae51fe174f0e522128714d6150eb5461fa",
+    "src/application/usecases/setup/apply_setup_publisher_use_case.ts": "29755113cd4bbe081e066f79fd9f078c1a59883b68bea0ea03858c995d8fb2b7",
+    "src/infrastructure/setup_operation_journal_store.ts": "53bb3cf85cccb2627e95a7d92e5beb88f8bcbfc425c778eb7f7d8810e84b59c2",
+    "src/tooling/__tests__/setup_publisher_acceptance_validator.test.ts": "8bb1884c6e882136c42211315d61a9e6594e8baf14a6ebb4023ffe0aecc97776",
+    "src/infrastructure/__tests__/setup_operation_journal_store.test.ts": "d1649ba0aea4920ba6f45f86d433e5ab0b441143535ab6de4114e076f95495e0"
+  },
+  "newArchives": 26,
+  "totalArchives": 232,
+  "parentNative096": "ALL4SUCCESS44952432613;966/19730PASS35historicalskips; no slow/pending Journal I/O observation. Cause of older7b waits remainsUNPROVEN.",
+  "parentNative7a": "Fresh runs started; not accepted by this receipt. No cancellation or obsolete retry.",
+  "normalHooksAndFinalNative": "required",
+  "installationEffects": 0,
+  "qualificationModelCalls": 0,
+  "actual174": "unstarted",
+  "actual42": "unstarted",
+  "qualifiedProfile": null,
+  "pilotWriteAttempts": 0,
+  "production": "disabled",
+  "orchestrationPreflightNegative": {
+    "at": "2026-11-21T22:29:42.354937+00:00",
+    "reason": "Prepared scope preflight retained review-round6 prefix instead of new review-round7 directory. It stopped before staging, one-use lock or commit. Corrected prefix; source/tests/build unchanged.",
+    "stagingStarted": false,
+    "commitInvoked": false,
+    "oneUseLockAbsent": true,
+    "parentUnchanged": "7a0745e31587d8fdce0c4b6d76a55f0ec54e158f"
+  }
+}

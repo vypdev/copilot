@@ -2153,6 +2153,94 @@
           "test": "bounded GitHub setup discovery and namespace inspection retains exact known bytes while accepting ordinary unrelated Git path names"
         }
       ]
+    },
+    {
+      "id": "publisher977-C92",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "Failed exclusive-lock initialization removes only its own identified file, preserves foreign or unverified replacements and the original error, and permits a later fresh acquisition.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization removes only its own uninitialized lock after writeFile failure and preserves the first error"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization removes only its own uninitialized lock after sync failure and preserves the first error"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization removes only its own uninitialized lock after close failure and preserves the first error"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization removes only its own uninitialized lock after writeFile-and-close failure and preserves the first error"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization removes only its own uninitialized lock after sync-and-close failure and preserves the first error"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization never removes a file replacement after failed initialization"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization never removes a directory replacement after failed initialization"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization never removes a symlink replacement after failed initialization"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization never removes a absent replacement after failed initialization"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization retains an unverified lock if its created descriptor identity cannot be read"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization preserves the initialization error when lstat cleanup fails"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization preserves the initialization error when unlink cleanup fails"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C93",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G06"
+      ],
+      "assertion": "Completed read-only recovery reports snapshot drift as stale, preserves cancellation and its exact durable receipt, and starts no delivery or journal writes.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "completed recovery reports branch snapshot drift as stale without changing its durable receipt"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "completed recovery reports pullRequest snapshot drift as stale without changing its durable receipt"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "completed recovery preserves cancellation during branch snapshot drift"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "completed recovery preserves cancellation during pullRequest snapshot drift"
+        }
+      ]
     }
   ]
 }

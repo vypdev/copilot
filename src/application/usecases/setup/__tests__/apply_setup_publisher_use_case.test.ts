@@ -276,3 +276,17 @@ it('preserves a known tree on an explicit stop before commit starts, allowing ex
   await expect(f.execute()).rejects.toMatchObject({ reason: 'stale', retained: { status: 'partial', preparedTree: tree, effects: ['tree'] } });
   expect(f.saved()?.uncertain).toBeUndefined(); expect(f.writer.branch).not.toHaveBeenCalled();
 });
+
+it.each(['branch', 'pullRequest'] as const)('completed recovery reports %s snapshot drift as stale without changing its durable receipt', async phase => {
+  const f = fixture(), existing = f.completed(['tree', 'commit', 'branch', 'pull-request']); f.retain(existing);
+  f.writer[phase].mockRejectedValue(new SetupInstallationSnapshotChanged());
+  await expect(f.execute(existing)).rejects.toMatchObject({ reason: 'stale', retained: existing, lastPersisted: existing });
+  expect(f.states).toEqual([]); expect(f.writes).toEqual([]); expect(f.release).toHaveBeenCalledTimes(1);
+  if (phase === 'branch') expect(f.writer.pullRequest).not.toHaveBeenCalled();
+});
+it.each(['branch', 'pullRequest'] as const)('completed recovery preserves cancellation during %s snapshot drift', async phase => {
+  const f = fixture(), existing = f.completed(['tree', 'commit', 'branch', 'pull-request']); f.retain(existing);
+  f.writer[phase].mockImplementation(async () => { f.active.mockReturnValue(false); throw new SetupInstallationSnapshotChanged(); });
+  await expect(f.execute(existing)).rejects.toMatchObject({ reason: 'cancelled', retained: existing, lastPersisted: existing });
+  expect(f.states).toEqual([]); expect(f.writes).toEqual([]); expect(f.release).toHaveBeenCalledTimes(1);
+});

@@ -167,3 +167,11 @@ After merge into trusted default, separately verify the installed revision and
 explicitly authorized native canary. Source integration, a packed CLI pass or a
 queued/skipped run does not complete installation. Rollback is a fresh reviewed
 normal change retaining prior receipts and newer human work.
+
+During publisher resume, changed installation facts produce stale-preview guidance:
+inspect the destination again and review the new preview before approving. A
+completed receipt remains unchanged if its read-only branch or PR proof becomes
+stale. If exclusive-lock initialization fails, setup removes its own identified
+unfinished lock so a later fresh attempt can proceed. A foreign, unverified or
+unremovable lock is retained; follow the documented owner verification procedure
+before orphan-lock recovery.

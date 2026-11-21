@@ -1479,7 +1479,8 @@
         "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
         "src/tooling/__tests__/setup_publisher_acceptance_validator.test.ts",
         "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
-        "src/infrastructure/__tests__/fixtures/journal_io_diagnostics.cjs"
+        "src/infrastructure/__tests__/fixtures/journal_io_diagnostics.cjs",
+        "src/infrastructure/__tests__/setup_operation_journal_store.test.ts"
       ],
       "documentation": [
         "README.md",

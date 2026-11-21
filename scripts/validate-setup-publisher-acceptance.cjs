@@ -31,7 +31,7 @@ for (const suite of report?.testResults ?? []) {
   }
 }
 const errors = [...publicationErrors], evidenceOwners = new Map();
-if (ledger.schemaVersion !== 1 || !Array.isArray(ledger.cases) || ledger.cases.length < 64) errors.push('Expected v1 ledger with at least 64 cases.');
+if (ledger.schemaVersion !== 1 || !Array.isArray(ledger.cases) || ledger.cases.length < 93) errors.push('Expected v1 ledger with at least 93 cases.');
 const cases = Array.isArray(ledger.cases) ? ledger.cases : [];
 const expected = Array.from({ length: cases.length }, (_, index) => `publisher977-C${String(index + 1).padStart(2, '0')}`);
 if (JSON.stringify(cases.map(item => item.id)) !== JSON.stringify(expected)) errors.push('Case IDs/order must retain C01–C64 exactly once and append contiguous additional IDs.');

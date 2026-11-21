@@ -50,8 +50,20 @@ export class SetupOperationJournalStore {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
       throw Object.assign(new Error(`Setup operation ${id} is locked at ${destination}. Stop all setup processes and verify the recorded owner before orphan-lock recovery. See https://github.com/vypdev/copilot/blob/master/docs/security-operations/operations/troubleshooting.mdx#recover-an-orphaned-batch-operation-lock`), { code: 'EEXIST' });
     });
-    try { await file.writeFile(JSON.stringify({ pid: process.pid, nonce })); await file.sync(); }
-    finally { await file.close(); }
+    let identity: Awaited<ReturnType<typeof file.stat>> | undefined;
+    let failure: { cause: unknown } | undefined;
+    try { identity = await file.stat(); await file.writeFile(JSON.stringify({ pid: process.pid, nonce })); await file.sync(); }
+    catch (cause) { failure = { cause }; }
+    try { await file.close(); }
+    catch (cause) { failure ??= { cause }; }
+    if (failure) {
+      // A failed acquisition has no release callback. Reclaim only the exact
+      // inode created here; a replacement or unverified owner must remain.
+      if (identity) await lstat(destination).then(current => {
+        if (current.isFile() && !current.isSymbolicLink() && current.dev === identity.dev && current.ino === identity.ino) return unlink(destination);
+      }).catch(() => undefined);
+      throw failure.cause;
+    }
     return async () => { await readFile(destination, 'utf8').then(content => {
       const current = JSON.parse(content) as { pid: number; nonce: string };
       if (current.pid === process.pid && current.nonce === nonce) return unlink(destination);

@@ -78851,6 +78851,7 @@ class StaleSetupApply extends Error {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplySetupPublisherUseCase = exports.SetupPublisherApplyError = void 0;
+const setup_installation_delivery_ports_1 = __nccwpck_require__(10308);
 const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
 const setup_publisher_plan_policy_1 = __nccwpck_require__(75733);
 class SetupPublisherApplyError extends Error {
@@ -78979,7 +78980,7 @@ class ApplySetupPublisherUseCase {
         catch (error) {
             if (error instanceof SetupPublisherApplyError)
                 throw error;
-            throw fail(this.ports.active() ? 'delivery' : 'cancelled');
+            throw fail(!this.ports.active() ? 'cancelled' : error instanceof setup_installation_delivery_ports_1.SetupInstallationSnapshotChanged ? 'stale' : 'delivery');
         }
         finally {
             await journal(release);
@@ -127182,12 +127183,31 @@ class SetupOperationJournalStore {
                 throw error;
             throw Object.assign(new Error(`Setup operation ${id} is locked at ${destination}. Stop all setup processes and verify the recorded owner before orphan-lock recovery. See https://github.com/vypdev/copilot/blob/master/docs/security-operations/operations/troubleshooting.mdx#recover-an-orphaned-batch-operation-lock`), { code: 'EEXIST' });
         });
+        let identity;
+        let failure;
         try {
+            identity = await file.stat();
             await file.writeFile(JSON.stringify({ pid: process.pid, nonce }));
             await file.sync();
         }
-        finally {
+        catch (cause) {
+            failure = { cause };
+        }
+        try {
             await file.close();
+        }
+        catch (cause) {
+            failure ?? (failure = { cause });
+        }
+        if (failure) {
+            // A failed acquisition has no release callback. Reclaim only the exact
+            // inode created here; a replacement or unverified owner must remain.
+            if (identity)
+                await (0, promises_1.lstat)(destination).then(current => {
+                    if (current.isFile() && !current.isSymbolicLink() && current.dev === identity.dev && current.ino === identity.ino)
+                        return (0, promises_1.unlink)(destination);
+                }).catch(() => undefined);
+            throw failure.cause;
         }
         return async () => {
             await (0, promises_1.readFile)(destination, 'utf8').then(content => {
