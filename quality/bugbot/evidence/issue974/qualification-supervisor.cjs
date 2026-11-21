@@ -39,7 +39,8 @@ function runSupervisor() {
     worker.on('message', message => {
         if (!message || typeof message !== 'object' || Array.isArray(message)) return end(1);
         if (message.kind === 'scope-ready') {
-            if (ready || Object.keys(message).length !== 2 || !/^[a-f0-9]{64}$/u.test(message.correlation)) return end(1);
+            if (ready || Object.keys(message).length !== 2 || typeof message.correlation !== 'string'
+                || !/^[a-f0-9]{64}$/u.test(message.correlation)) return end(1);
             ready = message.correlation;
             worker.send({ kind: 'scope-ready-accepted', correlation: ready });
             return;

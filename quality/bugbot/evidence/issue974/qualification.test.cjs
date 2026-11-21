@@ -313,6 +313,8 @@ test('ev974-C28 private live capability binds only the exact immutable plan/sign
         assert.throws(() => policy.requireQualificationOperationStopped(identity, scopeId,
             { identity: { ...identity, ...delta }, scopeId, namespaceInitStopped: true }));
     }
+    const supervisor = require('./supervisor-components.cjs').runSupervisorComponents();
+    assert.equal(supervisor.cases, 49); assert.equal(supervisor.failed, 0);
 });
 
 test('ev974-C29 durable planned174/42 inventories reject orphan, missing and incomplete owned-scope prefixes', () => {

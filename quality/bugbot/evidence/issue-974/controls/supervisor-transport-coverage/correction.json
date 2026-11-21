@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T09:15:24.962386+00:00",
+  "beforeSourceSha256": "e19e86dda95fddf6d61cfafdbc2cefba4a8a4612609bd767f46b04dcdd1f19a7",
+  "afterSourceSha256": "c886a99a75e12068d1eb34dc01e2df4c420b43d2f2819c65a31bcaaddbe2d26a",
+  "causalObservation": "A valid JSON array containing one64hexstring is coerced by RegExp.test and falsely receives a scope-ready ACK. The terminal correlation check may still reject it; no false completed namespace/model result or real exploitation is demonstrated.",
+  "correction": "Require an actual string before accepting the closed64hex readiness correlation; fixed valid-string behavior and all existing guards remain.",
+  "negative": "48PASS1FAIL/49 controlled process/fork cases; retained exactUTF8 bytes",
+  "corrected": "49PASS0FAIL; one public C28 groupPASS with49 component observations, original240logicalinventory unchanged",
+  "coverage": {
+    "file": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+    "sourceSha256": "c886a99a75e12068d1eb34dc01e2df4c420b43d2f2819c65a31bcaaddbe2d26a",
+    "summary": {
+      "lines": {
+        "total": 41,
+        "covered": 41,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 10,
+        "covered": 10,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 56,
+        "covered": 56,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 36,
+        "covered": 36,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "gate": true
+  },
+  "nativeSdkAcceptance": false,
+  "globalChangedModuleCoverageSatisfied": false,
+  "actualNative4": "Historical82f0c14/plans13e31eb/imageD2 remains historical only. New supervisor bytes require fresh final committed source/plan/image and actual native4 proof.",
+  "all174and42": "unstarted",
+  "qualificationModelCalls": 0,
+  "production": "disabled",
+  "logs": {
+    "supervisor-components-counterfactual-attempt1": {
+      "file": "supervisor-components-counterfactual-attempt1.utf8.json",
+      "bytes": 5205,
+      "sha256": "cf3939af2c67b46602819a43826b0fa69a79e07f0758f41512a2b1659516f31f"
+    },
+    "supervisor-components-attempt2": {
+      "file": "supervisor-components-attempt2.utf8.json",
+      "bytes": 4091,
+      "sha256": "e04fc4b1893d94922221e77a1300235b982f6126d936b733d19150af2f7cf699"
+    },
+    "supervisor-component-coverage-attempt1": {
+      "file": "supervisor-component-coverage-attempt1.utf8.json",
+      "bytes": 4265,
+      "sha256": "387c56d8677b73de300acaa75cc53c5ac4edd0efb07568365f945d27dfe55d61"
+    },
+    "supervisor-component-coverage-attempt2": {
+      "file": "supervisor-component-coverage-attempt2.utf8.json",
+      "bytes": 4492,
+      "sha256": "a4c7d4a2898ee1b2a5d249f8e768cd5bbe9be6033ca3b4eec1646755db53721c"
+    }
+  }
+}
