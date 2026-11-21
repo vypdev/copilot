@@ -138,6 +138,23 @@ it('an unavailable completed ref remains unverified without a replacement POST',
   const f = fixture(), existing = f.completed(['tree', 'commit', 'branch', 'pull-request']); f.retain(existing); f.writer.branch.mockRejectedValue(new Error('private-provider-value'));
   await expect(f.execute(existing)).rejects.toMatchObject({ reason: 'delivery', lastPersisted: existing }); expect(f.writer.pullRequest).not.toHaveBeenCalled(); expect(f.states).toEqual([]);
 });
+it('finalizes a retained PR-complete applying operation after exact read-only verification', async () => {
+  const f = fixture(), existing = parseSetupPublisherOperation({ ...f.completed(['tree', 'commit', 'branch', 'pull-request']), status: 'applying' });
+  f.retain(existing);
+  const result = await f.execute(existing);
+  expect(result).toEqual({ ...existing, status: 'waiting-for-merge' });
+  expect(f.saved()).toEqual(result); expect(f.states).toEqual([result]);
+  expect(f.reads).toEqual(['branch', 'pull-request']); expect(f.writes).toEqual([]);
+  expect(f.writer.prepareCommit).not.toHaveBeenCalled(); expect(f.release).toHaveBeenCalledTimes(1);
+});
+it('reports failed terminal reconciliation without overstating the last durable PR-complete state', async () => {
+  const f = fixture(), existing = parseSetupPublisherOperation({ ...f.completed(['tree', 'commit', 'branch', 'pull-request']), status: 'applying' });
+  f.retain(existing); f.journal.save.mockRejectedValue(new Error('private-terminal-save'));
+  await expect(f.execute(existing)).rejects.toMatchObject({ reason: 'journal',
+    retained: { ...existing, status: 'waiting-for-merge' }, lastPersisted: existing });
+  expect(f.saved()).toEqual(existing); expect(f.reads).toEqual(['branch', 'pull-request']); expect(f.writes).toEqual([]);
+  expect(f.writer.prepareCommit).not.toHaveBeenCalled(); expect(f.release).toHaveBeenCalledTimes(1);
+});
 it('cancellation after a known commit preserves it and prevents branch creation', async () => {
   const f = fixture(), prepare = f.writer.prepareCommit.getMockImplementation()!;
   f.writer.prepareCommit.mockImplementation(async (...args) => { const result = await prepare(...args); f.active.mockReturnValue(false); return result; });

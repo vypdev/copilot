@@ -78852,6 +78852,8 @@ class ApplySetupPublisherUseCase {
                 await writer.branch(operation.preparedCommit, true);
                 if (await writer.pullRequest(operation.preparedCommit, true) !== operation.pullRequestNumber)
                     throw fail('operation-mismatch');
+                if (operation.status !== 'waiting-for-merge')
+                    await retain({ ...operation, status: 'waiting-for-merge' });
                 return operation;
             }
             await retain({ ...operation, status: 'applying' });

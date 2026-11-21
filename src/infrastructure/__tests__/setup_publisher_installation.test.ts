@@ -88,7 +88,7 @@ function deliveryFixture(publisherInstalled = false) {
       ? { sha: base, tree: { sha: baseTree.root } } : { sha: commit, parents: [{ sha: base }], tree: { sha: setupInstallationTreeFixture(preparedFiles).root } };
     else if (route === 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}') data = baseTree.trees.get(String(parameters.tree_sha))
       ?? setupInstallationTreeFixture(preparedFiles).trees.get(String(parameters.tree_sha));
-    else if (route === 'GET /repos/{owner}/{repo}/contents/{path}') data = { encoding: 'base64', content: Buffer.from(preparedFiles.get(manifestPath)!).toString('base64') };
+    else if (route === 'GET /repos/{owner}/{repo}/contents/{path}' && parameters.path === manifestPath) data = { encoding: 'base64', content: Buffer.from(preparedFiles.get(manifestPath)!).toString('base64') };
     else if (route === 'POST /repos/{owner}/{repo}/git/trees') {
       for (const file of parameters.tree as { path: string; content: string }[]) preparedFiles.set(file.path, file.content);
       data = { sha: setupInstallationTreeFixture(preparedFiles).root };

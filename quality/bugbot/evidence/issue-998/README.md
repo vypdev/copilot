@@ -227,3 +227,6 @@ two additional remote reusable wrappers in the issue/PR comment workflows.
 `acceptance-mapping-correction/actual-default-inventory.json` retains every
 workflow blob/hash and the classifier hash. This is not a full CLI preview or
 installation; the historical49GET preview remains superseded.
+
+
+The third-review correction and counterevidence are in `review-round3/receipt.json`: terminal PR-complete journal recovery, exact fixture path, and unchanged missing-observer denial. All903 mapped assertions/60 cases pass; fresh normal hooks and final native gates remain required. The packet now verifies117 lossless archives. Production remains disabled.

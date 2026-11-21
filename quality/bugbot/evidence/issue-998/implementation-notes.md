@@ -295,3 +295,37 @@ two additional remote reusable wrappers in the issue/PR comment workflows.
 `acceptance-mapping-correction/actual-default-inventory.json` retains every
 workflow blob/hash and the classifier hash. This is not a full CLI preview or
 installation; the historical49GET preview remains superseded.
+
+
+### PR-complete terminal reconciliation and review counterevidence
+
+A stop after retaining the completed PR but before saving waiting-for-merge
+leaves an accepted applying journal. Two actual application regressions fail
+before correction. Recovery now verifies the exact retained branch and PR in
+inspection-only mode, then durably reconciles the terminal status through the
+existing validated journal helper. A save failure preserves the actual last
+durable applying state. It creates no replacement objects, ref or PR.
+
+The missing-observer finding is refuted by the existing unchanged test, which
+already passes on the parent source: the publisher retain callback rejects the
+coordinator SHA unless ordered observer completion has durably stored it. No
+shared-coordinator policy change is needed. The controlled delivery fixture now
+checks the exact requested manifest path instead of accepting any contents path.
+
+All129 focal assertions and all903 assertions in the19-file mapped cohort pass;
+the actual mapped validator confirms60/60 cases. Isolated changed Apply coverage
+is96.87% statements,97.14% lines,96.15% branches,100% functions; that targeted
+command exits1 for unrun global owners and is not full coverage acceptance.
+Types/lint/specifications/Graphify/build and104-file package/11 actual CLI
+controls with zero effects pass. Only the canonical CLI bundle changes; the
+other three bundles stay identical. Selected SDD and all64 case IDs, requirements
+and assertion texts are unchanged. See review-round3/receipt.json.
+
+Parent470 native CI passed all four jobs:966 SDK suites/19,673 passes,35 historical
+skips, all coverage budgets,60 mapped cases,385 extension files/5,291 passes,
+plus packaged CLI/API/web controls. The first local gh run-view coverage downloads
+were cached partial logs; those are retained locally and complete job API logs
+are archived here. Parent results do not substitute for fresh final-head gates.
+Normal hooks/publication/final native checks are pending at this snapshot.
+No installation,174/42 campaign, model qualification or production activation
+is claimed; evaluated-pilot writes remain0 and production remains disabled.
