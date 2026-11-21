@@ -68,7 +68,10 @@ function fixtureCli() {
     const prompt = fs.readFileSync(0, 'utf8');
     assert.equal(prompt, 'Model-free native SDK containment control ' + input.slot.caseId);
     const inherited = input.slot.caseId === 'ev974-C33';
-    const child = spawn(process.execPath, [fixtureFile, '--native-descendant', inherited ? 'intermediate' : 'ignored'], {
+    // C34 keeps the SDK leader alive. Reparent its descendant through a
+    // short-lived intermediary instead of waiting for that live leader to exit.
+    const reparented = inherited || input.slot.caseId === 'ev974-C34';
+    const child = spawn(process.execPath, [fixtureFile, '--native-descendant', reparented ? 'intermediate' : 'ignored'], {
         detached: true, stdio: inherited ? ['ignore', process.stdout, process.stderr] : 'ignore',
     });
     child.once('error', () => process.exit(1));
