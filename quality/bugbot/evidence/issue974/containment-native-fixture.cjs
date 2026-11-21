@@ -86,7 +86,7 @@ async function runWorker(output, plan, operation) {
     assert.equal(output, '/qualification-output/native'); fs.mkdirSync(output, { mode: 0o700 });
     const { requirePinnedCliProbe } = require('../issue-950/ev07-shadow/implementation.cjs');
     const realCli = requirePinnedCliProbe(plan.runtime);
-    const fixture = path.join(output, 'fixture-codex');
+    const fixture = path.join(output, 'codex');
     assert.equal(hash(fixtureCliBytes), plan.nativeControl.fixtureCliSha256);
     fs.writeFileSync(fixture, fixtureCliBytes, { flag: 'wx', mode: 0o700 });
     require('../issue-950/ev07-shadow/load.cjs');
@@ -132,7 +132,25 @@ async function run(output) {
     assert.equal(plan.nativeControl.fixtureCliSha256, hash(fixtureCliBytes));
     assert.match(plan.nativeControl.harnessSha256, /^[a-f0-9]{64}$/u);
     const operation = provenance.bootstrapOperation(root);
-    if (operation) return runWorker(output, plan, operation);
+    if (operation) {
+        try { return await runWorker(output, plan, operation); }
+        catch (error) {
+            // Persist an actual model-free SDK preflight/execution failure
+            // before whole-scope teardown kills this worker. This private
+            // diagnostic is never scope authority or accepted research.
+            try {
+                assert.equal(output, '/qualification-output/native');
+                const stat = fs.lstatSync(output);
+                assert(process.getuid() > 0 && stat.isDirectory() && !stat.isSymbolicLink()
+                    && stat.uid === process.getuid() && (stat.mode & 0o077) === 0);
+                write(path.join(output, 'worker-failure.json'), { schemaVersion: 1,
+                    caseId: operation.slot.caseId, name: error?.name ?? null,
+                    message: String(error?.message ?? 'Unknown native SDK failure').slice(0, 2000),
+                    category: error?.category ?? null, preflightStage: error?.preflightStage ?? null, modelCalls: 0 });
+            } catch { /* Retain the original failure if the private diagnostic is unavailable. */ }
+            throw error;
+        }
+    }
     output = path.resolve(output); fs.mkdirSync(output, { mode: 0o700 });
     const record = require('./attempt-ledger.cjs').createDurableRecorder(path.join(output, 'native.jsonl'));
     const controls = new Set(), abort = () => { for (const control of controls) control.abort(); };

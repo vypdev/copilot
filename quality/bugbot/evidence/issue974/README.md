@@ -4,8 +4,10 @@ Current preparation: implementation `e4bade2` is pushed and passes all 239 Node
 controls without failures, skips or cancellations, plus its normal SDK hooks.
 The corrected immutable SDK image and four new native-only plans are recorded
 in [the current tuple](../issue-974/native-controls/e4bade2/README.md).
-The two prior native commands failed admission before any SDK scope started;
-actual C32–C35 acceptance remains 0/4. Changed-module coverage and the complete
+The first two native commands failed before namespace startup; the third starts
+four namespaces but fails SDK fixture preparation. A local fixture basename and
+private diagnostic correction is separately retained below; actual C32–C35
+acceptance remains 0/4. Changed-module coverage and the complete
 scientific/comparison gates remain unmet. All174/42 model measurements are
 unstarted and production remains disabled.
 
@@ -319,3 +321,18 @@ retain four created, never-started scopes confirmed removed by exact ID. These
 are failed admission attempts, not successful SDK cancellation controls. The
 correction needs a new committed implementation/image and new native-only plans
 before another actual command. Qualification model calls remain zero.
+
+The third command at `b79c13f` starts all four namespaces and reaches the native
+worker, but each exits1 before any fixture leader/descendant readiness. All four
+namespaces are confirmed stopped and removed. The fixture used `fixture-codex`,
+which the actual unchanged SDK executable-selection policy necessarily rejects;
+an independent policy control reproduces that rejection and accepts the corrected
+`codex` basename. The exact original worker exception was not retained, so that
+control does not invent an exclusive stack trace. The fixture now preserves a
+private SDK error before teardown. Four semantic diagnostic variants preserve
+the original error and deny unsafe diagnostic targets/write replacement.
+[Retained third result and correction](../issue-974/controls/native3-sdk-preflight-correction.json)
+remain separate from actual cancellation acceptance, still0/4. A separate owned
+metadata process also confirms the effective mount check while running; this
+does not substitute for the actual SDK controls. Another source/image/plan tuple
+is required before the next native command. All174/42 model calls remain unstarted.
