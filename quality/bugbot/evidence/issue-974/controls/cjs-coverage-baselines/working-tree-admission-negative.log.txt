@@ -1,0 +1,29 @@
+✖ binds independent corpus dispatch to its actual ledger and score: valid (7038.968875ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7122.675917
+
+✖ failing tests:
+
+test at quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.test.cjs:100:5
+✖ binds independent corpus dispatch to its actual ledger and score: valid (7038.968875ms)
+  AssertionError [ERR_ASSERTION]: application source or lockfile does not match the preregistered implementation: src/data/repository/agent_cli_execution.ts
+      at Object.attestSource (/private/tmp/copilot-goal-974/quality/bugbot/evidence/issue-950/execution-provenance.cjs:134:9)
+      at boundCorpusFixture (/private/tmp/copilot-goal-974/quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.test.cjs:83:55)
+      at TestContext.<anonymous> (/private/tmp/copilot-goal-974/quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.test.cjs:101:19)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1397:25)
+      at Test.start (node:internal/test_runner/test:1257:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

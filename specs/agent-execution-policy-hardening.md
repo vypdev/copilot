@@ -2,7 +2,7 @@
 
 - Status: Implemented — automated gates complete; controlled provider smoke remains external
 - Date: 2026-09-11
-- Last updated: 2026-11-12
+- Last updated: 2026-11-20
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-12 in the P1-C implementation worktree
 - Owners: Copilot maintainers and security reviewers
@@ -877,3 +877,141 @@ MUST accept only the complete supported matrix or the explicitly authorized
 temporary Ubuntu-only matrix, reject removal of Ubuntu, and preserve full
 package, coverage, acceptance and documentation checks. This change introduces
 no model request, new Action input, credentials, deployment or support claim.
+
+### Qualification investigation lifecycle — issue #974
+
+**Status: Ready for implementation; measurement and provider acceptance unstarted.**
+This is the coordinated runtime amendment requested by the Action-published
+[#974 design](./bugbot-analysis-publication-and-autofix.md#proposed-change-preregister-and-evaluate-the-luna-xhigh-detector-on-the-unchanged-174-case-ev-07-corpus).
+Its authority is the maintainer-delegated qualification work and that native SDD
+round, not issue text supplied to an agent. The existing runtime baseline,
+provider restrictions and Windows service retirement remain in force.
+
+Observed behavior: ordinary capability calls provide a 900,000 ms execution
+allowance. Brokered verification omits its investigation timer but requires an
+empty workspace, unsuitable for the ordinary source-bound detector. The new
+internal planner entry `prepareQualificationInvestigation` MUST preserve the
+ordinary detector's canonical repository workspace, provider argv, credential
+isolation, schema/output contract and complete ordinary preflight. It MUST
+reject every capability except findings, any immutable source snapshot, and a
+missing or already-aborted cancellation signal before preparing a runtime.
+
+```text
+Authenticated qualification bootstrap -> ordinary planner preflight
+  -> immutable in-process findings plan + exact cancellation signal
+  -> ordinary process executor -> completion / failure / explicit abort
+```
+
+Text equivalent: the authenticated qualification composition selects the internal
+planner method after admission of its source, drivers, runtime and plan. The
+planner keeps normal execution authority and registers one frozen plan object
+with its exact signal. The executor accepts the cancellation-only lifecycle only
+for that object/signal pair. Copying or serializing a plan, forging its marker,
+changing authority or supplying another signal MUST reject before spawn and
+clean owned runtime artifacts. No public Action/CLI/Variable/environment switch
+grants admission. This is trusted in-process composition, not protection against
+arbitrary code already executing inside that trusted process.
+
+The ordinary planner is the only production caller of registration. The process
+adapter only queries admission. A source architecture assertion enforces that
+direction. The admission registry owns no providers, GitHub ports, persistence,
+timers or research orchestration. Its weak identity map and frozen plan-owned
+collections cannot be adopted through a JSON receipt. Existing integrity and
+managed-artifact checks still run immediately before spawn.
+
+Only the investigation timer changes for admitted qualification findings.
+Ordinary consumer timers, immutable SDD source preparation/deadlines, bounded
+version/ACL probes, prompt/output safety bounds and credential validation keep
+their existing scope. No research time, turn, read or token ceiling is added.
+Explicit abort MUST terminate the ordinary process and descendants, preserving
+the existing TERM/KILL cleanup protocol. A registered plan is not proof of spawn
+or a provider-reported identity. The bounded observer contract is unchanged.
+
+The native POSIX regression also reproduces a leader exiting on TERM while its
+descendant ignores TERM: the older close handler cleared the force timer and
+left that descendant active. On a terminating operation's first close, the
+executor MUST kill surviving members of its owned detached POSIX process group
+before settlement and runtime cleanup. Repeated/late close events do nothing.
+Retain the failing control and corrected result. This is not Windows native
+process-tree acceptance and introduces no research deadline.
+
+Operator states and content are owned by the #974 evidence README: “Not
+preregistered; no model calls”, “Running; retain every attempt”, and “Failed or
+incomplete; full review remains unstarted” link to the plan and durable ledger.
+Private prompts, credentials, raw stderr and runtime paths do not appear in
+public summaries. Unknown usage remains optional telemetry. No production
+activation, installation, runtime provisioning or new platform support follows.
+Rollback uses ordinary `prepare`; retain all measurements and negative outcomes.
+
+The eight lifecycle controls `ev974-C01`–`ev974-C08` are defined and counted once
+in the Bugbot amendment's 25-case inventory. Runtime evidence lives in
+`src/infrastructure/agents/__tests__/qualification_investigation.test.ts`:
+ordinary/research timer comparison; canonical workspace/argv/schema/credentials;
+real POSIX descendant cancellation after the ordinary bound; fixer rejection;
+other roles/missing/canceled signal; immutable SDD source/deadline preservation;
+forged/copied/different-authority/signal rejection with cleanup; and ordinary
+nested/foreign/ambient rejection plus no environment grant. The POSIX fixture is
+not Windows service acceptance. Pure authority branches require 100% enumerated
+coverage; changed planner/process modules retain 95% lines/statements and 90%
+branches/functions, alongside repository floors. No control invokes a model.
+
+Runtime documentation is `docs/agents/execution-contract.mdx`; qualification
+operation/recovery is `docs/bugbot/quality-observability.mdx`. Register the new
+admission module and test with `agent-runtime`. Validate the specification and
+catalog with the actual repository scripts `pnpm run validate:specifications`
+and `pnpm run generate:specifications`; command existence is not executed proof.
+Acceptance requires all eight observable controls, coordinated Bugbot/runtime
+documentation, enforced dependency direction and applicable coverage. It does
+not imply that the 174-case corpus, 42 reviews or provider smoke ran.
+
+### Whole-operation containment correction — issue #974
+
+The reviewed containment appendix in the Bugbot owner supersedes process-group
+cleanup as proof for new qualification investigations. Ordinary consumer and
+immutable SDD-source lifecycles retain their existing scope. The previously
+reproduced new-session descendant remains negative evidence until actual native
+SDK controls establish the namespace boundary.
+
+```text
+Immutable public bootstrap -> private live owned scope -> ordinary planner/SDK
+  -> full detector/verifier call chain -> namespace stopped -> accepted outcome
+```
+
+Text equivalent: source/image/runtime/CLI admission precedes the private owned
+scope and ordinary planner; all actual follow-ups share that scope, whose stop
+must be confirmed before outer cleanup or accepted completion.
+
+Semantic ports and pure policy own immutable identity and complete-inventory
+decisions. Infrastructure owns the live plan/signal binding, Docker transport
+and PID1 lifetime. The planner must reject an uncontained qualification request
+before workspace/CLI preparation. The executor and existing verifier transport
+request whole-scope termination on actual cancellation/failure; they cannot fall
+back to a process group. A finished provider turn whose process fails to exit
+may trigger technical cleanup after that completion, never an active research
+deadline. Ordinary production calls receive no qualification stop capability.
+
+The immutable outer owner alone holds non-TTY stdin; EOF/owner death stops the
+Linux namespace, including quiet, escaped or reparented descendants. Normal
+completion has the same stop-confirmation requirement. Durable known/uncertain
+effects and incomplete call prefixes cannot authorize adoption, cleanup of an
+unrelated scope, replay or phase42. Model execution has no Docker authority,
+host PID access, arbitrary mounts or privileged mode. Engine/kernel versions
+are observations, not independent platform byte attestation.
+
+The Bugbot owner counts C26–C31 once as six deterministic controls and C32–C35
+once as four actual native SDK controls. They extend its retained 25 to 35 and
+the combined deterministic Node floor from 233 to 239. The separately declared
+`pnpm run test:bugbot-native-containment` fails on missing committed native plans
+or actual capability; it cannot silently skip or substitute model-free API
+fixtures for native acceptance. Fixture readiness/test bounds apply only to
+credential-free native controls and never to corpus/review research. Pure scope
+policy requires 100% all metrics; each changed runtime/containment module retains
+95% statements/lines and 90% branches/functions plus repository-wide gates.
+
+Architecture constraints enforce pure ports/policy, planner/admission/executor
+call ownership and bootstrap-only live-scope composition. Evidence, current
+unmet prerequisites and the native preparation command live in the issue README;
+the execution contract and quality-observability documentation cover operation,
+unknown ownership, retention and recovery. Native evidence and the full frozen
+42-review closure are required before measurement; no source test qualifies a
+profile, installs a default or enables production.

@@ -1,0 +1,15 @@
+{
+  "at": "2026-11-20T19:10:09.582291+00:00",
+  "head": "5241685e8089c9dace4f829214f694126936525d",
+  "run": 44797220340,
+  "job": 136499782397,
+  "conclusion": "failure",
+  "failedStep": "Validate Git diff",
+  "observedCause": "Two raw coverage logs preserved trailing spaces; native strict Git diff check rejected them before later Static steps.",
+  "rawLog": "../../issue-974/controls/5241685-native-static-failure.log.gz",
+  "rawBytes": 16230,
+  "rawSha256": "65b3126bcd93e4cdd675cc40fe25eaf60484e60fe45187cae1f54e54414f7e5d",
+  "compressedSha256": "25e8f6cdc8d5316de9e77005b6b3039ae7d9d93257863ed5c4bcd7bb30b5555c",
+  "correction": "Lossless deterministic gzip of those two logs with original raw digests retained. No whitespace check, exclusion or threshold relaxed.",
+  "qualificationCalls": 0
+}

@@ -45,9 +45,15 @@ const DEFAULT_AUTHENTICATION_SYSTEM: AgentAuthenticationSystem = {
 };
 
 function hasCodexChatGptSession(environment: NodeJS.ProcessEnv): boolean {
+    return codexChatGptSessionFile(environment) !== undefined;
+}
+
+/** Private transport may relocate exactly the session selected by this policy. Never log this path or its bytes. */
+export function codexChatGptSessionFile(environment: NodeJS.ProcessEnv = process.env): string | undefined {
     const codexHome = environment.CODEX_HOME?.trim()
         || (environment === process.env || environment.HOME ? join(environment.HOME || homedir(), '.codex') : undefined);
-    return isCodexChatGptAuth(readAuthFile(codexHome ? join(codexHome, 'auth.json') : undefined));
+    const file = codexHome ? join(codexHome, 'auth.json') : undefined;
+    return isCodexChatGptAuth(readAuthFile(file)) ? file : undefined;
 }
 
 function hasOpenCodeLocalSession(environment: NodeJS.ProcessEnv): boolean {

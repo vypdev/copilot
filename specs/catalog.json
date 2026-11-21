@@ -2306,7 +2306,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes with regression coverage for cwd/pattern-grounded indirect unittest discovery and source-bound module execution evidence, with active-instance Kotlin Json nullable-input policy grounding; verify complete large diffs through a source-bound closed framed profile with immutable local Git proof, live-base freshness and atomic global publication; ground Python exception syntax in declared interpreter versions and PEP 758 while preserving older-target and independent runtime defects; ground filesystem recovery findings in retention/no-overwrite, ownership and publication contracts while preserving required disposable cleanup and data-loss defects; independently adjudicate candidates for supplied Python source, retaining existing bounded source, identity and history controls; trace concrete helper defaults/overrides, database-file parent containment and stored query values before judging assertions, preserving exact fragment coordinates and genuine assertion failures; co-deliver complete long discussion to every source-bound partition within closed native prompt and invocation traffic limits, preserving provenance and truthful provider partial coverage; verify actual resource content, source binding, human authority and intended entry availability before reporting an authentication defect; ground asynchronous findings in complete statements, actual receiver/cycle/caller and reached lifecycle effects, preserving genuine unfinished updates and omitting disproved claims JSON boundary evidence follows producer/decoder/transform/reader values and Python identity-cast semantics; paired source-bound controls preserve actual serialization failures without consumer-specific suppression. Native completed JSON/schema and host candidate-proof failures retain content-free closed reasons through the original three-attempt partition bound; provider/process and historical unknown failures remain distinct.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-19",
+      "lastVerified": "2026-11-21",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -2469,7 +2469,23 @@
         "src/application/policies/bugbot_mutation_cancellation_policy.ts",
         "quality/bugbot/corpus.v2.json",
         "quality/bugbot/evidence/issue-985/derivation.json",
-        "quality/bugbot/evidence/issue-985/historical-hashes.json"
+        "quality/bugbot/evidence/issue-985/historical-hashes.json",
+        "quality/bugbot/evidence/issue974/corpus-selection.cjs",
+        "quality/bugbot/evidence/issue974/attempt-ledger.cjs",
+        "quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs",
+        "quality/bugbot/evidence/issue-950/execution-provenance.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/configuration.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/load.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/full-review.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/score-review.py",
+        "quality/bugbot/evidence/issue974/operation-containment.cjs",
+        "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+        "quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile",
+        "quality/bugbot/evidence/issue974/containment-native-fixture.cjs"
       ],
       "tests": [
         "src/application/policies/__tests__/bugbot_shadow_configuration_policy.test.ts",
@@ -2592,7 +2608,18 @@
         "quality/bugbot/evidence/issue-950/ev07-shadow/plan.test.cjs",
         "src/application/policies/__tests__/bugbot_mutation_cancellation_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/observe_bugbot_base.test.ts",
-        "quality/bugbot/evidence/issue-985/corpus-revision.test.cjs"
+        "quality/bugbot/evidence/issue-985/corpus-revision.test.cjs",
+        "quality/bugbot/evidence/issue974/qualification.test.cjs",
+        "quality/bugbot/evidence/issue974/containment-native.test.cjs",
+        "quality/bugbot/evidence/issue-950/qualification-bootstrap.test.cjs",
+        "quality/bugbot/evidence/issue974/corpus-collector-components.cjs",
+        "quality/bugbot/evidence/issue974/corpus-worker-components.cjs",
+        "quality/bugbot/evidence/issue974/launcher-components.cjs",
+        "quality/bugbot/evidence/issue974/attempt-components.cjs",
+        "quality/bugbot/evidence/issue974/implementation-components.cjs",
+        "quality/bugbot/evidence/issue974/full-review-fault-components.cjs",
+        "quality/bugbot/evidence/issue974/full-review-lifecycle-components.cjs",
+        "quality/bugbot/evidence/issue-974/controls/implementation-full-review-coverage/coverage.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -2612,7 +2639,8 @@
         "quality/bugbot/evidence/issue-950/ev07-shadow/preregistration.md",
         "quality/bugbot/evidence/issue-950/shadow-verification/README.md",
         "quality/bugbot/evidence/issue-950/review-progress-follow-up.md",
-        "quality/bugbot/evidence/issue-985/README.md"
+        "quality/bugbot/evidence/issue-985/README.md",
+        "quality/bugbot/evidence/issue974/README.md"
       ]
     },
     {
@@ -2927,7 +2955,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-07",
+      "lastVerified": "2026-11-21",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -2994,7 +3022,12 @@
         "src/application/policies/agent_source_snapshot_policy.ts",
         "src/infrastructure/agents/agent_source_snapshot_git.ts",
         "src/infrastructure/agents/agent_source_snapshot_workspace.ts",
-        "src/infrastructure/agents/agent_source_snapshot_integrity.ts"
+        "src/infrastructure/agents/agent_source_snapshot_integrity.ts",
+        "src/infrastructure/agents/qualification_investigation_admission.ts",
+        "src/application/ports/qualification_operation_scope_ports.ts",
+        "src/application/policies/qualification_operation_scope_policy.ts",
+        "src/infrastructure/agents/qualification_operation_scope.ts",
+        "src/data/repository/agent_authentication.ts"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -3035,7 +3068,9 @@
         "src/infrastructure/agents/__tests__/agent_source_snapshot_integrity.test.ts",
         "src/infrastructure/agents/__tests__/agent_source_snapshot_gate.integration.test.ts",
         "src/application/policies/__tests__/sdd_source_context_presentation.test.ts",
-        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts"
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts",
+        "src/infrastructure/agents/__tests__/qualification_investigation.test.ts",
+        "src/architecture/__tests__/agent_output_locale_boundaries.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",

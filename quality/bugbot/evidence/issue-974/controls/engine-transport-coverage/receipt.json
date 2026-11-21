@@ -1,0 +1,273 @@
+{
+  "schemaVersion": 1,
+  "kind": "exact-source AST engine component coverage through repository C27 and actual local Unix HTTP fixtures; no native Docker/model acceptance",
+  "results": [
+    {
+      "file": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "sourceSha256": "6ca0073384a9eca948de6505310c66c8119f919cb362eeaf88bd4e0cf8c3d668",
+      "summary": {
+        "lines": {
+          "total": 262,
+          "covered": 262,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 47,
+          "covered": 44,
+          "skipped": 0,
+          "pct": 93.61
+        },
+        "statements": {
+          "total": 341,
+          "covered": 337,
+          "skipped": 0,
+          "pct": 98.82
+        },
+        "branches": {
+          "total": 159,
+          "covered": 148,
+          "skipped": 0,
+          "pct": 93.08
+        }
+      },
+      "gate": true
+    }
+  ],
+  "measuredEngineComponentGateSatisfied": true,
+  "globalChangedModuleCoverageSatisfied": false,
+  "observations": [
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "module-load",
+      "relative": "quality/bugbot/evidence/issue974/operation-containment.cjs"
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "nativeSdkAcceptance": false,
+  "production": "disabled",
+  "testRun": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "exitCode": 0
+  },
+  "sourceScope": "Only exact unchanged operation-containment.cjs, measured by the public repository driver; not Docker/native/model acceptance"
+}

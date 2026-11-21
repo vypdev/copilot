@@ -66,7 +66,50 @@ These let the sandbox locate its system tools on Linux and Windows. Model,
 GitHub, Git, SSH, proxy, and home/configuration variables are excluded. The
 list is fixed by Copilot and cannot be expanded through repository inputs.
 
-The hard maxima are 15 minutes, 512 KiB of prompt bytes, and 4 MiB of combined process output. Structured tasks declare a JSON Schema. Before Codex starts, Copilot requires a closed object schema in which every property is required, optional values are nullable, nested objects reject additional properties, and arrays define their items. Copilot then validates the returned response locally as well. An incompatible contract, invalid or oversized output, and prose-wrapped JSON are rejected; removed response shapes have no legacy conversion path.
+Ordinary execution has hard maxima of 15 minutes, 512 KiB of prompt bytes, and 4 MiB of combined process output. Structured tasks declare a JSON Schema. Before Codex starts, Copilot requires a closed object schema in which every property is required, optional values are nullable, nested objects reject additional properties, and arrays define their items. Copilot then validates the returned response locally as well. An incompatible contract, invalid or oversized output, and prose-wrapped JSON are rejected; removed response shapes have no legacy conversion path.
+
+### Qualification investigation
+
+The internal qualification composition can request a cancellation-only findings
+investigation after authenticating its committed source, driver, runtime and
+plan. It uses the ordinary detector, provider, canonical source workspace,
+read-only sandbox, credentials isolation and schema/output acceptance. It has no
+investigation timer, turn/read ceiling or token budget. Each complete corpus
+case or paired review has one admitted Linux PID namespace, including every
+detector/verifier follow-up. Explicit cancellation releases the entire scope,
+including descendants that change session or become reparented.
+
+```text
+Pinned qualification admission -> owned operation -> normal planner/executor
+  -> completion / failure / cancellation -> namespace stopped -> accepted result
+```
+
+The internal planner binds a frozen plan to its exact cancellation signal in
+memory. A copied/serialized plan, forged marker, different signal, write role,
+immutable SDD source snapshot or inconsistent authority cannot acquire that
+exception. Public inputs and environment variables do not select it. Trusted
+code in that process remains part of the qualification trust boundary. The live
+scope must exist before planner preparation or a CLI probe. Qualification has
+no uncontained or process-group fallback. Model execution gets no engine socket,
+client authority, host PID access or arbitrary host mounts.
+
+The immutable outer bootstrap alone owns the non-TTY stdin lifetime. Owner
+death/EOF stops the namespace. Normal completion also waits for an observed
+stopped namespace before outer cleanup and result acceptance. A provider
+response, process close, missing pipe or sampled process tree cannot supply that
+proof. Unknown create/start/stop effects remain incomplete and cannot be replayed
+or adopted automatically. Recovery addresses only positively correlated owned
+IDs. Technical KILL escalation follows an actual stop request and never limits
+active investigation.
+
+Ordinary execution and immutable pre-branch SDD source deadlines retain their
+existing limits. Technical version/ACL probes, credential, artifact and output
+integrity checks also remain in force. Planner admission does not prove that a
+process spawned or that the provider reported a model identity. Qualification
+records unavailable model identity and usage as unknown and preserves failed or
+interrupted attempts. See [qualification evidence and recovery](../bugbot/quality-observability).
+This internal route does not activate production verification or install a new
+default.
 
 For Codex, the native schema preserves that closed JSON shape while string
 length bounds are enforced locally from the complete original schema. This

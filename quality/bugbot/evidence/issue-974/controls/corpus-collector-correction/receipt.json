@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T14:20:16.930462+00:00",
+  "kind": "model-free corpus host orchestration component; synthetic case inventory and modeled containment, actual filesystem EISDIR",
+  "headBefore": "77603a660282ce9ca189a3ab465ac457ce61034b",
+  "sourcePath": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+  "sourceBeforeSha256": "175657587b08cdb313bdb7f58fe471de95219eb30d60afc454813e0e04abe54d",
+  "sourceAfterSha256": "71b24a615260277b6371354e488133e6fdcbf8caa4d251e79286fe8c4e1bc7e9",
+  "testPath": "quality/bugbot/evidence/issue974/qualification.test.cjs",
+  "sameTestForCausalRedAndGreen": true,
+  "testSha256": "89075279348a592c8ed9a7b752c7ceaab62e182d4da77b4f966b3e26b34d5ebb",
+  "fixtureError": "VM JSON realms prevented preflight dispatch in initial harness; not product evidence",
+  "causalRed": {
+    "selectedFail": 1,
+    "modeledDispatches": 3,
+    "siblingAborts": 0,
+    "requiredSiblingAborts": 2
+  },
+  "correctionGreen": {
+    "selectedPass": 1,
+    "fail": 0,
+    "skip": 0,
+    "cancel": 0,
+    "modeledDispatches": 3,
+    "siblingAborts": 2,
+    "waitedForConfirmedModeledStops": true,
+    "durableSyntheticSlots": 174,
+    "missingTerminal": 1,
+    "interrupted": 2,
+    "notStarted": 171,
+    "finishPassed": false,
+    "finishComplete": false
+  },
+  "bothC31Routes": {
+    "pass": 2,
+    "fail": 0,
+    "skip": 0,
+    "cancel": 0
+  },
+  "caseBudget": "Additional corpus arm of existing ev974-C31; retained35 minimum acceptance IDs unchanged. Not an extra native/model case.",
+  "unchangedSourceOutsideCorrection": [
+    "source admission",
+    "runtime admission",
+    "detector/verifier configuration",
+    "174 case IDs/labels/order",
+    "42 cohort",
+    "numerical gates",
+    "explicit cancellation",
+    "native scope ownership policy"
+  ],
+  "globalChangedDriverCoverageSatisfied": false,
+  "committedSourceCohort": "required after normal source commit; previous uncommitted-source negatives remain",
+  "freshFinalSourceRuntimeNative4Required": true,
+  "qualificationModelCalls": 0,
+  "nativeSdkAcceptance": false,
+  "actual174": "unstarted",
+  "actual42": "unstarted",
+  "qualifiedProfiles": [],
+  "production": "disabled",
+  "files": [
+    {
+      "path": "quality/bugbot/evidence/issue-974/controls/corpus-collector-correction/fixture-preflight-error.utf8.json",
+      "rawBytes": 917,
+      "rawSha256": "a4f47b091c24d4188fc3caa6f2be28c9d68970a1a1439d0692740dca808e38d9",
+      "containerSha256": "57f9286ddf424a162eb60175f2577a034ab0aafd83e5e1427f2ad63229858042"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/controls/corpus-collector-correction/causal-red.utf8.json",
+      "rawBytes": 931,
+      "rawSha256": "85c8fc291380d4f39c2bc55af23ff7b46ddd0c412781b770c65a8a2328027d41",
+      "containerSha256": "4452b54f8db9f31f832effc157b6bed91ff72406cebe52bb053c7e021ddc55aa"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/controls/corpus-collector-correction/correction-green.utf8.json",
+      "rawBytes": 220,
+      "rawSha256": "7ff98fda7bc27c7eb9603eb2a0fe15b6e99d21810bd190e251e8bb51eebb4834",
+      "containerSha256": "391b1bcdd116b3659097faea3728254ec6d3d42bad87fad6b0da6cbe85d26cd5"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/controls/corpus-collector-correction/both-routes-green.utf8.json",
+      "rawBytes": 348,
+      "rawSha256": "e242d24878e43566d1bf3d9bd8e95ffd484a0bc1ccd091008b2e5aa37b11de78",
+      "containerSha256": "aab369015c0cce50fdb6b7a33d77ef881f2d429cc8d18e113c492c3b17c72836"
+    }
+  ]
+}

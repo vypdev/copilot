@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "causal source validation failure",
+  "failedHead": "1f20e9c5b46a7b3fdd761fbc07051058bb0dc699",
+  "checkId": 136706675725,
+  "jobId": 136705726259,
+  "error": "validation.evidence-unavailable",
+  "rawLog": "/private/tmp/copilot-goal-974-1f20e9-native-commit-failure.log",
+  "rawLogSha256": "fd82e853d5c1b9e1e90d44ae8a142863103bf8e2ef0421d2fe0c557f76dd10b3",
+  "publishedCard": 7052572620,
+  "publishedCommit": "8d44350032e416f35f37abc9417587fa9469a5f2",
+  "selectionArtifact": "a5e74c0efa9c4dca80358316b75706ba9da5c1946356ad21aa144e3506c715f9",
+  "evaluatedArtifact": "01c9d4dab7d11def91538274b58f37c372ee6ca0151b9e1699bf59d1bca57812",
+  "changedNotes": "design-time case status and eight implementation file inventory rows",
+  "actualCause": "read_progress_sdd_seed.ts requires evaluated SDD text exactly equal to published text and selected artifact digest; source commit changed those noncontract notes",
+  "correction": "restore exact published owner bytes; keep implementation status and expanded path evidence in README/catalog evidence without weakening publication/selection validation",
+  "notYetApplied": true,
+  "modelCalls": 0,
+  "production": "disabled"
+}

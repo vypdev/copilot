@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "kind": "normal commit preparation failure, before any hook or commit",
+  "parent": "13e31eb0b1ed9a260f00e78de13091c295b9520c",
+  "helper": "/private/tmp/copilot-goal-974-commit-native5-session.py",
+  "exitCode": 1,
+  "reason": "git add refuses explicitly named ignored *.log artifacts; other owned paths may be staged",
+  "correction": "retain the exact raw bytes as .log.txt without changing ignore rules; recovery uses a new one-use normal helper",
+  "renamed": [
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/native5/ev974-native-completion-race-OcY5BU/bootstrap.log",
+      "reviewableText": "quality/bugbot/evidence/issue-974/controls/native5/ev974-native-completion-race-OcY5BU/bootstrap.log.txt"
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/native5/ev974-native-ev974-C32-NqYelO/bootstrap.log",
+      "reviewableText": "quality/bugbot/evidence/issue-974/controls/native5/ev974-native-ev974-C32-NqYelO/bootstrap.log.txt"
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/native5/ev974-native-ev974-C33-UpkpDL/bootstrap.log",
+      "reviewableText": "quality/bugbot/evidence/issue-974/controls/native5/ev974-native-ev974-C33-UpkpDL/bootstrap.log.txt"
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/native5/ev974-native-owner-loss-hw6XAz/bootstrap.log",
+      "reviewableText": "quality/bugbot/evidence/issue-974/controls/native5/ev974-native-owner-loss-hw6XAz/bootstrap.log.txt"
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/native5/ev974-native-unrelated-sentinel-5WKy0D/bootstrap.log",
+      "reviewableText": "quality/bugbot/evidence/issue-974/controls/native5/ev974-native-unrelated-sentinel-5WKy0D/bootstrap.log.txt"
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/native5/native-controls-attempt5.log",
+      "reviewableText": "quality/bugbot/evidence/issue-974/controls/native5/native-controls-attempt5.log.txt"
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/session-transport-coverage/prototype2.log",
+      "reviewableText": "quality/bugbot/evidence/issue-974/controls/session-transport-coverage/prototype2.log.txt"
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/session-transport-coverage/semantic-and-fault-controls.log",
+      "reviewableText": "quality/bugbot/evidence/issue-974/controls/session-transport-coverage/semantic-and-fault-controls.log.txt"
+    }
+  ],
+  "nativeAcceptanceUnaffected": true,
+  "modelCalls": 0,
+  "production": "disabled"
+}

@@ -1,0 +1,164 @@
+{
+  "recordedAt": "2026-11-20T18:16:59.219700+00:00",
+  "state": "precommit-deterministic-evidence",
+  "sourceBase": "f67b0d930578f961bb85bd23fc656468470239f6",
+  "implementationCommit": null,
+  "measuredModelCalls": 0,
+  "qualifiedProfile": null,
+  "fullReview": "unstarted",
+  "evaluatedPrWriteAttempts": 0,
+  "production": "disabled",
+  "newCases": {
+    "budget": 24,
+    "jestLifecycleCasesPassed": 8,
+    "nodePrecommitCasesPassed": 14,
+    "committedSourceGateCasesNotYetExecuted": [
+      "ev974-C22",
+      "ev974-C24"
+    ],
+    "nodeSuiteAfterCommit": 232,
+    "retainedNodeCases": 216
+  },
+  "lifecycleScopedCoverage": {
+    "commandExit": 0,
+    "passedTests": 119,
+    "oldSkipped": 2,
+    "note": "explicit module-scoped thresholds; not a repository-wide coverage certificate"
+  },
+  "retainedNegativeResults": [
+    {
+      "log": "../../issue-974/controls/lifecycle-incomplete-global-coverage.log.gz",
+      "exit": 1,
+      "testsPassed": 119,
+      "reason": "scoped collection excluded two globally configured coverage owners; not a passing whole-coverage command"
+    },
+    {
+      "log": "descendant-red.log",
+      "exit": 1,
+      "reason": "real TERM-ignoring POSIX descendant remained alive after its parent closed; owned fixture was explicitly cleaned"
+    },
+    {
+      "log": "node-first-schema-fixture-failure.log",
+      "exit": 1,
+      "passed": 13,
+      "failed": 1,
+      "reason": "C15 fake initial response omitted required ordinary schema fields; fixture corrected, strict product schema unchanged"
+    }
+  ],
+  "correctedResults": [
+    {
+      "log": "descendant-green.log",
+      "exit": 0,
+      "passed": 55,
+      "oldSkipped": 1
+    },
+    {
+      "log": "node-precommit-corrected.log",
+      "exit": 0,
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "log": "literal-followup-corrected.log",
+      "exit": 0,
+      "passed": 1
+    },
+    {
+      "log": "bootstrap-closed-route.log",
+      "exit": 0,
+      "passed": 1,
+      "note": "final added v2 normal-flow route rejection"
+    }
+  ],
+  "otherChecks": {
+    "typecheck": 0,
+    "focusedLint": 0,
+    "specificationGeneration": 0,
+    "specifications": 0,
+    "documentation": 0,
+    "agentDocumentation": 0
+  },
+  "limitations": [
+    "Initial Jest test-source TS narrowing error was corrected; its tool response remains in chat history, no raw local log was captured.",
+    "Negative/positive process regression was run before a contributor commit; the original close logic is retained in the Action source base and its Git history.",
+    "Synthetic attempt/scorer controls are not corpus measurements or independent malicious-producer attestation.",
+    "Full ordinary commit hooks, committed-source Node controls and final native checks remain pending."
+  ],
+  "artifacts": {
+    "lifecycle-focused.log": {
+      "bytes": 206,
+      "sha256": "1ce929bed9cdcd3c71ec8322cb883b7c7b339058eb40fba6516e58b8de61ebdf"
+    },
+    "lifecycle-scoped-coverage.json": {
+      "bytes": 1316,
+      "sha256": "48238713dadb166b85d9d870f11c3db70057912efc490859c07775ff684eef9b"
+    },
+    "descendant-red.log": {
+      "bytes": 1112,
+      "sha256": "2b8d2cd1896cdc8ee8041a9057da614da858eb466b90529ff9e8e10100af50e9"
+    },
+    "descendant-green.log": {
+      "bytes": 290,
+      "sha256": "7fbc11ae87cb2ff2c648c4219894a592e51603531c9b5148c07350025e7c8713"
+    },
+    "node-first-schema-fixture-failure.log": {
+      "bytes": 3106,
+      "sha256": "8619a25ff19ec0b32bb788d7e766acbd200477220bf49d1dc7d52affeed26bf9"
+    },
+    "literal-followup-corrected.log": {
+      "bytes": 237,
+      "sha256": "349da1584e7c342f7e2af5519db1976a8affcefe053b8402ce2e178b6412eb91"
+    },
+    "node-precommit-corrected.log": {
+      "bytes": 1738,
+      "sha256": "263777e88ca6fd6edf9a0975e02b60f8d7632f76a26f71f540160dce05cc2d8a"
+    },
+    "bootstrap-closed-route.log": {
+      "bytes": 236,
+      "sha256": "2b5eaafbfc58aad5f0b7253154fdbdc2d3ae61315ec3e4422b5b1cbf54854ae1"
+    },
+    "specification-generation.log": {
+      "bytes": 2466,
+      "sha256": "eff9e985ed38703c375957ed079f98b95e6d6de4c3e1efbbcc9d4be1f26078e3"
+    },
+    "specifications.log": {
+      "bytes": 2460,
+      "sha256": "f13ba93ab807d3b316b8143dae8d371eb8f1c4c9584f2a394b9c1ecf65d945e4"
+    },
+    "documentation.log": {
+      "bytes": 306,
+      "sha256": "1b2d840993321a85c930e6767a23f6fa9a1e6e9ba3d7b48dcac9dce11d259c5a"
+    },
+    "agent-documentation.log": {
+      "bytes": 205,
+      "sha256": "ec652764af3a0b1f07feb3c582fd25649f1be6af792595c925bf3d7ea5dfeac4"
+    },
+    "typecheck.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "focused-lint.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "../../issue-974/controls/lifecycle-incomplete-global-coverage.log.gz": {
+      "bytes": 583,
+      "sha256": "b53b2e539bdbd1d8972f61ade2e4cd0b9de78a5a30b0e0a6d4252dfbad9d9510",
+      "encoding": "gzip",
+      "rawBytes": 1990,
+      "rawSha256": "d284c9213fecaa664690f5afe553becb278ad02697b125e825be9fe0e4ca4d00",
+      "originalFile": "lifecycle-incomplete-global-coverage.log",
+      "reason": "Lossless transport; raw trailing spaces retained without weakening native Git whitespace checks."
+    },
+    "../../issue-974/controls/lifecycle-scoped-coverage.log.gz": {
+      "bytes": 538,
+      "sha256": "d4e1a8ba00aa9aed3834f538459f49184e4255588c33febeb3f4d6f2f9b1581d",
+      "encoding": "gzip",
+      "rawBytes": 1855,
+      "rawSha256": "3393e5828e8f53db495ddf3c04ec423d201724c733520d1d5430a807ffac2992",
+      "originalFile": "lifecycle-scoped-coverage.log",
+      "reason": "Lossless transport; raw trailing spaces retained without weakening native Git whitespace checks."
+    }
+  }
+}

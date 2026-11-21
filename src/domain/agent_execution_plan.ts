@@ -41,6 +41,8 @@ export interface AgentExecutionPlan {
     readonly output: AgentOutputContract;
     readonly timeoutMs: number;
     readonly brokeredVerification?: true;
+    /** Internal planner admission; this marker alone conveys no authority. */
+    readonly qualificationInvestigation?: true;
     readonly maxPromptBytes: number;
     readonly maxOutputBytes: number;
     readonly environment: Readonly<Record<string, string>>;

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "first actual native command rejected at host admission",
+  "implementation": "1f20e9c5b46a7b3fdd761fbc07051058bb0dc699",
+  "planRevision": "3d53cdbbb19627494f0aa1eef7bd9a035745c841",
+  "tests": 4,
+  "pass": 0,
+  "fail": 4,
+  "skipped": 0,
+  "cancelled": 0,
+  "sdkScopesCreated": 0,
+  "modelCalls": 0,
+  "expectedHostDependencies": "e8bb1b666678ffe4df2c6fd0f0c6fdc524b600752f6db1866ea9713ad37e9311",
+  "observedHostDependencies": "cabf91bec28ce54e95078a3ad787ca37810ff3e4521bd7f57a8fe2b6ea2eecef",
+  "evidence": "all four bootstrap logs reject dependencyTreeSha256 before probes; no native.jsonl or scope-created event exists",
+  "mutationObservation": "six dependency files have mtimes in the intervening normal-hook window: five ncc bytecode caches and Vite Svelte metadata. Before/after inventories were not captured, so no exclusive file-level cause is invented.",
+  "correction": "copy complete actual physical dependencies to a separate owned qualification checkout, compare full byte/mode/link identities before/after copy, never run development hooks there; commit new four native-only plans and then fetch exact reviewed data commit into that checkout",
+  "acceptedNativeControls": 0,
+  "production": "disabled"
+}

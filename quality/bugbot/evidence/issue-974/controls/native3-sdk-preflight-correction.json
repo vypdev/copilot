@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "kind": "actual SDK preflight failure and necessary fixture correction",
+  "implementationBefore": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+  "nativePlanRevision": "b79c13fbeb9f94fb06a152bfe756dc90acde7675",
+  "tests": {
+    "total": 4,
+    "pass": 0,
+    "fail": 4,
+    "skip": 0,
+    "cancel": 0
+  },
+  "scopes": [
+    {
+      "scopeId": "1c7e11cd3cb41787db380fdbdb2b84b7e84b1151e257de558e36ed0b47ca0e2b",
+      "identity": {
+        "ownerId": "112b70eabc0508bc0c8ea14532e984cd88fc2e124bc7106d9746a4903873c77c",
+        "operationId": "control:ev974-C32",
+        "planSha256": "9e48b8103cf7c4f9c85892fd47acd66b7c97d9f7b380147d7881fba8afcbbffd",
+        "implementation": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+        "imageSha256": "c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+        "purpose": "native-control"
+      },
+      "started": true,
+      "stopped": {
+        "event": "scope-stopped",
+        "identity": {
+          "ownerId": "112b70eabc0508bc0c8ea14532e984cd88fc2e124bc7106d9746a4903873c77c",
+          "operationId": "control:ev974-C32",
+          "planSha256": "9e48b8103cf7c4f9c85892fd47acd66b7c97d9f7b380147d7881fba8afcbbffd",
+          "implementation": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+          "imageSha256": "c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+          "purpose": "native-control"
+        },
+        "scopeId": "1c7e11cd3cb41787db380fdbdb2b84b7e84b1151e257de558e36ed0b47ca0e2b",
+        "namespaceInitStopped": true,
+        "exitCode": 1,
+        "started": true,
+        "actualImage": "sha256:c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+        "namespaceState": {
+          "running": false,
+          "pid": 0,
+          "restarting": false,
+          "status": "exited"
+        }
+      },
+      "removed": true,
+      "leaderOrDescendantReady": false
+    },
+    {
+      "scopeId": "60e7b2c9a14c79bb06a656de25b7d5de1caf49274227ea4130b78e2414974e35",
+      "identity": {
+        "ownerId": "ab5b1d7b23b291f94b46a2c913666b2f94655865486c7a813d6601723bf1a004",
+        "operationId": "control:ev974-C33",
+        "planSha256": "184327934c30de5b6ec7af24bf19bfa049adc220cf6e521197d244fa52b874cf",
+        "implementation": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+        "imageSha256": "c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+        "purpose": "native-control"
+      },
+      "started": true,
+      "stopped": {
+        "event": "scope-stopped",
+        "identity": {
+          "ownerId": "ab5b1d7b23b291f94b46a2c913666b2f94655865486c7a813d6601723bf1a004",
+          "operationId": "control:ev974-C33",
+          "planSha256": "184327934c30de5b6ec7af24bf19bfa049adc220cf6e521197d244fa52b874cf",
+          "implementation": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+          "imageSha256": "c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+          "purpose": "native-control"
+        },
+        "scopeId": "60e7b2c9a14c79bb06a656de25b7d5de1caf49274227ea4130b78e2414974e35",
+        "namespaceInitStopped": true,
+        "exitCode": 1,
+        "started": true,
+        "actualImage": "sha256:c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+        "namespaceState": {
+          "running": false,
+          "pid": 0,
+          "restarting": false,
+          "status": "exited"
+        }
+      },
+      "removed": true,
+      "leaderOrDescendantReady": false
+    },
+    {
+      "scopeId": "2bb2de215681af71c3870ade2ef314e6caf118bd5b95ced1462a50532b43a452",
+      "identity": {
+        "ownerId": "26c42cd87973b49550a489326794053d77a2b09d997dd130f4728c620ee2a695",
+        "operationId": "control:ev974-C34",
+        "planSha256": "3354ad8a702292741f69c75f30c79dc3502e128fc4a04022a0fc08d39e845837",
+        "implementation": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+        "imageSha256": "c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+        "purpose": "native-control"
+      },
+      "started": true,
+      "stopped": {
+        "event": "scope-stopped",
+        "identity": {
+          "ownerId": "26c42cd87973b49550a489326794053d77a2b09d997dd130f4728c620ee2a695",
+          "operationId": "control:ev974-C34",
+          "planSha256": "3354ad8a702292741f69c75f30c79dc3502e128fc4a04022a0fc08d39e845837",
+          "implementation": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+          "imageSha256": "c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+          "purpose": "native-control"
+        },
+        "scopeId": "2bb2de215681af71c3870ade2ef314e6caf118bd5b95ced1462a50532b43a452",
+        "namespaceInitStopped": true,
+        "exitCode": 1,
+        "started": true,
+        "actualImage": "sha256:c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+        "namespaceState": {
+          "running": false,
+          "pid": 0,
+          "restarting": false,
+          "status": "exited"
+        }
+      },
+      "removed": true,
+      "leaderOrDescendantReady": false
+    },
+    {
+      "scopeId": "80fdd4d6e843dd14075d733a72046ee55f23cd5a650263c820cd9d8498489a9e",
+      "identity": {
+        "ownerId": "0c316c08b79a2217fa90d81d5f8dcfd2f5e13eaa277c41f13d566552e5a87524",
+        "operationId": "control:ev974-C34",
+        "planSha256": "3354ad8a702292741f69c75f30c79dc3502e128fc4a04022a0fc08d39e845837",
+        "implementation": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+        "imageSha256": "c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+        "purpose": "native-control"
+      },
+      "started": true,
+      "stopped": {
+        "event": "scope-stopped",
+        "identity": {
+          "ownerId": "0c316c08b79a2217fa90d81d5f8dcfd2f5e13eaa277c41f13d566552e5a87524",
+          "operationId": "control:ev974-C34",
+          "planSha256": "3354ad8a702292741f69c75f30c79dc3502e128fc4a04022a0fc08d39e845837",
+          "implementation": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+          "imageSha256": "c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+          "purpose": "native-control"
+        },
+        "scopeId": "80fdd4d6e843dd14075d733a72046ee55f23cd5a650263c820cd9d8498489a9e",
+        "namespaceInitStopped": true,
+        "exitCode": 1,
+        "started": true,
+        "actualImage": "sha256:c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+        "namespaceState": {
+          "running": false,
+          "pid": 0,
+          "restarting": false,
+          "status": "exited"
+        }
+      },
+      "removed": true,
+      "leaderOrDescendantReady": false
+    }
+  ],
+  "actualObserved": "all four namespaces started, reached the native worker and real CLI version admission, wrote fixture-codex, then exited1 before any leader/descendant/SDK-ready evidence. The prior worker did not retain its SDK exception before teardown.",
+  "independentPolicyReproduction": {
+    "policy": "src/application/policies/agent_executable_policy.ts",
+    "policySha256": "0bd76d7d20f4879a3977e3f3932f80fb5c76e7b988b162669f2bb0d75de18885",
+    "oldPath": "/qualification-output/native/fixture-codex",
+    "oldRejected": true,
+    "observedError": "Agent executable must be the bare name \"codex\" or an absolute path with that basename.",
+    "correctedPath": "/qualification-output/native/codex",
+    "correctedAccepted": true,
+    "explanation": "The existing SDK selection policy necessarily rejects the old fixture basename. This is an independently reproduced blocking defect; the exact original worker exception was not retained, so no exclusive stack trace is invented."
+  },
+  "correction": "name the frozen fixture codex, preserving ordinary selection policy; persist bounded private model-free SDK error data before scope teardown, preserving original error if diagnostic writing fails or target is not positively owned",
+  "correctedFixtureSha256": "756cc67b57be9259de506e77e10a26070ac8d8683be20a6730e1d4d2b7436f32",
+  "diagnosticComponent": "four semantic variants PASS: owned600data, write failure, foreign owner and symlink; original synthetic SDK error preserved in every case. This is not native SDK evidence.",
+  "activeMountProbe": "active-engine-mount-observation.json: exact effective inputRO/outputRW metadata also validated while a separate credential-free Node metadata process was running; it was stopped and removed; no SDK acceptance inferred",
+  "qualificationModelCalls": 0,
+  "nativeSdkAccepted": 0,
+  "174": "unstarted",
+  "42": "unstarted",
+  "production": "disabled"
+}

@@ -1,0 +1,11 @@
+{
+  "sourceBefore": "5241685e8089c9dace4f829214f694126936525d",
+  "case": "ev974-C25",
+  "outcome": "green",
+  "exitCode": 0,
+  "modelCalls": 0,
+  "rawBytes": 273,
+  "rawSha256": "4f66ca9e648302b2a6e4893b942596d77656104acc0a5bf58ac5a0b1df66d5c2",
+  "compressedSha256": "6be39570b0967a853c47ac33c0d34480ce63f4388da80155dff2d944a7abbc3b",
+  "log": "../../issue-974/controls/v2-loader-admission-green.log.gz"
+}

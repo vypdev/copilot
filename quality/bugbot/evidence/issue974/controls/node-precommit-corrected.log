@@ -1,0 +1,22 @@
+✔ ev974-C09 explicit v2 selection is coherent and retains all corpus identities and labels (12.396709ms)
+✔ ev974-C10 omission retains v1/default and every frozen historical artifact byte (4.962917ms)
+✔ ev974-C11 rejects foreign path/hash/count/revision, altered identities and historical redirects before calls (4.799875ms)
+✔ ev974-C12 v2 cannot weaken gates, cohort, repetition, positives, latency or the exact Luna to Sol profile (2.627333ms)
+✔ ev974-C13 actual v2 public bootstrap rejects foreign source/runtime before modules and probes (3512.005208ms)
+✔ ev974-C14 actual v2 bootstrap rejects changed drivers/bootstrap and unsupported admission endpoints (1087.967292ms)
+✔ ev974-C15 ordinary benchmark generates distinct literal follow-up attempts with durable delivered bytes (616.9315ms)
+✔ ev974-C16 failed ordinary preparation is retained without a spawned session or reported identity (14.106292ms)
+✔ ev974-C17 provider and follow-up failures remain terminal with no unregistered retry (20.960292ms)
+✔ ev974-C18 interruption keeps the durable start, interrupted call and all unstarted outer slots (465.676042ms)
+✔ ev974-C19 unknown or high usage is telemetry and configured flags never become a reported identity (33.711583ms)
+✔ ev974-C20 ordinary v2 prompt generation excludes expected oracles and binds actual delivered prompt/schema bytes (30.018917ms)
+✔ ev974-C21 failed and incomplete v2 corpus launch zero full-review children and retain the first failure (2.371042ms)
+✔ ev974-C23 missing duplicate or unterminated attempts cannot admit completed-looking case IDs (27.607416ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5971.676166

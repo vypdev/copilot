@@ -1,0 +1,250 @@
+{
+  "id": "c71ec46767707dccaa8349a7d7ad9dd4ea367d93cef7de39b7dfa4ce029e29ef",
+  "actual": {
+    "Id": "c71ec46767707dccaa8349a7d7ad9dd4ea367d93cef7de39b7dfa4ce029e29ef",
+    "Created": "2026-11-21T03:57:25.516346873Z",
+    "Path": "/usr/local/bin/node",
+    "Args": [
+      "-e",
+      "const fs=require('node:fs'),crypto=require('node:crypto');if(crypto.createHash('sha256').update(fs.readFileSync(process.execPath)).digest('hex')!==\"23a5637c2470fde09fcc1acc77c1b92e04e3d7e3e6e80ff7df6f5831958d1477\")process.exit(1);setInterval(()=>{},1000)"
+    ],
+    "State": {
+      "Status": "running",
+      "Running": true,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": false,
+      "Dead": false,
+      "Pid": 2543554,
+      "ExitCode": 0,
+      "Error": "",
+      "StartedAt": "2026-11-21T03:57:25.602441423Z",
+      "FinishedAt": "0001-01-01T00:00:00Z"
+    },
+    "Image": "sha256:c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+    "ResolvConfPath": "/var/lib/docker/containers/c71ec46767707dccaa8349a7d7ad9dd4ea367d93cef7de39b7dfa4ce029e29ef/resolv.conf",
+    "HostnamePath": "/var/lib/docker/containers/c71ec46767707dccaa8349a7d7ad9dd4ea367d93cef7de39b7dfa4ce029e29ef/hostname",
+    "HostsPath": "/var/lib/docker/containers/c71ec46767707dccaa8349a7d7ad9dd4ea367d93cef7de39b7dfa4ce029e29ef/hosts",
+    "LogPath": "/var/lib/docker/containers/c71ec46767707dccaa8349a7d7ad9dd4ea367d93cef7de39b7dfa4ce029e29ef/c71ec46767707dccaa8349a7d7ad9dd4ea367d93cef7de39b7dfa4ce029e29ef-json.log",
+    "Name": "/copilot-qualification-prepare-e4-active-mounts",
+    "RestartCount": 0,
+    "Driver": "overlay2",
+    "Platform": "linux",
+    "MountLabel": "",
+    "ProcessLabel": "",
+    "AppArmorProfile": "",
+    "ExecIDs": null,
+    "HostConfig": {
+      "Binds": null,
+      "ContainerIDFile": "",
+      "LogConfig": {
+        "Type": "json-file",
+        "Config": {
+          "max-file": "5",
+          "max-size": "20m"
+        }
+      },
+      "NetworkMode": "bridge",
+      "PortBindings": {},
+      "RestartPolicy": {
+        "Name": "no",
+        "MaximumRetryCount": 0
+      },
+      "AutoRemove": false,
+      "VolumeDriver": "",
+      "VolumesFrom": null,
+      "ConsoleSize": [
+        0,
+        0
+      ],
+      "CapAdd": [
+        "SETUID",
+        "SETGID"
+      ],
+      "CapDrop": [
+        "ALL"
+      ],
+      "CgroupnsMode": "private",
+      "Dns": null,
+      "DnsOptions": null,
+      "DnsSearch": null,
+      "ExtraHosts": null,
+      "GroupAdd": null,
+      "IpcMode": "private",
+      "Cgroup": "",
+      "Links": null,
+      "OomScoreAdj": 0,
+      "PidMode": "",
+      "Privileged": false,
+      "PublishAllPorts": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges:true"
+      ],
+      "Tmpfs": {
+        "/tmp": "rw,nosuid,nodev,mode=1777"
+      },
+      "UTSMode": "",
+      "UsernsMode": "",
+      "ShmSize": 8408530944,
+      "Runtime": "runc",
+      "Isolation": "",
+      "CpuShares": 0,
+      "Memory": 0,
+      "NanoCpus": 0,
+      "CgroupParent": "",
+      "BlkioWeight": 0,
+      "BlkioWeightDevice": null,
+      "BlkioDeviceReadBps": null,
+      "BlkioDeviceWriteBps": null,
+      "BlkioDeviceReadIOps": null,
+      "BlkioDeviceWriteIOps": null,
+      "CpuPeriod": 0,
+      "CpuQuota": 0,
+      "CpuRealtimePeriod": 0,
+      "CpuRealtimeRuntime": 0,
+      "CpusetCpus": "",
+      "CpusetMems": "",
+      "Devices": null,
+      "DeviceCgroupRules": null,
+      "DeviceRequests": null,
+      "MemoryReservation": 0,
+      "MemorySwap": 0,
+      "MemorySwappiness": null,
+      "OomKillDisable": null,
+      "PidsLimit": null,
+      "Ulimits": null,
+      "CpuCount": 0,
+      "CpuPercent": 0,
+      "IOMaximumIOps": 0,
+      "IOMaximumBandwidth": 0,
+      "Mounts": [
+        {
+          "Type": "bind",
+          "Source": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/configuration-probe-4XhBOC/input",
+          "Target": "/qualification-input",
+          "ReadOnly": true,
+          "BindOptions": {
+            "Propagation": "rprivate",
+            "NonRecursive": true
+          }
+        },
+        {
+          "Type": "bind",
+          "Source": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/configuration-probe-4XhBOC/output",
+          "Target": "/qualification-output",
+          "BindOptions": {
+            "Propagation": "rprivate",
+            "NonRecursive": true
+          }
+        }
+      ],
+      "MaskedPaths": [
+        "/proc/acpi",
+        "/proc/asound",
+        "/proc/interrupts",
+        "/proc/kcore",
+        "/proc/keys",
+        "/proc/latency_stats",
+        "/proc/sched_debug",
+        "/proc/scsi",
+        "/proc/timer_list",
+        "/proc/timer_stats",
+        "/sys/devices/virtual/powercap",
+        "/sys/firmware"
+      ],
+      "ReadonlyPaths": [
+        "/proc/bus",
+        "/proc/fs",
+        "/proc/irq",
+        "/proc/sys",
+        "/proc/sysrq-trigger"
+      ]
+    },
+    "GraphDriver": {
+      "Data": {
+        "ID": "c71ec46767707dccaa8349a7d7ad9dd4ea367d93cef7de39b7dfa4ce029e29ef",
+        "LowerDir": "/var/lib/docker/overlay2/8dc5a477c9abcee077f825127665decd499783550373d98f339827a0a6eb9562-init/diff:/var/lib/docker/overlay2/yhp7hi1847pwxky0xk7j2g3v4/diff:/var/lib/docker/overlay2/yae0001oivpwl7dryathh9fsl/diff:/var/lib/docker/overlay2/opkeg96c63sqrvno67cvfr2bc/diff:/var/lib/docker/overlay2/8d3edibkcgx8tgs77k2d4ltwo/diff:/var/lib/docker/overlay2/f7451wiw8ft5qkzo227kvmc1o/diff:/var/lib/docker/overlay2/bl95zih6uh08jmzjumz23cki5/diff:/var/lib/docker/overlay2/iq2pymgx3t07gttrnclq5kzpb/diff:/var/lib/docker/overlay2/waxqrn8s212ym3au4ipm6940x/diff:/var/lib/docker/overlay2/vfk0xhjb60t6iukwso2brb3ee/diff:/var/lib/docker/overlay2/mi2mvcjpzscuj96zcnnl2605x/diff:/var/lib/docker/overlay2/b71bc3f51fa43c25983bf54d6d7d3f33967bdd448dbb6f30b337eb8f74f0a18b/diff:/var/lib/docker/overlay2/685186e6b8fe2f8b17acf691b97e78556a75449b6349c877ae69c5fa454120bf/diff:/var/lib/docker/overlay2/a8fac5a71611d8f37d492b7ff1091faa5cb542ee561063e3e9a70618f9d4b647/diff:/var/lib/docker/overlay2/cba3ec9b1bfe7a1011f320a7bd26bc46f07bd5be06bb5d758777ae0b371ea1bb/diff:/var/lib/docker/overlay2/a89ccca56346481015b8a2633f41c81cb9ae188e657fdfc5ca7721a1874f6da4/diff",
+        "MergedDir": "/var/lib/docker/overlay2/8dc5a477c9abcee077f825127665decd499783550373d98f339827a0a6eb9562/merged",
+        "UpperDir": "/var/lib/docker/overlay2/8dc5a477c9abcee077f825127665decd499783550373d98f339827a0a6eb9562/diff",
+        "WorkDir": "/var/lib/docker/overlay2/8dc5a477c9abcee077f825127665decd499783550373d98f339827a0a6eb9562/work"
+      },
+      "Name": "overlay2"
+    },
+    "Mounts": [
+      {
+        "Type": "bind",
+        "Source": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/configuration-probe-4XhBOC/input",
+        "Destination": "/qualification-input",
+        "Mode": "",
+        "RW": false,
+        "Propagation": "rprivate"
+      },
+      {
+        "Type": "bind",
+        "Source": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/configuration-probe-4XhBOC/output",
+        "Destination": "/qualification-output",
+        "Mode": "",
+        "RW": true,
+        "Propagation": "rprivate"
+      }
+    ],
+    "Config": {
+      "Hostname": "c71ec4676770",
+      "Domainname": "",
+      "User": "502:20",
+      "AttachStdin": true,
+      "AttachStdout": false,
+      "AttachStderr": false,
+      "Tty": false,
+      "OpenStdin": true,
+      "StdinOnce": true,
+      "Env": [
+        "PATH=/opt/codex/node_modules/.bin:/usr/local/bin:/usr/bin:/bin",
+        "NODE_VERSION=24.20.0",
+        "YARN_VERSION=1.22.22"
+      ],
+      "Cmd": [
+        "-e",
+        "const fs=require('node:fs'),crypto=require('node:crypto');if(crypto.createHash('sha256').update(fs.readFileSync(process.execPath)).digest('hex')!==\"23a5637c2470fde09fcc1acc77c1b92e04e3d7e3e6e80ff7df6f5831958d1477\")process.exit(1);setInterval(()=>{},1000)"
+      ],
+      "Image": "sha256:c948feb91697b2108e98fba5c3a0889242958aa51131ddb84b6581b7cd4ce717",
+      "Volumes": null,
+      "WorkingDir": "/sdk",
+      "Entrypoint": [
+        "/usr/local/bin/node"
+      ],
+      "Labels": {
+        "dev.vyp.copilot.qualification.preparation": "active-fixed-mount-metadata",
+        "dev.vyp.copilot.qualification.preparationOwner": "be3f90e20141eeec96e725c02caa93785a99ccf14e9f0b5b6aa81e69fa90b4ac"
+      }
+    },
+    "NetworkSettings": {
+      "SandboxID": "02c119643c108f77f4f10b1d79a4c79b870596873f107fc0460000c58138cb11",
+      "SandboxKey": "/var/run/docker/netns/02c119643c10",
+      "Ports": {},
+      "Networks": {
+        "bridge": {
+          "IPAMConfig": null,
+          "Links": null,
+          "Aliases": null,
+          "DriverOpts": null,
+          "GwPriority": 0,
+          "NetworkID": "c1d8b3e7448d659e236896a65413fff8f3166163973a41aa49d4feea8257f522",
+          "EndpointID": "a78362f488a4dd4abd6b099ddef3ab031bc1bf43e331708d35244a114fe71ad6",
+          "Gateway": "192.168.215.1",
+          "IPAddress": "192.168.215.2",
+          "MacAddress": "42:e0:37:b5:02:3a",
+          "IPPrefixLen": 24,
+          "IPv6Gateway": "",
+          "GlobalIPv6Address": "",
+          "GlobalIPv6PrefixLen": 0,
+          "DNSNames": null
+        }
+      }
+    }
+  },
+  "effectiveMountValidation": "passed while running",
+  "nativeSdkAcceptance": false,
+  "modelCalls": 0
+}

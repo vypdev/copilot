@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "kind": "exact-source AST actual launcher and attempt recorder/artifact/admission through32+13 component controls and selected existing semantic controls; modeled CLI/verifier/provenance/containment ports; actual private files; no native Docker/model/campaign acceptance",
+  "results": [
+    {
+      "file": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs",
+      "sourceSha256": "a3f378fe6b90228e8d9a0d37e9be407705d73c4409bae6841a1ac25dd22da4d6",
+      "summary": {
+        "lines": {
+          "total": 95,
+          "covered": 94,
+          "skipped": 0,
+          "pct": 98.94
+        },
+        "functions": {
+          "total": 23,
+          "covered": 23,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 119,
+          "covered": 118,
+          "skipped": 0,
+          "pct": 99.15
+        },
+        "branches": {
+          "total": 49,
+          "covered": 47,
+          "skipped": 0,
+          "pct": 95.91
+        }
+      },
+      "gate": true
+    },
+    {
+      "file": "quality/bugbot/evidence/issue974/attempt-ledger.cjs",
+      "sourceSha256": "b88d90219eb70b0ec0adcc030c52b2771501f2d6fd3b8979bd216859ba287294",
+      "summary": {
+        "lines": {
+          "total": 148,
+          "covered": 148,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 37,
+          "covered": 37,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 185,
+          "covered": 185,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 66,
+          "covered": 66,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "gate": true
+    }
+  ],
+  "measuredLauncherAndAttemptComponentGatesSatisfied": true,
+  "globalChangedModuleCoverageSatisfied": false,
+  "observations": [
+    {
+      "kind": "module-load",
+      "relative": "quality/bugbot/evidence/issue974/attempt-ledger.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "component-compileFunction",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    },
+    {
+      "kind": "module-load",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "nativeSdkAcceptance": false,
+  "production": "disabled"
+}

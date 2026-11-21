@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T06:20:30.276883+00:00",
+  "authorization": "Standing user delegation of all appropriate merges without further approval; same exact-parent Action-error recovery already applied and recorded for976. No remote branch lifecycle change, force or protection bypass.",
+  "authorizationPrecedent": "quality/bugbot/evidence/issue-976/exact-parent-reconciliation-plan.json at a7c23ad169bca92ade652c893f268b5c9ef566ab",
+  "exceptionBasis": "Verified current-parent Action sync failure44870656316/job136744193299; unexpected-paths after all944SDK/18744assertions and385extensionfiles pass. Failed resolution preserved, no retry claimed.",
+  "issue": 974,
+  "pr": 997,
+  "exactRef": "chore/974-preregister-and-evaluate-the-luna-xhigh-detector-on-the-unchanged-174-case-ev-07-corpus",
+  "child": "5e7faa0e57801d3884449b1aaae2833ffcc446d3",
+  "parent": "a7c23ad169bca92ade652c893f268b5c9ef566ab",
+  "expectedConflicts": [
+    "build/github_action/index.js"
+  ],
+  "originalFourBundleBytesReproduced": true,
+  "correctResolutionBuildReproducedWithoutWorkspaceDrift": true,
+  "steps": [
+    "Prepare ordinary local no-ff/no-commit merge of the exact Action-selected parent; stop if conflict inventory differs.",
+    "Preserve both source/evidence closures and the exact selected owning SDD; resolve the generated conflict using the independently reproduced merged-source build.",
+    "Run source/specification/documentation/Graphify verification and all normal commit hooks; retain incomplete qualification and all historical negatives.",
+    "Re-read exact remote child and develop before normal same-ref fast-forward push; stop on drift.",
+    "Require final native checks and valid findings before any protected PR merge."
+  ],
+  "production": "disabled",
+  "qualificationModelCalls": 0,
+  "174": "unstarted",
+  "42": "unstarted",
+  "installation": false,
+  "force": false,
+  "defaultWrites": false
+}

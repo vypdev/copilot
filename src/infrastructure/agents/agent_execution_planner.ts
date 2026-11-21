@@ -31,6 +31,8 @@ import { admitAgentSourceSnapshot } from '../../application/policies/agent_sourc
 import { SddSourceContextFailure, type AgentSourceSnapshot } from '../../domain/agent_source_snapshot';
 import { prepareSourceSnapshotWorkspace } from './agent_source_snapshot_workspace';
 import { createPrivateAgentExecutionRoot } from './agent_private_install_root';
+import { admitQualificationInvestigationPlan } from './qualification_investigation_admission';
+import { requireQualificationOperationScope } from './qualification_operation_scope';
 
 export interface AgentExecutionPlanningRequest {
     readonly configuration: AgentConfiguration;
@@ -87,6 +89,23 @@ export class AgentExecutionPlanner {
 
     prepare(request: AgentExecutionPlanningRequest): AgentExecutionPlan {
         return this.preparePlan(request);
+    }
+
+    /** Trusted qualification composition only; ordinary callers keep prepare(). */
+    prepareQualificationInvestigation(request: AgentExecutionPlanningRequest): AgentExecutionPlan {
+        if (request.capability !== 'findings' || request.sourceSnapshot || !request.signal) {
+            throw new AgentCliError('Qualification investigation requires findings, no source snapshot, and explicit cancellation.', 'configuration');
+        }
+        if (request.signal.aborted) throw new AgentCliError('Agent CLI execution was cancelled.', 'cancelled');
+        try { requireQualificationOperationScope(request.signal); }
+        catch { throw new AgentCliError('Qualification investigation requires its exact live owned operation scope.', 'configuration'); }
+        const plan = this.preparePlan(request);
+        try {
+            return admitQualificationInvestigationPlan({ ...plan, qualificationInvestigation: true }, request.signal);
+        } catch (error) {
+            rmSync(plan.runtimeDirectory, { recursive: true, force: true });
+            throw error;
+        }
     }
 
     prepareBrokeredVerification(request: AgentExecutionPlanningRequest, emptyWorkspace: string): AgentExecutionPlan {

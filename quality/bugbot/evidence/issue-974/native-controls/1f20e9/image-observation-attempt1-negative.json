@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "stage": "credential-free image byte preparation",
+  "outcome": "failed before runtime probe or native SDK control",
+  "cause": "preparation script expected vendor/aarch64-unknown-linux-musl/codex/codex; actual published package uses vendor/aarch64-unknown-linux-musl/bin/codex",
+  "image": "sha256:9b7c5e0906943cf11b7438ebc50bfe012fcebbee215cb251a165f74e384d76f8",
+  "script": "/private/tmp/copilot-goal-974-observe-native-image-1f20e9.py",
+  "actualLayout": "image-codex-layout.json",
+  "ownedPreparationContainer": "stopped without ever starting, removed after correlated inspect PID0",
+  "modelCalls": 0,
+  "nativeControlsExecuted": false
+}
