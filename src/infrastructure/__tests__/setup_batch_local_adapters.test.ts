@@ -8,6 +8,9 @@ import * as setupFiles from '../../utils/setup_files';
 import type { SetupBatchOperation } from '../../domain/setup_batch';
 import type { Dirent } from 'node:fs';
 import { load } from 'js-yaml';
+// Preserve phase evidence if the unchanged CI test deadline expires.
+jest.requireActual<{ installJournalIoDiagnostics(): void }>('./fixtures/journal_io_diagnostics.cjs').installJournalIoDiagnostics();
+
 const id = 'a67c8e40-93be-43ed-a7ed-e07378c7e773';
 const operation: SetupBatchOperation = { schemaVersion: 1, operationId: id, organization: 'acme', targets: [{ repositoryId: 7,
   repository: 'repo', defaultBranch: 'master', baseSha: 'a'.repeat(40), planDigest: 'b'.repeat(64), status: 'ready', effects: [] }] };

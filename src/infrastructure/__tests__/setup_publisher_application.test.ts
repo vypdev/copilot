@@ -14,6 +14,9 @@ import { SetupBatchProviderError } from '../setup_batch_github_read_adapter';
 import type { SetupPublisherPlan, SetupPublisherOperation } from '../../domain/setup_publisher_installation';
 import { setupInstallationTreeFixture } from './fixtures/setup_installation_tree_fixture';
 
+// Preserve phase evidence if the unchanged CI test deadline expires.
+jest.requireActual<{ installJournalIoDiagnostics(): void }>('./fixtures/journal_io_diagnostics.cjs').installJournalIoDiagnostics();
+
 const id = '12345678-1234-4234-8234-123456789abc', commit = 'c'.repeat(40);
 let root: string;
 beforeEach(async () => { root = await mkdtemp(join(tmpdir(), 'publisher-composed-')); });
