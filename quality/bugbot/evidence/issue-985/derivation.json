@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "source": "quality/bugbot/corpus.v1.json",
+  "target": "quality/bugbot/corpus.v2.json",
+  "sourceSha256": "640c3355aeb65c1b15454bd7f9242fa36acc12b8b3f5ef284ee06af8af36c6c6",
+  "case": "actions-readonly-metadata",
+  "field": "diff",
+  "before": "+on: pull_request\n+permissions:\n+  contents: read\n+steps:\n+  - run: echo '${{ github.event.pull_request.number }}'",
+  "after": "+on: pull_request\n+permissions:\n+  contents: read\n+jobs:\n+  metadata:\n+    runs-on: ubuntu-latest\n+    steps:\n+      - run: echo '${{ github.event.pull_request.number }}'",
+  "targetSha256": "001223aa255e5af7e10bddab2c8deacd7cacf0b5b3690a5a2034d241274cb9d6",
+  "reviewState": "proposed-for-independent-PR-review",
+  "expected": [],
+  "historicalScoresRecomputed": false,
+  "modelCalls": 0,
+  "evaluatedPrWriteAttempts": 0
+}

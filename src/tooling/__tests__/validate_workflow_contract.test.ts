@@ -1426,10 +1426,25 @@ describe('workflow contract validator', () => {
     expect(() => validateWorkflow(file, workflow)).toThrow('check the result of every CI job');
   });
 
+  it.each([
+    ['no-op', (gate: Record<string, any>) => { gate.steps[0].run = 'true'; }, 'executable all-worker'],
+    ['partial predicate', (gate: Record<string, any>) => { gate.steps[0].run = '[[ "$STATIC_RESULT" == success ]]'; }, 'executable all-worker'],
+    ['masked failure', (gate: Record<string, any>) => { gate.steps[0].run += '\ntrue'; }, 'executable all-worker'],
+    ['missing result', (gate: Record<string, any>) => { delete gate.steps[0].env.BUILD_RESULT; }, 'check the result of every CI job'],
+    ['step continue-on-error', (gate: Record<string, any>) => { gate.steps[0]['continue-on-error'] = true; }, 'check the result of every CI job'],
+    ['job continue-on-error', (gate: Record<string, any>) => { gate['continue-on-error'] = true; }, 'check the result of every CI job'],
+  ] as const)('rejects an aggregate gate with %s', (_name, mutate, message) => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'ci_check.yml');
+    mutate(workflow.jobs['ci-check']);
+    expect(() => validateWorkflow(file, workflow)).toThrow(message);
+  });
+
   const onBashPlatform = process.platform === 'win32' ? it.skip : it;
   onBashPlatform.each([
     ['success', 'success', 'success', 0],
     ['failure', 'success', 'success', 1],
+    ['success', 'failure', 'success', 1],
+    ['success', 'success', 'failure', 1],
     ['success', 'cancelled', 'success', 1],
     ['success', 'success', 'skipped', 1],
     ['success', 'success', '', 1],

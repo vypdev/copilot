@@ -50,7 +50,7 @@ for (const [name, data] of [
         assert.throws(() => launchFullReview(directory, launch), /independent corpus/);
         const direct = spawnSync(process.execPath, [path.join(__dirname, 'full-review.cjs'), directory], { encoding: 'utf8' });
         assert.equal(direct.status, 1);
-        assert.match(direct.stderr, /independent corpus/u);
+        assert.match(direct.stderr, /immutable bootstrap/u);
         assert.equal(existsSync(path.join(directory, 'full-review')), false);
     });
 }
@@ -67,9 +67,11 @@ function boundCorpusFixture(t) {
     const { evaluateBugbotBenchmark } = require(path.join(root, 'src/tooling/bugbot_benchmark'));
     const directory = fixture(t);
     const hash = value => createHash('sha256').update(value).digest('hex');
-    const plan = { ...require('./configuration.cjs'), runtime: { codex: 'codex-cli 0.169.1', codexSha256: 'a'.repeat(64) },
-        inspectedArtifacts: Object.fromEntries(['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs',
-            'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py']
+    const sourceProof = require('../execution-provenance.cjs');
+    const implementation = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    const plan = { ...require('./configuration.cjs'), implementation,
+        runtime: { ...sourceProof.runtimeIdentity(root), codex: 'codex-cli 0.169.1', codexSha256: 'a'.repeat(64) },
+        inspectedArtifacts: Object.fromEntries(require('./implementation.cjs').qualificationDrivers
             .map(file => [file, hash(readFileSync(path.join(__dirname, file)))])) };
     const planFile = path.join(directory, 'plan.json');
     writeFileSync(planFile, JSON.stringify(plan));
@@ -78,7 +80,8 @@ function boundCorpusFixture(t) {
     const predictions = { schemaVersion: 1, predictions: Object.fromEntries(corpus.cases.map(item =>
         [item.id, item.expected.map(finding => ({ ...finding, confidence: 1 }))])) };
     const rows = [{ event: 'start', cli: plan.runtime.codex, configuration: plan.detector, plan: hash(readFileSync(planFile)),
-        preregistration,
+        preregistration, provenance: { ...sourceProof.attestSource(root, implementation), drivers: plan.inspectedArtifacts,
+            runtime: sourceProof.runtimeIdentity(root) },
         runner: hash(readFileSync(path.join(__dirname, 'corpus.cjs'))), implementation: plan.implementation,
         corpus: plan.corpus.sha256, gitHubMutationPorts: 0 }, ...corpus.cases.map((item, index) => ({ event: 'case', index,
         id: item.id, status: 'completed', predictions: predictions.predictions[item.id], runtimeProofs: [{ executableSha256: plan.runtime.codexSha256 }], calls: [{ model: plan.detector.model,

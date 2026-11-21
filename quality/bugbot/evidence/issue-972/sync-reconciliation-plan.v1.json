@@ -1,0 +1,39 @@
+{
+  "at": "2026-11-20T10:09:05.859662+00:00",
+  "kind": "exceptional maintainer-authorized recovery of failed Action synchronization",
+  "authorization": "User: estas autorizado a mergear lo que consideres, no necesitas mi aprobacion",
+  "scopeInterpretation": "Normal merge operations needed for delivery include recovery of failed parent-to-existing-child synchronization; no ref creation, rename, delete or force. Action remains normal owner.",
+  "actionFailure": {
+    "run": 44714013610,
+    "job": 136212640982,
+    "diagnostic": "Agent execution failed (run/timeout) at900000ms; merge --abort; workflowfailed; retryableNo",
+    "log": "/private/tmp/copilot-goal-972-official-sync-44714013610-failure.log",
+    "reply": "https://github.com/vypdev/copilot/pull/988#issuecomment-7036752045"
+  },
+  "workingRef": "bugfix/972-forward-explicit-cancellation-into-the-normal-flow-bugbot-shadow-review-operation",
+  "expectedChild": "e1b7d2d22c9e5cca34fa85bbfcf9f7b439c0ac88",
+  "parentRef": "develop",
+  "expectedParent": "4736cd4f0b28b2ae2579434904c6ce7b5bdea58e",
+  "conflictPaths": [
+    "docs/development/testing.mdx",
+    "package.json",
+    "quality/bugbot/evidence/issue-950/normal-flow-shadow/run.cjs"
+  ],
+  "plan": [
+    "Fetch exact current refs; prepare non-fast-forward merge locally on existing linked972ref; preserve all parent admission and child cancellation behavior.",
+    "Adapt six deterministic cancellation fixtures through authenticated public bootstrap with committed disposable pins; preserve genuine seven controls, zero models/evaluatedPRwrites.",
+    "Retain failed Action/initial combined failures; run focused/full shadow controls and applicable specs/catalog/docs/graph, then mandatory full precommit build/test/lint.",
+    "Before any normal push re-read parent and child; stop on moved identities. Push only to the same exact existing managedref; no force/lifecycle/production effects.",
+    "Check final exacthead native checks and findings before authorized normal PR merge."
+  ],
+  "effectsPerformed": "Local merge and fixture preparation only; no commit or remote push",
+  "localMergePrepared": true,
+  "remotePushPerformed": false,
+  "initialCombinedEvidence": {
+    "uncommittedManifestCases": "6fail/1purepass;expectedbootstraprejection",
+    "providerFailureExit": "authenticatedactualfailedledgerandCLI0;causalnegativepreserved;nowmappingfailed1",
+    "focus": "8casesrunning;notyetclaimedpassed",
+    "models": 0,
+    "evaluatedPrWriteAttempts": 0
+  }
+}

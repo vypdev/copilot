@@ -1,0 +1,30 @@
+{
+  "at": "2026-11-20T10:44:22.193025+00:00",
+  "kind": "exceptional delegated maintainer merge recovery after Action verification abort",
+  "authorization": "estas autorizado a mergear lo que consideres, no necesitas mi aprobacion",
+  "workingRef": "chore/971-audit-ev-07-precision-and-calibration-failures-before-another-measured-campaign",
+  "expectedChild": "1f3fbddeb4b84dea231ddeb7dc18af54fa33a565",
+  "parentRef": "develop",
+  "expectedParent": "4736cd4f0b28b2ae2579434904c6ce7b5bdea58e",
+  "actualActionError": {
+    "run": 44715033832,
+    "job": 136216119230,
+    "phase": "command3 pnpm run test:coverage",
+    "details": "Clean prepared merge, no fixer needed.943Jest/18695pass;extension384filespass,commands.test.ts beforeAll60000ms timeout;mergeabortnopush;nonretryableworkflow.failed",
+    "rawLog": "/private/tmp/copilot-goal-971-official-sync-44715033832-failure.raw.log",
+    "sha256": "63bb0403d5c7376f909e3411c2229b9a72ddc44646c797798929e29bba81d5c1"
+  },
+  "inspection": {
+    "extensionTreeUnchanged": "4a5bbf2f98bec1b429c9821fb8a0eca3e3e66a21",
+    "sameUnchangedLocalSuite": "6/6PASS21.18s",
+    "limitation": "LocalMacpassdoesnotestablishnativeLinuxwholeextensionpass;causeofnativehookdelaynotproven. No verifier timeout/source/concurrency/runner change."
+  },
+  "plan": [
+    "Prepare same clean parent-to-existing-child merge locally; preserve frozen audit labels, scores and classification.",
+    "Retain original failednative/fullJest+extension output and unchanged isolated6PASS; no unchangedActionretry.",
+    "Run auditcontrols, graph and applicable spec/docs checks; commitcandidate throughfullmandatoryhook,thenfullshadowagainstcommittedsourcebeforepush.",
+    "Re-read bothremoteidentities;onlynormalpush tosameexistingref,stoponmovedhead. No force/create/rename/delete.",
+    "Finalcurrent-headnativeCIincludingwholeLinuxextensionandReviewmustpassbeforeanyPRmerge."
+  ],
+  "remoteEffectsPerformed": false
+}
