@@ -263,7 +263,12 @@ async function runContainedCorpus(destination, preflight) {
                 record(retained); results.set(item.id, retained);
             }
         }
-        await Promise.all(Array.from({ length: plan.corpus.concurrency }, () => worker()));
+        let collectorFailed = false;
+        await Promise.allSettled(Array.from({ length: plan.corpus.concurrency }, () => worker().catch(error => {
+            collectorFailed = true;
+            cancel.abort();
+            record({ event: 'collector-failure', reason: error?.code ?? error?.name ?? 'unknown' });
+        })));
         const predictions = {};
         for (const [index, item] of corpus.cases.entries()) {
             const row = results.get(item.id);
@@ -286,7 +291,7 @@ async function runContainedCorpus(destination, preflight) {
         } catch { /* A missing stop or unknown namespace cannot admit phase42. */ }
         const workspaceUnchanged = results.size === 174 && [...results.values()].every(row => row.workspaceUnchanged);
         const decision = { complete, completed: Object.keys(predictions).length, attemptsComplete, containmentComplete,
-            passed: complete && attemptsComplete && containmentComplete && workspaceUnchanged && score.violations.length === 0,
+            passed: !collectorFailed && complete && attemptsComplete && containmentComplete && workspaceUnchanged && score.violations.length === 0,
             githubWriteAttempts: 0, workspaceUnchanged, score };
         fs.writeFileSync(path.join(destination, 'predictions.json'), JSON.stringify(bundle, null, 2) + '\n', { mode: 0o600 });
         fs.writeFileSync(path.join(destination, 'corpus-score.json'), JSON.stringify(decision, null, 2) + '\n', { mode: 0o600 });
