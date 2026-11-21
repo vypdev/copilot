@@ -239,7 +239,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             expect(calls).toEqual(['POST /repos/owner/repo/issues']);
             expect(await readdir(folder)).toEqual([]);
         } finally { await rm(folder, { recursive: true, force: true }); }
-    });
+    }, 30_000); // Keep native journal I/O inside the test's awaited lifetime.
 
     it('publishes the closed Issue number when deletion is denied after Issues Write succeeds', async () => {
         const folder = await mkdtemp(join(tmpdir(), 'copilot-issue-residue-'));

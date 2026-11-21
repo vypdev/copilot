@@ -43,7 +43,7 @@ describe('catalog publication through real filesystem boundaries', () => {
     return spawnSync(process.execPath, ['-e',
       'require(process.argv[1]).main(process.argv[2] === "--write" ? ["--write"] : [], process.argv[3]);',
       module, write ? '--write' : '--check', root,
-    ], { encoding: 'utf8', env, timeout: 10_000 });
+    ], { encoding: 'utf8', env, timeout: 30_000 });
   }
   function invoke(write = true) {
     const logs: string[] = [];
@@ -64,12 +64,15 @@ describe('catalog publication through real filesystem boundaries', () => {
 
   it('creates an absent regular catalog through the actual CLI', () => {
     const missing = cli(false);
+    expect(missing.error).toBeUndefined(); expect(missing.signal).toBeNull();
     expect(missing.status).toBe(1); expect(missing.stderr).toContain('is stale');
     const result = cli();
+    expect(result.error).toBeUndefined(); expect(result.signal).toBeNull();
     expect(result.status).toBe(0); expect(result.stdout).toContain('generation: PASS');
     expect(fs.lstatSync(target).isFile()).toBe(true);
     expect(fs.readFileSync(target, 'utf8')).toBe(renderCatalog(catalog)); noTemps();
     const validated = cli(false);
+    expect(validated.error).toBeUndefined(); expect(validated.signal).toBeNull();
     expect(validated.status).toBe(0); expect(validated.stdout).toContain('validation: PASS');
   });
   it('regenerates a regular catalog atomically and preserves its permissions', () => {
