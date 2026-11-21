@@ -498,6 +498,14 @@
         {
           "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
           "test": "distinguishes exact canonical bytes from modified, executable and case-aliased publishers"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C20: an uninspected remote reusable workflow at main cannot establish absence"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C20: an uninspected remote reusable workflow at aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa cannot establish absence"
         }
       ]
     },
@@ -768,8 +776,32 @@
       "gate": "jest",
       "evidence": [
         {
-          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
-          "test": "recovers an uncertain pull-request with inspection only"
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher recovery: reviewed resume adopts an existing uncertain pull-request after a lost response without repeating its POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign marker without another POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign head ref without another POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign head sha without another POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign head repository without another POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign base ref without another POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign base repository without another POST"
         }
       ]
     },
@@ -951,19 +983,19 @@
       "evidence": [
         {
           "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
-          "test": "publisher977-C41: a denied branch write retains partial facts without escalation, probes or POST replay"
+          "test": "publisher977-C41: a denied branch write retains partial facts without escalation, probes or blind POST replay"
         },
         {
           "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
-          "test": "publisher977-C41: a denied commit write retains partial facts without escalation, probes or POST replay"
+          "test": "publisher977-C41: a denied commit write retains partial facts without escalation, probes or blind POST replay"
         },
         {
           "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
-          "test": "publisher977-C41: a denied pull-request write retains partial facts without escalation, probes or POST replay"
+          "test": "publisher977-C41: a denied pull-request write retains partial facts without escalation, probes or blind POST replay"
         },
         {
           "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
-          "test": "publisher977-C41: a denied tree write retains partial facts without escalation, probes or POST replay"
+          "test": "publisher977-C41: a denied tree write retains partial facts without escalation, probes or blind POST replay"
         }
       ]
     },

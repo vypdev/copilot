@@ -79,7 +79,7 @@ function fixture() {
     setPulls: (value: unknown[]) => { pulls = value; } };
 }
 
-it.each(['branch', 'pull-request'] as const)('publisher977-C45: fresh reviewed resume creates a confirmed-absent uncertain %s without replaying Git objects', async kind => {
+it.each(['branch', 'pull-request'] as const)('publisher recovery: fresh reviewed resume creates a confirmed-absent uncertain %s without replaying Git objects', async kind => {
   const f = fixture(), route = kind === 'branch' ? 'POST /repos/{owner}/{repo}/git/refs' : 'POST /repos/{owner}/{repo}/pulls';
   const original = f.transport.call.getMockImplementation()!;
   let interrupted = false;
@@ -102,7 +102,7 @@ it.each(['branch', 'pull-request'] as const)('publisher977-C45: fresh reviewed r
   expect((await f.journal.load(id))?.uncertain).toBeUndefined();
 });
 
-it.each(['branch', 'pull-request'] as const)('publisher977-C45: reviewed resume adopts an existing uncertain %s after a lost response without repeating its POST', async kind => {
+it.each(['branch', 'pull-request'] as const)('publisher recovery: reviewed resume adopts an existing uncertain %s after a lost response without repeating its POST', async kind => {
   const f = fixture(), route = kind === 'branch' ? 'POST /repos/{owner}/{repo}/git/refs' : 'POST /repos/{owner}/{repo}/pulls';
   const inspection = kind === 'branch' ? 'GET /repos/{owner}/{repo}/git/ref/{ref}' : 'GET /repos/{owner}/{repo}/pulls';
   let responseLost = false;
@@ -120,7 +120,7 @@ it.each(['branch', 'pull-request'] as const)('publisher977-C45: reviewed resume 
   expect(f.confirm).toHaveBeenCalledTimes(2);
 });
 
-it.each(['branch', 'pull-request'] as const)('publisher977-C47: reviewed uncertain %s recovery refuses a conflicting identity without a replacement POST', async kind => {
+it.each(['branch', 'pull-request'] as const)('publisher recovery: reviewed uncertain %s recovery refuses a conflicting identity without a replacement POST', async kind => {
   const f = fixture(), route = kind === 'branch' ? 'POST /repos/{owner}/{repo}/git/refs' : 'POST /repos/{owner}/{repo}/pulls';
   const inspection = kind === 'branch' ? 'GET /repos/{owner}/{repo}/git/ref/{ref}' : 'GET /repos/{owner}/{repo}/pulls';
   let responseLost = false;
@@ -138,7 +138,7 @@ it.each(['branch', 'pull-request'] as const)('publisher977-C47: reviewed uncerta
   expect(f.posts()).toHaveLength(before); expect(f.confirm).toHaveBeenCalledTimes(2);
 });
 
-it.each(['branch', 'pull-request'] as const)('publisher977-C47: a completed publisher receipt never recreates a missing %s', async kind => {
+it.each(['branch', 'pull-request'] as const)('publisher recovery: a completed publisher receipt never recreates a missing %s', async kind => {
   const f = fixture(); await f.executeInstalled(false); const saved = await f.journal.load(id), before = f.posts().length;
   if (kind === 'branch') f.setBranch(undefined); else f.setPulls([]);
   await expect(f.executeInstalled(true)).rejects.toMatchObject({ reason: 'delivery', lastPersisted: saved });

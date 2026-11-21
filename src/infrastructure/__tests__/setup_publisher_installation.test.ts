@@ -249,6 +249,19 @@ describe('actual shared Git delivery composition with controlled provider', () =
     f.transform((route, data) => { if (route === 'POST /repos/{owner}/{repo}/pulls') throw new Error('lost response'); return data; });
     expect(await f.writer.pullRequest(f.commit)).toBe(73); expect(await f.writer.pullRequest(f.commit, true)).toBe(73); expect(f.posts()).toHaveLength(1);
   });
+  it.each(['marker', 'head ref', 'head sha', 'head repository', 'base ref', 'base repository'])(
+    'publisher977-C33 refuses an uncertain PR with foreign %s without another POST', async field => {
+      const f = deliveryFixture(), pull = f.pull(); f.setBranch(f.commit);
+      if (field === 'marker') pull.body = 'Unrelated human PR';
+      if (field === 'head ref') pull.head.ref = 'setup/copilot/foreign';
+      if (field === 'head sha') pull.head.sha = 'f'.repeat(40);
+      if (field === 'head repository') pull.head.repo.id = 99;
+      if (field === 'base ref') pull.base.ref = 'foreign';
+      if (field === 'base repository') pull.base.repo.id = 99;
+      f.setPulls([pull]);
+      await expect(f.writer.pullRequest(f.commit)).rejects.toThrow(); expect(f.posts()).toEqual([]);
+    },
+  );
   it('a head changed during PR creation remains a partial conflict without cleanup', async () => {
     const f = deliveryFixture(); f.setBranch(f.commit);
     f.transform((route, data) => { if (route === 'POST /repos/{owner}/{repo}/pulls') f.setBranch('f'.repeat(40)); return data; });

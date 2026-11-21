@@ -262,3 +262,36 @@ changes for this correction. The preceding normal hooks passed966 SDK
 suites/19,667 assertions,35 historical skips/build/lint; those results are
 retained. Fresh final-head native checks/review remain mandatory. The failed
 run is not retried. Production remains disabled and pilot writes0.
+
+
+### Acceptance evidence names and exact PR identity proof
+
+Native4e coverage passes all966 SDK suites/19,667 assertions plus35 historical
+skips and every coverage budget, then correctly rejects five stale expanded
+assertion names in the publisher acceptance ledger. It stops before extension
+tests/upload. The failure is retained; the obsolete run is not retried.
+
+The corrected map binds C33 to the actual reviewed/private-journal PR response
+recovery and six explicit actual-provider forgeries: marker, head ref, head SHA,
+head repository, base ref and base repository. All reject with zero POSTs. C41
+now uses the four executed denial names, and C20 includes both executed remote
+workflow uncertainty controls. Extra recovery titles use descriptive prefixes,
+removing unrelated C45/C47/C08 scenario labels. No64-case ID, requirement or
+assertion text changes. This improves the evidence map, not a product threshold.
+
+All19 mapped Jest files run901 assertions with zero failure/skip; the validator
+then confirms60/60 mapped Jest cases against that actual report. C55–C58 remain
+the separate extracted-package gate. The runtime source and four bundles remain
+byte-identical to4e; only test/acceptance evidence changes. Types, specifications
+and Graphify pass. See `acceptance-mapping-correction/receipt.json`; all99 raw
+and compressed archives are verified. Normal hooks and fresh final-head native
+checks/review/uploaded coverage remain required. The selected Action SDD stays
+byte-identical. Production remains disabled, qualification calls/pilot writes0;
+no installation, native canary or actual174/42 qualification is claimed.
+
+The current classifier was also re-executed on all20 immutable masterace workflow
+blobs. It returns UNKNOWN at14 execution paths:12 known local references and
+two additional remote reusable wrappers in the issue/PR comment workflows.
+`acceptance-mapping-correction/actual-default-inventory.json` retains every
+workflow blob/hash and the classifier hash. This is not a full CLI preview or
+installation; the historical49GET preview remains superseded.

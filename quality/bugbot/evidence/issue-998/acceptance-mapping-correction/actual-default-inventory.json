@@ -1,0 +1,157 @@
+{
+  "at": "2026-11-21T18:01:30.545Z",
+  "publishedSource": "4e71f8cbb3fa86406180f7634a1f4b8435139a72",
+  "defaultRevision": "ace49e4a7ce0f6a007fef5d11479eb9b7a5846e3",
+  "completeWorkflowCount": 20,
+  "canonicalWorkflowAbsent": true,
+  "classification": {
+    "kind": "unknown",
+    "paths": [
+      ".github/workflows/copilot_branch_sync.yml",
+      ".github/workflows/copilot_close_inactive_issues.yml",
+      ".github/workflows/copilot_comment_runtime.yml",
+      ".github/workflows/copilot_commit.yml",
+      ".github/workflows/copilot_deployment_orchestration.yml",
+      ".github/workflows/copilot_issue.yml",
+      ".github/workflows/copilot_issue_comment.yml",
+      ".github/workflows/copilot_pull_request.yml",
+      ".github/workflows/copilot_pull_request_approval.yml",
+      ".github/workflows/copilot_pull_request_comment.yml",
+      ".github/workflows/copilot_pull_request_review_state.yml",
+      ".github/workflows/hotfix_workflow.yml",
+      ".github/workflows/release_workflow.yml",
+      ".github/workflows/setup_platform_smoke.yml"
+    ]
+  },
+  "workflowMetadata": [
+    {
+      "path": ".github/workflows/agent-cli-provisioning.yml",
+      "mode": "100644",
+      "blob": "932d923f1b8049238049d94871607ede3c8e2a3c",
+      "sha256": "4a15c6a3e33f2a0b93fdee853b5b2034fc2dc919f8a49a6d6d09b0b3d8b65b40"
+    },
+    {
+      "path": ".github/workflows/ci_check.yml",
+      "mode": "100644",
+      "blob": "67a7b11c54ea0f14e4e3fac32374d85b49a8deec",
+      "sha256": "128fc15ff7dc3f3a03b56f70651cc3dee4ff61e00cdc6704a58a417a7e51008c"
+    },
+    {
+      "path": ".github/workflows/copilot_branch_sync.yml",
+      "mode": "100644",
+      "blob": "a6d58afe4081ccbfbd92d416ed26a71d83a677bb",
+      "sha256": "0f81b7c1b45c415615d3cc4d9c7d3fc91d05557d753070063319188b2f333022"
+    },
+    {
+      "path": ".github/workflows/copilot_close_inactive_issues.yml",
+      "mode": "100644",
+      "blob": "c04d7631f3b19f84651e8128da25f2b72965441e",
+      "sha256": "28fd691e257b66ef38b70f95b0ba54b36446b593b9452d1482e843a0a74a05a2"
+    },
+    {
+      "path": ".github/workflows/copilot_comment_runtime.yml",
+      "mode": "100644",
+      "blob": "e656b81012d22993bd80b59799ad6a9c554c996e",
+      "sha256": "b356c1fcd2cf227f55efb8d6f95e1f7a4efb21647b6bdc48ca50676b36fbaf9f"
+    },
+    {
+      "path": ".github/workflows/copilot_commit.yml",
+      "mode": "100644",
+      "blob": "2e94c22825d427f4fd58ef2528a3330dbf7d75cf",
+      "sha256": "f42103e9b9a453c39beabc8e51f2d6c1b5f3d7109c017533422986cdf5b5064c"
+    },
+    {
+      "path": ".github/workflows/copilot_credential_health.yml",
+      "mode": "100644",
+      "blob": "2ccf3f70fc9824811e0439e7aa020c5303a2c2ba",
+      "sha256": "5f093b2c03bef389ccea68ef43bec3577cb1bfddc038da1884a146088f39a4ec"
+    },
+    {
+      "path": ".github/workflows/copilot_deployment_orchestration.yml",
+      "mode": "100644",
+      "blob": "4a1acda8b4cb6d5cc8833619934d85c958589a71",
+      "sha256": "51b55a3a17a4f24c7e32d51ea9c0a56abcda86c4c6cea2b5355aec0c5c9c3d3d"
+    },
+    {
+      "path": ".github/workflows/copilot_issue.yml",
+      "mode": "100644",
+      "blob": "8414fda3b88ced894d17410ba8ba10cb769300f5",
+      "sha256": "3c5e18335b1df952f9dbb303db9302481e8a3e319e733fcd61e077a612621226"
+    },
+    {
+      "path": ".github/workflows/copilot_issue_comment.yml",
+      "mode": "100644",
+      "blob": "4bdd5a267b2b7caaaf99c1867457c6578b7b14d9",
+      "sha256": "e5afe0e8f445e6dffebfd2a04a4d8be69eac2149534b34c93c3c8d6b5b09b916"
+    },
+    {
+      "path": ".github/workflows/copilot_pull_request.yml",
+      "mode": "100644",
+      "blob": "24fb417dbfbaaa013351a2c439de603ab07ed6bf",
+      "sha256": "391ee27d4a995608902cdeb40735cc4f2c1a1f0a332bae34b6d5a0fc04314dc8"
+    },
+    {
+      "path": ".github/workflows/copilot_pull_request_approval.yml",
+      "mode": "100644",
+      "blob": "249d067d835df0efb877af182b085d9c97c2991b",
+      "sha256": "4c57079d62f4b76d32819337066683bb375cf20578474ffddd5ae648104685c1"
+    },
+    {
+      "path": ".github/workflows/copilot_pull_request_comment.yml",
+      "mode": "100644",
+      "blob": "ba294e032e7000757549f25c57665c71ec3e63f6",
+      "sha256": "ed483fb43c03fc7446e7a7eaed27142cbb31852ae1315d122a572b657f0040be"
+    },
+    {
+      "path": ".github/workflows/copilot_pull_request_merge_queue.yml",
+      "mode": "100644",
+      "blob": "25714cf926357ce09099d1f6f546e185f009994c",
+      "sha256": "54e27670bdacca1026ca6b68292c6ad8f82e0649ec6fa5b317b37a2f1847d069"
+    },
+    {
+      "path": ".github/workflows/copilot_pull_request_review_state.yml",
+      "mode": "100644",
+      "blob": "63cedc3b43700a184f5c867384d286254cdd6042",
+      "sha256": "2355180e355453ce76b863494959b9f6274dbed721962e857572c9d78f6231cb"
+    },
+    {
+      "path": ".github/workflows/copilot_runner_diagnostics.yml",
+      "mode": "100644",
+      "blob": "9a05af5fc8fb8263e72ad6d8118cf56e3ae734b0",
+      "sha256": "f4dab910824dad19508e73baa9d9df88822b6c1344666e437d019c4dacb1c61f"
+    },
+    {
+      "path": ".github/workflows/hotfix_workflow.yml",
+      "mode": "100644",
+      "blob": "2116f5edfa59af37c51bdc162a964c172cd0aa87",
+      "sha256": "2432f68a910d82c8c05c7a236da87bf308dc415a4e6e80782b94948db93520a3"
+    },
+    {
+      "path": ".github/workflows/release_workflow.yml",
+      "mode": "100644",
+      "blob": "3522a476d7bdd697363567c27f443f22d9ec4d08",
+      "sha256": "06056affd7c8732f2b05b34bcfe5f9f4715d2d2d1a03f47b332e924934d4f133"
+    },
+    {
+      "path": ".github/workflows/repowise.yml",
+      "mode": "100644",
+      "blob": "7ee5cd04a3ccc8d2abcb72cac5e2a91a74e4e431",
+      "sha256": "9288761513287b9581637e90a42d03f0b01ccdac36e32eafcd5c6e3e1ed9116f"
+    },
+    {
+      "path": ".github/workflows/setup_platform_smoke.yml",
+      "mode": "100644",
+      "blob": "b8523670491e1a0acb33e3015a3c38916691f9d6",
+      "sha256": "6fd2dc68ff86d55f761753a157b9583d6c982d7ca4ed75eb1b6200b74212e357"
+    }
+  ],
+  "classifierSha256": "bc5a100cfb5bd4bac2caee4de1ad1be02087d1ccc1a36218c9c3a224754a2f62",
+  "boundary": "Actual immutable Git workflow bytes and current source classifier; no GitHub CLI preview, Apply or installation.",
+  "modelCalls": 0,
+  "installationEffects": 0,
+  "production": "disabled",
+  "newUnknownPathsVersusLocalOnlyCorrection": [
+    ".github/workflows/copilot_issue_comment.yml",
+    ".github/workflows/copilot_pull_request_comment.yml"
+  ]
+}

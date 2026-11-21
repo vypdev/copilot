@@ -12,7 +12,7 @@ it('an ordinary environment mapping does not grant publisher authority or cause 
   const content = 'env:\n  NODE_ENV: test\n' + ci;
   expect(inspectSetupPublisherWorkflows([workflow(content)], expected)).toEqual({ kind: 'absent', paths: [] });
 });
-it.each(['main', 'a'.repeat(40)])('publisher977-C08: an uninspected remote reusable workflow at %s cannot establish absence', revision => {
+it.each(['main', 'a'.repeat(40)])('publisher977-C20: an uninspected remote reusable workflow at %s cannot establish absence', revision => {
   const content = `on: push\njobs:\n  ci:\n    uses: other/repo/.github/workflows/wrapper.yml@${revision}\n`;
   expect(inspectSetupPublisherWorkflows([workflow(content)], expected)).toEqual({ kind: 'unknown', paths: ['.github/workflows/ci.yml'] });
   expect(inspectSetupPublisherWorkflows([workflow(expected, SETUP_PUBLISHER_WORKFLOW_PATH), workflow(content)], expected).kind).toBe('unknown');

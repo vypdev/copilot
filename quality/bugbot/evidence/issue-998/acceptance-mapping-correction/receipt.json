@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T18:22:54.689083+00:00",
+  "sourceParent": "4e71f8cbb3fa86406180f7634a1f4b8435139a72",
+  "nativeNegative": {
+    "run": 44932094766,
+    "job": 136930736208,
+    "SDK": "966suites/19667PASS35historicalskip",
+    "coverageBudgets": "allPASS",
+    "failure": "Publisher acceptance ledger retained five stale expanded assertion names after reviewed test renames; command stopped before extension/upload.",
+    "retryRequested": false
+  },
+  "correction": {
+    "C33": "Bind to real reviewed/private-journal PR response recovery plus six actual provider identity-forgery controls (marker, head ref/SHA/repository, base ref/repository).",
+    "C41": "Use the four actual updated denial assertion names that distinguish blindly replayed POSTs from freshly reviewed create-after-inspected-absence.",
+    "C20": "Include the two actual uninspected remote-workflow inventory assertions.",
+    "regressionTitles": "Use descriptive recovery prefixes instead of unrelated C45/C47/C08 IDs.",
+    "additionalC33Controls": 6
+  },
+  "fixedIds": 64,
+  "idsRequirementsAndAssertionsUnchanged": true,
+  "actualMappedSuite": {
+    "suites": 19,
+    "passed": 901,
+    "failed": 0,
+    "skipped": 0,
+    "validator": "60/60mappedJestPASS;C55-C58remainseparateextractedpackagegate"
+  },
+  "runtimeSourceUnchanged": true,
+  "fourBundleHashesUnchanged": true,
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8466815,
+      "sha256": "22da5bff2a903f2b9720559faa74ee1abec52ddb6b5d9ce07bb353f8d3bfd191"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+    }
+  },
+  "typecheck": "PASS",
+  "specifications": "PASS",
+  "graphify": "PASS",
+  "selectedSddSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "newNormalHooksAndNativeGates": "stillrequired",
+  "installationEffects": 0,
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "production": "disabled"
+}

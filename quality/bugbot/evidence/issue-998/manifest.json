@@ -563,6 +563,48 @@
       "rawSha256": "03dfa593625caeb9e25006a543cf4e7992ece04ea81ac848c638dd116f27712e",
       "gzipBytes": 2207,
       "gzipSha256": "f4490bd7fca192a6f12e98ac111dba52518ebeb6368033c467c9b2fd392b15e1"
+    },
+    "acceptance-mapping-correction/native-4e-coverage-before.log.gz": {
+      "rawBytes": 3163166,
+      "rawSha256": "13e2d8915cd928697c39f9fe64cb9f84a3f94beacfc4fe8a6c404398cde09197",
+      "gzipBytes": 579266,
+      "gzipSha256": "dc1f0eb829bb9d6205942f9f7dbcbeb11872cdb7e9b3f085986bd6cce2b3df4a"
+    },
+    "acceptance-mapping-correction/mapped-suite-results.json.log.gz": {
+      "rawBytes": 394746,
+      "rawSha256": "50c5bae23ba4faf49920073b8d6647d3cbc2a784a2d1d3ba58a5d15f8ab680a1",
+      "gzipBytes": 23732,
+      "gzipSha256": "fd751d6cd6db888ba3c31dd92736a6396085ff0d87624cd1f498125bece31cfd"
+    },
+    "acceptance-mapping-correction/mapped-suite.log.gz": {
+      "rawBytes": 1553,
+      "rawSha256": "4faaeda103128caeffe6296793bfd7acef3e42c71051ba2b83fafc0d58818c76",
+      "gzipBytes": 431,
+      "gzipSha256": "11e3223fc96f1174c90f0b7ec080f980fbac3068c59327634713aed71a58c5eb"
+    },
+    "acceptance-mapping-correction/mapped-validator.log.gz": {
+      "rawBytes": 119,
+      "rawSha256": "44af1feefebae08e8e667f0cce0c07fcacb73d0801aea88485643bdfec767e23",
+      "gzipBytes": 127,
+      "gzipSha256": "a4512f2f9d4783d1cf73a601bfa624b77b9add98eaeb51b6b3bb6fdca6b6a591"
+    },
+    "acceptance-mapping-correction/typecheck.log.gz": {
+      "rawBytes": 555,
+      "rawSha256": "96e50bba6ba77c1b37b6fc8d1c6205f02288d7bd8a3161e5af2e0fbe68d5623e",
+      "gzipBytes": 252,
+      "gzipSha256": "f18703251ced998328dee03fbe39fbea198a515268c80f52e59017f6ad4c814a"
+    },
+    "acceptance-mapping-correction/specifications.log.gz": {
+      "rawBytes": 2463,
+      "rawSha256": "7ef15150df9575b9ab9f434bd8e4b2f3d2e4b7c07ce7768946669b7bfde4cc83",
+      "gzipBytes": 1081,
+      "gzipSha256": "3c041b90753beee893e25aa9a4bd09059f51e1aaa8ab6681f015cae8973b5bf4"
+    },
+    "acceptance-mapping-correction/graphify.log.gz": {
+      "rawBytes": 3619,
+      "rawSha256": "bee76f6ef99679288fc901d1a73b14ef532c7e22caa8a5ac47bf1295413acb8b",
+      "gzipBytes": 929,
+      "gzipSha256": "e33e162f184a7038aa985ca72570574306a69bdec9dbbe688f2633ab70f35b2c"
     }
   },
   "fullSDKCorrectedBeforeNewTests": "964suites and19584assertions PASS,35existing skips; commandexit1 at existingpurepolicycoverage95%, before20additional metadata cases. This negative gate is retained.",
@@ -1027,5 +1069,70 @@
     "installationEffects": 0,
     "qualificationModelCalls": 0,
     "pilotWriteAttempts": 0
+  },
+  "acceptanceMappingCorrection": {
+    "schemaVersion": 1,
+    "at": "2026-11-21T18:22:54.689083+00:00",
+    "sourceParent": "4e71f8cbb3fa86406180f7634a1f4b8435139a72",
+    "nativeNegative": {
+      "run": 44932094766,
+      "job": 136930736208,
+      "SDK": "966suites/19667PASS35historicalskip",
+      "coverageBudgets": "allPASS",
+      "failure": "Publisher acceptance ledger retained five stale expanded assertion names after reviewed test renames; command stopped before extension/upload.",
+      "retryRequested": false
+    },
+    "correction": {
+      "C33": "Bind to real reviewed/private-journal PR response recovery plus six actual provider identity-forgery controls (marker, head ref/SHA/repository, base ref/repository).",
+      "C41": "Use the four actual updated denial assertion names that distinguish blindly replayed POSTs from freshly reviewed create-after-inspected-absence.",
+      "C20": "Include the two actual uninspected remote-workflow inventory assertions.",
+      "regressionTitles": "Use descriptive recovery prefixes instead of unrelated C45/C47/C08 IDs.",
+      "additionalC33Controls": 6
+    },
+    "fixedIds": 64,
+    "idsRequirementsAndAssertionsUnchanged": true,
+    "actualMappedSuite": {
+      "suites": 19,
+      "passed": 901,
+      "failed": 0,
+      "skipped": 0,
+      "validator": "60/60mappedJestPASS;C55-C58remainseparateextractedpackagegate"
+    },
+    "runtimeSourceUnchanged": true,
+    "fourBundleHashesUnchanged": true,
+    "bundles": {
+      "api": {
+        "bytes": 1127424,
+        "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+      },
+      "cli": {
+        "bytes": 8466815,
+        "sha256": "22da5bff2a903f2b9720559faa74ee1abec52ddb6b5d9ce07bb353f8d3bfd191"
+      },
+      "deployment_recovery": {
+        "bytes": 2035151,
+        "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+      },
+      "github_action": {
+        "bytes": 11093575,
+        "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+      }
+    },
+    "typecheck": "PASS",
+    "specifications": "PASS",
+    "graphify": "PASS",
+    "selectedSddSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+    "newNormalHooksAndNativeGates": "stillrequired",
+    "installationEffects": 0,
+    "qualificationModelCalls": 0,
+    "pilotWriteAttempts": 0,
+    "production": "disabled",
+    "actualDefaultInventory": {
+      "file": "acceptance-mapping-correction/actual-default-inventory.json",
+      "sha256": "7ef5110656b588b62b9c3d31d54544095e7769bb23fb27478faac5e4d88cb31e",
+      "completeWorkflows": 20,
+      "currentUnknownPaths": 14,
+      "result": "UNKNOWN; installation unsupported until reconciled"
+    }
   }
 }
