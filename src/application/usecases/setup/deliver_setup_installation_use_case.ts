@@ -18,9 +18,13 @@ export class DeliverSetupInstallationUseCase implements SetupInstallationDeliver
       state = next;
       await control.retain(state);
     };
-    const fresh = async (): Promise<void> => {
+    const active = (): void => {
       if (!control.active()) throw new SetupInstallationDeliveryError('cancelled', state);
+    };
+    const fresh = async (): Promise<void> => {
+      active();
       if (!await control.revalidate()) throw new SetupInstallationDeliveryError('drift', state);
+      active();
     };
     try {
       // An unknown Git-object POST cannot be discovered safely by guessing its ID.
@@ -28,6 +32,7 @@ export class DeliverSetupInstallationUseCase implements SetupInstallationDeliver
       if (!state.preparedCommit) {
         await fresh();
         await retain({ ...state, uncertain: 'prepared-objects' });
+        active();
         let treeCreated = false;
         const commit = await commands.prepareCommit(async event => {
           if (event.effect === 'tree' && event.state === 'completed') treeCreated = true;
@@ -50,6 +55,7 @@ export class DeliverSetupInstallationUseCase implements SetupInstallationDeliver
         await fresh();
         const inspectOnly = state.uncertain === name && control.recovery !== 'reviewed-create-if-absent';
         await retain({ ...state, uncertain: name });
+        active();
         await work(inspectOnly);
         await retain({ ...state, effects: [...state.effects, name], uncertain: undefined });
       };

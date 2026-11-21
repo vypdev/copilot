@@ -2241,6 +2241,49 @@
           "test": "completed recovery preserves cancellation during pullRequest snapshot drift"
         }
       ]
+    },
+    {
+      "id": "publisher977-C94",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "Cancellation during file-phase revalidation or intent persistence stops the next provider command and preserves completed facts and retained uncertainty.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during prepared-objects revalidation prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during prepared-objects intent prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during branch revalidation prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during branch intent prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during pull-request revalidation prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during pull-request intent prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts",
+          "test": "sequential reviewed batch Apply cancels during file preparation revalidation without dispatching objects"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts",
+          "test": "sequential reviewed batch Apply cancels during file preparation intent without dispatching objects"
+        }
+      ]
     }
   ]
 }

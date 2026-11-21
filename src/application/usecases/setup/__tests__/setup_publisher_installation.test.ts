@@ -85,9 +85,41 @@ describe('shared approved-file delivery and retained effects', () => {
     await expect(f.execute()).rejects.toMatchObject({ reason: 'drift' }); expect(f.order).toEqual([]); expect(f.states).toEqual([]);
   });
   it('cancellation after a known prepared commit retains it and stops branch creation', async () => {
-    const f = fixture(); f.control.active.mockReturnValueOnce(true).mockReturnValue(false);
+    const f = fixture();
+    f.commands.prepareCommit.mockImplementation(async () => {
+      f.order.push('prepare'); f.control.active.mockReturnValue(false); return commit;
+    });
     await expect(f.execute()).rejects.toMatchObject({ reason: 'cancelled', retained: { preparedCommit: commit } });
     expect(f.order).toEqual(['prepare']); expect(f.states.at(-1)?.preparedCommit).toBe(commit);
+  });
+  it.each([
+    ['prepared-objects', 'revalidation'], ['prepared-objects', 'intent'],
+    ['branch', 'revalidation'], ['branch', 'intent'],
+    ['pull-request', 'revalidation'], ['pull-request', 'intent'],
+  ] as const)('cancellation during %s %s prevents dispatch and retains prior facts', async (phase, boundary) => {
+    const f = fixture();
+    const state: SetupInstallationDeliveryState = phase === 'prepared-objects' ? initial()
+      : { preparedCommit: commit, effects: phase === 'branch' ? [] : ['branch'] };
+    let entered!: () => void, release!: () => void;
+    const reached = new Promise<void>(resolve => { entered = resolve; });
+    const held = new Promise<void>(resolve => { release = resolve; });
+    if (boundary === 'revalidation') f.control.revalidate.mockImplementation(async () => {
+      entered(); await held; return true;
+    });
+    else {
+      const retain = f.control.retain.getMockImplementation()!;
+      f.control.retain.mockImplementation(async next => { await retain(next); entered(); await held; });
+    }
+    const execution = f.execute(state).catch((error: unknown) => error);
+    await reached;
+    f.control.active.mockReturnValue(false); release();
+    const error = await execution;
+    expect(error).toBeInstanceOf(SetupInstallationDeliveryError);
+    expect(error).toMatchObject({ reason: 'cancelled', retained: boundary === 'intent' ? { ...state, uncertain: phase } : state });
+    expect(f.order).toEqual([]);
+    expect(f.commands.prepareCommit).not.toHaveBeenCalled(); expect(f.commands.branch).not.toHaveBeenCalled();
+    expect(f.commands.pullRequest).not.toHaveBeenCalled();
+    expect(f.states).toEqual(boundary === 'intent' ? [{ ...state, uncertain: phase }] : []);
   });
   it('drift after the branch stops PR creation without deleting or rolling back the branch', async () => {
     const f = fixture(); f.control.revalidate.mockResolvedValueOnce(true).mockResolvedValueOnce(true).mockResolvedValue(false);

@@ -175,3 +175,10 @@ stale. If exclusive-lock initialization fails, setup removes its own identified
 unfinished lock so a later fresh attempt can proceed. A foreign, unverified or
 unremovable lock is retained; follow the documented owner verification procedure
 before orphan-lock recovery.
+
+During file delivery, cancellation is checked again after each asynchronous freshness
+check and after saving each prepare, branch or pull-request intent. Cancelling there
+stops the next provider command. Already completed effects and retained intents stay
+available for inspection and reviewed recovery; cancellation does not roll them back
+or erase an uncertain outcome. A failed state save still stops delivery as a journal
+failure.

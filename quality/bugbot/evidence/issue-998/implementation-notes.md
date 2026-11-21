@@ -370,4 +370,14 @@ qualification or qualified profile is claimed; pilot writes0/productiondisabled.
 
 The cumulative normative90-case budget, C65–C90 assertions, traceability and extended Definition of Done live in the owning organization/batch SDD appendix. The selected companion remains immutable as the original64-case baseline. The validator reads both contracts, rejects duplicate published IDs, and requires every mapped actual assertion. Source invocation validation is stateless YAML parsing in pure policy; the GitHub adapter ignores disjoint installation PRs while fencing every own-marker claim. See review-round5/receipt.json for real test boundaries, fixture negatives and pending final-head acceptance.
 
-Round6 makes the current cumulative acceptance floor91 (87namedJest +four extracted-package cases). C91 binds complete legacy tree-path validation before blob download; C08 retains its original normative assertion and expands only its evidence to authorized-Boolean no-Apply and actual prior partial receipt/fresh-decline controls. All other prior evidence and all prior IDs/areas/requirements/assertions/gates remain unchanged. The owning SDD publishes the additional table row, traceability and current Definition of Done; the selected companion remains byte-exact.
+The historical Round6 snapshot has a cumulative acceptance floor91 (87namedJest +four extracted-package cases). C91 binds complete legacy tree-path validation before blob download; C08 retains its original normative assertion and expands only its evidence to authorized-Boolean no-Apply and actual prior partial receipt/fresh-decline controls. All other prior evidence and all prior IDs/areas/requirements/assertions/gates remain unchanged. The owning SDD publishes the additional table row, traceability and current Definition of Done; the selected companion remains byte-exact.
+
+
+Round7 raises the historical floor to93 (89 mapped Jest cases plus four extracted-
+package cases), adding C92 lock initialization and C93 completed-recovery guidance.
+Round8 makes the current floor94 (90 mapped Jest cases plus the same four package
+cases): C94 covers cancellation during revalidation and intent persistence at each
+file phase and through ordinary batch Apply. All prior93 ledger objects and the
+selected companion remain unchanged. Baseline publication rows are mandatory; only
+contiguous additions above C94 may use the generic future-case checks. New execution
+results and the separate final-head native acceptance belong in review-round8.

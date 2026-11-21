@@ -36,6 +36,27 @@ describe('sequential reviewed batch Apply', () => {
     expect(result.targets[0]).toMatchObject({ status: 'cancelled', reason: 'cancelled' });
     expect(f.writer.grant).toHaveBeenCalledTimes(1); expect(f.writer.variables).not.toHaveBeenCalled();
   });
+  it.each(['revalidation', 'intent'] as const)('cancels during file preparation %s without dispatching objects', async boundary => {
+    const f = fixture(1), save = f.journal.save.getMockImplementation()!;
+    const resources = ['access', 'variables', 'labels', 'issue-types'] as const;
+    let ready = false, resourceCompleteSaves = 0;
+    f.writer.issueTypes.mockImplementation(async () => { ready = true; });
+    f.writer.revalidate.mockImplementation(async () => {
+      if (boundary === 'revalidation' && ready) f.presentation.active.mockReturnValue(false);
+      return true;
+    });
+    f.journal.save.mockImplementation(async operation => {
+      await save(operation);
+      if (resources.every(effect => operation.targets[0].effects.includes(effect))
+        && !operation.targets[0].preparedCommit) resourceCompleteSaves += 1;
+      if (boundary === 'intent' && resourceCompleteSaves === 2) f.presentation.active.mockReturnValue(false);
+    });
+    const result = await f.useCase.execute(f.plan, 'fixture');
+    expect(result.targets[0]).toMatchObject({ status: 'cancelled',
+      reason: boundary === 'revalidation' ? 'preflight' : 'cancelled', effects: resources });
+    expect(f.writer.prepareCommit).not.toHaveBeenCalled(); expect(f.writer.branch).not.toHaveBeenCalled();
+    expect(f.writer.pullRequest).not.toHaveBeenCalled(); expect(f.unlock).toHaveBeenCalledTimes(1);
+  });
   it('completes resource-only setup as verification pending without creating a ref or PR', async () => {
     const f = fixture(1); const plan = { ...f.plan, targets: [{ ...f.plan.targets[0], files: [] }] };
     const result = await f.useCase.execute(plan, 'fixture');

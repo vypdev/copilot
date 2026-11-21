@@ -120,6 +120,18 @@ describe('publisher acceptance report execution boundary', () => {
         const result = f.execute(); expect(result.status).toBe(1); expect(result.stderr).toContain('duplicate published contract');
     });
 
+    it.each([
+        ['publisher977-C27', 'specs/setup-bugbot-publisher-manifest-route.md'],
+        ['publisher977-C92', 'specs/organization-configuration-reuse-and-batch-setup.md'],
+    ])('rejects a missing required publication row %s while retaining its ledger evidence', (id, file) => {
+        const f = extendedFixture(), path = join(f.runtimeRoot, file);
+        writeFileSync(path, readFileSync(path, 'utf8').split('\n')
+            .filter(line => !line.startsWith(`| ${id} |`)).join('\n'));
+        const result = f.execute();
+        expect(result.status).toBe(1); expect(result.stderr).toContain(`${id}: missing required published contract`);
+        expect(result.stdout).not.toContain('mapped Jest cases passed');
+    });
+
     it('keeps registration-only mode exclusive to an omitted report argument', () => {
         const result = run();
         expect(result.status).toBe(0);

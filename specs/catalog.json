@@ -1088,7 +1088,7 @@
       "id": "setup-and-doctor",
       "title": "Setup, configuration, credentials, and doctor",
       "status": "implemented",
-      "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials; publisher delivery isolates exact operation PRs and structurally verifies the single pinned source invocation, with cumulative baseline and owning-appendix acceptance; malformed asset inventory fails closed before blob reads or an absent-manifest baseline.",
+      "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials; publisher delivery isolates exact operation PRs and structurally verifies the single pinned source invocation, with cumulative baseline and owning-appendix acceptance; malformed asset inventory fails closed before blob reads or an absent-manifest baseline. File delivery rechecks cancellation after awaited freshness and retained intents; mandatory published acceptance rows cannot fall back to future-case checks.",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-21",
       "specs": [
