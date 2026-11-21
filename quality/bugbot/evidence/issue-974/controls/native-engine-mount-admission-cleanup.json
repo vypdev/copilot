@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "scopes": [
+    {
+      "directory": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/native-controls-attempt2-tmp/ev974-native-ev974-C32-7Wvs5B",
+      "scopeId": "6f705bd3fe80ae8f10d44a9db6e968b502bcf0acf45e2abbbbbcda28e2410073",
+      "identity": {
+        "ownerId": "4969fd39d5660eafb1a7381d8e8c979039072f018bf2102851d3ffad762aec47",
+        "operationId": "control:ev974-C32",
+        "planSha256": "f3d64f632c253d4d9f7c51f25882e8070b6d84e82ce5be8672b6d461870153be",
+        "implementation": "1f20e9c5b46a7b3fdd761fbc07051058bb0dc699",
+        "imageSha256": "9b7c5e0906943cf11b7438ebc50bfe012fcebbee215cb251a165f74e384d76f8",
+        "purpose": "native-control"
+      },
+      "state": {
+        "Status": "created",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": false,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "0001-01-01T00:00:00Z",
+        "FinishedAt": "0001-01-01T00:00:00Z"
+      },
+      "scopeStarted": false,
+      "removedStatus": 404,
+      "acceptanceEvidence": false
+    },
+    {
+      "directory": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/native-controls-attempt2-tmp/ev974-native-ev974-C33-EdMcpi",
+      "scopeId": "e4c353c9da2ccb9166010b145e8e250dba5dd16238fcaa4422757ae167b5d6c0",
+      "identity": {
+        "ownerId": "fef6f2f6153e5f84333712e278f787c5ddc761ab73829aa90e0ba679822209b2",
+        "operationId": "control:ev974-C33",
+        "planSha256": "5dfaf456bc7f9be09b99c2334751a000fb54dd1e87059230da934a3159152039",
+        "implementation": "1f20e9c5b46a7b3fdd761fbc07051058bb0dc699",
+        "imageSha256": "9b7c5e0906943cf11b7438ebc50bfe012fcebbee215cb251a165f74e384d76f8",
+        "purpose": "native-control"
+      },
+      "state": {
+        "Status": "created",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": false,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "0001-01-01T00:00:00Z",
+        "FinishedAt": "0001-01-01T00:00:00Z"
+      },
+      "scopeStarted": false,
+      "removedStatus": 404,
+      "acceptanceEvidence": false
+    },
+    {
+      "directory": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/native-controls-attempt2-tmp/ev974-native-owner-loss-YPqXa7",
+      "scopeId": "1bf8b053596a1b2b835a83936e21e6b9b3cd7685fa93443e4e917ac252557ed9",
+      "identity": {
+        "ownerId": "c0fbab19a0094b78f01fceef86ec0de4658bf21fcb439734b8e27137c69ef270",
+        "operationId": "control:ev974-C34",
+        "planSha256": "a94c44644235302d36bfde37b3b2635a84b504f743a7409d1eec9137e986f830",
+        "implementation": "1f20e9c5b46a7b3fdd761fbc07051058bb0dc699",
+        "imageSha256": "9b7c5e0906943cf11b7438ebc50bfe012fcebbee215cb251a165f74e384d76f8",
+        "purpose": "native-control"
+      },
+      "state": {
+        "Status": "created",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": false,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "0001-01-01T00:00:00Z",
+        "FinishedAt": "0001-01-01T00:00:00Z"
+      },
+      "scopeStarted": false,
+      "removedStatus": 404,
+      "acceptanceEvidence": false
+    },
+    {
+      "directory": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/native-controls-attempt2-tmp/ev974-native-unrelated-sentinel-0Segj4",
+      "scopeId": "ee25a7ce1bbf69c6a8aac80ad4810c8de41cc3ac80efd8a3a2e950ca8a919ed7",
+      "identity": {
+        "ownerId": "e2b695ab8334c1fb42416d0bcef14723afcc9c2b0c5f49f19f366e9c861fe3ae",
+        "operationId": "control:ev974-C34",
+        "planSha256": "a94c44644235302d36bfde37b3b2635a84b504f743a7409d1eec9137e986f830",
+        "implementation": "1f20e9c5b46a7b3fdd761fbc07051058bb0dc699",
+        "imageSha256": "9b7c5e0906943cf11b7438ebc50bfe012fcebbee215cb251a165f74e384d76f8",
+        "purpose": "native-control"
+      },
+      "state": {
+        "Status": "created",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": false,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "0001-01-01T00:00:00Z",
+        "FinishedAt": "0001-01-01T00:00:00Z"
+      },
+      "scopeStarted": false,
+      "removedStatus": 404,
+      "acceptanceEvidence": false
+    }
+  ],
+  "modelCalls": 0
+}
