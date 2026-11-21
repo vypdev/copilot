@@ -12,7 +12,8 @@ const ev07 = path.join(__dirname, '../issue-950/ev07-shadow');
 const sourceProof = require('../issue-950/execution-provenance.cjs');
 const implementation = require('../issue-950/ev07-shadow/implementation.cjs');
 const { selectedCorpus, requireCorpusSelection } = require('./corpus-selection.cjs');
-const { createDurableRecorder, createRecordedCli, validateCompleteAttempts } = require('./attempt-ledger.cjs');
+const { createDurableRecorder, createRecordedCli, createRecordedVerifier, validateCompleteAttempts,
+    validateCompleteReviewAttempts } = require('./attempt-ledger.cjs');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const clone = value => JSON.parse(JSON.stringify(value));
 const plan = () => ({ ...clone(require('../issue-950/ev07-shadow/plan.json')), schemaVersion: 2,
@@ -115,7 +116,7 @@ test('ev974-C12 v2 cannot weaken gates, cohort, repetition, positives, latency o
     for (const mutate of mutations) { const p = plan(); mutate(p); assert.throws(() => implementation.requireQualificationPolicy(p)); }
 });
 
-function publicBootstrapFixture(t, moduleFence = false) {
+function publicBootstrapFixture(t, moduleFence = false, containment) {
     const directory = temporary(t), project = path.join(directory, 'project'); fs.mkdirSync(project);
     const prefix = 'quality/bugbot/evidence/issue-950/', git = gitAt(project);
     const write = (file, bytes) => { fs.mkdirSync(path.dirname(path.join(project, file)), { recursive: true }); fs.writeFileSync(path.join(project, file), bytes); };
@@ -126,9 +127,12 @@ function publicBootstrapFixture(t, moduleFence = false) {
     write('node_modules/typescript/package.json', JSON.stringify({ name: 'typescript', version: 'fixture', main: 'index.js' }));
     write('node_modules/typescript/index.js', 'module.exports={};\n');
     const marker = path.join(directory, 'module-ran'), probe = path.join(directory, 'probe-ran');
-    const p = plan(), drivers = implementation.selectedQualificationDrivers(p);
+    const p = plan();
+    if (containment) p.containment = containmentProfile();
+    const drivers = implementation.selectedQualificationDrivers(p);
     for (const file of drivers) write(path.posix.normalize(prefix + 'ev07-shadow/' + file), 'module.exports={};\n');
     for (const file of ['execution-provenance.cjs', 'qualification-bootstrap.cjs']) write(prefix + file, fs.readFileSync(path.join(__dirname, '../issue-950', file)));
+    if (containment) write('quality/bugbot/evidence/issue974/operation-containment.cjs', fs.readFileSync(path.join(__dirname, 'operation-containment.cjs')));
     write(prefix + 'ev07-shadow/corpus.cjs', `require('node:fs').writeFileSync(${JSON.stringify(marker)},'entered');
         exports.run=()=>{require('node:child_process').execFileSync(process.execPath,['-e',${JSON.stringify(`require('node:fs').writeFileSync(${JSON.stringify(probe)},'probe');`)}]);};\n`);
     if (moduleFence) {
@@ -148,6 +152,11 @@ function publicBootstrapFixture(t, moduleFence = false) {
     }
     git('add', '.'); const source = git('commit-tree', git('write-tree'), '-m', 'Trusted synthetic v2 source'); git('update-ref', 'HEAD', source);
     p.implementation = source; p.runtime = sourceProof.runtimeIdentity(project);
+    if (containment) {
+        p.hostRuntime = p.runtime;
+        p.containment.supervisorSha256 = hash(fs.readFileSync(path.join(project, 'quality/bugbot/evidence/issue974/qualification-supervisor.cjs')));
+        containment(p);
+    }
     p.inspectedArtifacts = Object.fromEntries(drivers.map(file => [file, hash(fs.readFileSync(path.join(project, prefix, 'ev07-shadow', file)))]));
     const planPath = 'quality/bugbot/evidence/issue974/plan.json'; write(planPath, JSON.stringify(p)); git('add', planPath);
     const revision = git('commit-tree', git('write-tree'), '-p', source, '-m', 'Synthetic v2 preregistration'); git('update-ref', 'HEAD', revision);
@@ -169,6 +178,157 @@ test('ev974-C13 actual v2 public bootstrap rejects foreign source/runtime before
     fs.writeFileSync(source, before); f.write('node_modules/typescript/index.js', 'throw new Error("foreign dependency executed");');
     const runtime = f.launch(); assert.notEqual(runtime.status, 0); assert.match(runtime.stderr, /runtime differs/u);
     assert(!fs.existsSync(f.marker) && !fs.existsSync(f.probe));
+});
+
+function containmentProfile() {
+    const bytes = 'a'.repeat(64);
+    return { schemaVersion: 1, image: 'sha256:' + bytes, imageConfigSha256: bytes,
+        hostNodeSha256: hash(fs.readFileSync(process.execPath)), socketPath: '/fixture/engine.sock', supervisorSha256: bytes,
+        workerUid: process.getuid(), workerGid: process.getgid(),
+        engine: { version: 'synthetic-engine', apiVersion: '1.54', os: 'linux', arch: 'arm64', kernelVersion: 'synthetic-kernel' } };
+}
+
+test('ev974-C26 immutable public bootstrap rejects closed profile and CLI byte mismatches before application imports/probes', t => {
+    for (const mutate of [p => { p.containment.image = 'node:latest'; }, p => { p.containment.imageConfigSha256 = ''; },
+        p => { p.containment.hostNodeSha256 = 'f'.repeat(64); }, p => { p.containment.supervisorSha256 = 'f'.repeat(64); },
+        p => { p.containment.engine.kernelVersion = ''; }]) {
+        const fixture = publicBootstrapFixture(t, false, mutate), run = fixture.launch();
+        assert.notEqual(run.status, 0); assert(!fs.existsSync(fixture.marker) && !fs.existsSync(fixture.probe));
+    }
+    // Exercise the private core-only byte admission as a model-free component;
+    // this VM export is never present in the actual public bootstrap.
+    const vm = require('node:vm'), module = { exports: {} };
+    vm.runInNewContext(fs.readFileSync(path.join(ev07, '../qualification-bootstrap.cjs'), 'utf8')
+        + '\nmodule.exports.testCliBytes=admitCliBytes;', { require, module, process, __filename: __filename });
+    const directory = temporary(t), executable = path.join(directory, 'cli'), native = path.join(directory, 'native');
+    fs.writeFileSync(executable, '#!/bin/sh\nexit 99\n', { mode: 0o700 }); fs.writeFileSync(native, 'native fixture');
+    const runtime = { codex: 'fixture', executable, executableSha256: hash(fs.readFileSync(executable)),
+        nativeExecutable: native, nativeExecutableSha256: hash(fs.readFileSync(native)), nodeSha256: hash(fs.readFileSync(process.execPath)) };
+    module.exports.testCliBytes(runtime);
+    for (const mutate of [r => { r.executableSha256 = 'f'.repeat(64); }, r => { r.nativeExecutableSha256 = 'f'.repeat(64); },
+        r => { delete r.nativeExecutable; }, r => { r.nodeSha256 = 'f'.repeat(64); }]) {
+        const altered = clone(runtime); mutate(altered); assert.throws(() => module.exports.testCliBytes(altered));
+    }
+});
+
+test('ev974-C27 closed containment refuses ambient grants, mutable images, arbitrary mounts/flags and unsafe namespace configuration', async t => {
+    const { requireProfile, fixedConfiguration, createOperationContainment } = require('./operation-containment.cjs');
+    const profile = containmentProfile(), directory = fs.realpathSync(temporary(t));
+    const input = path.join(directory, 'input'), output = path.join(directory, 'output');
+    fs.mkdirSync(input, { mode: 0o700 }); fs.mkdirSync(output, { mode: 0o700 });
+    const identity = { ownerId: 'b'.repeat(64), operationId: 'control:C27', planSha256: 'c'.repeat(64),
+        implementation: 'd'.repeat(40), imageSha256: profile.image.slice(7), purpose: 'native-control' };
+    const config = fixedConfiguration(profile, identity, input, output, ['PATH=/usr/local/bin:/usr/bin:/bin']);
+    assert.equal(config.HostConfig.Privileged, false); assert.equal(config.HostConfig.PidMode, '');
+    assert.equal(config.HostConfig.Mounts.length, 2); assert.equal(config.Tty, false);
+    assert.equal(config.OpenStdin, true); assert.equal(config.StdinOnce, true); assert.equal(config.HostConfig.AutoRemove, false);
+    for (const delta of [{ image: 'node:latest' }, { flags: ['--privileged'] }, { hostPid: true }, { socketMount: '/var/run/docker.sock' },
+        { mounts: ['/'] }, { environment: { QUALIFIED: 'true' } }, { workerUid: 0 }, { workerGid: 0 }]) {
+        assert.throws(() => requireProfile({ ...profile, ...delta }));
+    }
+    for (const environment of [['GH_TOKEN=private-fixture'], ['NODE_OPTIONS=--require /foreign'], ['PATH=/a', 'PATH=/b'], {}]) {
+        assert.throws(() => fixedConfiguration(profile, identity, input, output, environment));
+    }
+    for (const ambient of ['true', '1', JSON.stringify({ namespaceInitStopped: true })]) {
+        const saved = process.env.COPILOT_QUALIFICATION_SCOPE;
+        process.env.COPILOT_QUALIFICATION_SCOPE = ambient;
+        try { await assert.rejects(createOperationContainment({ root, identity, inputDirectory: input, outputDirectory: output,
+            record() { throw new Error('must not reach an Engine effect'); } }), /bootstrap/iu); }
+        finally { if (saved === undefined) delete process.env.COPILOT_QUALIFICATION_SCOPE; else process.env.COPILOT_QUALIFICATION_SCOPE = saved; }
+    }
+});
+
+test('ev974-C28 private live capability binds only the exact immutable plan/signal/owner/operation', async () => {
+    require('../issue-950/ev07-shadow/load.cjs');
+    const scope = require(path.join(root, 'src/infrastructure/agents/qualification_operation_scope'));
+    const identity = { ownerId: 'a'.repeat(64), operationId: 'control:C28', planSha256: 'b'.repeat(64),
+        implementation: 'c'.repeat(40), imageSha256: 'd'.repeat(64), purpose: 'native-control' };
+    const c = new AbortController(), scopeId = 'e'.repeat(64), plan = Object.freeze({});
+    let confirm, stopped = false;
+    const ended = new Promise(resolve => { confirm = resolve; });
+    const port = { identity, scopeId, signal: c.signal, stopped: ended,
+        requestStop() { stopped = true; confirm({ identity, scopeId, namespaceInitStopped: true }); } };
+    assert.throws(() => scope.requireQualificationOperationScope(c.signal));
+    await scope.withQualificationOperationScope(port, async () => {
+        scope.bindQualificationOperationPlan(plan, c.signal);
+        assert.equal(scope.hasQualificationOperationPlan(plan, c.signal), true);
+        assert.equal(scope.hasQualificationOperationPlan({ ...plan }, c.signal), false);
+        assert.equal(scope.hasQualificationOperationPlan(plan, new AbortController().signal), false);
+        assert.throws(() => scope.bindQualificationOperationPlan(plan, c.signal));
+        assert.throws(() => scope.qualificationOperationTermination(new AbortController().signal));
+        assert(Object.isFrozen(plan));
+    });
+    assert.equal(stopped, true); assert.equal(scope.hasQualificationOperationPlan(plan, c.signal), false);
+    const policy = require(path.join(root, 'src/application/policies/qualification_operation_scope_policy'));
+    for (const delta of [{ ownerId: 'f'.repeat(64) }, { operationId: 'foreign' }, { planSha256: 'f'.repeat(64) }]) {
+        assert.throws(() => policy.requireQualificationOperationStopped(identity, scopeId,
+            { identity: { ...identity, ...delta }, scopeId, namespaceInitStopped: true }));
+    }
+});
+
+test('ev974-C29 durable planned174/42 inventories reject orphan, missing and incomplete owned-scope prefixes', () => {
+    require('../issue-950/ev07-shadow/load.cjs');
+    const { requireCompleteQualificationOperations } = require(path.join(root, 'src/application/policies/qualification_operation_scope_policy'));
+    const selected = plan(), tuple = { planSha256: 'a'.repeat(64), implementation: 'b'.repeat(40), imageSha256: 'c'.repeat(64) };
+    const inventory = selectedCorpus(selected, root).inventory.cases.map(row => ({ operationId: 'corpus:' + row.id, purpose: 'corpus-case' }));
+    const paired = Array.from({ length: 3 }, (_, index) => selected.repositoryCohort.order.map(id =>
+        ({ operationId: 'review:' + id + ':r' + (index + 1), purpose: 'paired-review' }))).flat();
+    for (const slots of [inventory, paired]) {
+        const rows = slots.flatMap((slot, index) => {
+            const identity = { ...tuple, ...slot, ownerId: (index + 1).toString(16).padStart(64, '0') };
+            const scopeId = (index + 1000).toString(16).padStart(64, '0');
+            return [{ event: 'start', identity, scopeId }, { event: 'stopped', identity, scopeId, outcome: 'completed', namespaceInitStopped: true }];
+        });
+        requireCompleteQualificationOperations(slots, rows, tuple);
+        for (const mutate of [r => r.pop(), r => r.shift(), r => r.push(r[0]),
+            r => { r[1].namespaceInitStopped = false; }, r => { r[1].outcome = 'interrupted'; },
+            r => { r[1].identity.operationId = 'orphan'; }]) {
+            const incomplete = clone(rows); mutate(incomplete); assert.throws(() => requireCompleteQualificationOperations(slots, incomplete, tuple));
+        }
+    }
+    assert.equal(inventory.length, 174); assert.equal(paired.length, 42);
+});
+
+test('ev974-C31 collector failure aborts every owned sibling and waits for stopped scopes before returning failure', async t => {
+    const vm = require('node:vm'), directory = temporary(t), selected = plan(); selected.containment = containmentProfile();
+    const source = fs.readFileSync(path.join(ev07, 'full-review.cjs'), 'utf8'), module = { exports: {} };
+    const pendingStops = []; let started = 0, aborts = 0, returned = false;
+    const fakeContainment = { async runContainedOperation(request) {
+        fs.mkdirSync(request.outputDirectory, { mode: 0o700 }); started++;
+        if (started === 1) {
+            await request.record({ event: 'scope-stopped', namespaceInitStopped: true });
+            // A real copy error after stop, rather than a fake child exit.
+            fs.mkdirSync(path.join(request.outputDirectory, 'review.jsonl'));
+            return { exitCode: 0, interrupted: false, namespaceInitStopped: true };
+        }
+        return new Promise(resolve => {
+            request.signal.addEventListener('abort', () => { aborts++; }, { once: true });
+            pendingStops.push(async () => {
+                await request.record({ event: 'scope-stopped', namespaceInitStopped: true });
+                resolve({ exitCode: 143, interrupted: true, namespaceInitStopped: true });
+            });
+        });
+    } };
+    const controlledRequire = name => {
+        if (name === '../execution-provenance.cjs') return { requireBootstrapAdmission() {}, spawnQualificationDriver() { throw new Error('group/child fallback forbidden'); } };
+        if (name === './launch-full-review.cjs') return { requirePassingCorpus: campaign => campaign };
+        if (name === './implementation.cjs') return { qualificationProvenance: () => ({ implementation: selected.implementation }), selectedPlanProvenance: () => ({ sha256: 'a'.repeat(64) }) };
+        if (name === './configuration.cjs') return selected;
+        if (name === '../../issue974/attempt-ledger.cjs') return require('./attempt-ledger.cjs');
+        if (name === '../../issue974/operation-containment.cjs') return fakeContainment;
+        return require(name);
+    };
+    vm.runInNewContext(source, { require: controlledRequire, module, __dirname: ev07, process, AbortController });
+    const running = module.exports.run(directory).then(code => { returned = true; return code; });
+    await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(started, 3); assert.equal(aborts, 2); assert.equal(returned, false);
+    for (const stop of pendingStops) await stop();
+    assert.equal(await running, 1); assert.equal(started, 3);
+    const ledger = fs.readFileSync(path.join(directory, 'full-review/slots.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+    assert.equal(ledger.filter(row => row.event === 'slot-planned').length, 42);
+    assert.equal(ledger.filter(row => row.event === 'not-started').length, 39);
+    assert.equal(ledger.filter(row => row.event === 'collector-failure').length, 1);
+    assert.equal(ledger.at(-1).failed, true);
 });
 
 test('ev974-C14 actual v2 bootstrap rejects changed drivers/bootstrap and unsupported admission endpoints', t => {
@@ -366,4 +526,116 @@ test('ev974-C25 authenticated v2 public bootstrap admits its exact helper module
         `require('node:fs').writeFileSync(${JSON.stringify(shadow.marker)},'shadow module executed');`);
     const blocked = shadow.launch(); assert.notEqual(blocked.status, 0); assert.match(blocked.stderr, /dependency shadow/u);
     assert(!fs.existsSync(shadow.marker) && !fs.existsSync(shadow.probe));
+});
+
+test('ev974-C30 fixed174/fixed42 retain actual verifier follow-ups and zero candidates start zero verifiers', async t => {
+    const selected = plan(), f = ledgerFixture(t, selected), caseId = 'U1:r1';
+    const detector = f.make(caseId); await detector.execute(f.request);
+    const verifierDirectory = path.join(f.directory, 'verifiers'); fs.mkdirSync(verifierDirectory);
+    const flags = { model: selected.verifier.model, modelProvider: selected.verifier.modelProvider,
+        reasoningEffort: selected.verifier.effort, sandbox: 'read-only' };
+    const turns = []; let called = 0;
+    const transport = createRecordedVerifier({ caseId, record: f.record, artifactDirectory: verifierDirectory,
+        admitRuntime: () => ({ executableSha256: selected.runtime.executableSha256 }),
+        async transport(request) {
+            // This is a model-free semantic transport fixture, not a provider
+            // result or a native SDK acceptance observation.
+            assert.equal(f.rows.at(-1).event, 'verifier-attempt-start');
+            assert(fs.existsSync(path.join(verifierDirectory, f.rows.at(-1).requestFile)));
+            request.onRuntimeAdmission({ executable: '/fixture', prefixArgs: [] }); request.onInvocation(flags);
+            const fact = { failure: called++ === 0 ? 'provider-context-window' : null,
+                resolvedModel: selected.verifier.model, invocation: flags,
+                promptSha256: hash(request.prompt), schemaSha256: hash(JSON.stringify(request.schema)),
+                ...(called === 2 && { usage: { totalTokens: 1e12 } }) };
+            turns.push(fact);
+            return { response: { action: 'fixture' }, fact };
+        } });
+    const request = { candidateId: 'actual-candidate', configuration: selected.verifier, prompt: 'delivered first turn',
+        schema: { type: 'object' }, signal: f.c.signal };
+    await transport(request); await transport({ ...request, prompt: 'actual application follow-up' });
+    const result = { event: 'result', success: true, checkoutUnchanged: true,
+        payload: { dryRun: true, findings: [], bugbotShadowVerification: {
+            publicationSimulation: { status: 'complete', individual: {}, overflow: 0 },
+            candidates: [{ id: request.candidateId, status: 'technical-failure',
+                investigation: { turns: turns.map(({ failure, reportedModel, usage }) => ({ failure, reportedModel, usage })) } }] } } };
+    const records = [...f.rows, result];
+    const validate = (rows = records) => validateCompleteReviewAttempts({ records: rows, caseId, selected,
+        detectorDirectory: f.artifacts, verifierDirectory });
+    assert.deepEqual(validate(), { complete: true, detectorCalls: 1, verifierCalls: 2, candidates: 1 });
+    assert.equal(called, 2); assert(f.rows.filter(row => row.providerReported).every(row => row.providerReported.model === null));
+    for (const mutate of [rows => rows.pop(), rows => rows.splice(rows.findIndex(row => row.event === 'verifier-attempt-finish'), 1),
+        rows => rows.push({ event: 'verifier-attempt-finish', attemptId: 'orphan' }),
+        rows => { rows.find(row => row.event === 'verifier-attempt-prepared').runtimeProof.executableSha256 = 'f'.repeat(64); },
+        rows => { rows.find(row => row.event === 'verifier-attempt-invocation').flags.model = 'foreign'; },
+        rows => { rows.at(-1).payload.bugbotShadowVerification.candidates[0].investigation.turns.pop(); }]) {
+        const rows = clone(records); mutate(rows); assert.throws(() => validate(rows));
+    }
+    const zero = clone(result); zero.payload.bugbotShadowVerification.candidates = [];
+    const noVerifierCalls = [...f.rows.filter(row => !/^verifier-attempt-/u.test(row.event)), zero];
+    assert.equal(validate(noVerifierCalls).verifierCalls, 0); assert.equal(called, 2);
+    assert.throws(() => validate([...f.rows, zero]), /without an actual candidate/u);
+    for (const mutate of [p => { p.corpus.cases--; }, p => { p.corpus.outerAttemptsPerCase++; },
+        p => { p.repositoryCohort.repetitions--; }, p => { p.repositoryCohort.order.pop(); }]) {
+        const p = plan(); mutate(p); assert.throws(() => implementation.requireQualificationPolicy(p));
+    }
+    // A real collector failure keeps the durable attempted prefix; it cannot
+    // be replaced by a later completed-looking response.
+    const negative = ledgerFixture(t), failedDirectory = path.join(negative.directory, 'verifier'); fs.mkdirSync(failedDirectory);
+    const failed = createRecordedVerifier({ caseId, record: negative.record, artifactDirectory: failedDirectory,
+        admitRuntime() { throw new Error('frozen physical bytes differ'); },
+        async transport(input) { input.onRuntimeAdmission({}); throw new Error('must not reach a provider'); } });
+    await assert.rejects(failed(request), /physical bytes/u);
+    assert.deepEqual(negative.rows.map(row => row.event), ['verifier-attempt-start', 'verifier-attempt-finish']);
+    assert.equal(negative.rows.at(-1).status, 'failed');
+
+    // Exercise the real Python scorer with explicitly synthetic namespace
+    // evidence. Only one slot is complete, so this can never qualify fixed42.
+    const bytes = 'a'.repeat(64), scopeId = 'e'.repeat(64);
+    selected.containment = { schemaVersion: 1, image: 'sha256:' + bytes };
+    selected.hostRuntime = { nodeSha256: bytes, gitSha256: bytes, typescriptSha256: bytes, dependencyTreeSha256: bytes };
+    Object.assign(selected.runtime, selected.hostRuntime);
+    selected.inspectedArtifacts = Object.fromEntries(implementation.selectedQualificationDrivers(selected).map(file => [file, bytes]));
+    const planFile = path.join(f.directory, 'plan.json'); fs.writeFileSync(planFile, JSON.stringify(selected));
+    const preregistration = commitPlan(planFile);
+    const host = { implementation: selected.implementation, drivers: selected.inspectedArtifacts,
+        runtime: selected.hostRuntime, containment: selected.containment, workerRuntime: selected.runtime, executionContext: 'host' };
+    const subject = JSON.parse(fs.readFileSync(path.join(ev07, '../v4/manifest.json'))).subjects.find(row => row.id === 'U1');
+    const start = { event: 'start', implementation: selected.implementation, plan: preregistration.sha256, preregistration };
+    const first = { ...start, subject, repetition: 1, provenance: { ...host, executionContext: 'worker',
+        runtime: Object.fromEntries(Object.keys(host.runtime).map(key => [key, selected.runtime[key]])) } };
+    const reviewFile = path.join(f.directory, 'U1-1.jsonl');
+    const scoredResult = clone(result); scoredResult.payload.bugbotShadowVerification.publicationSimulation.status = 'incomplete';
+    fs.writeFileSync(reviewFile, [first, ...f.rows, scoredResult].map(row => JSON.stringify(row)).join('\n') + '\n');
+    fs.cpSync(f.artifacts, reviewFile + '.attempts', { recursive: true });
+    fs.cpSync(verifierDirectory, reviewFile + '.verifier-attempts', { recursive: true });
+    const identity = { ownerId: 'b'.repeat(64), operationId: 'review:U1:r1', planSha256: preregistration.sha256,
+        implementation: selected.implementation, imageSha256: bytes, purpose: 'paired-review' };
+    const scope = ['scope-create-start', 'scope-created', 'operation-start', 'scope-start', 'scope-stopped',
+        'operation-stopped', 'scope-remove-start', 'scope-removed'].map(event => ({ event, identity,
+        ...(event !== 'scope-create-start' && { scopeId }),
+        ...(['scope-stopped', 'operation-stopped'].includes(event) && { namespaceInitStopped: true }),
+        ...(event === 'operation-stopped' && { exitCode: 0, interrupted: false }) }));
+    const planned = Array.from({ length: 3 }, (_, index) => selected.repositoryCohort.order.map(id =>
+        ({ event: 'slot-planned', id, repetition: index + 1, status: 'not-started' }))).flat();
+    const saveScope = rows => {
+        fs.writeFileSync(reviewFile + '.scopes.jsonl', rows.map(row => JSON.stringify(row)).join('\n') + '\n');
+        const scheduled = [{ ...start, provenance: host }, ...planned, { event: 'slot-start', id: 'U1', repetition: 1 },
+            ...rows.map(row => ({ ...row, slot: { id: 'U1', repetition: 1 } })),
+            { event: 'slot-finish', id: 'U1', repetition: 1, exit: { code: 0, signal: null, namespaceInitStopped: true } }];
+        fs.writeFileSync(path.join(f.directory, 'slots.jsonl'), scheduled.map(row => JSON.stringify(row)).join('\n') + '\n');
+    };
+    const score = () => {
+        const run = spawnSync('python3', [path.join(ev07, 'score-review.py'), f.directory], {
+            encoding: 'utf8', env: { ...process.env, COPILOT_EV07_PLAN: planFile } });
+        assert.equal(run.status, 0, run.stderr); return JSON.parse(run.stdout);
+    };
+    saveScope(scope);
+    const valid = score(); assert.equal(valid.passed, false); assert.equal(valid.rows.length, 42);
+    assert.equal(valid.rows[0].status, 'incomplete'); assert.equal(valid.rows[0].actualCalls.verifierCalls, 2);
+    assert.equal(valid.rows[0].containment.complete, true); assert.equal(valid.checks.complete, false);
+    for (const mutate of [rows => rows.splice(4, 1), rows => { rows[4].namespaceInitStopped = false; },
+        rows => { rows[5].identity.imageSha256 = 'f'.repeat(64); }, rows => rows.push(rows[1])]) {
+        const rows = clone(scope); mutate(rows); saveScope(rows);
+        const invalid = score(); assert.equal(invalid.passed, false); assert.equal(invalid.rows[0].status, 'invalid');
+    }
 });

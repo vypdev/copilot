@@ -4879,7 +4879,7 @@ Append this amendment to the existing owner; retain all original source/history,
 
 ### 14. Testing strategy and numeric budget
 
-This appendix adds exactly the minimum10 distinct cases below, not35 new cases and not a second declaration of the retained25. Six deterministic Node cases extend the combined command from233 to239 (216+17+6). Four actual native model-free SDK cases have a separately declared executable command in `package.json`; no silent skips or fake substitutions. Combined campaign-specific floor is35 =25retained+10new. All10 are presently unexecuted. Pure authority/selection/scope policy targets100% all metrics. Changed runtime/planner/containment modules retain95% statements/lines and90% branches/functions plus unchanged global and changed-path gates. Actual native controls use the admitted SDK image and immutable public bootstrap/ordinary execution path, with explicitly frozen model-free subprocess fixtures only for cancellation; they do not replace actual CLI/version/provider admission or any model measurement.
+This appendix adds exactly the minimum10 distinct cases below, not35 new cases and not a second declaration of the retained25. Six deterministic Node cases extend the combined command from233 to239 (216+17+6). Four actual native model-free SDK cases have a separately declared executable command in `package.json`; no silent skips or fake substitutions. Combined campaign-specific floor is35 =25retained+10new. At design publication all10 were unexecuted; implementation evidence distinguishes the six deterministic controls from four actual native SDK controls and never infers native acceptance from source checks. Pure authority/selection/scope policy targets100% all metrics. Changed runtime/planner/containment modules retain95% statements/lines and90% branches/functions plus unchanged global and changed-path gates. Actual native controls use the admitted SDK image and immutable public bootstrap/ordinary execution path, with explicitly frozen model-free subprocess fixtures only for cancellation; they do not replace actual CLI/version/provider admission or any model measurement.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -4913,6 +4913,12 @@ Update runtime/Bugbot owners, execution guidance, quality operations, evidence R
 | `quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs` | update |
 | `quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs` | update |
 | `quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs` | update |
+| `quality/bugbot/evidence/issue-950/ev07-shadow/full-review.cjs` | update |
+| `quality/bugbot/evidence/issue-950/ev07-shadow/score-review.py` | update |
+| `src/data/repository/agent_authentication.ts` | update |
+| `src/infrastructure/bugbot/shadow_verification_adapter.ts` | update |
+| `src/infrastructure/bugbot/shadow/session.cjs` | update |
+| `src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts` | update |
 | `quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs` | update |
 | `quality/bugbot/evidence/issue974/attempt-ledger.cjs` | update |
 | `quality/bugbot/evidence/issue974/corpus-selection.cjs` | update |

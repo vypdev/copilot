@@ -32,6 +32,7 @@ import { SddSourceContextFailure, type AgentSourceSnapshot } from '../../domain/
 import { prepareSourceSnapshotWorkspace } from './agent_source_snapshot_workspace';
 import { createPrivateAgentExecutionRoot } from './agent_private_install_root';
 import { admitQualificationInvestigationPlan } from './qualification_investigation_admission';
+import { requireQualificationOperationScope } from './qualification_operation_scope';
 
 export interface AgentExecutionPlanningRequest {
     readonly configuration: AgentConfiguration;
@@ -96,6 +97,8 @@ export class AgentExecutionPlanner {
             throw new AgentCliError('Qualification investigation requires findings, no source snapshot, and explicit cancellation.', 'configuration');
         }
         if (request.signal.aborted) throw new AgentCliError('Agent CLI execution was cancelled.', 'cancelled');
+        try { requireQualificationOperationScope(request.signal); }
+        catch { throw new AgentCliError('Qualification investigation requires its exact live owned operation scope.', 'configuration'); }
         const plan = this.preparePlan(request);
         try {
             return admitQualificationInvestigationPlan({ ...plan, qualificationInvestigation: true }, request.signal);

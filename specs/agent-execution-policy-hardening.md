@@ -963,3 +963,55 @@ and `pnpm run generate:specifications`; command existence is not executed proof.
 Acceptance requires all eight observable controls, coordinated Bugbot/runtime
 documentation, enforced dependency direction and applicable coverage. It does
 not imply that the 174-case corpus, 42 reviews or provider smoke ran.
+
+### Whole-operation containment correction — issue #974
+
+The reviewed containment appendix in the Bugbot owner supersedes process-group
+cleanup as proof for new qualification investigations. Ordinary consumer and
+immutable SDD-source lifecycles retain their existing scope. The previously
+reproduced new-session descendant remains negative evidence until actual native
+SDK controls establish the namespace boundary.
+
+```text
+Immutable public bootstrap -> private live owned scope -> ordinary planner/SDK
+  -> full detector/verifier call chain -> namespace stopped -> accepted outcome
+```
+
+Text equivalent: source/image/runtime/CLI admission precedes the private owned
+scope and ordinary planner; all actual follow-ups share that scope, whose stop
+must be confirmed before outer cleanup or accepted completion.
+
+Semantic ports and pure policy own immutable identity and complete-inventory
+decisions. Infrastructure owns the live plan/signal binding, Docker transport
+and PID1 lifetime. The planner must reject an uncontained qualification request
+before workspace/CLI preparation. The executor and existing verifier transport
+request whole-scope termination on actual cancellation/failure; they cannot fall
+back to a process group. A finished provider turn whose process fails to exit
+may trigger technical cleanup after that completion, never an active research
+deadline. Ordinary production calls receive no qualification stop capability.
+
+The immutable outer owner alone holds non-TTY stdin; EOF/owner death stops the
+Linux namespace, including quiet, escaped or reparented descendants. Normal
+completion has the same stop-confirmation requirement. Durable known/uncertain
+effects and incomplete call prefixes cannot authorize adoption, cleanup of an
+unrelated scope, replay or phase42. Model execution has no Docker authority,
+host PID access, arbitrary mounts or privileged mode. Engine/kernel versions
+are observations, not independent platform byte attestation.
+
+The Bugbot owner counts C26–C31 once as six deterministic controls and C32–C35
+once as four actual native SDK controls. They extend its retained 25 to 35 and
+the combined deterministic Node floor from 233 to 239. The separately declared
+`pnpm run test:bugbot-native-containment` fails on missing committed native plans
+or actual capability; it cannot silently skip or substitute model-free API
+fixtures for native acceptance. Fixture readiness/test bounds apply only to
+credential-free native controls and never to corpus/review research. Pure scope
+policy requires 100% all metrics; each changed runtime/containment module retains
+95% statements/lines and 90% branches/functions plus repository-wide gates.
+
+Architecture constraints enforce pure ports/policy, planner/admission/executor
+call ownership and bootstrap-only live-scope composition. Evidence, current
+unmet prerequisites and the native preparation command live in the issue README;
+the execution contract and quality-observability documentation cover operation,
+unknown ownership, retention and recovery. Native evidence and the full frozen
+42-review closure are required before measurement; no source test qualifies a
+profile, installs a default or enables production.

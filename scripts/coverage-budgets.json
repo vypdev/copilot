@@ -130,7 +130,8 @@
             "src/application/policies/agent_execution/cursor_execution_plan_policy.ts",
             "src/infrastructure/agents/agent_runtime_manifest.ts",
             "src/application/policies/agent_execution_failure_policy.ts",
-            "src/data/repository/agent_cli_exit_diagnostic.ts"
+            "src/data/repository/agent_cli_exit_diagnostic.ts",
+            "src/application/policies/qualification_operation_scope_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -142,7 +143,9 @@
             "src/infrastructure/agents/agent_executable_file.ts",
             "src/infrastructure/agents/agent_execution_planner.ts",
             "src/data/repository/agent_cli_client.ts",
-            "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts"
+            "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts",
+            "src/infrastructure/agents/qualification_operation_scope.ts",
+            "src/infrastructure/agents/qualification_investigation_admission.ts"
           ],
           "mode": "each",
           "thresholdProfile": "default"

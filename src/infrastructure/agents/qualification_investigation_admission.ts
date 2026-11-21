@@ -1,5 +1,6 @@
 import type { AgentExecutionPlan } from '../../domain/agent_execution_plan';
 import { AgentCliError } from '../../data/repository/agent_cli_contracts';
+import { bindQualificationOperationPlan, hasQualificationOperationPlan } from './qualification_operation_scope';
 
 // In-process authority, never an environment/configuration/serialized receipt.
 // Only the ordinary planner registers plans, after its complete preflight.
@@ -11,6 +12,7 @@ export function admitQualificationInvestigationPlan(plan: AgentExecutionPlan, si
         || plan.childNetwork !== 'deny' || plan.approval !== 'never' || plan.sessionPersistence !== false) {
         throw new AgentCliError('Qualification investigation requires ordinary read-only findings authority.', 'configuration');
     }
+    bindQualificationOperationPlan(plan, signal);
     // A spread/copy loses admission. Freeze all plan-owned mutable collections
     // so a registered object cannot later acquire different process authority.
     Object.freeze(plan.argv);
@@ -25,5 +27,6 @@ export function admitQualificationInvestigationPlan(plan: AgentExecutionPlan, si
 }
 
 export function isAdmittedQualificationInvestigation(plan: AgentExecutionPlan, signal?: AbortSignal): boolean {
-    return plan.qualificationInvestigation === true && signal !== undefined && admissions.get(plan) === signal;
+    return plan.qualificationInvestigation === true && signal !== undefined && admissions.get(plan) === signal
+        && hasQualificationOperationPlan(plan, signal);
 }

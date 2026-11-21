@@ -7,7 +7,7 @@ const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
-const { pinnedGit, admitQualificationModules } = require('../execution-provenance.cjs');
+const { pinnedGit, admitQualificationModules, bootstrapOperation } = require('../execution-provenance.cjs');
 const { qualificationProvenance, requirePinnedExecution, preparePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
@@ -86,7 +86,10 @@ function readSubject(id, checkout) {
 }
 
 async function run(checkout, id, repetition, output, preflight = false) {
-    require('../execution-provenance.cjs').requireBootstrapAdmission(path.resolve(__dirname, '../../../../..'));
+    const root = path.resolve(__dirname, '../../../../..');
+    require('../execution-provenance.cjs').requireBootstrapAdmission(root);
+    const contained = bootstrapOperation(root);
+    assert(!plan.containment || contained, 'contained review requires its private whole-operation dispatch');
     const provenance = qualificationProvenance(plan);
     const implementation = provenance.implementation;
     admitQualificationModules(path.resolve(__dirname, '../../../../..'));
@@ -180,16 +183,29 @@ async function run(checkout, id, repetition, output, preflight = false) {
         reviewed_head_sha: subject.head,
     }) }
         : createFindingsQueryPort({ cli: detectorCli });
-    const cancel = new AbortController();
+    const cancel = contained ? { signal: contained.signal, abort: contained.abort } : new AbortController();
     process.once('SIGINT', () => cancel.abort());
     process.once('SIGTERM', () => cancel.abort());
     const evidenceToken = process.env.COPILOT_EVIDENCE_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
     assert(preflight || evidenceToken, 'read-only GitHub evidence credential unavailable');
     const ci = preflight ? undefined : createGitHubBugbotCiReader({ owner: repository.owner, repo: repository.name },
         getOctokit(evidenceToken).rest.actions);
+    let verifierTransport = askManagedBugbotShadowTurn;
+    if (!preflight && plan.schemaVersion === 2) {
+        const artifactDirectory = output + '.verifier-attempts';
+        fs.mkdirSync(artifactDirectory, { mode: 0o700 });
+        verifierTransport = require('../../issue974/attempt-ledger.cjs').createRecordedVerifier({
+            caseId: id + ':r' + repetition, record: log, artifactDirectory, transport: askManagedBugbotShadowTurn,
+            admitRuntime(invocation) {
+                return requirePinnedExecution({ executable: invocation.executable, launcherArgv: invocation.prefixArgs,
+                    ...(invocation.prefixArgs.length && { launcherSha256: hash(fs.readFileSync(invocation.prefixArgs[0])) }),
+                    runtimeContract: { version: plan.runtime.codex } }, plan.runtime);
+            },
+        });
+    }
     const verifier = createInstalledBugbotShadowVerifier(repository, checkout, async turn => {
         assert.deepEqual(turn.configuration, plan.verifier);
-        const result = await askManagedBugbotShadowTurn(turn);
+        const result = await verifierTransport(turn);
         log({ event: 'verifier', candidate: turn.candidateId, fact: result.fact });
         return result;
     }, ci);

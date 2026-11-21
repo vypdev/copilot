@@ -85,7 +85,12 @@ function ask({ cwd, prompt, schema, threadId, signal, configuration, onInvocatio
         const child = spawn(runtime?.executable ?? (configuration.executable || 'codex'), [...(runtime?.prefixArgs ?? []), ...argv], { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
         let tail = '', stderr = '', output = null, usage = null, actualThread = null, failure = null;
         let completions = 0, bytes = 0, grace, reportedModel, turnStarted = false;
-        const stop = code => { failure ??= code; child.kill('SIGKILL'); };
+        const stop = code => {
+            failure ??= code;
+            try { runtime?.onTermination?.(code); }
+            catch { failure = 'provider-evidence-unavailable'; }
+            finally { child.kill('SIGKILL'); }
+        };
         const cancel = () => stop('investigation-canceled');
         if (signal?.aborted) cancel();
         else signal?.addEventListener('abort', cancel, { once: true });
@@ -106,7 +111,7 @@ function ask({ cwd, prompt, schema, threadId, signal, configuration, onInvocatio
                     reportedModel = event.model;
                 }
                 // The provider already completed this turn. Reap a process that fails to exit.
-                grace = setTimeout(() => child.kill('SIGKILL'), 1600);
+                grace = setTimeout(() => runtime?.onTermination ? stop('provider-cli-exit-unconfirmed') : child.kill('SIGKILL'), 1600);
             }
             if (!['item.started', 'item.updated', 'item.completed'].includes(event.type)) return;
             // The CLI emits this startup notice when the explicitly disabled host is unavailable.

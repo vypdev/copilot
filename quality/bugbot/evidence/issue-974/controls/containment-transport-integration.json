@@ -1,0 +1,103 @@
+{
+  "at": "2026-11-21T00:51:31.558754+00:00",
+  "state": "uncommitted-source-integration",
+  "head": "8d44350032e416f35f37abc9417587fa9469a5f2",
+  "sourceSha256": {
+    "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs": "4ec2ab7c16d1f6f84ac0d1b698e459ea3e9bc8e190b51c99cf9689413237cfd2",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/full-review.cjs": "0b98bd871cf97cb30f0611f31b7a9feea643a9a4a2dcbe3d730e3660aeeff43c",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs": "c4e10813358a6605201d6147f98566cedceb3967950f724e51e4faf05ca82f0f",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs": "c00e300ec23e758e852918dbebeb3ab634836ff71fea24d749f470d1e3f410ff",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs": "9c9858e02088b50f21c1774db67cee62a852eeb92d6df58b0b3c18241880f52a",
+    "quality/bugbot/evidence/issue-950/execution-provenance.cjs": "cc5b11979d30f4ba050e959b3e68a427e76c154f3d81f2a4606cbb322845a1d0",
+    "quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs": "75e9ba20bd6d21c149eeef3a577a0e1b7634a62743a74857990fb96ce7c9ee06",
+    "quality/bugbot/evidence/issue974/README.md": "c70d7dc0d518458abf3f3c77d79335e40fe395adff6b44ad65dc8ae65a7bf08d",
+    "quality/bugbot/evidence/issue974/attempt-ledger.cjs": "dfd4f6b9ccd2456821e289dae2839b37b81713a91bcea66b335723cdb8bc435d",
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "c7b9d82150f4ca81831949c8aa6c0248631e5cfdfe9f2f8a9704562ccda3392a",
+    "quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile": "6c12a7b98ccf4e50c92c710a5d5a08eb9a48bd684ca3a4e9967cbfc41abcc9da",
+    "quality/bugbot/evidence/issue974/qualification-supervisor.cjs": "e19e86dda95fddf6d61cfafdbc2cefba4a8a4612609bd767f46b04dcdd1f19a7",
+    "src/application/policies/qualification_operation_scope_policy.ts": "ee4a858890c4454c3aa01e773a4728d399042b2375b16d7a8ac8ddd16fe32490",
+    "src/application/ports/qualification_operation_scope_ports.ts": "a01ece00d232bf912523f54400d100fd66b1c8b7906e14ee4b58edfcd566da9d",
+    "src/architecture/__tests__/agent_output_locale_boundaries.test.ts": "8dfc336a3b22f4656b5236a5c249ea0e80bd74fd195cee512910c8b1635c3ba3",
+    "src/data/repository/agent_authentication.ts": "cbd790a767cebb2a1cb95dbef523fc86b1cef061c329614d0c17372b2de451e0",
+    "src/data/repository/agent_cli_execution.ts": "23be1860dad29b3de0a9bb4d50c648c3244efd4785d9b94a89f0d7833778c013",
+    "src/infrastructure/agents/__tests__/qualification_investigation.test.ts": "4fa863b8c931d34726268a29b810253de81208787398a2200833041d3cd756dc",
+    "src/infrastructure/agents/agent_execution_planner.ts": "8cbb5e1509f31a995e0da6c137f41f4cd21d6c22e0d19586322b52c2a60f9e1d",
+    "src/infrastructure/agents/qualification_investigation_admission.ts": "9493a7f3982dbfb6f7abf2d57846fcb9bc46578885a9bbd356d363c3c70f8b2e",
+    "src/infrastructure/agents/qualification_operation_scope.ts": "595f8c46e56b7d9dc5180ec0f4503b37f157588ecc8dbc015ad90f4df1992849"
+  },
+  "checks": {
+    "ordinarySdkSuites": 5,
+    "ordinarySdkPassed": 115,
+    "ordinarySdkExistingPlatformSkips": 2,
+    "selectedActualBootstrapControls": [
+      "ev974-C13",
+      "ev974-C14",
+      "ev974-C25"
+    ],
+    "selectedBootstrapPassed": 3,
+    "architectureSuites": 3,
+    "architecturePassed": 17,
+    "types": "PASS",
+    "focalLint": "PASS",
+    "graphify": "PASS AST-only"
+  },
+  "logs": {
+    "executor-integration-attempt1": {
+      "path": "quality/bugbot/evidence/issue-974/controls/transport-executor-integration-attempt1.log.gz",
+      "rawBytes": 223,
+      "rawSha256": "548a62936e6f70f7d5eb52e0cd582361122049185cd9d15cbe7deb8659462f95"
+    },
+    "executor-compatibility-attempt1": {
+      "path": "quality/bugbot/evidence/issue-974/controls/transport-executor-compatibility-attempt1.log.gz",
+      "rawBytes": 472,
+      "rawSha256": "3db782b676196f2ee460da6ec2ae089e264ce3e49786fc997eafafec03932efe"
+    },
+    "executor-compatibility-attempt2": {
+      "path": "quality/bugbot/evidence/issue-974/controls/transport-executor-compatibility-attempt2.log.gz",
+      "rawBytes": 487,
+      "rawSha256": "c2f671fcad2a25e1113ef93959aa3264d22e8273de3cfe569c3fe88fa501c6bb"
+    },
+    "bootstrap-focused-attempt1": {
+      "path": "quality/bugbot/evidence/issue-974/controls/transport-bootstrap-focused-attempt1.log.gz",
+      "rawBytes": 507,
+      "rawSha256": "075e98426655ca7f623e4822724c7322396d115fd4a160fb329e155be0d1c2eb"
+    },
+    "bootstrap-focused-attempt2": {
+      "path": "quality/bugbot/evidence/issue-974/controls/transport-bootstrap-focused-attempt2.log.gz",
+      "rawBytes": 502,
+      "rawSha256": "00708f92db8aeea7df0b48d5ee23e2ed557a3b762275496f0b6c1dfc60741545"
+    },
+    "architecture-transport": {
+      "path": "quality/bugbot/evidence/issue-974/controls/transport-architecture-transport.log.gz",
+      "rawBytes": 334,
+      "rawSha256": "518debc91c9a729e3d54968cac3fa932dc25020ff8991d0a78d51ea49b7103c9"
+    },
+    "types-transport": {
+      "path": "quality/bugbot/evidence/issue-974/controls/transport-types-transport.log.gz",
+      "rawBytes": 0,
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "lint-transport": {
+      "path": "quality/bugbot/evidence/issue-974/controls/transport-lint-transport.log.gz",
+      "rawBytes": 0,
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "graphify-transport": {
+      "path": "quality/bugbot/evidence/issue-974/controls/transport-graphify-transport.log.gz",
+      "rawBytes": 3618,
+      "rawSha256": "ca9e6cb4162a5a146c7300ee14bf9e7a7be49bee107cb79c52abc3933ba3109a"
+    }
+  },
+  "newNodeCases26to31Complete": false,
+  "nativeSdkCases32to35Complete": false,
+  "nativeFixtureImplemented": false,
+  "imageBuilt": false,
+  "actualNamespaceAcceptance": false,
+  "full42ScorerAndVerifierDurableCallsComplete": false,
+  "preregistration": null,
+  "corpus174": "unstarted",
+  "paired42": "unstarted",
+  "qualificationModelCalls": 0,
+  "evaluatedPrWriteAttempts": 0,
+  "production": "disabled"
+}

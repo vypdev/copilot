@@ -6,6 +6,7 @@ import type { BugbotShadowCandidate, BugbotShadowInvestigationMetrics, BugbotSha
 import type { AgentConfiguration } from '../../domain/agent';
 import { redactSensitiveText } from '../../domain/security/sensitive_text';
 import { AgentExecutionPlanner } from '../agents/agent_execution_planner';
+import { qualificationOperationTermination } from '../agents/qualification_operation_scope';
 import { runAgentCli } from '../../data/repository/agent_cli_execution';
 import { AgentCliError } from '../../data/repository/agent_cli_contracts';
 import { AGENT_EXECUTION_TIMEOUT_MAX_MS } from '../../domain/agent_execution_plan';
@@ -52,7 +53,11 @@ interface TurnRequest {
     readonly signal?: AbortSignal;
     readonly configuration: Readonly<AgentConfiguration>;
     readonly candidateId: string;
-    readonly runtime?: { readonly executable: string; readonly prefixArgs: readonly string[]; readonly environment: NodeJS.ProcessEnv };
+    readonly onTermination?: (failure: string) => void;
+    readonly onRuntimeAdmission?: (invocation: { readonly executable: string; readonly prefixArgs: readonly string[] }) => void;
+    readonly onInvocation?: (invocation: Readonly<Record<string, string | undefined>>) => void;
+    readonly runtime?: { readonly executable: string; readonly prefixArgs: readonly string[]; readonly environment: NodeJS.ProcessEnv;
+        readonly onTermination?: (failure: string) => void };
 }
 
 interface TurnResult {
@@ -124,7 +129,12 @@ export function askManagedBugbotShadowTurn(request: TurnRequest): Promise<TurnRe
             configuration.executable ?? getAgentRuntimeManifestEntry(configuration.provider).executable, environment,
         );
         const invocation = validateResolvedAgentInvocation(executable, configuration.provider, environment);
-        return ask({ ...request, runtime: { ...invocation, environment } });
+        const terminate = qualificationOperationTermination(request.signal);
+        request.onRuntimeAdmission?.(invocation);
+        return ask({ ...request, runtime: { ...invocation, environment, ...(terminate && { onTermination(failure: string) {
+            try { request.onTermination?.(failure); }
+            finally { terminate(failure === 'investigation-canceled' ? 'cancelled' : 'failed'); }
+        } }) } });
     } catch {
         return Promise.resolve({ fact: { failure: 'provider-runtime-unavailable' } });
     }

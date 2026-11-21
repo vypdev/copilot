@@ -84,10 +84,13 @@ and a new committed preregistration, not a search for a passing result.
 
 ## Validation and current evidence
 
-The new budget is 25 distinct controls: eight Jest lifecycle/authority controls
+The retained initial budget is 25 distinct controls: eight Jest lifecycle/authority controls
 (`ev974-C01`–`C08`) and seventeen Node qualification controls (`C09`–`C25`). They are
 additional to the 216 retained Node controls; the complete Node command therefore
-has 233 controls, while the eight lifecycle cases remain separately counted.
+had 233 controls, while the eight lifecycle cases remain separately counted.
+The containment appendix adds six Node and four actual native controls. The
+current complete deterministic Node floor is 239 and the issue-specific floor
+is 35. The native command remains separate from that deterministic count.
 No deterministic fake result constitutes a measured corpus/profile result.
 
 The [precommit validation receipt](./controls/precommit-validation.json) retains
@@ -153,3 +156,97 @@ This is an unresolved lifecycle limitation, not a passing control or evidence
 for another operating system. The prior 233 passing controls do not cover this
 case. Keep the 174-case campaign and all 42 reviews unstarted until this
 cancellation requirement has an adequate implemented and verified boundary.
+
+## Whole-operation containment implementation
+
+The Action published the containment appendix as
+[`8d443500`](https://github.com/vypdev/copilot/commit/8d44350032e416f35f37abc9417587fa9469a5f2).
+Its selected receipt and exact retained-owner proof are linked from the existing
+[published SDD card](https://github.com/vypdev/copilot/issues/974#issuecomment-7052572620).
+The old owning document remains an exact prefix; the appendix adds six Node
+cases (`C26`–`C31`) and four actual native SDK cases (`C32`–`C35`). The six new
+Node cases pass on the local WIP; the four native cases remain unexecuted.
+The combined Node floor is
+239, and the complete campaign-specific floor is 35 including the retained 25.
+
+Local implementation currently adds semantic operation ownership/stop ports,
+a pure identity/complete-ledger policy and a process-local plan/signal binding.
+Their component controls cover copied/foreign authority, missing or orphaned
+terminals, stopped-namespace correlation, interrupted quiet work, unknown stop
+state and completion/cancellation races. Synthetic port confirmations prove
+these decisions; they do not prove a real namespace stopped.
+
+The engine adapter, PID1 supervisor and runtime-image recipe are connected in
+source to the authenticated public bootstrap and ordinary executor. This source
+is local WIP, not native acceptance. They are not supported standalone
+entrypoints. The recipe requires a sanitized,
+credential-free implementation checkout and explicit immutable base-image and
+CLI version selection. No image has yet been built or admitted for this route.
+The existing unrelated-image mechanism prototypes remain separate evidence.
+
+The selected runtime uses one dedicated Linux PID namespace per complete outer
+case or paired review. Only the immutable outer bootstrap owns the fixed
+non-TTY stdin lifetime; EOF or owner death ends PID1. The worker has a separate
+unprivileged identity and private fork IPC. Model stdout, environment values and
+serialized receipts cannot grant that capability. Configuration fixes the two
+owned input/output mounts, denies engine/socket mounts and host PID/privileged
+mode, and preserves the ordinary model's sandbox and credential policy.
+
+Normal completion also needs stopped-scope confirmation before outer cleanup or
+accepted results. A finished provider response alone cannot settle an operation
+while its scope is pending. Engine requests, active execution and waits have no
+research deadline or heartbeat. A technical KILL escalation is scheduled only
+after an actual stop request. Unknown create/start/stop effects stay incomplete;
+there is no automatic adoption, replay or cleanup of an unrelated scope.
+
+The immutable image/configuration, host and worker runtime, source/driver/CLI
+bytes and full 42-review closure must still be authenticated and frozen before
+measurement. Component checks do not resolve the cancellation finding, satisfy
+native SDK acceptance, preregister a campaign or qualify any model profile.
+
+### Native preparation and actual-call evidence
+
+Commit implementation X before building a sanitized, credential-free SDK
+checkout with its own Git objects. Supply the immutable Node base digest and
+exact Codex version. Record the actual image/configuration, host/worker
+Node/Git/compiler/dependencies and CLI/interpreter/native executable bytes. An
+image tag or successful build is not admission. Independently materialize and
+review the external bootstrap and native harness before executing them.
+
+Commit four otherwise identical `purpose=native-control` plans selecting C32,
+C33, C34 and C35. Their closed `nativeControl` object contains `schemaVersion=1`,
+the exact four-case inventory, one `selectedCase`, `fixtureCliSha256` and
+`harnessSha256`. A private JSON array lists the four records in that order. Each
+record contains exactly `caseId`, `repository`, `revision`, `planPath`,
+`planSha256`, `bootstrapPath` and `bootstrapSha256`. The public bootstrap checks
+these committed references; they are not scope grants. Native purpose cannot
+authorize corpus/review calls and receives no model or GitHub credential. The
+actual installed CLI byte/version probe remains separate from the frozen
+model-free subprocess exercised through the ordinary SDK planner/executor.
+
+```sh
+COPILOT_NATIVE_CONTROL_PLANS=/absolute/private/native-controls.json \
+  pnpm run test:bugbot-native-containment
+```
+
+Absent plans/Engine capability fail this explicit command without skipping. Its
+readiness/test bounds apply only to fixed, credential-free subprocess fixtures;
+corpus/review calls never enter that path. C34 kills the actual outer bootstrap
+and retains the missing terminal. C35 observes another independently owned
+sentinel still running before explicitly stopping that sentinel. Cleanup after
+a test failure is labeled `acceptanceEvidence=false`. Preserve raw logs,
+known/unknown IDs, stop observations and incomplete prefixes.
+
+Every real verifier call is recorded before transport, including context
+restarts and follow-ups, with delivered/returned artifacts, physical runtime
+proof, actual flags and provider-reported facts. The Python scorer checks these
+records, the host scheduler and stopped-scope sidecars. It does not manufacture
+SDK observer events for the separate verifier transport. Collection failure
+aborts siblings and settles all dispatched operations before returning failure.
+
+Current local checks: C26–C31 (6/6), retained scorer controls (11/11), SDK/verifier
+controls (32 tests), and live scope/pure policy coverage (127 statements,
+107 branches, 29 functions, 100 lines; 100% each). The full 239-control
+committed-source run, changed-module coverage, immutable image, four actual native
+controls and final native PR checks remain pending. No implementation commit,
+actual model call or measurement preregistration is claimed by these WIP checks.

@@ -114,6 +114,7 @@ function validateCompleteAttempts(ledger, cases, selected, artifactDirectory) {
             assert.deepEqual(prepared.prepared.runtimeProof, {
                 executableSha256: selected.runtime.executableSha256 ?? selected.runtime.codexSha256,
                 ...(selected.runtime.launcherSha256 ? { launcherSha256: selected.runtime.launcherSha256 } : {}),
+                ...(selected.runtime.nativeExecutableSha256 ? { nativeExecutableSha256: selected.runtime.nativeExecutableSha256 } : {}),
             });
             assert.equal(prepared.prepared.runtimeContract.version, selected.runtime.codex);
             assert.equal(prepared.prepared.workspaceMode, 'read-only');
@@ -128,4 +129,110 @@ function validateCompleteAttempts(ledger, cases, selected, artifactDirectory) {
     return { calls: starts.length, complete: true };
 }
 
-module.exports = { createDurableRecorder, createRecordedCli, validateCompleteAttempts, boundedFailure };
+/** Verifier transport calls are real calls, including context restarts and
+ * application follow-ups. Keep their own evidence rather than inventing SDK
+ * AgentCliObserver events for this separate transport. */
+function createRecordedVerifier({ caseId, record, artifactDirectory, transport, admitRuntime }) {
+    let ordinal = 0;
+    return async request => {
+        const number = ++ordinal, attemptId = caseId + ':verifier:' + number;
+        const stem = hash(caseId + ':verifier').slice(0, 24) + '-' + number;
+        const requestFile = stem + '.request.json';
+        const bytes = JSON.stringify({ prompt: request.prompt, schema: request.schema,
+            threadId: request.threadId ?? null, candidateId: request.candidateId, configuration: request.configuration });
+        durableWrite(path.join(artifactDirectory, requestFile), bytes, 'wx');
+        record({ event: 'verifier-attempt-start', attemptId, caseId, ordinal: number, candidate: request.candidateId,
+            at: new Date().toISOString(), configured: request.configuration, requestFile, requestSha256: hash(bytes),
+            promptSha256: hash(request.prompt), schemaSha256: hash(JSON.stringify(request.schema)),
+            providerReported: { model: null, usage: null } });
+        try {
+            const result = await transport({ ...request,
+                onRuntimeAdmission(invocation) {
+                    const runtimeProof = admitRuntime(invocation);
+                    record({ event: 'verifier-attempt-prepared', attemptId, runtimeProof });
+                    request.onRuntimeAdmission?.(invocation);
+                },
+                onInvocation(flags) {
+                    record({ event: 'verifier-attempt-invocation', attemptId, flags });
+                    request.onInvocation?.(flags);
+                },
+                onTermination(failure) {
+                    record({ event: 'verifier-attempt-termination', attemptId,
+                        failure: /^[a-z0-9-]{1,80}$/u.test(failure) ? failure : 'unknown' });
+                    request.onTermination?.(failure);
+                },
+            });
+            const responseFile = stem + '.response.txt', response = JSON.stringify(result);
+            durableWrite(path.join(artifactDirectory, responseFile), response, 'wx');
+            record({ event: 'verifier-attempt-finish', attemptId, at: new Date().toISOString(),
+                status: request.signal?.aborted ? 'interrupted' : result.fact?.failure ? 'failed' : 'completed',
+                responseFile, responseSha256: hash(response),
+                providerReported: { model: result.fact?.reportedModel ?? null, usage: result.fact?.usage ?? null } });
+            return result;
+        } catch (error) {
+            record({ event: 'verifier-attempt-finish', attemptId, at: new Date().toISOString(),
+                status: request.signal?.aborted ? 'interrupted' : 'failed', failure: boundedFailure(error),
+                providerReported: { model: null, usage: null } });
+            throw error;
+        }
+    };
+}
+
+/** Independently check every actual transport call, not just the final labels.
+ * Recovered provider/context failures remain calls with their original result. */
+function validateCompleteReviewAttempts({ records, caseId, selected, detectorDirectory, verifierDirectory }) {
+    const result = records.filter(row => row.event === 'result'); assert.equal(result.length, 1);
+    const detectorStarts = records.filter(row => row.event === 'attempt-start');
+    validateCompleteAttempts(records, [{ id: caseId, attemptIds: detectorStarts.map(row => row.attemptId) }],
+        selected, detectorDirectory);
+    const report = result[0].payload?.bugbotShadowVerification;
+    assert(Array.isArray(report?.candidates), 'actual candidate observations are missing');
+    const candidates = new Map(report.candidates.map(row => [row.id, row]));
+    assert.equal(candidates.size, report.candidates.length, 'duplicate candidate observations');
+    const starts = records.filter(row => row.event === 'verifier-attempt-start');
+    const ids = new Set(starts.map(row => row.attemptId)); assert.equal(ids.size, starts.length);
+    const calls = records.filter(row => /^verifier-attempt-/u.test(row.event));
+    assert(calls.every(row => ids.has(row.attemptId)), 'orphan verifier attempt');
+    assert(starts.every(row => candidates.has(row.candidate)), 'verifier ran without an actual candidate');
+    const expectedRuntime = { executableSha256: selected.runtime.executableSha256 ?? selected.runtime.codexSha256,
+        ...(selected.runtime.launcherSha256 && { launcherSha256: selected.runtime.launcherSha256 }),
+        ...(selected.runtime.nativeExecutableSha256 && { nativeExecutableSha256: selected.runtime.nativeExecutableSha256 }) };
+    const expectedFlags = { model: selected.verifier.model, modelProvider: selected.verifier.modelProvider,
+        reasoningEffort: selected.verifier.effort, sandbox: 'read-only' };
+    for (const [offset, start] of starts.entries()) {
+        assert.equal(start.caseId, caseId); assert.equal(start.ordinal, offset + 1);
+        assert.equal(start.attemptId, caseId + ':verifier:' + start.ordinal);
+        assert.deepEqual(start.configured, selected.verifier);
+        const chain = calls.filter(row => row.attemptId === start.attemptId);
+        assert.deepEqual(chain.map(row => row.event), ['verifier-attempt-start', 'verifier-attempt-prepared',
+            'verifier-attempt-invocation', 'verifier-attempt-finish'], 'missing or terminated verifier lifecycle');
+        const [, prepared, invoked, finish] = chain;
+        assert.deepEqual(prepared.runtimeProof, expectedRuntime); assert.deepEqual(invoked.flags, expectedFlags);
+        const delivered = JSON.parse(artifact(verifierDirectory, start.requestFile, start.requestSha256));
+        assert.equal(hash(delivered.prompt), start.promptSha256);
+        assert.equal(hash(JSON.stringify(delivered.schema)), start.schemaSha256);
+        assert.equal(delivered.candidateId, start.candidate); assert.deepEqual(delivered.configuration, selected.verifier);
+        const response = JSON.parse(artifact(verifierDirectory, finish.responseFile, finish.responseSha256));
+        assert(response.fact && typeof response.fact === 'object');
+        assert.equal(finish.status, response.fact.failure ? 'failed' : 'completed');
+        assert.deepEqual(finish.providerReported, { model: response.fact.reportedModel ?? null, usage: response.fact.usage ?? null });
+        assert.equal(response.fact.resolvedModel, selected.verifier.model);
+        assert.deepEqual(response.fact.invocation, expectedFlags);
+        assert.equal(response.fact.promptSha256, start.promptSha256);
+        assert.equal(response.fact.schemaSha256, start.schemaSha256);
+        const candidateCalls = starts.filter(row => row.candidate === start.candidate);
+        const turn = candidates.get(start.candidate).investigation?.turns?.[candidateCalls.indexOf(start)];
+        assert(turn, 'candidate omitted an actual verifier turn');
+        assert.deepEqual({ failure: turn.failure ?? null, model: turn.reportedModel ?? null, usage: turn.usage ?? null },
+            { failure: response.fact.failure ?? null, model: response.fact.reportedModel ?? null, usage: response.fact.usage ?? null });
+    }
+    for (const candidate of candidates.values()) {
+        const turns = candidate.investigation?.turns;
+        assert(Array.isArray(turns), 'actual candidate turn inventory missing');
+        assert.equal(turns.length, starts.filter(row => row.candidate === candidate.id).length, 'missing verifier call evidence');
+    }
+    return { complete: true, detectorCalls: detectorStarts.length, verifierCalls: starts.length, candidates: candidates.size };
+}
+
+module.exports = { createDurableRecorder, createRecordedCli, createRecordedVerifier, validateCompleteAttempts,
+    validateCompleteReviewAttempts, boundedFailure };

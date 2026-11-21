@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
-const { devNull } = require('node:os');
+const { devNull, release } = require('node:os');
 const path = require('node:path');
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -179,7 +179,8 @@ function admitQualificationModules(root) {
         assert.equal(hash(bytes), proof.planSha256, 'admitted qualification plan changed');
         const selected = JSON.parse(bytes);
         if (selected.schemaVersion === 2) {
-            for (const name of ['corpus-selection.cjs', 'attempt-ledger.cjs']) {
+            for (const name of ['corpus-selection.cjs', 'attempt-ledger.cjs', ...(selected.containment
+                ? ['operation-containment.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'containment-native-fixture.cjs'] : [])]) {
                 const file = path.join(root, 'quality/bugbot/evidence/issue974', name);
                 const expected = selected.inspectedArtifacts?.['../../issue974/' + name];
                 assert.match(expected ?? '', /^[a-f0-9]{64}$/u, 'v2 helper is absent from the reviewed closure');
@@ -200,21 +201,29 @@ function admitQualificationModules(root) {
     } });
 }
 
-function runtimeIdentity(root) {
+function runtimeIdentity(root, expected) {
     const dependencies = dependencyIdentity(root);
+    if (expected) for (const [name, value] of Object.entries(dependencies)) {
+        assert.equal(value, expected[name], 'preregistered runtime differs before probes: ' + name);
+    }
     const typescript = require.resolve('typescript', { paths: [root] });
     assert(fs.realpathSync(typescript).startsWith(fs.realpathSync(path.join(root, 'node_modules')) + path.sep),
         'compiler is outside the admitted dependency tree');
     const gitExecutable = trustedGitExecutable();
-    return { ...dependencies, node: process.version, nodeSha256: hash(fs.readFileSync(process.execPath)),
+    const actual = { ...dependencies, os: process.platform, arch: process.arch, kernel: release(),
+        node: process.version, nodeSha256: hash(fs.readFileSync(process.execPath)),
         gitExecutable, gitSha256: hash(fs.readFileSync(gitExecutable)),
-        git: execFileSync(gitExecutable, ['--version'], { env: gitEnvironment(), encoding: 'utf8' }).trim(),
         typescript: JSON.parse(fs.readFileSync(require.resolve('typescript/package.json', { paths: [root] }))).version,
         typescriptSha256: hash(fs.readFileSync(typescript)) };
+    if (expected) for (const [name, value] of Object.entries(actual)) {
+        assert.equal(value, expected[name], 'preregistered runtime differs before probes: ' + name);
+    }
+    return { ...actual, git: execFileSync(gitExecutable, ['--version'], { env: gitEnvironment(), encoding: 'utf8' }).trim() };
 }
 
 function attestRuntime(root, selected) {
-    const actual = runtimeIdentity(root);
+    assert(selected && typeof selected === 'object', 'preregistered runtime required before probes');
+    const actual = runtimeIdentity(root, selected);
     for (const [name, value] of Object.entries(actual)) {
         assert.equal(value, selected?.[name], 'preregistered runtime differs: ' + name);
     }
@@ -263,7 +272,7 @@ function attestCommittedArtifact(root, file, expectedSha256, commit) {
 // this immutable module. A checkout file is never execution authority. This
 // context is not an independent attestation of the host or of human review.
 let bootstrapContext;
-function initializeBootstrapContext(root, proof, spawnDriver) {
+function initializeBootstrapContext(root, proof, spawnDriver, operation, campaign) {
     assert(!bootstrapContext, 'bootstrap context is already installed');
     root = fs.realpathSync(root);
     const main = fs.realpathSync(require.main.filename);
@@ -272,7 +281,14 @@ function initializeBootstrapContext(root, proof, spawnDriver) {
     assert.equal(hash(fs.readFileSync(path.join(root, 'quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs'))),
         proof.bootstrapSha256, 'admitted bootstrap identity differs');
     assert.equal(typeof spawnDriver, 'function');
-    bootstrapContext = Object.freeze({ root, proof: Object.freeze({ ...proof }), spawnDriver });
+    if (operation) {
+        assert(operation.signal instanceof AbortSignal && typeof operation.abort === 'function', 'live private operation required');
+        assert.match(operation.scopeId, /^[a-f0-9]{64}$/u);
+        assert(operation.identity && Object.isFrozen(operation.identity), 'immutable operation correlation required');
+    }
+    assert(campaign === undefined || typeof campaign === 'string', 'invalid admitted corpus campaign');
+    bootstrapContext = Object.freeze({ root, proof: Object.freeze({ ...proof }), spawnDriver, scopes: new Map(), campaign,
+        ...(operation && { operation: Object.freeze({ ...operation }) }) });
 }
 function bootstrapAdmission(root) {
     return bootstrapContext?.root === fs.realpathSync(root) ? bootstrapContext.proof : undefined;
@@ -282,6 +298,32 @@ function requireBootstrapAdmission(root) {
     assert(proof, 'qualification requires the independently reviewed immutable bootstrap');
     return proof;
 }
+function bootstrapOperation(root) {
+    return bootstrapContext?.root === fs.realpathSync(root) ? bootstrapContext.operation : undefined;
+}
+function bootstrapCampaign(root) {
+    requireBootstrapAdmission(root);
+    return bootstrapContext.campaign;
+}
+function selectedQualificationRuntime(root, plan) {
+    return plan.containment && !bootstrapOperation(root) ? plan.hostRuntime : plan.runtime;
+}
+function retainBootstrapScope(root, identity, scopeId) {
+    requireBootstrapAdmission(root);
+    const key = identity.ownerId + ':' + identity.operationId;
+    const previous = bootstrapContext.scopes.get(key);
+    assert(!previous || previous === scopeId, 'owned scope correlation changed');
+    bootstrapContext.scopes.set(key, scopeId ?? null);
+}
+function confirmBootstrapScopeStopped(root, identity, scopeId) {
+    requireBootstrapAdmission(root);
+    const key = identity.ownerId + ':' + identity.operationId;
+    assert.equal(bootstrapContext.scopes.get(key), scopeId, 'owned scope stop correlation differs');
+    bootstrapContext.scopes.delete(key);
+}
+function bootstrapCleanupAllowed(root) {
+    return bootstrapAdmission(root) !== undefined && bootstrapContext.scopes.size === 0;
+}
 function spawnQualificationDriver(mode, args, options) {
     assert(bootstrapContext, 'qualification requires the independently reviewed immutable bootstrap');
     return bootstrapContext.spawnDriver(mode, args, options);
@@ -289,4 +331,5 @@ function spawnQualificationDriver(mode, args, options) {
 
 module.exports = { attestSource, attestRuntime, attestDrivers, runtimeIdentity, dependencyIdentity, admitQualificationModules,
     pinnedGit, gitEnvironment, trustedGitExecutable, attestCommittedArtifact, requireBootstrapAdmission,
-    bootstrapAdmission, initializeBootstrapContext, spawnQualificationDriver };
+    bootstrapAdmission, initializeBootstrapContext, spawnQualificationDriver, bootstrapOperation, selectedQualificationRuntime,
+    retainBootstrapScope, confirmBootstrapScopeStopped, bootstrapCleanupAllowed, bootstrapCampaign };
