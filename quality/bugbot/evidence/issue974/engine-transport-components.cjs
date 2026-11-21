@@ -25,6 +25,7 @@ async function fixture(options = {}) {
     const identity = { ownerId: 'b'.repeat(64), operationId: 'control:C27', planSha256: proof.planSha256, implementation: plan.implementation, imageSha256: image.slice(7), purpose: 'native-control' };
     const id = 'f'.repeat(64), requests = [], events = [], connections = new Set(), waiters = [], timers = [];
     let config, running = false, pid = 0, status = 'created', removed = false, lifetime;
+    let lifetimeEnds = 0, attachDestructions = 0;
     function stopped() { running = false; pid = 0; status = 'exited'; for (const response of waiters.splice(0))
         json(response, options.waitResult ?? { StatusCode: 0 }); }
     function json(response, value, code = 200) { response.writeHead(code, { 'content-type': 'application/json' }); response.end(JSON.stringify(value)); }
@@ -62,6 +63,7 @@ async function fixture(options = {}) {
             if (route === '/containers/' + id + '/json') {
                 const actual = { Id: id, Image: image, Config: { ...config }, HostConfig: config.HostConfig, Mounts: config.HostConfig.Mounts.map(m => ({ Destination: m.Target, Source: m.Source, Type: m.Type, Mode: '', Propagation: m.BindOptions.Propagation, RW: !m.ReadOnly })), State: { Running: running, Pid: pid, Restarting: false, Status: status, ExitCode: 0 } };
                 options.inspect?.(actual, { running, pid, status });
+                if (options.holdInspection?.()) { options.onHeldInspection(() => json(response, actual)); return; }
                 return json(response, actual);
             }
             if (route === '/containers/' + id + '/start') {
@@ -107,6 +109,7 @@ async function fixture(options = {}) {
             connection.end('HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n');
             return;
         }
+        if (options.holdAttachment) { options.onHeldAttachment(() => connection.destroy()); return; }
         connection.write('HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n' + (options.attachHead ? 'unexpected' : ''));
         connection.on('data', () => { });
         connection.on('end', () => { if (!options.ignoreLifetimeEof)
@@ -124,7 +127,19 @@ async function fixture(options = {}) {
     Object.defineProperty(isolatedProcess, 'env', { value: options.environment ?? {}, writable: false });
     const authFile = path.join(directory, 'unit-auth.json');
     fs.writeFileSync(authFile, 'COMPONENT_ONLY_SESSION');
-    const context = { module, require: name => name === '../issue-950/execution-provenance.cjs' ? provenance : name === '../issue-950/ev07-shadow/load.cjs' ? {} : name.endsWith('/src/data/repository/agent_authentication') ? { buildAgentCliEnvironment: () => options.selectedCredentials ?? {}, codexChatGptSessionFile: () => options.sessionFile ? authFile : undefined } : name.endsWith('/src/data/repository/agent_credential_policy') ? { allowedCredentialVariables: () => ['OPENAI_API_KEY'] } : nativeRequire(name), process: isolatedProcess, Buffer, AbortController, AbortSignal, __dirname: path.dirname(file), __coverage__: globalThis.__coverage__, setTimeout: (callback, delay) => { assert.equal(delay, 5000); const timer = { callback }; timers.push(timer); return timer; }, clearTimeout: timer => { const index = timers.indexOf(timer); if (index >= 0)
+    const observedHttp = { ...http, request(...args) {
+        const req = http.request(...args);
+        if (args[0]?.path?.includes('/attach?')) {
+            const destroy = req.destroy;
+            req.destroy = function (...values) { attachDestructions += 1; return destroy.apply(this, values); };
+            req.once('upgrade', (_response, socket) => {
+                const end = socket.end;
+                socket.end = function (...values) { lifetimeEnds += 1; return end.apply(this, values); };
+            });
+        }
+        return req;
+    } };
+    const context = { module, require: name => name === 'node:http' ? observedHttp : name === '../issue-950/execution-provenance.cjs' ? provenance : name === '../issue-950/ev07-shadow/load.cjs' ? {} : name.endsWith('/src/data/repository/agent_authentication') ? { buildAgentCliEnvironment: () => options.selectedCredentials ?? {}, codexChatGptSessionFile: () => options.sessionFile ? authFile : undefined } : name.endsWith('/src/data/repository/agent_credential_policy') ? { allowedCredentialVariables: () => ['OPENAI_API_KEY'] } : nativeRequire(name), process: isolatedProcess, Buffer, AbortController, AbortSignal, __dirname: path.dirname(file), __coverage__: globalThis.__coverage__, setTimeout: (callback, delay) => { assert.equal(delay, 5000); const timer = { callback }; timers.push(timer); return timer; }, clearTimeout: timer => { const index = timers.indexOf(timer); if (index >= 0)
             timers.splice(index, 1); } };
     vm.runInNewContext(raw, context, { filename: file });
     const record = async (event) => { events.push(JSON.parse(JSON.stringify(event))); if (event.event === 'operation-start') {
@@ -133,7 +148,7 @@ async function fixture(options = {}) {
         assert.equal(credentials.codexAuth, options.sessionFile ? 'COMPONENT_ONLY_SESSION' : null);
     } if (options.recordFailure === event.event)
         throw Error('unit durable record failure'); };
-    return { api: module.exports, directory, input, output, identity, profile, plan, requests, events, proof, get running() { return running; }, get removed() { return removed; }, record,
+    return { api: module.exports, directory, input, output, identity, profile, plan, requests, events, proof, get lifetimeEnds() { return lifetimeEnds; }, get attachDestructions() { return attachDestructions; }, get running() { return running; }, get removed() { return removed; }, record,
         async create() { return module.exports.createOperationContainment({ root: directory, identity, inputDirectory: input, outputDirectory: output, record }); },
         async close() { lifetime?.destroy(); for (const connection of connections)
             connection.destroy(); await new Promise(resolve => server.close(resolve)); for (const event of events.filter(e => e.event === 'operation-incomplete' && e.inputDirectory)) {

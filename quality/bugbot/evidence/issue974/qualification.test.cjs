@@ -808,3 +808,5 @@ require('./review-driver-components.cjs');
 require('./component-coverage-gate-components.cjs');
 
 require('./stop-record-components.cjs');
+
+require('./startup-stop-components.cjs');

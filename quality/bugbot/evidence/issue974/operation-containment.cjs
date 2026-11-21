@@ -116,20 +116,25 @@ function request(socketPath, apiVersion, method, route, body) {
 }
 
 /** Only the outer immutable bootstrap owns this writer; child/model stdio is unrelated. */
-function attachLifetime(socketPath, apiVersion, id) {
+function attachLifetime(socketPath, apiVersion, id, signal) {
     assert.match(id, idPattern);
     return new Promise((resolve, reject) => {
         const req = http.request({ socketPath, method: 'POST', agent: false, timeout: 0,
             path: '/v' + apiVersion + '/containers/' + id + '/attach?stream=1&stdin=1&stdout=0&stderr=0',
             headers: { Connection: 'Upgrade', Upgrade: 'tcp' } });
+        const abort = () => req.destroy(new Error('Owned stdin attachment cancelled.'));
+        const clear = () => signal.removeEventListener('abort', abort);
         req.once('upgrade', (response, socket, head) => {
-            if (response.statusCode !== 101 || head.length) { socket.destroy(); reject(new Error('Owned stdin upgrade was not admitted.')); return; }
+            clear();
+            if (signal.aborted || response.statusCode !== 101 || head.length) { socket.destroy(); reject(new Error('Owned stdin upgrade was not admitted.')); return; }
             // Unexpected bytes cannot serve as authority or block the lifetime
             // channel. The PID1 control input accepts EOF, never model output.
             socket.setTimeout(0); socket.resume(); resolve(socket);
         });
-        req.once('response', response => { response.resume(); reject(new Error('Owned stdin upgrade unavailable.')); });
-        req.once('error', reject); req.end();
+        req.once('response', response => { clear(); response.resume(); reject(new Error('Owned stdin upgrade unavailable.')); });
+        req.once('error', error => { clear(); reject(error); });
+        signal.addEventListener('abort', abort, { once: true });
+        if (signal.aborted) abort(); else req.end();
     });
 }
 
@@ -193,6 +198,7 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
     assert.match(created?.Id ?? '', idPattern, 'scope creation identity is unknown');
     const id = created.Id;
     let lifetime, starting = false, stopping = false, removed = false, stoppedProof, confirmation, startRequest, stopRequest, waitRequest;
+    const attachment = new AbortController();
     async function inspect() {
         assert(!removed, 'owned scope already removed');
         const actual = await api('GET', '/containers/' + id + '/json');
@@ -232,7 +238,7 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
             startRequest = (async () => {
                 await inspect();
                 assert(!stopping, 'scope was stopped before startup');
-                lifetime = await attachLifetime(profile.socketPath, profile.engine.apiVersion, id);
+                lifetime = await attachLifetime(profile.socketPath, profile.engine.apiVersion, id, attachment.signal);
                 lifetime.once('error', () => { /* Channel loss never becomes successful research. */ });
                 assert(!stopping, 'scope was stopped before startup');
                 await record({ event: 'scope-start', identity, scopeId: id });
@@ -259,11 +265,10 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
             if (stopRequest) return stopRequest;
             stopping = true;
             stopRequest = (async () => {
-                await inspect();
-                let recordFailure;
-                try { await record({ event: 'scope-stop-request', identity, scopeId: id, reason }); }
-                catch (cause) { recordFailure = { cause }; }
-                lifetime?.end();
+                // The already-owned lifetime channel is the stop capability.
+                // Request it before any metadata/journal wait; inspection still
+                // gates later Engine effects, confirmation and cleanup.
+                attachment.abort(); lifetime?.end();
                 // Escalation begins AFTER an actual termination request only.
                 // It never caps investigation/run/wait/heartbeat duration.
                 let escalation;
@@ -271,6 +276,10 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
                     ? api('POST', '/containers/' + id + '/kill?signal=SIGKILL') : undefined);
                 void escalation.catch(() => undefined); }, 5_000);
                 try {
+                    await inspect();
+                    let recordFailure;
+                    try { await record({ event: 'scope-stop-request', identity, scopeId: id, reason }); }
+                    catch (cause) { recordFailure = { cause }; }
                     if (startRequest) await startRequest.catch(() => undefined);
                     lifetime?.end();
                     if (starting) await api('POST', '/containers/' + id + '/wait?condition=not-running');

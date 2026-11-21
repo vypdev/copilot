@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T23:24:25.822983+00:00",
+  "parent": "34aca826fdff85aef6af6016ed265f14a68dea4b",
+  "findings": [
+    "PRRT_kwDONSeBW866Yqj8",
+    "PRRT_kwDONSeBW866dMuE"
+  ],
+  "sourceHashes": {
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "106435a98f0c2d10fa7e6fa997093e2f328648c88aaea916f91dc7e3b4491b3e"
+  },
+  "testHelperHashes": {
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "2c26ae3cc42e858a01277da99ec7c0d6520f8f5dbf756a99eb0b174f674f4fc2",
+    "quality/bugbot/evidence/issue974/engine-transport-components.cjs": "9e2ac879092de3163f06f5ab763feddded76362e86e1c307ad240d9802647279",
+    "quality/bugbot/evidence/issue974/supervisor-components.cjs": "777e153bda4585dcf91cb03505e86e188eb82b453566ea1a38858a464c5e2e10",
+    "quality/bugbot/evidence/issue974/corpus-collector-components.cjs": "ddbf23d902bc7b283cee00932447f7b8681df574e9c424a9c991dc2a4d8f3690",
+    "quality/bugbot/evidence/issue974/corpus-worker-components.cjs": "3874d465fb616651324c20661fee17f705e0f0bd562ecabd33d108bb69b84e3e",
+    "quality/bugbot/evidence/issue974/launcher-components.cjs": "d74d76c8393d1f5fba61a8e3b6ea5703d57ced1c697a7e576524a890e51066f5",
+    "quality/bugbot/evidence/issue974/attempt-components.cjs": "5e7773031d79085da569fa78fc1d6db2d29f136593ec708079901b3eaf6106c1",
+    "quality/bugbot/evidence/issue974/implementation-components.cjs": "8188ef5b2be118ae09fafc93d30d147c04e03efc68ea0ce25009a8b926eaf234",
+    "quality/bugbot/evidence/issue974/full-review-fault-components.cjs": "d2be1ea46c49da922c56395334d84db54a5f9d00bd65fbd84dee456b66dce194",
+    "quality/bugbot/evidence/issue974/full-review-lifecycle-components.cjs": "4f87bba74e3ecdfa3ff08863a00815091a3a7cde74661200f4196e08249f599a",
+    "quality/bugbot/evidence/issue974/review-driver-components.cjs": "a1ca260ade2154b097c10a9be7abd932b106c20bba0fbfa4dc54c83160e85b1f",
+    "quality/bugbot/evidence/issue974/component-coverage-gate-components.cjs": "37c51f2060cc2863d3f7d72550ce216e522f7afb783be7887b07978ba8a1ae0f",
+    "quality/bugbot/evidence/issue974/stop-record-components.cjs": "5cf256c13b07d491957b05ac153648bc85a266a25de8372ec6cfd8dd767e4b04",
+    "quality/bugbot/evidence/issue974/startup-stop-components.cjs": "6adf6f4988271d654015d105e163c713e49631db4a3106cb21a91e9c17766e83",
+    "quality/bugbot/evidence/issue-974/controls/engine-transport-coverage/coverage.cjs": "15233feb5b1775ad9036d73463ffdd5ec51740b92554d46b1609e6ac6f79ff25"
+  },
+  "fullShadowCommand": {
+    "exit": 0,
+    "passed": 463,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "focused": {
+    "causalRedPassed": 0,
+    "causalRedFailed": 4,
+    "greenPassed": 16,
+    "greenFailed": 0,
+    "newControls": 4,
+    "retainedStopRecordControls": 12
+  },
+  "selectedControlsPassed": 17,
+  "measuredEngineModuleGateSatisfied": true,
+  "globalChangedModuleGateSatisfied": false,
+  "coverage": [
+    {
+      "file": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "sourceSha256": "106435a98f0c2d10fa7e6fa997093e2f328648c88aaea916f91dc7e3b4491b3e",
+      "summary": {
+        "lines": {
+          "total": 272,
+          "covered": 272,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 50,
+          "covered": 47,
+          "skipped": 0,
+          "pct": 94
+        },
+        "statements": {
+          "total": 361,
+          "covered": 356,
+          "skipped": 0,
+          "pct": 98.61
+        },
+        "branches": {
+          "total": 166,
+          "covered": 154,
+          "skipped": 0,
+          "pct": 92.77
+        }
+      },
+      "gate": true
+    }
+  ],
+  "testHashProof": "14 test files captured before loading and unchanged at exit.",
+  "fixes": [
+    "Explicitly cancel the exact owned pending attach HTTP request so start can reject and stop can inspect/confirm/remove an unstarted scope.",
+    "Close the alreadyowned lifetime channel and start existing post-termination escalation before any metadata/journal await; fresh inspection still gates Engine effects, confirmation and cleanup."
+  ],
+  "preserved": [
+    "first stop-record error semantics",
+    "scope identity/image/mount/grant fences",
+    "no new research/metadata timeouts, retries, turn/read/token limits",
+    "SDK/four application bundles/corpora/measurement plan/35logicalIDs/selected SDD"
+  ],
+  "fixtureNegative": "Initial private test released a held response twice; the second response write could skip fixture close. Original source/log retained. Stop helper stopped at command revalidation before its final receipt; whether an earlier exact-marker SIGTERM was delivered is UNKNOWN and no PID/count is invented. Original handle4869 terminal1 and posthoc exact-marker process inventory0. Idempotent release fixes the harness; the corrected run exits naturally with four causal assertion failures.",
+  "fixtureAudit": {
+    "at": "2026-11-21T23:11:29.513957+00:00",
+    "kind": "posthoc private fixture-stop audit",
+    "initialStopHelper": "Initial selection allowed at most two Node processes with the exact private probe argument; it stopped at command revalidation assertion before writing its final receipt. Whether an earlier matched SIGTERM had already been delivered is unknown; no count or PID is invented. No additional stop is attempted.",
+    "originalHandle": "4869 now terminal exit1",
+    "remainingExactMarkerProcesses": [],
+    "notSDKorDockerorModel": true,
+    "fixtureCorrection": "Held HTTP release is now idempotent; second real run terminates normally with four causal assertion failures.",
+    "subsequentNegativeLog": "/private/tmp/copilot-goal-974-startup-stop-red-attempt2.log"
+  },
+  "boundaries": "Actual Unix HTTP held-transport acknowledgments, ClientRequest.destroy and Socket.end calls; Engine/admission/timer responses are explicitly modeled. No native Docker/PID namespace/SDK/model or credential/read-scope admission.",
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8350055,
+      "sha256": "52bade17c4ad39eb06a034e3e6e48889932aff07cd83baa24faa7bff163520f2"
+    },
+    "github_action": {
+      "bytes": 11109171,
+      "sha256": "5fa8301d2c57269edcf833ffc1dae9ca9a89fff234fe943fed3c18d2053121ac"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "archives": 21,
+  "actual174": "unstarted",
+  "actual42": "unstarted",
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "qualifiedProfile": null,
+  "production": "disabled",
+  "normalHooksAndFinalNative": "required",
+  "remaining": "Other valid SDKscope/owner-loss/credential/read-scope/durability/evidence findings, global drivers and fresh exact-tuple nativeC32-C35 remain unmet."
+}
