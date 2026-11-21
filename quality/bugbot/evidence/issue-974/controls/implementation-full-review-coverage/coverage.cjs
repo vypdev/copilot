@@ -36,6 +36,7 @@ process.on('exit',()=>{
  for(const record of targets.values()){
   check(record);const summary=map.fileCoverageFor(record.file).toSummary().toJSON();const passed=summary.statements.pct>=95&&summary.lines.pct>=95&&summary.branches.pct>=90&&summary.functions.pct>=90;gate&&=passed;results.push({file:record.relative,sourceSha256:record.sourceSha256,summary,gate:passed});
  }
+ if(!gate&&!process.exitCode)process.exitCode=1;
  fs.writeFileSync(path.join(output,'coverage-final.json'),JSON.stringify(map.toJSON()),{mode:0o600});fs.writeFileSync(path.join(output,'receipt.json'),JSON.stringify({schemaVersion:1,kind:'exact-source AST implementation/plan/driver/CLI admission and full-review cancellation/journal/collector/copy through41+24 components and selected existing controls; real private Git/files/version-only child; explicitly modeled attestation/admission/planner/scope ports; no native/model/campaign acceptance',results,measuredImplementationAndFullReviewComponentGatesSatisfied:gate,globalChangedModuleCoverageSatisfied:false,observations,testSha256,qualificationModelCalls:0,nativeSdkAcceptance:false,production:'disabled'},null,2)+'\n',{mode:0o600});
  console.log('ALL_CJS_COMPONENT_COVERAGE',JSON.stringify(results.map(r=>({file:r.file,statements:r.summary.statements.pct,lines:r.summary.lines.pct,branches:r.summary.branches.pct,functions:r.summary.functions.pct,gate:r.gate}))));
 });

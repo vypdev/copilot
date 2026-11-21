@@ -29,6 +29,7 @@ process.on('exit',()=>{
  for(const record of targets.values()){
   check(record);const summary=map.fileCoverageFor(record.file).toSummary().toJSON();const passed=summary.statements.pct>=95&&summary.lines.pct>=95&&summary.branches.pct>=90&&summary.functions.pct>=90;gate&&=passed;results.push({file:record.relative,sourceSha256:record.sourceSha256,summary,gate:passed});
  }
+ if(!gate&&!process.exitCode)process.exitCode=1;
  fs.writeFileSync(path.join(output,'coverage-final.json'),JSON.stringify(map.toJSON()),{mode:0o600});fs.writeFileSync(path.join(output,'receipt.json'),JSON.stringify({schemaVersion:1,kind:'exact-source AST corpus component coverage through existing C31 plus56 semantic component controls with modeled CLI/agent/provenance/containment ports and actual private filesystem; no native Docker/model acceptance',results,measuredCorpusComponentGateSatisfied:gate,globalChangedModuleCoverageSatisfied:false,observations,qualificationModelCalls:0,nativeSdkAcceptance:false,production:'disabled'},null,2)+'\n',{mode:0o600});
  console.log('ALL_CJS_COMPONENT_COVERAGE',JSON.stringify(results.map(r=>({file:r.file,statements:r.summary.statements.pct,lines:r.summary.lines.pct,branches:r.summary.branches.pct,functions:r.summary.functions.pct,gate:r.gate}))));
 });

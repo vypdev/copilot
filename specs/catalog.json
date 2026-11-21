@@ -2619,7 +2619,10 @@
         "quality/bugbot/evidence/issue974/implementation-components.cjs",
         "quality/bugbot/evidence/issue974/full-review-fault-components.cjs",
         "quality/bugbot/evidence/issue974/full-review-lifecycle-components.cjs",
-        "quality/bugbot/evidence/issue-974/controls/implementation-full-review-coverage/coverage.cjs"
+        "quality/bugbot/evidence/issue-974/controls/implementation-full-review-coverage/coverage.cjs",
+        "quality/bugbot/evidence/issue974/review-driver-components.cjs",
+        "quality/bugbot/evidence/issue974/component-coverage-gate-components.cjs",
+        "quality/bugbot/evidence/issue-974/controls/review-driver-coverage/coverage.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

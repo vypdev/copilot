@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T22:33:03.845218+00:00",
+  "parent": "8933ec1cf77c64c7328a6c8ebbaa3274890c8379",
+  "sourceHashes": {
+    "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs": "6b8e27717b30ae68a9ece2a9703073775b8025912614b1039ae25cab4b4fc85c"
+  },
+  "testHelperHashes": {
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "e17df4d3c248fc05eda35b47f5357e8842baef3acbf3e8e079cc9168665c9b99",
+    "quality/bugbot/evidence/issue974/review-driver-components.cjs": "a1ca260ade2154b097c10a9be7abd932b106c20bba0fbfa4dc54c83160e85b1f",
+    "quality/bugbot/evidence/issue974/component-coverage-gate-components.cjs": "37c51f2060cc2863d3f7d72550ce216e522f7afb783be7887b07978ba8a1ae0f",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/review-runtime.test.cjs": "e92345f031a6b8cafd1195c57e56df636b88abe593d1f9c278d5360112e38db1",
+    "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/coverage.cjs": "3713203721e0f130e202fe08629046d1a1ce97f5024fb963b814432bbbe6a717",
+    "quality/bugbot/evidence/issue-974/controls/engine-transport-coverage/coverage.cjs": "bcd60384b131428ace00ed078e6b034729dc041727b9fb48aad523380404d7c2",
+    "quality/bugbot/evidence/issue-974/controls/supervisor-transport-coverage/coverage.cjs": "391f0c210001d46a02ef9d4f25677f6f9544b2d5bab923de98b268d1386741b7",
+    "quality/bugbot/evidence/issue-974/controls/launcher-attempt-coverage/coverage.cjs": "533cfea3bd33c4aeac305a147e0ca5f332b71dc283b11df2b3ec44693f93e8ae",
+    "quality/bugbot/evidence/issue-974/controls/implementation-full-review-coverage/coverage.cjs": "e8fad18a6ae62cab2b9f7ec4626d4d0d77999333e70ed0bb7f76d83402f7fad1",
+    "quality/bugbot/evidence/issue-974/controls/review-driver-coverage/coverage.cjs": "38d28fa3705e832ad2bbbba09a468da77329f4113a150687b597d7714cc504c5"
+  },
+  "reviewComponentControls": 27,
+  "coverageExitControls": 12,
+  "fullShadowCommand": {
+    "exit": 0,
+    "passed": 447,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "measuredReviewDriverComponentGateSatisfied": true,
+  "globalChangedModuleGateSatisfied": false,
+  "reviewCoverage": [
+    {
+      "file": "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs",
+      "sourceSha256": "6b8e27717b30ae68a9ece2a9703073775b8025912614b1039ae25cab4b4fc85c",
+      "summary": {
+        "lines": {
+          "total": 158,
+          "covered": 158,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 40,
+          "covered": 38,
+          "skipped": 0,
+          "pct": 95
+        },
+        "statements": {
+          "total": 191,
+          "covered": 188,
+          "skipped": 0,
+          "pct": 98.42
+        },
+        "branches": {
+          "total": 63,
+          "covered": 60,
+          "skipped": 0,
+          "pct": 95.23
+        }
+      },
+      "gate": true
+    }
+  ],
+  "coverageExitCausalRed": "5PASS5FAIL across five real AST driver processes with actual zero-hit maps; each false gate erroneously exits0. Prior23 preservation passes.",
+  "coverageExitGreen": "12PASS: six drivers reject zero-hit coverage without overwriting prior23. Only suite imports suppressed, no forged map or feature-run claim.",
+  "fixtureNegative": "Initial10FAIL used one extra parent directory in test harness path. Exact initial source/log retained; corrected harness before causal red.",
+  "qualificationDriverSourceChanged": false,
+  "sdkOrBundleChanged": false,
+  "nativeSdkAcceptance": false,
+  "modeledPorts": [
+    "provenance/bootstrap admission",
+    "SDK inputs/context projection/composition",
+    "planner/client",
+    "installed verifier/transport",
+    "CI reader"
+  ],
+  "actualBoundaries": [
+    "private two-commit Git repository and diff",
+    "runtime executable and optional launcher-byte admission",
+    "invocation flag parser",
+    "attempt recorder and filesystem",
+    "published AST drivers as actual child processes"
+  ],
+  "testHashCapture": "Pre-load capture plus unchanged verification on exit.",
+  "originalLogicalControlIds": 35,
+  "corporaAndMeasurementPlanChanged": false,
+  "archives": 17,
+  "normalHooksAndFinalNative": "required",
+  "remaining": [
+    "execution-provenance/bootstrap/native-fixture/global coverage",
+    "valid containment/cancellation/owner-loss/attempt-durability/read-scope/credential findings",
+    "compliant actual pinned CLI admission and fresh exact-tuple nativeC32-C35",
+    "final preregistration before174",
+    "same-tuple174PASS before42"
+  ],
+  "actual174": "unstarted",
+  "actual42": "unstarted",
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "qualifiedProfile": null,
+  "production": "disabled"
+}
