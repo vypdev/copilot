@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-21T00:28:49.385532+00:00",
+  "purpose": "source-integration-only",
+  "selectedPolicy": {
+    "repository": "vypdev/copilot",
+    "ref": "authenticated repository default only",
+    "workflow": ".github/workflows/copilot_credential_health.yml",
+    "originalActorIds": [
+      1783618,
+      260864876
+    ],
+    "triggeringActors": [
+      "efraespada",
+      "vypbot"
+    ],
+    "reruns": "same original and triggering actor selection",
+    "checks": "all eight explicit flags false by default",
+    "runner": {
+      "group": "vypdev",
+      "labels": [
+        "self-hosted",
+        "codex",
+        "Linux"
+      ]
+    }
+  },
+  "authorization": "estas autorizado a mergear lo que consideres, no necesitas mi aprobacion",
+  "agentDecision": "Select the reviewed source-only default-ref/exact-workflow and two-actor/rerun selector for normal integration under delegated merge judgment. Original question is not a new per-PR merge gate. Existing workflow editors remain credential holders; the selector and validator are mutable together and are not independent protection. Org isolation/grants remain unavailable/unverified.",
+  "specificHumanAssumptionReplyReceived": false,
+  "priorActorObservation": {
+    "at": "2026-11-20T11:58:30.630651+00:00",
+    "collaborators": [
+      {
+        "id": 1783618,
+        "login": "efraespada",
+        "permissions": {
+          "admin": true,
+          "maintain": true,
+          "push": true,
+          "triage": true,
+          "pull": true
+        },
+        "role": "admin"
+      },
+      {
+        "id": 260864876,
+        "login": "vypbot",
+        "permissions": {
+          "admin": true,
+          "maintain": true,
+          "push": true,
+          "triage": true,
+          "pull": true
+        },
+        "role": "admin"
+      }
+    ]
+  },
+  "officialSync": {
+    "at": "2026-11-21T00:26:29.632842+00:00",
+    "run": 44841116670,
+    "job": 136649438719,
+    "head": "72a24c9342dfef9f8603b4fe68566a190c5e735a",
+    "parents": [
+      "f0655e7f64d7d141de2e943b68db21e8fdb32392",
+      "a7c23ad169bca92ade652c893f268b5c9ef566ab"
+    ],
+    "branch": "chore/979-define-and-test-the-trusted-ref-policy-for-credential-health-workflow-dispatch",
+    "rawBytes": 3792599,
+    "rawSha256": "9394e82de047d0441c4947eaf7bc0aff30bf58f99e12d37ce7abe7dfd271fb97",
+    "localFastForwardOnly": true,
+    "remoteMutationsByAgent": 0
+  },
+  "sourceSha256": {
+    ".github/workflows/copilot_credential_health.yml": "1fa84882cf6cc3bc8cc9186b7c3c7727e4337ef7240119bbf2b087e680fbddf2",
+    "scripts/credential-health-source-contract.cjs": "a8be2de856ed8aff46ef8a0e32b85eaab7c91b558c4d9112b377dbeab882cd59",
+    "src/tooling/__tests__/credential_health_source_policy.test.ts": "c5a139bb123362445a21a76c0c29d52021e2161663e5b891258defd5f4863f36"
+  },
+  "independentWorkflowEditorProtectionEstablished": false,
+  "organizationIsolationAndCredentialGrants": "unavailable/unverified; retained baseline403 evidence",
+  "defaultInstallationPerformed": false,
+  "realHealthDispatches": 0,
+  "credentialValuesRead": 0,
+  "credentialGrantChanges": 0,
+  "consumerTemplatesChanged": false,
+  "runnerOrProtectionChanges": false,
+  "production": "disabled",
+  "qualificationModelCalls": 0,
+  "evaluatedPrWriteAttempts": 0
+}

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "test-only native I/O fixture budget correction after observed CI failures",
+  "base": "cfb0be0300896d0fd0fc27a2327f5c7588ad005d",
+  "priorCiFailures": [
+    {
+      "run": 44845925626,
+      "job": 136665479233,
+      "rawBytes": 3050033,
+      "rawSha256": "5b0d546f296e983510ddf3b1fbdf24d0cf3fbe2a17cb0be69f3278c02c3d4d9a",
+      "outcome": "one upgrade test exceeded ordinary5000ms Jest bound;943 suites18733PASS1FAIL35existing skip"
+    },
+    {
+      "run": 44845925626,
+      "job": 136677998858,
+      "rawBytes": 3152715,
+      "rawSha256": "d0fa7b460e04ef0f6e5b11cf8aed6249e95d0dab34c8f5daddbf4020ff9633ad",
+      "outcome": "permission journal test exceeded5000ms and active-inspection refusal cascaded; catalog subprocess statusNULL at16.741s without captured error/signal;942 suites18703PASS31FAIL35existing skip"
+    }
+  ],
+  "causeLimits": "The deadline failures are directly observed. Host scheduling/I/O cause is unproven. Historical catalog result did not capture error/signal, so timeout is not asserted as its exclusive cause.",
+  "changes": [
+    "two observed asynchronous real-I/O cases use explicit30000ms Jest technical test budgets",
+    "real catalog subprocess budget10000to30000ms; first CLI lifecycle additionally asserts absence of spawn error and terminating signal before exact unchanged status/content/atomic-publication checks"
+  ],
+  "assertionsWeakened": false,
+  "testsSkippedOrMockedInsteadOfNativeIo": false,
+  "runtimeOrResearchBudgetChanged": false,
+  "workflowSelectorAndGrantPolicyChanged": false,
+  "runnerProtectionInstallationProductionChanged": false,
+  "sameShaRetryRequested": false,
+  "focused": {
+    "suites": 3,
+    "pass": 141,
+    "fail": 0,
+    "logBytes": 1583,
+    "logSha256": "0bce9a3d9d96e67a4461460e846bb1a42137c80638ba2b1d132e1f5db85d9c70",
+    "log": "io-fixture-budget-focused.log.txt"
+  },
+  "nativeFinalChecksPending": true,
+  "qualificationModelCalls": 0,
+  "production": "disabled"
+}
