@@ -734,3 +734,14 @@ continues to prove neither framework execution nor verified SDD publication.
 The eight additional runtime document cases are counted in the owning #595
 amendment budget, not again in this companion's historic inventory. Existing
 unavailable/blocked provenance, read-only boundaries and recovery remain unchanged.
+
+
+### Publisher-route coordination (#998, 2026-11-21)
+
+The new publisher CLI path is an installation proposal route, not a runtime-doctor command or permission grant. A source merge or installer PR does not make a runtime prerequisite installed. Runtime doctor remains observational and must retain explicit missing/unknown states until actual trusted-default/native evidence exists.
+
+The officially published [publisher companion](./setup-bugbot-publisher-manifest-route.md)
+and [batch delivery owner](./organization-configuration-reuse-and-batch-setup.md#reviewed-publisher-purpose-delivery-998-2026-11-21)
+own the additional 64-case contract and shared delivery changes. This coordination
+note does not complete this SDD's existing external or prospective gates. Actual
+#977 installation/native evidence and #981/#982 observations remain separate.

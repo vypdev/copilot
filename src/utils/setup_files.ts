@@ -1,4 +1,5 @@
 import { issueWorkflowHeading } from '../domain/issue_workflow_profile';
+import { isSetupTokenValueValid } from '../application/policies/setup_token_value_policy';
 import * as fs from 'fs';
 import * as path from 'path';
 import { copySetupDirectory, copySetupFile } from './setup_file_copy';
@@ -326,15 +327,6 @@ function isLocalSourceApprovalObserver(cwd: string, destination: string): boolea
 }
 
 const ENV_TOKEN_KEY = 'PERSONAL_ACCESS_TOKEN';
-const ENV_PLACEHOLDER_VALUE = 'github_pat_11..';
-/** Minimum length for a token to be considered "defined" (not placeholder). */
-const MIN_VALID_TOKEN_LENGTH = 20;
-
-function isTokenValueValid(token: string): boolean {
-  const t = token.trim();
-  return t.length >= MIN_VALID_TOKEN_LENGTH && t !== ENV_PLACEHOLDER_VALUE;
-}
-
 /**
  * Resolves the PERSONAL_ACCESS_TOKEN for setup from a single priority order:
  * 1. override (e.g. CLI --token) if provided and valid,
@@ -343,9 +335,9 @@ function isTokenValueValid(token: string): boolean {
  */
 export function getSetupToken(_cwd: string, override?: string): string | undefined {
   const overrideTrimmed = override?.trim();
-  if (overrideTrimmed && isTokenValueValid(overrideTrimmed)) return overrideTrimmed;
+  if (overrideTrimmed && isSetupTokenValueValid(overrideTrimmed)) return overrideTrimmed;
   const fromEnv = process.env[ENV_TOKEN_KEY]?.trim();
-  if (fromEnv && isTokenValueValid(fromEnv)) return fromEnv;
+  if (fromEnv && isSetupTokenValueValid(fromEnv)) return fromEnv;
   return undefined;
 }
 

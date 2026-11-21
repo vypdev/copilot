@@ -1,0 +1,92 @@
+{
+  "originalReportSha256": "ea647e333d142b6f376546d8db56a952dc033c269ceb1cd278b19311e97288d0",
+  "pid": 78807,
+  "captureTime": "2026-11-21 16:43:13.8661 +0100",
+  "exception": {
+    "codes": "0x0000000000000001, 0x000000000000000e",
+    "rawCodes": [
+      1,
+      14
+    ],
+    "type": "EXC_BAD_ACCESS",
+    "signal": "SIGSEGV",
+    "subtype": "KERN_INVALID_ADDRESS at 0x000000000000000e"
+  },
+  "faultingThread": 0,
+  "frames": [
+    [
+      {
+        "symbol": "v8::internal::ClearStaleLeftTrimmedPointerVisitor::VisitRootPointers(v8::internal::Root, char const*, v8::internal::FullObjectSlot, v8::internal::FullObjectSlot)",
+        "imageIndex": 0,
+        "symbolLocation": 100
+      },
+      {
+        "symbol": "v8::internal::InternalFrame::Iterate(v8::internal::RootVisitor*) const",
+        "imageIndex": 0,
+        "symbolLocation": 240
+      },
+      {
+        "symbol": "v8::internal::Isolate::Iterate(v8::internal::RootVisitor*, v8::internal::ThreadLocalTop*)",
+        "imageIndex": 0,
+        "symbolLocation": 364
+      },
+      {
+        "symbol": "v8::internal::Heap::IterateRoots(v8::internal::RootVisitor*, v8::base::EnumSet<v8::internal::SkipRoot, int>, v8::internal::Heap::IterateRootsMode)",
+        "imageIndex": 0,
+        "symbolLocation": 460
+      },
+      {
+        "symbol": "v8::internal::MarkCompactCollector::MarkRoots(v8::internal::RootVisitor*)",
+        "imageIndex": 0,
+        "symbolLocation": 56
+      },
+      {
+        "symbol": "v8::internal::MarkCompactCollector::MarkLiveObjects()",
+        "imageIndex": 0,
+        "symbolLocation": 968
+      },
+      {
+        "symbol": "v8::internal::MarkCompactCollector::CollectGarbage()",
+        "imageIndex": 0,
+        "symbolLocation": 128
+      },
+      {
+        "symbol": "v8::internal::Heap::MarkCompact()",
+        "imageIndex": 0,
+        "symbolLocation": 420
+      },
+      {
+        "symbol": "v8::internal::Heap::PerformGarbageCollection(v8::internal::GarbageCollector, v8::internal::GarbageCollectionReason, char const*)",
+        "imageIndex": 0,
+        "symbolLocation": 824
+      },
+      {
+        "symbol": "v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags)::$_1::operator()() const",
+        "imageIndex": 0,
+        "symbolLocation": 1188
+      },
+      {
+        "symbol": "void heap::base::Stack::SetMarkerAndCallbackImpl<v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags)::$_1>(heap::base::Stack*, void*, void const*)",
+        "imageIndex": 0,
+        "symbolLocation": 40
+      },
+      {
+        "symbol": "PushAllRegistersAndIterateStack",
+        "imageIndex": 0,
+        "symbolLocation": 40
+      }
+    ]
+  ],
+  "imageNames": [
+    "node",
+    "resolver.darwin-arm64.node",
+    "",
+    "dyld",
+    "libsystem_kernel.dylib",
+    "libsystem_pthread.dylib"
+  ],
+  "causalAttribution": "UNPROVEN",
+  "matchingPrimarySourceLead": "https://github.com/nodejs/node/issues/62393",
+  "privateOriginalRetained": true,
+  "runtimeOrFlagsChanged": false
+}

@@ -1,0 +1,25 @@
+{
+  "at": "2026-11-21T14:01:36.083180+00:00",
+  "sourceHeadBefore": "e2ff500a26b01f29bf64530af2de823f0db8770c",
+  "failure": {
+    "run": 44911228475,
+    "job": 136867281006,
+    "check": 136867716002,
+    "code": "validation.evidence-unavailable",
+    "retryable": false
+  },
+  "selectedPath": "specs/setup-bugbot-publisher-manifest-route.md",
+  "publishedCommit": "d9f03bcf11c8680ee1a726abc758937b50d34ce8",
+  "publishedSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "asBuiltBeforeSha256": "0ca9e80934e3b64d418e47b86db8dbdaa339891dbca55dea0742093660e48608",
+  "restoredSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "exactPublicationRestored": true,
+  "all8GoalRowsAnd64CaseRowsUnchanged": true,
+  "asBuiltEvidence": "quality/bugbot/evidence/issue-998/implementation-notes.md",
+  "originalAsBuiltPreservedAt": "e2ff500a26b01f29bf64530af2de823f0db8770c",
+  "sourceAndFourBundlesUnchanged": true,
+  "selectionPolicyUnchanged": true,
+  "qualificationCalls": 0,
+  "production": "disabled",
+  "finalNativeGates": "required separately"
+}

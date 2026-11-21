@@ -196,6 +196,15 @@ remain in place and must not be repeated blindly. See the
 
 ## Shared writer acknowledgment
 
+If trusted default lacks the required publisher workflow, prepare a reviewed
+installation using the [explicit publisher proposal route](/security-operations/operations/provisioning#reviewed-bugbot-publisher-proposals).
+The complete workflow/manifest preview and subsequent PR are preparation facts.
+Record the actual merged destination revision and a separately authorized native
+writer/canary run before claiming installation or runtime acceptance. A source
+merge, packed CLI pass, queued/skipped run or correlated receipt cannot stand in
+for those observations or independent producer-code attestation. Setup preserves
+production verification settings; qualification and activation remain separate.
+
 An accepted status-writer dispatch can omit its run ID. The caller recovers only
 one native run that matches the exact handoff operation, repository, workflow,
 default ref and producer attempt. A recent run on the same PR is insufficient.

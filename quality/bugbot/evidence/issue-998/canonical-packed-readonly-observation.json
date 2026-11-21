@@ -1,0 +1,23 @@
+{
+  "at": "2026-11-21T13:19:17.326126+00:00",
+  "tarballSha256": "0c840653dd2f2d778747ccd649e9ca0c39b994771e0d7f8d18fc2095daa861ad",
+  "cliSha256": "a3d8fb8384983c89b6b0b1d2056ae54c0ea21930067199261c6784a49028eaec",
+  "cliBytes": 8463905,
+  "outsideCheckout": true,
+  "modelCalls": 0,
+  "actualApply": false,
+  "proposal": "Historical merged976 source e2b, current known master destination; not the future977installation packet.",
+  "exit": 0,
+  "stdoutBytes": 4098,
+  "stderrBytes": 0,
+  "requestCount": 49,
+  "allFixedScopeGet200": true,
+  "filesystemWriteAttempts": [],
+  "childProcessAttempts": [],
+  "blockedRequests": [],
+  "credentialOutput": false,
+  "twoFilesShown": true,
+  "spanishDryRunCompleted": true,
+  "undiciObserverIsNotIndependentEnforcement": true,
+  "unchangedCliHashAfter": true
+}

@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T17:21:43.235948+00:00",
+  "sourceParent": "6b5092e5616ade565dd6063dbbbaa8d24bdeb44e",
+  "findings": [
+    "PRRT_kwDONSeBW866Zvr-",
+    "PRRT_kwDONSeBW866ZvsM"
+  ],
+  "reproduction": {
+    "passed": 60,
+    "failed": 4,
+    "namedCases": "two actual composed Install/review/private-journal/delivery absent-phase controls and two inventory reusable-reference controls"
+  },
+  "initialCorrection": {
+    "passed": 118,
+    "failed": 0,
+    "suites": 3
+  },
+  "expanded": {
+    "passed": 124,
+    "failed": 0,
+    "suites": 3,
+    "commandExit": 1,
+    "reason": "Targeted command leaves web/specification-publication/global owners unexecuted; this is not full-coverage acceptance.",
+    "changedRuntimeAllMetrics": 100
+  },
+  "extraTestBudget": {
+    "actualComposedPublisherRecovery": 8,
+    "remoteReusableInventory": 2,
+    "fixedScenarioIds": 64,
+    "idsOrRequirementsChanged": false
+  },
+  "fixtureNegative": {
+    "passed": 120,
+    "failed": 4,
+    "cause": "The actual adapter immediately recovered matching effects after a lost POST response. The fixture was corrected to also deny its followup reads, producing a retained uncertain operation for a later reviewed resume. No extra runtime correction was made for this fixture error."
+  },
+  "prestageBuildValidatorNegative": "Compares worktree against Git index, so it correctly rejected the freshly generated unstaged CLI bundle. Validate after staging; no compiler nondeterminism inferred.",
+  "sourceHashes": {
+    "src/application/usecases/setup/apply_setup_publisher_use_case.ts": "e8ad51395a31b25b3d770db3f1e1ba2b40ba4abd2ab843d3995c0bcafe26daed",
+    "src/infrastructure/setup_publisher_workflow_inventory.ts": "bc5a100cfb5bd4bac2caee4de1ad1be02087d1ccc1a36218c9c3a224754a2f62",
+    "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts": "18a9c512edd33755185f8832474f9d40b5a46801b5760d2f6a307e8b76fc5903",
+    "src/infrastructure/__tests__/setup_publisher_application.test.ts": "3fef7e092abbe0af2b54593550821bb5e53d343d4a0367bdbcbad4dd62d2410a",
+    "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts": "8690b0906eb5d34ecaf371ab791994e28fb989224db8491357ff0c5c89b56f02"
+  },
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8466815,
+      "sha256": "22da5bff2a903f2b9720559faa74ee1abec52ddb6b5d9ce07bb353f8d3bfd191"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+    }
+  },
+  "selectedSddSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "parentNative": "All4CIjobs/defaultprofile,Commit,Verification,BranchSync andPRexecutionPASS; exact6b modifiedlinescovered, Codecovbase352commitsstale. Eight previous review threads replied/resolved. Review neutral with these two new findings.",
+  "newSourceAcceptance": "Normal hooks, publication and fresh final-head native gates/review still required. Parent results are history, not acceptance of these changed bytes.",
+  "installationEffects": 0,
+  "qualificationModelCalls": 0,
+  "actual174": "unstarted",
+  "actual42": "unstarted",
+  "qualifiedProfile": null,
+  "pilotWriteAttempts": 0,
+  "production": "disabled"
+}

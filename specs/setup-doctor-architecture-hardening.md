@@ -530,3 +530,14 @@ required inputs, exit codes, skipped semantics, read-only guarantee, and recover
   `skipped` for remote dependants.
 - Decision: canonical defaults are valid non-interactive decisions; credentials,
   targets, and organization prerequisites without safe defaults remain required.
+
+
+### Publisher-route coordination (#998, 2026-11-21)
+
+Publisher policy, review/apply use cases and semantic ports remain inward of CLI/provider/filesystem adapters. Both installer routes share file delivery and private operation primitives; the narrow composition receives no generic resource writers or probes. Doctor stays read-only and does not adopt an installation command capability.
+
+The officially published [publisher companion](./setup-bugbot-publisher-manifest-route.md)
+and [batch delivery owner](./organization-configuration-reuse-and-batch-setup.md#reviewed-publisher-purpose-delivery-998-2026-11-21)
+own the additional 64-case contract and shared delivery changes. This coordination
+note does not complete this SDD's existing external or prospective gates. Actual
+#977 installation/native evidence and #981/#982 observations remain separate.

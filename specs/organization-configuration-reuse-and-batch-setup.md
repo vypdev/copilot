@@ -929,3 +929,158 @@ must enable the approval feature and prove preservation even when the comparator
 proposes a replacement. Operator documentation distinguishes completed path
 coverage from installation/runtime verification. Report measured local diff
 coverage and the uploaded current-head Codecov report separately.
+
+
+### Reviewed publisher-purpose delivery (#998, 2026-11-21)
+
+The officially published [publisher companion](./setup-bugbot-publisher-manifest-route.md)
+adds one explicit CLI route to this capability. It changes only the canonical
+status publisher workflow and the existing manifest receipt, with complete
+preview, independently inspected identities/grants and fresh interactive approval.
+Ordinary one-to-25-target resource setup, Secret retention, permission probes and
+its legacy v1 records retain their own policy. Publisher composition has no such
+writers or probes and requires a compatible existing manifest/guidance baseline.
+
+Both routes MUST use the common application file-delivery coordinator and GitHub
+delivery adapter, plus the same private UUID store/nonce lock. Complete tree proof
+checks every unapproved sibling and approved leaf, exact parent/receipt and owned
+ref/PR identities. Publisher v2 records contain only purpose-bound metadata/file
+effects, never credentials or configuration values, and cannot adopt v1 records.
+Unknown POST outcomes and partial receipts survive cancellation/failure; no blind
+replay, force, deletion or human-head overwrite is authorized. A completed PR is
+waiting for merge, never evidence of default installation or native verification.
+
+The selected companion establishes the immutable original **64-case baseline**: 16 pure, eight read/freshness,
+12 application/recovery, ten provider/delivery, 12 CLI/content and six packaged/
+security. Preserve the companion's C01–C64 IDs, all earlier numeric budgets and
+100% pure policy. The executable publisher budget lists six exhaustive pure
+modules and 19 runtime modules at 95% lines/statements and 90% branches/functions.
+The final uploaded report still requires no incomplete executable changed lines;
+passing a private focused cohort is not that report. All four static catalogs and
+atomic English fallback must preserve approved bytes and authority.
+
+CLI help, how-to/configuration, provisioning/recovery, Bugbot failure guidance and
+architecture documentation describe this same contract. The companion records
+actual source paths and pending final acceptance. Source integration does not
+install a workflow, activate verification, qualify a model profile or complete
+#977's separately authorized default/native acceptance. Human accessibility and
+platform observations keep their independent status; no source test substitutes
+for them.
+
+Review corrections retain the closed legacy v1 format. A confirmed stop before
+any Git-object POST uses the existing `preflight` reason on the incomplete
+receipt, allowing a newly reviewed and audited resume. Every new preparation
+intent clears that proof before its POST. Once a tree may exist without a known
+commit, recovery remains uncertain; a known commit is retained before later
+proof reads and must pass the complete tree/receipt check again.
+
+The common delivery coordinator defaults to inspect-only recovery. Only a batch
+Apply that has obtained fresh review selects the explicit create-if-absent
+recovery policy. The adapter still proves the exact prepared commit, checks the
+owned ref and complete PR inventory, and revalidates before any permitted create.
+Completed publisher-purpose recovery retains its read-only contract. Add at least
+**19 regressions** across the real private-v1 journal and reconstructed GitHub
+adapter (nine), common object-observer/recovery decisions (six), cancelled
+unknown-preparation retention (one), mandatory reviewed/audited resume (one), and
+retention of confirmed pre-POST proof across another early read/cancellation (two).
+All previous budgets, changed-path requirements and C01–C64 identities remain.
+
+Publisher interruption during token entry, approval or post-approval inspection
+MUST preserve cancellation and CLI status130. Explicit decline remains a normal
+no-Apply result. A credential-session change while still active remains stale;
+cancellation must not relabel that authority mismatch.
+
+Literal local Action or reusable-workflow references are unresolved by this
+reader. They MUST classify the workflow inventory as unknown rather than prove
+publisher absence, even with a non-publisher selector. Three additional cases
+cover local composites, local root Actions and reusable workflow paths. The
+reader does not add an implicit exception for this repository's own workflows.
+An unsupported inventory blocks preview/Apply until reconciled; a historical
+preview taken before this correction cannot authorize installation.
+
+
+#### Cumulative publisher acceptance after review (#998)
+
+This appendix is normative for the current implementation. The Action-selected
+companion remains the byte-exact first-SDD artifact; its original 64-case budget,
+C01–C64 assertions and traceability are preserved as the baseline, not the current
+completion gate. This owning appendix extends its budget, case table,
+traceability and Definition of Done. Both tables MUST be read by the executable
+acceptance validator. Removing a required appendix case from the ledger MUST fail.
+
+The cumulative floor is **90 distinct cases**, with no evidence key counted by
+two IDs: original64 + terminal reconciliation2 + required recovery19 + unresolved
+local inventory3 + operation isolation1 + structural source invocation1. The
+19 recovery cases below are C67–C85 (nine provider/private-v1, six coordinator,
+one cancelled uncertainty, one renewed review/audit, two proof-retention cases).
+C86–C88 are the three additional inventory requirements. C89–C90 close the next
+reviewed delivery and source-scope gaps. Parameter rows in a mapped case provide
+its complete behavioral proof; they are not counted again toward the 90 IDs.
+
+| Area | Original minimum | Additional | Cumulative minimum |
+|---|---:|---:|---:|
+| Pure proposal/scope/plan policy | 16 | 1 | 17 |
+| Read-only planning/freshness | 8 | 3 | 11 |
+| Application/recovery | 12 | 12 | 24 |
+| Provider/delivery contracts | 10 | 10 | 20 |
+| CLI/content | 12 | 0 | 12 |
+| Packaged integration/security | 6 | 0 | 6 |
+| **Total** | **64** | **26** | **90** |
+
+| Case ID | Area | Requirements | Observable assertion |
+|---|---|---|---|
+| publisher977-C65 | Application/recovery | PU977-G04 | A PR-complete applying operation reaches waiting-for-merge only after exact read-only branch and PR verification. |
+| publisher977-C66 | Application/recovery | PU977-G04 | A failed terminal reconciliation reports the attempted state and exact last durable PR-complete state without another provider write. |
+| publisher977-C67 | Provider/delivery contracts | PU977-G04, PU977-G07 | A confirmed pre-POST manifest-read failure retains the strict v1 receipt and resumes without repeating completed resources. |
+| publisher977-C68 | Provider/delivery contracts | PU977-G04, PU977-G07 | A confirmed pre-POST base-commit-read failure retains the strict v1 receipt and resumes without repeating completed resources. |
+| publisher977-C69 | Provider/delivery contracts | PU977-G03, PU977-G04 | A known commit is durable before its later proof read fails and is reused without another object POST. |
+| publisher977-C70 | Provider/delivery contracts | PU977-G03, PU977-G04 | Fresh reviewed recovery after ref-read failure inspects absence before creating the exact unfinished target. |
+| publisher977-C71 | Provider/delivery contracts | PU977-G03, PU977-G04 | Fresh reviewed recovery after ref-create failure inspects absence before creating the exact unfinished target. |
+| publisher977-C72 | Provider/delivery contracts | PU977-G03, PU977-G04 | Fresh reviewed recovery after PR-read failure inspects absence before creating the exact unfinished target. |
+| publisher977-C73 | Provider/delivery contracts | PU977-G03, PU977-G04 | Fresh reviewed recovery after PR-create failure inspects absence before creating the exact unfinished target. |
+| publisher977-C74 | Provider/delivery contracts | PU977-G04, PU977-G07 | An unknown git/trees POST with no object identity cannot be replayed by a reconstructed adapter and real v1 journal. |
+| publisher977-C75 | Provider/delivery contracts | PU977-G04, PU977-G07 | An unknown git/commits POST with no object identity cannot be replayed by a reconstructed adapter and real v1 journal. |
+| publisher977-C76 | Application/recovery | PU977-G03, PU977-G04 | Only an observed stop before the tree POST clears preparation uncertainty. |
+| publisher977-C77 | Application/recovery | PU977-G03, PU977-G04 | A known tree without a commit keeps preparation uncertain when commit creation never starts. |
+| publisher977-C78 | Application/recovery | PU977-G03, PU977-G04 | The exact observed commit survives a subsequent failed proof read. |
+| publisher977-C79 | Application/recovery | PU977-G03, PU977-G04 | An invalid observed commit cannot clear preparation uncertainty. |
+| publisher977-C80 | Application/recovery | PU977-G03, PU977-G04 | Create-if-absent branch recovery requires the explicit freshly reviewed policy. |
+| publisher977-C81 | Application/recovery | PU977-G03, PU977-G04 | Create-if-absent PR recovery requires the explicit freshly reviewed policy. |
+| publisher977-C82 | Application/recovery | PU977-G04, PU977-G07 | Marking an interrupted legacy operation cancelled cannot erase its unknown preparation outcome. |
+| publisher977-C83 | Application/recovery | PU977-G02, PU977-G04 | Confirmed pre-POST resume requires renewed review and the mandatory permission audit before preparation. |
+| publisher977-C84 | Application/recovery | PU977-G04 | A second early read failure preserves confirmed no-POST proof for the next reviewed retry. |
+| publisher977-C85 | Application/recovery | PU977-G04 | Cancellation before target revalidation preserves confirmed no-POST proof for the next reviewed retry. |
+| publisher977-C86 | Read-only planning/freshness | PU977-G01, PU977-G07 | An unresolved local composite keeps workflow inventory unknown and blocks absence-based preview and Apply. |
+| publisher977-C87 | Read-only planning/freshness | PU977-G01, PU977-G07 | An unresolved local root action keeps workflow inventory unknown and blocks absence-based preview and Apply. |
+| publisher977-C88 | Read-only planning/freshness | PU977-G01, PU977-G07 | An unresolved local reusable workflow keeps workflow inventory unknown and blocks absence-based preview and Apply. |
+| publisher977-C89 | Provider/delivery contracts | PU977-G03, PU977-G04 | Unrelated setup PRs do not block exact-operation delivery; foreign or malformed heads claiming this operation marker remain rejected. |
+| publisher977-C90 | Pure proposal/scope/plan policy | PU977-G01, PU977-G03, PU977-G07 | Structural source validation admits exactly one canonical local invocation and proves its replacement pins that executed scalar without another local reference. |
+
+Additional traceability (the companion's original mapping remains in force):
+
+| Requirement | Additional cases | Owning boundary | Documentation |
+|---|---|---|---|
+| PU977-G01 | publisher977-C86, publisher977-C87, publisher977-C88, publisher977-C90 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
+| PU977-G02 | publisher977-C83 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
+| PU977-G03 | publisher977-C69, publisher977-C70, publisher977-C71, publisher977-C72, publisher977-C73, publisher977-C76, publisher977-C77, publisher977-C78, publisher977-C79, publisher977-C80, publisher977-C81, publisher977-C89, publisher977-C90 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
+| PU977-G04 | publisher977-C65, publisher977-C66, publisher977-C67, publisher977-C68, publisher977-C69, publisher977-C70, publisher977-C71, publisher977-C72, publisher977-C73, publisher977-C74, publisher977-C75, publisher977-C76, publisher977-C77, publisher977-C78, publisher977-C79, publisher977-C80, publisher977-C81, publisher977-C82, publisher977-C83, publisher977-C84, publisher977-C85, publisher977-C89 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
+| PU977-G07 | publisher977-C67, publisher977-C68, publisher977-C74, publisher977-C75, publisher977-C82, publisher977-C86, publisher977-C87, publisher977-C88, publisher977-C90 | Shared review/delivery, private journals and pure source validation | `docs/security-operations/operations/provisioning.mdx` |
+
+Operation isolation means an unrelated open or closed installation PR is ignored.
+The exact owned branch or any PR claiming this operation's marker MUST pass all
+state/head/base/repository/commit checks; conflicting or duplicate claims block
+creation. Source validation parses executable workflow scopes with existing
+fixed 100,000-byte, 10,000-node and depth64 technical bounds. It rejects cycles,
+unsupported merge keys, additional/ambiguous local invocations and dynamic uses.
+It then proves that the single byte-preserving replacement changed the executed
+canonical scalar. These checks expose no new configuration or authority.
+
+Definition of Done for the extended companion: all C01–C90 MUST be registered;
+86 mapped Jest cases MUST pass by exact file/full assertion name in the actual
+current run, and C55–C58 MUST pass the separately extracted npm package gate.
+Every required table row must match its ledger assertion/area/requirements.
+Further meaningful contiguous cases MAY be appended; 90 is a floor. Existing
+coverage/changed-path, architecture, docs, global and final native checks remain
+mandatory. A parser fixture with synthetic statuses proves only validator
+behavior. This gate does not establish default installation, a native canary,
+human observations, model qualification or production activation.

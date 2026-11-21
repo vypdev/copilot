@@ -24,6 +24,17 @@ export class SetupBatchGithubTransport {
     now: () => Date.now(), wait: (milliseconds: number): Promise<void> => new Promise(resolve => setTimeout(resolve, milliseconds)),
   }) {}
   async call(token: string, route: string, parameters: BatchRecord): Promise<unknown> {
+    return (await this.response(token, route, parameters)).data;
+  }
+  /** Granted OAuth scopes only. Endpoint-required permission headers are not grants. */
+  async identity(token: string): Promise<{ readonly user: unknown; readonly oauthScopes: readonly string[] | null }> {
+    const response = await this.response(token, 'GET /user', {});
+    const value = response.headers?.['x-oauth-scopes'];
+    const scopes = typeof value === 'string' && value.length <= 4096 ? value.split(',').map(scope => scope.trim()) : [];
+    return { user: response.data, oauthScopes: scopes.length > 0 && scopes.length <= 64
+      && scopes.every(scope => /^[a-z][a-z0-9_:.-]*$/u.test(scope)) ? Object.freeze([...new Set(scopes)].sort()) : null };
+  }
+  private async response(token: string, route: string, parameters: BatchRecord): ReturnType<GithubSetupBatchClient['request']> {
     const read = route.startsWith('GET ');
     for (let attempt = 0; ; attempt += 1) {
       const controller = new AbortController();
@@ -34,7 +45,7 @@ export class SetupBatchGithubTransport {
         }, 15_000); });
         const response = await Promise.race([this.provider.getClient(token).request(route, { ...parameters,
           request: { timeout: 15_000, signal: controller.signal } }), timeout]);
-        return response.data;
+        return response;
       } catch (error) {
         const record = batchObject(error);
         const status = record?.status;

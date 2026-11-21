@@ -1,0 +1,53 @@
+import { createHash } from 'node:crypto';
+import type { SetupPublisherOperation, SetupPublisherPlan } from '../domain/setup_publisher_installation';
+import type { SetupPublisherMessageCatalog } from '../application/policies/setup_publisher_message_catalog';
+
+/** Preserve displayed data while preventing cursor, bidi and invisible-control execution. */
+export function setupPublisherInertText(text: string): string {
+  return text.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, character => character === '\n' ? '\n'
+    : character === '\r' ? '\\r' : character === '\t' ? '\\t' : `\\u{${character.codePointAt(0)!.toString(16)}}`);
+}
+
+export class SetupPublisherInstallationPresenter {
+  constructor(private readonly catalog: SetupPublisherMessageCatalog, private readonly write: (text: string) => void) {}
+  private line(text: string): void { this.write(setupPublisherInertText(text) + '\n'); }
+
+  preview(plan: SetupPublisherPlan, retained?: SetupPublisherOperation): void {
+    const repository = `${plan.target.owner}/${plan.target.name}`;
+    this.line(this.catalog.message('title', { repository }));
+    this.line(this.catalog.message(plan.status === 'unchanged' ? 'unchanged' : 'preview'));
+    if (plan.status === 'review') this.line(this.catalog.message('effects'));
+    if (retained) this.operation(retained);
+    this.line(this.catalog.message('operation', { id: plan.operationId }));
+    this.line(this.catalog.message('target', { repository, branch: plan.target.defaultBranch, head: plan.target.baseSha }));
+    this.line(this.catalog.message('source', { commit: plan.sourceCommit }));
+    this.line(this.catalog.message('actor', { id: String(plan.actorId) }));
+    this.line(this.catalog.message('digest', { digest: plan.digest }));
+    for (const file of plan.files) {
+      this.line(this.catalog.message('file', { path: file.path, bytes: String(Buffer.byteLength(file.content!, 'utf8')),
+        hash: createHash('sha256').update(file.content!).digest('hex') }));
+      // Every data line has its own inert prefix; data cannot imitate a prompt.
+      for (const line of file.content!.split('\n')) this.write('  | ' + setupPublisherInertText(line) + '\n');
+    }
+    this.line(this.catalog.message('nativePending')); this.line(this.catalog.message('production'));
+  }
+
+  operation(operation: SetupPublisherOperation, journalUnconfirmed = false): void {
+    this.line(this.catalog.message('operation', { id: operation.operationId }));
+    this.line(operation.effects.length ? this.catalog.message('retained', {
+      effects: operation.effects.map(effect => this.catalog.message(`effect.${effect}`)).join(', '),
+    }) : this.catalog.message('noEffects'));
+    if (operation.preparedTree) this.line(this.catalog.message('object', { effect: this.catalog.message('effect.tree'), sha: operation.preparedTree }));
+    if (operation.preparedCommit) this.line(this.catalog.message('object', { effect: this.catalog.message('effect.commit'), sha: operation.preparedCommit }));
+    if (operation.uncertain) this.line(this.catalog.message('uncertain', { effect: this.catalog.message(`effect.${operation.uncertain}`) }));
+    if (journalUnconfirmed) this.line(this.catalog.message('journalUnconfirmed'));
+    this.line(this.catalog.message('recovery'));
+  }
+
+  delivered(operation: SetupPublisherOperation): void {
+    this.operation(operation);
+    const url = `https://github.com/${operation.repository}/pull/${operation.pullRequestNumber!}`;
+    this.line(this.catalog.message('waitingMerge', { url })); this.line(this.catalog.message('nextMerge'));
+    this.line(this.catalog.message('nativePending')); this.line(this.catalog.message('production'));
+  }
+}

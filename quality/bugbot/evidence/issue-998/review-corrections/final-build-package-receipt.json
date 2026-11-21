@@ -1,0 +1,33 @@
+{
+  "at": "2026-11-21T16:14:18.353705+00:00",
+  "snapshot": "before normal commit hooks/source publication",
+  "build": "PASS",
+  "typecheck": "PASS(root+extension)",
+  "specifications": "PASS after final19-case correction note",
+  "lint": "PASS changedfiles; fullnormalhooklint stillrequired",
+  "graphify": "PASS; existing Svelte parser warnings retained",
+  "generatedBundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8466763,
+      "sha256": "b486f8906b1d3a90dd11574ba674d7eb6e2e1a11cc22536f67c019d398b2f2a4"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+    }
+  },
+  "extractedPackage": "PASSCLI+typedBugbotAPI+isolatedlocalweb",
+  "C55_C58": "11actualCLIinvocations,zeroeffects,no credential",
+  "finalNativeHeadAcceptance": "pending after normalcommit/push",
+  "production": "disabled",
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0
+}

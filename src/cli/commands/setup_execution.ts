@@ -1,4 +1,5 @@
 import { createSetupRunnerDiscovery, createSetupInstallationReview } from '../../infrastructure/composition/setup_runner_composition_root';
+import type { Command } from 'commander';
 import { runLocalAction } from '../../actions/local_action';
 import { getSetupToken } from '../../utils/setup_files';
 import { logError, logInfo } from '../../utils/logger';
@@ -56,14 +57,24 @@ import { buildSetupOrganizationReusePermissionRequirements } from '../../applica
 import { createDefaultSetupConfiguration, mergeSetupConfiguration } from '../../application/policies/setup_configuration_policy';
 
 export interface SetupExecutionOptions extends SetupCommandOverrideOptions {
-  batch?: boolean; resumeOperation?: string;
+  batch?: boolean; resumeOperation?: string; publisherManifest?: string;
   debug?: boolean; token?: string; workflowPat?: string; secret?: Record<string, string>;
   nonInteractive?: boolean; web?: boolean; yes?: boolean; dryRun?: boolean;
   skipSecrets?: boolean; skipVariables?: boolean; updateWorkflows?: boolean;
   confirmUnverifiableWritePermissions?: boolean;
 }
 
-export async function executeSetupCommand(options: SetupExecutionOptions): Promise<void> {
+export async function executeSetupCommand(options: SetupExecutionOptions, command?: Command): Promise<void> {
+      const publisherSource = command?.getOptionValueSource('publisherManifest');
+      if (options.publisherManifest !== undefined || publisherSource !== undefined && publisherSource !== 'default'
+        || !command && Object.prototype.hasOwnProperty.call(options, 'publisherManifest')) {
+        const { executeSetupPublisherCommand } = await import('../setup_publisher_installation_adapter');
+        const keys = new Set([...Object.keys(options), ...Object.keys(command?.opts() ?? {})]);
+        const explicitOptions = [...keys].filter(key => command?.getOptionValueSource(key) === 'cli');
+        await executeSetupPublisherCommand({ proposalPath: options.publisherManifest, explicitOptions,
+          token: options.token, dryRun: Boolean(options.dryRun), resumeOperation: options.resumeOperation });
+        return;
+      }
       const terminal = options.nonInteractive || options.web ? undefined : createInteractiveTerminalDriver();
       const webBridge = options.web ? new WebSetupBridge('Resolving repository…') : undefined;
       let webServer: WebSetupServer | undefined;

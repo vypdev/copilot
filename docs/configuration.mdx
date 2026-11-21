@@ -379,6 +379,37 @@ retain their single-repository behavior. Target count (1–25), one organization
 sequential Apply, immutable shared values and no automatic merge are fixed
 rules, not configurable templates.
 
+## Reviewed publisher proposal options
+
+`copilot setup --publisher-manifest <path>` selects a separate file-only route
+for an existing compatible installation. It does not import organization settings
+or run the ordinary questionnaire, resource creation or permission-write probes.
+Only the canonical Bugbot status workflow and existing Setup manifest receipt
+can change. The source repository, workflow path and two-file scope are fixed.
+
+The proposal must be a regular nonsymlink UTF-8 JSON file of at most 128 KiB,
+using closed schema version 1. Unknown fields, unsupported versions or claims
+of prior installation/canary authorization are rejected. Repository IDs,
+default/base, merged source revision and byte hashes are independently inspected;
+proposal text supplies no authority. Supported existing manifest/guidance
+and a complete workflow inventory are required. Foreign, renamed or customized
+publisher workflows require manual review and block replacement.
+
+Allowed accompanying options are `--token`, `--debug`, `--dry-run` and
+`--resume-operation <operation-id>`. Every other explicitly supplied setup option
+is rejected, including empty/default-looking values. Dry-run performs authenticated
+reads and full preview without mutations; Apply always needs interactive fresh
+approval. No automation approval, renderer, endpoint, source, workflow or locale
+override is added. An explicitly invalid token never falls back to an environment
+credential.
+
+Display locale uses `LC_ALL`, then `LC_MESSAGES`, then `LANG`. Bundled en/es/fr/pt
+catalogs provide the whole journey; an unsupported/invalid locale or incomplete
+selected catalog falls back to English as a unit. Locale changes neither file
+bytes nor approval identity. Credentials and credential hashes are never persisted.
+Purpose-bound metadata uses the existing private Setup operation directory. See
+[provisioning and resume](/security-operations/operations/provisioning#reviewed-bugbot-publisher-proposals).
+
 ## Runner profiles
 
 The terminal review lists routes and changed files without logging workflow

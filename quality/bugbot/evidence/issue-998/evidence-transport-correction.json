@@ -1,0 +1,112 @@
+{
+  "at": "2026-11-21T13:46:35.412712+00:00",
+  "headBefore": "5bd4553a9cd2190d463698fb74f9507e272b2ee1",
+  "nativeFailure": {
+    "run": 44909610385,
+    "job": 136862404474,
+    "check": 136862840468,
+    "code": "validation.evidence-unavailable",
+    "retryable": false
+  },
+  "policyUnchanged": true,
+  "sourceAndFourBundlesUnchanged": true,
+  "compressedAndRawBytesPreserved": true,
+  "moves": [
+    {
+      "from": "quality/setup/evidence/issue-998/catalog-incomplete-before.log.gz",
+      "to": "quality/bugbot/evidence/issue-998/catalog-incomplete-before.log.gz",
+      "gzipSha256": "d3c4b4ccb1d7a5725285e4f31208af3afaf71466eccb36b2b3e6d44da5bd64a3",
+      "rawSha256": "24ba8b009bbf0de244defd3352be1baf6965eb766792bc14cf5482fb66d2a4cd",
+      "rawBytes": 2305
+    },
+    {
+      "from": "quality/setup/evidence/issue-998/catalog-incomplete-after.log.gz",
+      "to": "quality/bugbot/evidence/issue-998/catalog-incomplete-after.log.gz",
+      "gzipSha256": "f730ce95845d7200d74b115420b94395ff20e3d116ae8b1e39c508743dfb906b",
+      "rawSha256": "34bf57e0725346c90eccf946fb51de157f550b4b151be1bc0a46fc786d1ed76a",
+      "rawBytes": 1080
+    },
+    {
+      "from": "quality/setup/evidence/issue-998/compatibility-before.log.gz",
+      "to": "quality/bugbot/evidence/issue-998/compatibility-before.log.gz",
+      "gzipSha256": "a2eb689a95641609a42e9406df6906aab057123a335b184bc612edab55c39342",
+      "rawSha256": "6773bbd5a3fa336cdc30b230873407ff8d738bd85d12255dddb4055a939ef536",
+      "rawBytes": 3313058
+    },
+    {
+      "from": "quality/setup/evidence/issue-998/compatibility-after.log.gz",
+      "to": "quality/bugbot/evidence/issue-998/compatibility-after.log.gz",
+      "gzipSha256": "3a1c2c3a073d06aca055cc324cb1e164d5b1b640c1216fde855a34b049457cfa",
+      "rawSha256": "9ff42535e35b78c74829c77f47852eeeac3aa9bc851abd8b46c6af4c0da0d595",
+      "rawBytes": 421
+    },
+    {
+      "from": "quality/setup/evidence/issue-998/full-sdk-before.log.gz",
+      "to": "quality/bugbot/evidence/issue-998/full-sdk-before.log.gz",
+      "gzipSha256": "043f651454fd53d32479ee8f59e5921279689bd12a0cc4b7b2eff3a3895c0e4f",
+      "rawSha256": "87ac21b49722de16e8fb83aeacd198ad9a5064e039a47cc3b63683914612d432",
+      "rawBytes": 7160669
+    },
+    {
+      "from": "quality/setup/evidence/issue-998/full-sdk-before-results.json.gz",
+      "to": "quality/bugbot/evidence/issue-998/full-sdk-before-results.json.log.gz",
+      "gzipSha256": "77ab4de1e4cd7f63d17aec79ded5c50bbe76f691c7364075e61b61b684d1256b",
+      "rawSha256": "7a62e4e738a275975076a3f5b2bd9e92688fc43aa3061870e211c892b089b148",
+      "rawBytes": 29028382
+    },
+    {
+      "from": "quality/setup/evidence/issue-998/focused-after-results.json.gz",
+      "to": "quality/bugbot/evidence/issue-998/focused-after-results.json.log.gz",
+      "gzipSha256": "927f9338f2f63ba40e5ebe40631de5a14f60d241c1c047cff366b93f0d809be3",
+      "rawSha256": "5967f77394c203d47010744f1bbf37501a190205080e03c2fcb1fc836fd64528",
+      "rawBytes": 1149350
+    },
+    {
+      "from": "quality/setup/evidence/issue-998/package-after.log.gz",
+      "to": "quality/bugbot/evidence/issue-998/package-after.log.gz",
+      "gzipSha256": "32c52dc752ff85e45473606915406bd0fd0ca6d51342d01900b0506614af0fdf",
+      "rawSha256": "51c44f72b82d9cef938145f59070d9f99fe5e682b13786ae41c170ce941eee9c",
+      "rawBytes": 1143
+    },
+    {
+      "from": "quality/setup/evidence/issue-998/full-sdk-corrected-before-new-tests.log.gz",
+      "to": "quality/bugbot/evidence/issue-998/full-sdk-corrected-before-new-tests.log.gz",
+      "gzipSha256": "240c68b6fa73371742649aef94dee0629566303bf0989220aaa18a8df4cafc88",
+      "rawSha256": "06e43f7b8bebc94ab2b4963c154a86f7d68eaacf5abbc73263a7ac5e7c55c306",
+      "rawBytes": 350595
+    },
+    {
+      "from": "quality/setup/evidence/issue-998/legacy-recovery-after.log.gz",
+      "to": "quality/bugbot/evidence/issue-998/legacy-recovery-after.log.gz",
+      "gzipSha256": "5959f56848793d329bad8169a77d31004e59902395289b3343b031a8ef451f64",
+      "rawSha256": "1327dd97c2f41ede724ecb226da509c0a62bf1beba9668b6f4b018f3a92d41f5",
+      "rawBytes": 1971
+    },
+    {
+      "from": "quality/setup/evidence/issue-998/native-build-before-context-correction.log.gz",
+      "to": "quality/bugbot/evidence/issue-998/native-build-before-context-correction.log.gz",
+      "gzipSha256": "8395b3c715374a11aa0590f702856d5ef7de887a47dc3522bea9bcacbbcbacb8",
+      "rawSha256": "8aab47d107e1c235067111bc5fa8013c35d5a70b92488add9e4e0c57e732f331",
+      "rawBytes": 409982
+    },
+    {
+      "from": "quality/setup/evidence/issue-998/native-coverage-initial-source.log.gz",
+      "to": "quality/bugbot/evidence/issue-998/native-coverage-initial-source.log.gz",
+      "gzipSha256": "524b6571b9ed7147aa09f7993f82d077dda6d35fab027e56ee9edd0a5056c93f",
+      "rawSha256": "9102b47acc646d18e57108da9e7e86b95c4d5eca7cf91fcd5725f3133d162fd5",
+      "rawBytes": 3327732
+    }
+  ],
+  "resultLogFormat": "The two .json.log.gz files remain exact JSON test-result bytes after decompression; the archive name declares a generated evidence log, not executable source.",
+  "nativeBuildAt5bd": "PASS including four synchronized bundles, two clean extension builds,104 packaged files and11 actual publisher CLI controls",
+  "nativeStaticAt5bd": "PASS including217Node controls,0fail/skip/cancel",
+  "finalHeadChecks": "required separately; old failure is not retried or relabeled",
+  "actualProductionPolicyCounterfactual": {
+    "policySha256": "5ce2cd09b1d840418041aaca88d442fb86d04d3baa3f865302224ef7735c6ff7",
+    "actualUnchangedProductionPolicy": true,
+    "oldRejected": 12,
+    "newAccepted": 12,
+    "foreignDenied": 3,
+    "rawArchiveHashesVerifiedSeparately": true
+  }
+}
