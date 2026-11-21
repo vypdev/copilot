@@ -236,6 +236,27 @@ test('ev974-C27 closed containment refuses ambient grants, mutable images, arbit
             record() { throw new Error('must not reach an Engine effect'); } }), /bootstrap/iu); }
         finally { if (saved === undefined) delete process.env.COPILOT_QUALIFICATION_SCOPE; else process.env.COPILOT_QUALIFICATION_SCOPE = saved; }
     }
+    // Actual Git transport, not an Engine/model fixture: the image has X and
+    // must be able to fetch the reviewed later Y by its exact SHA from a delta.
+    const source = path.join(directory, 'bundle-source'), target = path.join(directory, 'bundle-target');
+    fs.mkdirSync(source); fs.mkdirSync(target);
+    const git = gitAt(source), received = gitAt(target);
+    git('init', '--quiet', '--template='); fs.writeFileSync(path.join(source, 'sdk.txt'), 'fixed SDK input\n'); git('add', '.');
+    const x = git('commit-tree', git('write-tree'), '-m', 'Model-free implementation X'); git('update-ref', 'HEAD', x);
+    const baseline = path.join(input, 'implementation.bundle'); git('bundle', 'create', baseline, 'HEAD');
+    received('init', '--quiet', '--template='); received('fetch', '--quiet', '--no-tags', '--no-write-fetch-head', baseline, x);
+    fs.writeFileSync(path.join(source, 'plan.json'), '{"modelCalls":0}\n'); git('add', 'plan.json');
+    const y = git('commit-tree', git('write-tree'), '-p', x, '-m', 'Model-free later plan Y'); git('update-ref', 'HEAD', y);
+    assert.throws(() => received('cat-file', '-e', y));
+    const bundle = path.join(input, 'plan.bundle');
+    assert.equal(sourceProof.materializePlanBundle(source, x, y, bundle), hash(fs.readFileSync(bundle)));
+    assert.equal(git('bundle', 'list-heads', bundle), y + ' HEAD');
+    received('fetch', '--quiet', '--no-tags', '--no-write-fetch-head', bundle, y);
+    assert.equal(received('show', y + ':plan.json'), '{"modelCalls":0}');
+    const rejected = path.join(input, 'must-not-create.bundle');
+    assert.throws(() => sourceProof.materializePlanBundle(source, x, 'f'.repeat(40), rejected), /HEAD changed/u);
+    assert(!fs.existsSync(rejected));
+    assert.throws(() => sourceProof.materializePlanBundle(source, x, y, bundle), /already exists/u);
 });
 
 test('ev974-C28 private live capability binds only the exact immutable plan/signal/owner/operation', async () => {

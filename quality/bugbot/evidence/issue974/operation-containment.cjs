@@ -319,8 +319,7 @@ async function runContainedOperation({ root, plan, mode, slot, outputDirectory, 
     try {
         fs.mkdirSync(outputDirectory, { mode: 0o700 }); outputDirectory = fs.realpathSync(outputDirectory);
         const bundle = path.join(input, 'plan.bundle');
-        provenance.pinnedGit(root)('bundle', 'create', bundle, proof.planCommit); fs.chmodSync(bundle, 0o600);
-        bundleSha256 = sha256(fs.readFileSync(bundle));
+        bundleSha256 = provenance.materializePlanBundle(root, plan.implementation, proof.planCommit, bundle);
         if (mode === 'review') {
             assert(typeof campaign === 'string');
             const target = path.join(input, 'campaign');

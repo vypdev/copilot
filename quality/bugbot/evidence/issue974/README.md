@@ -270,3 +270,11 @@ empty copied runtime projections; the scorer now requires the complete observed
 runtime fields, source identity and bootstrap correlation. Six deterministic
 controls pass after that correction. The final committed-source 239 run remains
 pending for these follow-up bytes, and actual native SDK acceptance is unexecuted.
+
+The later-plan transport also has an actual local Git regression: a bundle
+created with a raw commit alone exits 128 (`Refusing to create empty bundle`).
+The corrected helper validates that HEAD is exactly reviewed Y, confirms X is
+its ancestor, then advertises HEAD and excludes implementation X's objects.
+C27 fetches that delta by exact Y SHA into a separate repository containing only
+X, verifies its plan bytes, and rejects a moved HEAD or occupied output. This
+is model-free Git protocol evidence, not an SDK image or kernel observation.

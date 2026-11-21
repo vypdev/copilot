@@ -50,6 +50,31 @@ function pinnedGit(root) {
     return command;
 }
 
+/** Git data transport only: no loader, scope or model admission is granted.
+ * The immutable image already has implementation; carry only later plan data. */
+function materializePlanBundle(root, implementation, planCommit, destination) {
+    assert.match(implementation ?? '', /^[a-f0-9]{40}$/u);
+    assert.match(planCommit ?? '', /^[a-f0-9]{40}$/u);
+    assert.notEqual(implementation, planCommit, 'the plan must follow implementation');
+    assert(typeof destination === 'string' && path.isAbsolute(destination) && path.resolve(destination) === destination);
+    const parent = path.dirname(destination), stat = fs.lstatSync(parent);
+    assert(fs.realpathSync(parent) === parent && stat.isDirectory() && !stat.isSymbolicLink()
+        && stat.uid === process.getuid() && (stat.mode & 0o077) === 0, 'private owned bundle staging required');
+    let occupied = false;
+    try { fs.lstatSync(destination); occupied = true; } catch (error) { assert.equal(error.code, 'ENOENT'); }
+    assert(!occupied, 'bundle destination already exists');
+    const git = pinnedGit(root);
+    assert.equal(git('rev-parse', '--verify', 'HEAD').toString('utf8').trim(), planCommit, 'reviewed plan HEAD changed');
+    git('merge-base', '--is-ancestor', implementation, planCommit);
+    // A raw SHA alone advertises no ref and Git refuses an empty bundle.
+    // HEAD is accepted only after exact identity validation, never as a mutable
+    // substitute for the independently reviewed commit. Exclude image objects.
+    git('bundle', 'create', destination, 'HEAD', '^' + implementation);
+    fs.chmodSync(destination, 0o600);
+    assert.equal(git('bundle', 'list-heads', destination).toString('utf8').trim(), planCommit + ' HEAD');
+    return hash(fs.readFileSync(destination));
+}
+
 function attestSource(root, implementation) {
     assert.match(implementation ?? '', /^[a-f0-9]{40}$/u, 'invalid implementation pin');
     root = fs.realpathSync(root);
@@ -330,6 +355,6 @@ function spawnQualificationDriver(mode, args, options) {
 }
 
 module.exports = { attestSource, attestRuntime, attestDrivers, runtimeIdentity, dependencyIdentity, admitQualificationModules,
-    pinnedGit, gitEnvironment, trustedGitExecutable, attestCommittedArtifact, requireBootstrapAdmission,
+    pinnedGit, materializePlanBundle, gitEnvironment, trustedGitExecutable, attestCommittedArtifact, requireBootstrapAdmission,
     bootstrapAdmission, initializeBootstrapContext, spawnQualificationDriver, bootstrapOperation, selectedQualificationRuntime,
     retainBootstrapScope, confirmBootstrapScopeStopped, bootstrapCleanupAllowed, bootstrapCampaign };
