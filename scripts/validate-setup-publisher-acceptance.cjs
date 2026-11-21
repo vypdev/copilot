@@ -28,15 +28,22 @@ for (const suite of report?.testResults ?? []) {
   }
 }
 const errors = [], evidenceOwners = new Map();
-const expected = Array.from({ length: 64 }, (_, index) => `publisher977-C${String(index + 1).padStart(2, '0')}`);
-if (ledger.schemaVersion !== 1 || !Array.isArray(ledger.cases) || ledger.cases.length !== 64) errors.push('Expected closed v1 ledger with 64 cases.');
+if (ledger.schemaVersion !== 1 || !Array.isArray(ledger.cases) || ledger.cases.length < 64) errors.push('Expected v1 ledger with at least 64 cases.');
 const cases = Array.isArray(ledger.cases) ? ledger.cases : [];
-if (JSON.stringify(cases.map(item => item.id)) !== JSON.stringify(expected)) errors.push('Case IDs/order must retain C01–C64 exactly once.');
+const expected = Array.from({ length: cases.length }, (_, index) => `publisher977-C${String(index + 1).padStart(2, '0')}`);
+if (JSON.stringify(cases.map(item => item.id)) !== JSON.stringify(expected)) errors.push('Case IDs/order must retain C01–C64 exactly once and append contiguous additional IDs.');
+if ([...published.keys()].some(id => !cases.some(item => item.id === id))) errors.push('Every selected SDD case must remain registered.');
+const areas = new Set([...published.values()].map(item => item.area));
+const requirements = new Set([...published.values()].flatMap(item => item.requirements));
 let jestCases = 0;
 for (const item of cases) {
   const contract = published.get(item.id);
-  if (!contract || item.area !== contract.area || item.assertion !== contract.assertion
-    || JSON.stringify(item.requirements) !== JSON.stringify(contract.requirements)) errors.push(`${item.id}: differs from the selected SDD contract.`);
+  if (contract ? item.area !== contract.area || item.assertion !== contract.assertion
+    || JSON.stringify(item.requirements) !== JSON.stringify(contract.requirements)
+    : !areas.has(item.area) || typeof item.assertion !== 'string' || item.assertion.trim().length < 15
+      || !Array.isArray(item.requirements) || item.requirements.length === 0
+      || new Set(item.requirements).size !== item.requirements.length
+      || item.requirements.some(requirement => !requirements.has(requirement))) errors.push(`${item.id}: differs from the selected SDD contract.`);
   const packaged = ['publisher977-C55', 'publisher977-C56', 'publisher977-C57', 'publisher977-C58'].includes(item.id);
   if (item.gate !== (packaged ? 'npm-package-smoke' : 'jest')) errors.push(`${item.id}: incorrect execution boundary.`);
   if (!Array.isArray(item.evidence) || item.evidence.length === 0) { errors.push(`${item.id}: no executable evidence.`); continue; }
@@ -56,7 +63,7 @@ for (const item of cases) {
     }
   }
 }
-if (jestCases !== 60) errors.push('Exactly 60 cases must use Jest; four require the extracted package.');
+if (jestCases !== cases.length - 4) errors.push('Every case except C55–C58 must use Jest; those four require the extracted package.');
 if (errors.length) { errors.forEach(error => console.error(error)); process.exitCode = 1; }
-else if (reportSupplied) console.log('Publisher acceptance: 60/60 mapped Jest cases passed. C55–C58 require the separate extracted npm-package smoke gate.');
-else console.log('Publisher acceptance: 64 cases registered; execution is not established by ledger validation.');
+else if (reportSupplied) console.log(`Publisher acceptance: ${jestCases}/${jestCases} mapped Jest cases passed. C55–C58 require the separate extracted npm-package smoke gate.`);
+else console.log(`Publisher acceptance: ${cases.length} cases registered; execution is not established by ledger validation.`);

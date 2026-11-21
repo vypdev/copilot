@@ -1496,6 +1496,36 @@
           "test": "an incomplete selected catalog falls back as a whole without mixing approval and recovery words"
         }
       ]
+    },
+    {
+      "id": "publisher977-C65",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "A PR-complete applying operation reaches waiting-for-merge only after exact read-only branch and PR verification.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "finalizes a retained PR-complete applying operation after exact read-only verification"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C66",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "A failed terminal reconciliation reports the attempted state and exact last durable PR-complete state without another provider write.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "reports failed terminal reconciliation without overstating the last durable PR-complete state"
+        }
+      ]
     }
   ]
 }

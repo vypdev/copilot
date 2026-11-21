@@ -713,6 +713,126 @@
       "rawSha256": "51c44f72b82d9cef938145f59070d9f99fe5e682b13786ae41c170ce941eee9c",
       "gzipBytes": 471,
       "gzipSha256": "32c52dc752ff85e45473606915406bd0fd0ca6d51342d01900b0506614af0fdf"
+    },
+    "review-round4/initial-budget-and-fixture-red.log.gz": {
+      "rawBytes": 1105,
+      "rawSha256": "c7eb67db40a63b9774b454afb7d0f6127517186d7546c78de510f896bffa94e4",
+      "gzipBytes": 554,
+      "gzipSha256": "0947a413066cf9582bc7e9a621dce0492f23964fdd1b5f3eeddfcb3a41644d61"
+    },
+    "review-round4/fixture-alias-negative.log.gz": {
+      "rawBytes": 2534,
+      "rawSha256": "f189a0e618563463ac78bb24bae315d4822656b1f5acab4979f36fac51883d9a",
+      "gzipBytes": 868,
+      "gzipSha256": "08964d1f9fef4d288f9e84cfec28e40e736f40b7edea3fdd22987f4f71bd648b"
+    },
+    "review-round4/fixture-alias-negative-results.json.log.gz": {
+      "rawBytes": 408939,
+      "rawSha256": "962cd6fdda37cf56486af6c55fc8245a08aa567d9c9de9d50d938aa33c482a8c",
+      "gzipBytes": 25281,
+      "gzipSha256": "0d06df902e6627f84bb6c9758ab5535d7e02456b759b6e107ddec36ae70b9fba"
+    },
+    "review-round4/fixture-alias-diagnostic.log.gz": {
+      "rawBytes": 48470,
+      "rawSha256": "2ca676c49c95d070ffc86f15a1ddbe734824696fb90495bb3fcfeef6577334eb",
+      "gzipBytes": 4983,
+      "gzipSha256": "71b7b8f549487ddee349dc7c571a267be53ed6fa2a31e34ef7b725c3f0c47b2d"
+    },
+    "review-round4/exact-parent-counterfactual.log.gz": {
+      "rawBytes": 276,
+      "rawSha256": "f654b814d59ec40a9d72e8739ddf2eaeb35f3e2e4b876217844057fab8485508",
+      "gzipBytes": 193,
+      "gzipSha256": "65cca60749cab897dc49f3f0103c9f6020be224557a0c8cace50ab5ef429b09e"
+    },
+    "review-round4/exact-corrected-counterfactual.log.gz": {
+      "rawBytes": 119,
+      "rawSha256": "f16f2537a2d8d64218edd79fedc26dc809bb29d7bd3817dbdeda7d5543b4495b",
+      "gzipBytes": 127,
+      "gzipSha256": "ba00d6278986aef44961026ff7dd7fcece4ff55c3f5bf74d49f4b42cb90e34cc"
+    },
+    "review-round4/exact-counterfactual-receipt.json.log.gz": {
+      "rawBytes": 1425,
+      "rawSha256": "9dd89ccc0fc9a010274834827ada88bdbfa89744d068e78b7a761492852ad432",
+      "gzipBytes": 822,
+      "gzipSha256": "c1ac6e66d1e459d9876553c16c1e5a5c9b5f84a4c239a909ef11981135b42e97"
+    },
+    "review-round4/expanded-after.log.gz": {
+      "rawBytes": 1607,
+      "rawSha256": "5002612dfcd98f4549668b6ba3fcaaa214f370909da16ca8c73d44e3447dc917",
+      "gzipBytes": 450,
+      "gzipSha256": "512fae10072e1332be5eb92bc4877b35e45dd8f91e47de1dbbd1ea317161d17d"
+    },
+    "review-round4/expanded-after-results.json.log.gz": {
+      "rawBytes": 405540,
+      "rawSha256": "cf8455304b8948158e85166be9007ad16c4f4402da2ae348cd0a8b366909453c",
+      "gzipBytes": 24476,
+      "gzipSha256": "802447a3651822acd0e0ce3a07ce5dd5efb602059e97bcdfe40ab8a09a78cd18"
+    },
+    "review-round4/expanded-validator.log.gz": {
+      "rawBytes": 119,
+      "rawSha256": "f16f2537a2d8d64218edd79fedc26dc809bb29d7bd3817dbdeda7d5543b4495b",
+      "gzipBytes": 127,
+      "gzipSha256": "ba00d6278986aef44961026ff7dd7fcece4ff55c3f5bf74d49f4b42cb90e34cc"
+    },
+    "review-round4/parent2d-native-coverage-failure.log.gz": {
+      "rawBytes": 3174588,
+      "rawSha256": "e0d7df946f067cae73d912dd38cf612a77b9d61201777ef92248d4d4d11534b3",
+      "gzipBytes": 580304,
+      "gzipSha256": "606cf33b1fbb0e807ec49df24113925694a77358abab306f8aa9234dc8bb2ae5"
+    },
+    "review-round4/timeout-source-comparison.json.log.gz": {
+      "rawBytes": 1533,
+      "rawSha256": "64e96b5bf648bb90978ae6da93c6fc547e765a35db51260b2d68ac2914476391",
+      "gzipBytes": 671,
+      "gzipSha256": "953764238c61e1d0f421d472ffe0b38c1bff343780746bc0d3c9adbffc4f3c09"
+    },
+    "review-round4/timeout-isolation.log.gz": {
+      "rawBytes": 1602,
+      "rawSha256": "dfdedcd46307e3c2b85ea803a6276632380ae92b51598b4da157d8c5377e7b27",
+      "gzipBytes": 585,
+      "gzipSha256": "fd7679da2df31fe25f23ab79a87a3c5e64e889460084d52bf8ae19f81cbe486b"
+    },
+    "review-round4/timeout-isolation-results.json.log.gz": {
+      "rawBytes": 51991,
+      "rawSha256": "f27fd87ef0a4d6300d9732266b0d9ce23efb135b9a96d109b0c8f773523aa910",
+      "gzipBytes": 4840,
+      "gzipSha256": "925eeafdb7c67a003b18e6e2d73a9b616368a201c370364ae9c5b7472f95b549"
+    },
+    "review-round4/parent2d-native-build.log.gz": {
+      "rawBytes": 413582,
+      "rawSha256": "90dd54367ddc2e314e2e1033b4993cecbca4151de69b4240520675eacf94d823",
+      "gzipBytes": 55637,
+      "gzipSha256": "cd6dda56e76385ccbb0842255618406c49fc50e64a28f73d4e8d90fad38e5dae"
+    },
+    "review-round4/parent2d-native-static.log.gz": {
+      "rawBytes": 89950,
+      "rawSha256": "5e32185cee44b00da3e8f0cf50231ec4a9b39ede5e283cd1de650f31ecde5a57",
+      "gzipBytes": 19866,
+      "gzipSha256": "d549e26ac527e17ed852f92adcd4b5cb90d44a96c15c020487cbd522e6ee5d94"
+    },
+    "review-round4/typecheck.log.gz": {
+      "rawBytes": 555,
+      "rawSha256": "96e50bba6ba77c1b37b6fc8d1c6205f02288d7bd8a3161e5af2e0fbe68d5623e",
+      "gzipBytes": 252,
+      "gzipSha256": "f18703251ced998328dee03fbe39fbea198a515268c80f52e59017f6ad4c814a"
+    },
+    "review-round4/lint.log.gz": {
+      "rawBytes": 86,
+      "rawSha256": "0a2352a03e73069eb2ad761f12973b53b2f480ccc68defe1d6d6e3be6a153325",
+      "gzipBytes": 97,
+      "gzipSha256": "a1b23a58e8bdef1f6593adb33757440dca0aac65125541cce0f1fed2ee2cb970"
+    },
+    "review-round4/graphify.log.gz": {
+      "rawBytes": 3087,
+      "rawSha256": "8f15b9c5be92b0280911c34b82553fd38b8612268fda47a9dc2991aa3e3c544b",
+      "gzipBytes": 655,
+      "gzipSha256": "91d664eec77575e50f9d6ce62383fdb3dccf5a88082ee06b51983c04ac8ea677"
+    },
+    "review-round4/specifications.log.gz": {
+      "rawBytes": 2460,
+      "rawSha256": "a70f3beb6181209f74f6abf881978e7066eea0e26e9fc8a9c4502a4f00fafd40",
+      "gzipBytes": 1081,
+      "gzipSha256": "bf5b75119d3212ffe3a221985e407e96cadd6c02adff2a5c322cae4b6bedd48d"
     }
   },
   "fullSDKCorrectedBeforeNewTests": "964suites and19584assertions PASS,35existing skips; commandexit1 at existingpurepolicycoverage95%, before20additional metadata cases. This negative gate is retained.",

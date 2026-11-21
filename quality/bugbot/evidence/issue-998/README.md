@@ -230,3 +230,6 @@ installation; the historical49GET preview remains superseded.
 
 
 The third-review correction and counterevidence are in `review-round3/receipt.json`: terminal PR-complete journal recovery, exact fixture path, and unchanged missing-observer denial. All903 mapped assertions/60 cases pass; fresh normal hooks and final native gates remain required. The packet now verifies117 lossless archives. Production remains disabled.
+
+
+`review-round4/receipt.json` records the unchanged64-case baseline plus meaningful C65/C66 under the selected SDD floor. All923 assertions/20 files and62 mapped cases pass. Exact validator counterfactual, fixture alias negative and parent2d native journal timing failure are retained; cause unproven, no deadlines changed or obsolete retry. All runtime and4bundles remain identical to2d. The packet now verifies137 lossless archives; fresh final native gates remain required. Production stays disabled.

@@ -329,3 +329,41 @@ are archived here. Parent results do not substitute for fresh final-head gates.
 Normal hooks/publication/final native checks are pending at this snapshot.
 No installation,174/42 campaign, model qualification or production activation
 is claimed; evaluated-pilot writes remain0 and production remains disabled.
+
+
+### Extensible acceptance floor and two additional recovery cases
+
+The selected immutable SDD calls64 a minimum, but the old validator fixed the
+ledger to64, required every case to appear in the selected64-row table, and
+fixed Jest acceptance to60. The corrected validator retains every original
+case object and every selected SDD case, requires ordered contiguous extra IDs,
+known SDD areas/requirements and meaningful assertions, unique safe actual test
+evidence, and passed named execution. Only C55–C58 retain the package boundary.
+C65 and C66 now register the two actual PR-complete terminal reconciliation
+and failed-durability regressions, each under existing PU977-G04. There are66
+cases and62 mapped Jest cases; the original64 case objects are unchanged and the selected Action SDD stays byte-identical.
+
+The initial new parser fixture used macOS /var paths while Node resolved its
+script under /private/var. Its19-pass/1-fail tooling result and subsequent
+922-pass/1-fail cohort are retained, with the diagnostic. Resolving the owned
+fixture root fixes the test setup; no production path policy changes. A separate
+actual old-versus-corrected validator subprocess uses identical canonical
+private source/ledger/report bytes and isolates the old budget rejection without
+missing assertions. Those synthetic statuses prove parser behavior only.
+The actual final20-file cohort passes923 assertions, including20 parser tests,
+and the actual feature report validates62/62 mapped cases. Types/lint/specs
+and Graphify pass. All runtime source and four bundle hashes stay identical
+to2d; normal hooks and fresh final-head native gates remain required.
+
+Parent2d native static/build pass, including104 packaged files and11 real CLI
+controls with zero effects/API/web smoke. Coverage fails four journal tests and
+a cleanup hook at their unchanged5-second limits:965 suites/19,671 assertions
+pass,35 historical skips. Journal/store/policy/lockfile/Jest config and the
+complete first test describe are identical to passing470. Complete local
+instrumented isolation passes73 assertions; its command exits1 for partial
+global branch coverage and unrun owners, so it is not full coverage acceptance.
+The native cause remains unproven; local OS differs. The negative, source
+comparison and isolation are retained; no deadline changes or obsolete retry.
+See review-round4/receipt.json. The duplicate terminal-recovery finding was
+posted on original470 and is already fixed by2d. No installation,174/42
+qualification or qualified profile is claimed; pilot writes0/productiondisabled.
