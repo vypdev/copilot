@@ -1,0 +1,12 @@
+{
+  "outcome": "failed",
+  "stage": "mandatory pre-commit Jest",
+  "suitesPassed": 942,
+  "suiteFailedToStart": "src/prompts/__tests__/bugbot_complete_conversation.test.ts",
+  "signal": "SIGSEGV",
+  "testsPassed": 18689,
+  "testsSkipped": 35,
+  "rawSha256": "2e9cc621a52ff61bc74e2c81cb5103d91b455c176d2dcd7dc53cdb3ced5b7e30",
+  "rawBytes": 532863,
+  "observationCasesExecuted": 0
+}
