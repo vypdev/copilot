@@ -1,0 +1,1 @@
+{"passed":14,"output":"/private/tmp/copilot-goal-980-d306-packaged-attempt1.jsonl"}
