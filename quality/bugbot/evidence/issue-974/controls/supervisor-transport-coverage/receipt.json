@@ -1,0 +1,289 @@
+{
+  "schemaVersion": 1,
+  "kind": "exact-source AST supervisor IPC components using modeled process/fork observations; no native PID/namespace/Docker/model acceptance",
+  "results": [
+    {
+      "file": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "sourceSha256": "c886a99a75e12068d1eb34dc01e2df4c420b43d2f2819c65a31bcaaddbe2d26a",
+      "summary": {
+        "lines": {
+          "total": 41,
+          "covered": 41,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 10,
+          "covered": 10,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 56,
+          "covered": 56,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 36,
+          "covered": 36,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "gate": true
+    }
+  ],
+  "measuredSupervisorComponentGateSatisfied": true,
+  "globalChangedModuleCoverageSatisfied": false,
+  "observations": [
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "testOnlyExportSuffix": false
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "nativeSdkAcceptance": false,
+  "production": "disabled"
+}
