@@ -2611,7 +2611,9 @@
         "quality/bugbot/evidence/issue-985/corpus-revision.test.cjs",
         "quality/bugbot/evidence/issue974/qualification.test.cjs",
         "quality/bugbot/evidence/issue974/containment-native.test.cjs",
-        "quality/bugbot/evidence/issue-950/qualification-bootstrap.test.cjs"
+        "quality/bugbot/evidence/issue-950/qualification-bootstrap.test.cjs",
+        "quality/bugbot/evidence/issue974/corpus-collector-components.cjs",
+        "quality/bugbot/evidence/issue974/corpus-worker-components.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

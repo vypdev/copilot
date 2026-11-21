@@ -1,3 +1,17 @@
+## Corpus component coverage correction
+
+The unchanged corpus driver now has56 additional model-free C31 component
+controls (28 collector and28 worker). Together with the two retained controls,
+58 pass with exact-source AST coverage98.96% statements/99.13% lines/93.84%
+branches/97.36% functions. This closes the corpus module gate only; the global
+changed-driver gate remains unmet. The35 logical case IDs, scorer thresholds,
+corpora, measurement plan, SDK runtime and four bundles are unchanged.
+See [source and evidence](../issue-974/controls/corpus-transport-coverage/README.md).
+Full shadow controls, normal hooks and current-head native findings remain
+separate required checks. These fixtures do not establish actual model quality,
+CLI confinement, native containment or qualification. Actual174/42 are still
+unstarted; production remains disabled and pilot writes0.
+
 # EV-07 v2 detector qualification — issue #974
 
 ## Corpus collector correction — component evidence
@@ -380,3 +394,13 @@ All four known namespaces are confirmed stopped and removed. The result remains
 intermediary so reparenting can occur while the CLI leader stays alive, retaining
 every readiness and ownership assertion. [Raw partial result and topology correction](../issue-974/controls/native4-partial-sdk-topology-correction.json)
 require another committed source/image/plan tuple and fresh actual command.
+
+
+The complete deterministic `pnpm run test:bugbot-shadow-verification` command
+passes298 controls with zero failure, skip or cancellation (325.546seconds).
+It includes the56 new C31 component controls and the prior242 controls, using
+actual owned local Unix sockets where required. See the full retained log and
+hash in `corpus-transport-coverage/source-and-controls.json`. Catalog generation,
+specification validation and Graphify pass. Normal hooks and fresh final-head
+native checks are still required. No actual native SDK or model campaign
+acceptance is inferred from this deterministic command.
