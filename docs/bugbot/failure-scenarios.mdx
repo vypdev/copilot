@@ -193,3 +193,24 @@ confirmation. Correct the named provider/response cause and recheck from the
 current source; preserve identity and reconciliation checks. Completed writes
 remain in place and must not be repeated blindly. See the
 [structured error reference](/security-operations/operations/error-reference#conflict-eligibility-and-review-freshness).
+
+## Shared writer acknowledgment
+
+An accepted status-writer dispatch can omit its run ID. The caller recovers only
+one native run that matches the exact handoff operation, repository, workflow,
+default ref and producer attempt. A recent run on the same PR is insufficient.
+The matching source workflow must be installed on trusted default; preparing a
+PR or merging develop does not establish installation.
+
+If acknowledgment remains unavailable, inspect the native writer run and retry
+acknowledgment. The previous verified card and Review check remain authoritative;
+no completed publication receipt or unqueued card fallback is issued. A retry in
+the same producer adapter reads the accepted operation instead of repeating its
+POST. A native rerun creates a new producer attempt and retains the existing
+source/head/policy fences. This is not a durable exactly-once guarantee across
+arbitrary process restarts.
+
+Missing permission, foreign or ambiguous runs and incomplete listings fail
+closed. The bounded lookup applies to this short publication acknowledgment;
+it imposes no model investigation deadline or token/turn/read limit. Operation
+correlation establishes data/run identity, not independent code attestation.

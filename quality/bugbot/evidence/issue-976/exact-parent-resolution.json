@@ -1,0 +1,18 @@
+{
+  "head": "1b024481d9d86cb4d4b10eb7f8569f9c8e2f0981",
+  "parent": "0ddac1011204db6dda45dff0f99e3ef91309c701",
+  "resolvedConflicts": "both SDD appendices and union of all catalog paths retained; generated views/bundle will be regenerated",
+  "sourcePatchId": "5258c02e3c9035e7781c00129f01af81f5ef7ea8",
+  "originalSourcePatchPreserved": true,
+  "originalSourcePaths": [
+    ".github/workflows/copilot_bugbot_status_card.yml",
+    "src/actions/github_action.ts",
+    "src/infrastructure/github/__tests__/github_bugbot_status_card_dispatch.test.ts",
+    "src/infrastructure/github/__tests__/github_bugbot_status_card_workflow.test.ts",
+    "src/infrastructure/github/github_bugbot_status_card_acknowledgment.ts",
+    "src/infrastructure/github/github_bugbot_status_card_dispatch.ts",
+    "src/infrastructure/github/github_bugbot_status_card_handoff.ts",
+    "src/infrastructure/github/github_bugbot_status_card_workflow.ts"
+  ],
+  "allCatalogAncestorPathsRetained": true
+}

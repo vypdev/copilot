@@ -330,6 +330,8 @@ queued, canceled or failed job is missing evidence, even if other jobs passed.
 The platform fixtures exercise local paths. Authenticated agent tool execution
 has separate acceptance.
 
+## Qualification runtime and bootstrap
+
 Qualification runtime admission also pins `dependencyTreeSha256` and
 `dependencyEntries` for the physical installed dependency closure. Capture the
 expected identity only from a reviewed isolated frozen-lockfile installation
@@ -435,6 +437,22 @@ The real-process controls cover both direct and optional-launcher stalls, exact
 30-second fixture cleanup never bounds research. Node's synchronous subprocess
 API otherwise continues waiting if a timed-out child handles SIGTERM; see the
 [pinned Node v24.20.0 subprocess documentation](https://nodejs.org/download/release/v24.20.0/docs/api/child_process.html#child_processexecfilesyncfile-args-options).
+
+## CI aggregate predicate
+
+The source repository's `CI Check` gate requires success from all three independent
+workers. `validate:workflows` binds its command to the executable contract in
+`scripts/validate-workflow-contract.cjs`; it compares the complete command without
+executing candidate YAML. Changing that command requires reviewing the contract
+and its execution fixtures together. CRLF line endings and outer whitespace are
+normalized; additional commands or alternate predicates are rejected.
+
+The workflow tests execute the current gate in Bash with controlled result
+values: all-success passes, each worker failure fails, and canceled, skipped or
+missing results fail. Separate validator mutations reject no-op, partial and
+masked predicates, missing bindings, and step/job `continue-on-error`. Runner
+placement, fork exclusion, public check identity, parallel jobs and consumer
+installation templates retain their existing contracts.
 
 ## Normal-flow shadow cancellation
 

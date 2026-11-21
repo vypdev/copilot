@@ -96336,7 +96336,7 @@ async function runGitHubAction(verificationAuthority) {
             event: eventName, ref, actor, server: serverUrl, workflowRef: process.env.GITHUB_WORKFLOW_REF ?? '',
             locale: (0, github_action_locale_inputs_1.readGithubActionLocaleInputs)(github_action_input_1.getGithubActionInput).pullRequest,
             policy: verificationAuthority?.policyDigest ?? 'default',
-            inputs: { pullNumber: payload.inputs?.pull_number, work: payload.inputs?.work },
+            inputs: { pullNumber: payload.inputs?.pull_number, work: payload.inputs?.work, operation: payload.inputs?.operation },
         });
         if (effect === 'skipped')
             core.setFailed('No current Bugbot status card publication was authorized.');
@@ -164581,6 +164581,122 @@ function githubBugbotReviewProgress(context, summary, current, observeCheck, wak
 
 /***/ }),
 
+/***/ 86730:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.statusCardUnacknowledged = void 0;
+exports.createGithubBugbotStatusCardAcknowledgment = createGithubBugbotStatusCardAcknowledgment;
+const github_bugbot_status_card_handoff_1 = __nccwpck_require__(83620);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+const github_bugbot_status_card_installation_1 = __nccwpck_require__(31666);
+class StatusCardAcknowledgmentError extends Error {
+}
+const statusCardUnacknowledged = () => new StatusCardAcknowledgmentError('The shared Bugbot status card writer did not acknowledge publication. Inspect its native run and retry acknowledgment; preserve the last verified card and Check fallback.');
+exports.statusCardUnacknowledged = statusCardUnacknowledged;
+/** Correlation is data provenance, never independent producer-code attestation. */
+function createGithubBugbotStatusCardAcknowledgment(binding) {
+    const { read, write, scope, ref, runId, attempt, repositoryId } = binding;
+    const workflow = { ...scope, workflow_id: github_bugbot_status_card_installation_1.bugbotStatusCardWorkflow };
+    const unresolved = exports.statusCardUnacknowledged;
+    const acknowledgments = new Map();
+    return async (inputs, sequence) => {
+        const operation = (0, github_bugbot_status_card_handoff_1.githubBugbotStatusCardOperation)(inputs.work, sequence);
+        const title = 'Bugbot status · PR ' + inputs.pull_number + ' · ' + operation;
+        let acknowledgment = acknowledgments.get(operation);
+        if (!acknowledgment) {
+            acknowledgment = { issued: false };
+            acknowledgments.set(operation, acknowledgment);
+        }
+        if (acknowledgment.id)
+            return { id: acknowledgment.id, title };
+        if (acknowledgment.pending)
+            return { id: await acknowledgment.pending, title };
+        const state = acknowledgment;
+        state.pending = (async () => {
+            if (!state.issued) {
+                // A lost response can still mean accepted: retry reads, never this POST.
+                state.issued = true;
+                const { data } = await write.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
+                    ...workflow, ref, inputs: { ...inputs, operation }, return_run_details: true,
+                });
+                const direct = (0, positive_integer_policy_1.parsePositiveSafeInteger)(data?.workflow_run_id);
+                if (direct)
+                    return state.id = direct;
+            }
+            for (let lookup = 0; lookup < 6; lookup += 1) {
+                try {
+                    const expected = await read.rest.actions.getWorkflow(workflow);
+                    const origin = await read.rest.actions.getWorkflowRun({ ...scope, run_id: runId });
+                    const created = origin.data.created_at;
+                    if (!(0, positive_integer_policy_1.parsePositiveSafeInteger)(expected.data.id) || expected.data.path !== github_bugbot_status_card_installation_1.bugbotStatusCardPath
+                        || origin.data.id !== runId || origin.data.repository.id !== repositoryId || origin.data.run_attempt !== attempt
+                        || typeof created !== 'string' || !Number.isFinite(Date.parse(created)))
+                        throw unresolved();
+                    const matches = new Set();
+                    const seen = new Set();
+                    let complete = false;
+                    let total;
+                    for (let page = 1; page <= 10; page += 1) {
+                        const response = await read.rest.actions.listWorkflowRuns({ ...workflow,
+                            branch: ref, event: 'workflow_dispatch', created: '>=' + created, per_page: 100, page });
+                        const data = response.data;
+                        if (!Array.isArray(data.workflow_runs) || data.workflow_runs.length > 100
+                            || !Number.isSafeInteger(data.total_count) || data.total_count < 0
+                            || total !== undefined && total !== data.total_count)
+                            throw unresolved();
+                        total = data.total_count;
+                        for (const run of data.workflow_runs) {
+                            const id = (0, positive_integer_policy_1.parsePositiveSafeInteger)(run.id);
+                            if (!id || seen.has(id))
+                                throw unresolved();
+                            seen.add(id);
+                            if (run.repository.id === repositoryId && run.workflow_id === expected.data.id
+                                && run.path === github_bugbot_status_card_installation_1.bugbotStatusCardPath && run.event === 'workflow_dispatch'
+                                && run.head_branch === ref && run.display_title === title && run.run_attempt === 1
+                                && Number.isFinite(Date.parse(run.created_at)) && Date.parse(run.created_at) >= Date.parse(created))
+                                matches.add(id);
+                        }
+                        if (seen.size === total || data.workflow_runs.length < 100) {
+                            if (data.total_count !== seen.size)
+                                throw unresolved();
+                            complete = true;
+                            break;
+                        }
+                    }
+                    if (!complete || matches.size > 1)
+                        throw unresolved();
+                    if (matches.size === 1)
+                        return state.id = [...matches][0];
+                }
+                catch (error) {
+                    if ([401, 403].includes(Number((0, github_bugbot_status_card_installation_1.statusCardGithubErrorStatus)(error))) || error instanceof StatusCardAcknowledgmentError)
+                        throw unresolved();
+                    if (lookup === 5)
+                        throw unresolved();
+                }
+                if (lookup < 5)
+                    await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            throw unresolved();
+        })().catch(() => { throw unresolved(); });
+        try {
+            return { id: await state.pending, title };
+        }
+        catch {
+            throw unresolved();
+        }
+        finally {
+            state.pending = undefined;
+        }
+    };
+}
+
+
+/***/ }),
+
 /***/ 42190:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -164595,7 +164711,8 @@ const positive_integer_policy_1 = __nccwpck_require__(19879);
 const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
 const github_bugbot_status_card_handoff_1 = __nccwpck_require__(83620);
 const github_bugbot_status_card_installation_1 = __nccwpck_require__(31666);
-const unresolved = () => new Error('The shared Bugbot status card writer did not acknowledge publication.');
+const github_bugbot_status_card_acknowledgment_1 = __nccwpck_require__(86730);
+const unresolved = github_bugbot_status_card_acknowledgment_1.statusCardUnacknowledged;
 async function createGithubBugbotStatusCardDispatcher(binding, environment = process.env) {
     const runId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(environment.GITHUB_RUN_ID);
     const attempt = (0, positive_integer_policy_1.parsePositiveSafeInteger)(environment.GITHUB_RUN_ATTEMPT);
@@ -164608,23 +164725,16 @@ async function createGithubBugbotStatusCardDispatcher(binding, environment = pro
     const read = (0, github_1.getOctokit)(binding.evidenceToken);
     const write = (0, github_1.getOctokit)(binding.token);
     const scope = { owner: binding.owner, repo: binding.repository };
-    const workflow = { ...scope, workflow_id: github_bugbot_status_card_installation_1.bugbotStatusCardWorkflow };
     const installation = await (0, github_bugbot_status_card_installation_1.readGithubBugbotStatusCardInstallation)(read, scope, ref);
     if (installation === 'absent')
         return undefined;
     const pullRequests = new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)());
-    const dispatch = async (request) => {
+    const acknowledge = (0, github_bugbot_status_card_acknowledgment_1.createGithubBugbotStatusCardAcknowledgment)({ read, write, scope, ref, runId, attempt, repositoryId });
+    const dispatch = async (request, sequence) => {
         const inputs = (0, github_bugbot_status_card_handoff_1.encodeGithubBugbotStatusCardHandoff)(request);
         if (installation !== 'installed' || !inputs)
             throw unresolved();
-        const { data } = await write.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
-            ...workflow, ref, inputs, return_run_details: true,
-        });
-        const published = data;
-        const operation = (0, positive_integer_policy_1.parsePositiveSafeInteger)(published?.workflow_run_id);
-        if (!operation)
-            throw unresolved();
-        return operation;
+        return acknowledge(inputs, sequence);
     };
     const terminal = {
         async publish(input) {
@@ -164642,7 +164752,7 @@ async function createGithubBugbotStatusCardDispatcher(binding, environment = pro
             // This deadline is only for acknowledging the short comment job.
             const until = Date.now() + 7 * 60000;
             while (Date.now() < until) {
-                const observed = await read.rest.actions.getWorkflowRun({ ...scope, run_id: effect }).catch((error) => {
+                const observed = await read.rest.actions.getWorkflowRun({ ...scope, run_id: effect.id }).catch((error) => {
                     if ((0, github_bugbot_status_card_installation_1.statusCardGithubErrorStatus)(error) === 404)
                         return undefined;
                     throw unresolved();
@@ -164652,13 +164762,13 @@ async function createGithubBugbotStatusCardDispatcher(binding, environment = pro
                     continue;
                 }
                 const { data } = observed;
-                if (data.id !== effect || data.repository.id !== repositoryId || data.path !== github_bugbot_status_card_installation_1.bugbotStatusCardPath
+                if (data.id !== effect.id || data.display_title !== effect.title || data.run_attempt !== 1 || data.repository.id !== repositoryId || data.path !== github_bugbot_status_card_installation_1.bugbotStatusCardPath
                     || data.event !== 'workflow_dispatch' || data.head_branch !== ref)
                     throw unresolved();
                 if (data.status === 'completed') {
                     if (data.conclusion !== 'success')
                         throw unresolved();
-                    const { data: jobs } = await read.rest.actions.listJobsForWorkflowRun({ ...scope, run_id: effect, per_page: 20, filter: 'latest' });
+                    const { data: jobs } = await read.rest.actions.listJobsForWorkflowRun({ ...scope, run_id: effect.id, per_page: 20, filter: 'latest' });
                     if (jobs.total_count === 1 && jobs.jobs.length === 1
                         && jobs.jobs[0].name === 'Publish Bugbot status card' && jobs.jobs[0].head_sha === data.head_sha
                         && jobs.jobs[0].conclusion === 'success' && jobs.jobs[0].steps?.some((step) => step.name === 'Publish canonical comment' && step.conclusion === 'success'))
@@ -164676,7 +164786,7 @@ async function createGithubBugbotStatusCardDispatcher(binding, environment = pro
             if (installation !== 'installed' || !observation.baseSha)
                 return;
             await dispatch({ kind: 'progress', runId, attempt, source: { repositoryId, pullNumber: observation.pullNumber,
-                    base: observation.baseSha, baseRef: observation.baseRefSha ?? observation.baseSha, head: observation.headSha, policy: binding.policy } });
+                    base: observation.baseSha, baseRef: observation.baseRefSha ?? observation.baseSha, head: observation.headSha, policy: binding.policy } }, observation.sequence);
         },
     };
 }
@@ -164692,6 +164802,8 @@ async function createGithubBugbotStatusCardDispatcher(binding, environment = pro
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.decodeGithubBugbotStatusCardHandoff = decodeGithubBugbotStatusCardHandoff;
 exports.encodeGithubBugbotStatusCardHandoff = encodeGithubBugbotStatusCardHandoff;
+exports.githubBugbotStatusCardOperation = githubBugbotStatusCardOperation;
+const node_crypto_1 = __nccwpck_require__(6005);
 const bugbot_status_card_publication_policy_1 = __nccwpck_require__(4809);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
 const maxHandoffBytes = 64000;
@@ -164741,6 +164853,12 @@ function encodeGithubBugbotStatusCardHandoff(request) {
     const { pullNumber } = request.source;
     const work = JSON.stringify({ version: 1, ...request });
     return decodeGithubBugbotStatusCardHandoff({ pullNumber, work }) ? { pull_number: String(pullNumber), work } : undefined;
+}
+/** A correlation key binds bytes; the worker still validates publication authority. */
+function githubBugbotStatusCardOperation(work, sequence) {
+    if (sequence !== undefined && (!Number.isSafeInteger(sequence) || sequence < 0))
+        throw new Error('Invalid progress correlation sequence.');
+    return (sequence === undefined ? '' : String(sequence) + ':') + (0, node_crypto_1.createHash)('sha256').update(work).digest('hex');
 }
 
 
@@ -164928,9 +165046,15 @@ const sourceEvents = new Map([
 ]);
 async function runGithubBugbotStatusCardWorkflow(binding) {
     const request = (0, github_bugbot_status_card_handoff_1.decodeGithubBugbotStatusCardHandoff)(binding.inputs);
+    const correlation = typeof binding.inputs.operation === 'string'
+        ? binding.inputs.operation.match(/^(0|[1-9]\d*):[a-f0-9]{64}$/u)?.[1] : undefined;
+    const sequence = correlation === undefined ? undefined : Number(correlation);
     const repository = binding.owner + '/' + binding.repository;
     if (binding.event !== 'workflow_dispatch' || binding.workflowRef !== repository + '/' + github_bugbot_status_card_installation_1.bugbotStatusCardPath + '@' + binding.ref
-        || !/^https:\/\/[a-z0-9.-]+(?::\d+)?$/iu.test(binding.server) || !request)
+        || !/^https:\/\/[a-z0-9.-]+(?::\d+)?$/iu.test(binding.server) || !request
+        || request.kind === 'progress' && (sequence === undefined || !Number.isSafeInteger(sequence))
+        || typeof binding.inputs.work !== 'string'
+        || binding.inputs.operation !== (0, github_bugbot_status_card_handoff_1.githubBugbotStatusCardOperation)(binding.inputs.work, request.kind === 'progress' ? sequence : undefined))
         return 'skipped';
     const api = (0, github_1.getOctokit)(binding.evidenceToken);
     const scope = { owner: binding.owner, repo: binding.repository };

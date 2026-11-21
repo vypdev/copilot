@@ -7,10 +7,12 @@ import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 import { createPullRequestLifecycleClient } from '../composition/github_pull_request_client_factory';
 import { encodeGithubBugbotStatusCardHandoff } from './github_bugbot_status_card_handoff';
 import {
-    bugbotStatusCardPath, bugbotStatusCardWorkflow, readGithubBugbotStatusCardInstallation, statusCardGithubErrorStatus,
+    bugbotStatusCardPath, readGithubBugbotStatusCardInstallation, statusCardGithubErrorStatus,
 } from './github_bugbot_status_card_installation';
 
-const unresolved = () => new Error('The shared Bugbot status card writer did not acknowledge publication.');
+import { createGithubBugbotStatusCardAcknowledgment, statusCardUnacknowledged } from './github_bugbot_status_card_acknowledgment';
+
+const unresolved = statusCardUnacknowledged;
 
 export async function createGithubBugbotStatusCardDispatcher(binding: {
     owner: string; repository: string; repositoryId: unknown; defaultBranch: unknown;
@@ -26,20 +28,14 @@ export async function createGithubBugbotStatusCardDispatcher(binding: {
     const read = getOctokit(binding.evidenceToken);
     const write = getOctokit(binding.token);
     const scope = { owner: binding.owner, repo: binding.repository };
-    const workflow = { ...scope, workflow_id: bugbotStatusCardWorkflow };
     const installation = await readGithubBugbotStatusCardInstallation(read, scope, ref);
     if (installation === 'absent') return undefined;
     const pullRequests = new PullRequestLifecycleRepository(createPullRequestLifecycleClient());
-    const dispatch = async (request: Parameters<typeof encodeGithubBugbotStatusCardHandoff>[0]): Promise<number> => {
+    const acknowledge = createGithubBugbotStatusCardAcknowledgment({ read, write, scope, ref, runId, attempt, repositoryId });
+    const dispatch = async (request: Parameters<typeof encodeGithubBugbotStatusCardHandoff>[0], sequence?: number) => {
         const inputs = encodeGithubBugbotStatusCardHandoff(request);
         if (installation !== 'installed' || !inputs) throw unresolved();
-        const { data } = await write.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
-            ...workflow, ref, inputs, return_run_details: true,
-        });
-        const published = data as { workflow_run_id?: number } | undefined;
-        const operation = parsePositiveSafeInteger(published?.workflow_run_id);
-        if (!operation) throw unresolved();
-        return operation;
+        return acknowledge(inputs, sequence);
     };
     const terminal: BugbotStatusCardTerminalPort = {
         async publish(input) {
@@ -57,7 +53,7 @@ export async function createGithubBugbotStatusCardDispatcher(binding: {
             // This deadline is only for acknowledging the short comment job.
             const until = Date.now() + 7 * 60_000;
             while (Date.now() < until) {
-                const observed = await read.rest.actions.getWorkflowRun({ ...scope, run_id: effect }).catch((error: unknown) => {
+                const observed = await read.rest.actions.getWorkflowRun({ ...scope, run_id: effect.id }).catch((error: unknown) => {
                     if (statusCardGithubErrorStatus(error) === 404) return undefined;
                     throw unresolved();
                 });
@@ -66,11 +62,11 @@ export async function createGithubBugbotStatusCardDispatcher(binding: {
                     continue;
                 }
                 const { data } = observed;
-                if (data.id !== effect || data.repository.id !== repositoryId || data.path !== bugbotStatusCardPath
+                if (data.id !== effect.id || data.display_title !== effect.title || data.run_attempt !== 1 || data.repository.id !== repositoryId || data.path !== bugbotStatusCardPath
                     || data.event !== 'workflow_dispatch' || data.head_branch !== ref) throw unresolved();
                 if (data.status === 'completed') {
                     if (data.conclusion !== 'success') throw unresolved();
-                    const { data: jobs } = await read.rest.actions.listJobsForWorkflowRun({ ...scope, run_id: effect, per_page: 20, filter: 'latest' });
+                    const { data: jobs } = await read.rest.actions.listJobsForWorkflowRun({ ...scope, run_id: effect.id, per_page: 20, filter: 'latest' });
                     if (jobs.total_count === 1 && jobs.jobs.length === 1
                         && jobs.jobs[0].name === 'Publish Bugbot status card' && jobs.jobs[0].head_sha === data.head_sha
                         && jobs.jobs[0].conclusion === 'success' && jobs.jobs[0].steps?.some((step: { name: string; conclusion?: string | null }) =>
@@ -87,7 +83,7 @@ export async function createGithubBugbotStatusCardDispatcher(binding: {
         async wake(observation: BugbotReviewProgressObservation) {
             if (installation !== 'installed' || !observation.baseSha) return;
             await dispatch({ kind: 'progress', runId, attempt, source: { repositoryId, pullNumber: observation.pullNumber,
-                base: observation.baseSha, baseRef: observation.baseRefSha ?? observation.baseSha, head: observation.headSha, policy: binding.policy } });
+                base: observation.baseSha, baseRef: observation.baseRefSha ?? observation.baseSha, head: observation.headSha, policy: binding.policy } }, observation.sequence);
         },
     };
 }
