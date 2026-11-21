@@ -19,7 +19,7 @@ these checks can admit coherent fixtures; they are not measured model results.
 Exact-source Istanbul AST coverage reaches98.96% statements,99.13% lines,
 93.84% branches and97.36% functions. This satisfies this module's95/90 gate only.
 The global changed-driver gate remains unmet. See `receipt.json`,
-`coverage-final.json`, `component-ast.log.txt` and `source-and-controls.json`.
+`coverage-final.json.log.gz`, `component-ast.log.txt.log.gz` and `source-and-controls.json`.
 
 Reproduce from a clean source using a fresh private output directory:
 

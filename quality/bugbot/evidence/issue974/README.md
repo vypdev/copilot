@@ -404,3 +404,6 @@ hash in `corpus-transport-coverage/source-and-controls.json`. Catalog generation
 specification validation and Graphify pass. Normal hooks and fresh final-head
 native checks are still required. No actual native SDK or model campaign
 acceptance is inferred from this deterministic command.
+
+
+Generated bulk coverage and hook reports are retained losslessly using the existing .log.gz contract after native progress hit call-budget before its seven assessment batches. Original paths/hashes/Git blobs are mapped in `../issue-974/controls/generated-report-archive.json`. No runtime, selected SDD, limit or test changes. Parent fb1 native CI4/4 passes; fresh final progress remains required. Actual174/42 unstarted, profileNONE, pilotwrites0, productiondisabled.

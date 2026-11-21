@@ -1,0 +1,75 @@
+{
+  "policyFile": "src/application/policies/progress_generated_artifact_policy.ts",
+  "policySha256": "5ce2cd09b1d840418041aaca88d442fb86d04d3baa3f865302224ef7735c6ff7",
+  "unchangedPolicy": true,
+  "results": [
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/bundle-restoration-hook-negative.utf8.json",
+      "archive": "quality/bugbot/evidence/issue-974/controls/bundle-restoration-hook-negative.utf8.json.log.gz",
+      "oldGenerated": false,
+      "newGenerated": true
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt2-coverage-final.json",
+      "archive": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt2-coverage-final.json.log.gz",
+      "oldGenerated": false,
+      "newGenerated": true
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt1.log.utf8.json",
+      "archive": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt1.log.utf8.json.log.gz",
+      "oldGenerated": false,
+      "newGenerated": true
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt2.log.txt",
+      "archive": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt2.log.txt.log.gz",
+      "oldGenerated": false,
+      "newGenerated": true
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/engine-transport-coverage/coverage-final.json",
+      "archive": "quality/bugbot/evidence/issue-974/controls/engine-transport-coverage/coverage-final.json.log.gz",
+      "oldGenerated": false,
+      "newGenerated": true
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/session-transport-coverage/coverage-final.json",
+      "archive": "quality/bugbot/evidence/issue-974/controls/session-transport-coverage/coverage-final.json.log.gz",
+      "oldGenerated": false,
+      "newGenerated": true
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/supervisor-transport-coverage/coverage-final.json",
+      "archive": "quality/bugbot/evidence/issue-974/controls/supervisor-transport-coverage/coverage-final.json.log.gz",
+      "oldGenerated": false,
+      "newGenerated": true
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/coverage-final.json",
+      "archive": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/coverage-final.json.log.gz",
+      "oldGenerated": false,
+      "newGenerated": true
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/component-ast.log.txt",
+      "archive": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/component-ast.log.txt.log.gz",
+      "oldGenerated": false,
+      "newGenerated": true
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/complete-shadow.log.txt",
+      "archive": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/complete-shadow.log.txt.log.gz",
+      "oldGenerated": false,
+      "newGenerated": true
+    },
+    {
+      "original": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/partial-host-coverage.json",
+      "archive": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/partial-host-coverage.json.log.gz",
+      "oldGenerated": false,
+      "newGenerated": true
+    }
+  ],
+  "generatedRawBytesExcludedFromSourceInventory": 1271020,
+  "newNativeAcceptanceStillRequired": true
+}
