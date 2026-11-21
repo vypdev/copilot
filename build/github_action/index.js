@@ -140313,11 +140313,6 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
         if (terminationError) {
             if (scopeTermination)
                 return;
-            // The leader can close before a TERM-ignoring descendant. Its
-            // detached POSIX group still belongs to this operation; remove any
-            // survivors before clearing the delayed force timer and settling.
-            if (process.platform !== 'win32' && child.pid)
-                signalProcessTree(child, 'SIGKILL');
             finishReject(terminationError);
             return;
         }

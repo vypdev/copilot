@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": {
+    "startedAt": "2026-11-21T06:55:42.137628+00:00",
+    "finishedAt": "2026-11-21T07:02:11.425749+00:00",
+    "exitCode": 0,
+    "parent": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+    "headAfter": "ea47746038f7cb22b5bf88468e8179956b2d880e",
+    "statusAfter": " M build/cli/index.js\n M build/github_action/index.js",
+    "normalHooks": true,
+    "log": "/private/tmp/copilot-goal-974-reviewable-engine-attempt3-commit.log",
+    "rawBytes": 549895,
+    "sha256": "312c718f03e06e95bb2670eb68f1b137b7d68a20cb22b18549194fe34008c190",
+    "suiteSummaries": [
+      "Test Suites: 944 passed, 944 total"
+    ],
+    "assertionSummaries": [
+      "Tests:       35 skipped, 18744 passed, 18779 total"
+    ],
+    "qualificationModelCalls": 0,
+    "174": "unstarted",
+    "42": "unstarted",
+    "production": "disabled",
+    "globalCoverageGateSatisfied": false
+  },
+  "generatedOutputAfterNormalHook": {
+    "build/cli/index.js": "52bade17c4ad39eb06a034e3e6e48889932aff07cd83baa24faa7bff163520f2",
+    "build/github_action/index.js": "5fa8301d2c57269edcf833ffc1dae9ca9a89fff234fe943fed3c18d2053121ac"
+  },
+  "status": "source normal-hook PASS; generated bundles not part of the initial staged source commit, preparing an ordinary follow-up commit before publication",
+  "full240AtNewSource": "pending final committed bundle/source closure",
+  "globalChangedModuleCoverageGate": false,
+  "qualificationModelCalls": 0,
+  "production": "disabled"
+}
