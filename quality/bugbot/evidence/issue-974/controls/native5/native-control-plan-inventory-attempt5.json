@@ -1,0 +1,38 @@
+[
+  {
+    "caseId": "ev974-C32",
+    "repository": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/frozen-host",
+    "revision": "13e31eb0b1ed9a260f00e78de13091c295b9520c",
+    "planPath": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C32.json",
+    "planSha256": "8a010f27ddcfbbb38e6db0cd79429f572af0378fa451567890d4706c69e8b316",
+    "bootstrapPath": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/reviewed-bootstrap.cjs",
+    "bootstrapSha256": "36a2ffa685a6dca9be0930c9386cf9a4ac11553e14a0f24d67597ff53b9b3be2"
+  },
+  {
+    "caseId": "ev974-C33",
+    "repository": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/frozen-host",
+    "revision": "13e31eb0b1ed9a260f00e78de13091c295b9520c",
+    "planPath": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C33.json",
+    "planSha256": "897ef6410b299baf0f9e336144112c3fd1ade927c5739d2b4739f89f6537e307",
+    "bootstrapPath": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/reviewed-bootstrap.cjs",
+    "bootstrapSha256": "36a2ffa685a6dca9be0930c9386cf9a4ac11553e14a0f24d67597ff53b9b3be2"
+  },
+  {
+    "caseId": "ev974-C34",
+    "repository": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/frozen-host",
+    "revision": "13e31eb0b1ed9a260f00e78de13091c295b9520c",
+    "planPath": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C34.json",
+    "planSha256": "811588031c386c3049e5c006bd6dbab97dd4e2964df49949008e1899d29f21d2",
+    "bootstrapPath": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/reviewed-bootstrap.cjs",
+    "bootstrapSha256": "36a2ffa685a6dca9be0930c9386cf9a4ac11553e14a0f24d67597ff53b9b3be2"
+  },
+  {
+    "caseId": "ev974-C35",
+    "repository": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/frozen-host",
+    "revision": "13e31eb0b1ed9a260f00e78de13091c295b9520c",
+    "planPath": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C35.json",
+    "planSha256": "660c1c63a7649e3e0b0476196c5cc92f100c7e860fa5992ca8dd6a2dfe7f359d",
+    "bootstrapPath": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/reviewed-bootstrap.cjs",
+    "bootstrapSha256": "36a2ffa685a6dca9be0930c9386cf9a4ac11553e14a0f24d67597ff53b9b3be2"
+  }
+]

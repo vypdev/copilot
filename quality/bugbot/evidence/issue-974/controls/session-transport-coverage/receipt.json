@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "kind": "AST component coverage; original semantic suite plus repository provider-transport fault group, fake child/timers are not native SDK proof",
+  "source": "/private/tmp/copilot-goal-974/src/infrastructure/bugbot/shadow/session.cjs",
+  "sourceSha256": "3234f7356290c1993d6fa6d6754c3ab897f6e40228e2834906d94bf0a344d0f4",
+  "testSha256": {
+    "quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs": "6971c477a0a18a9c8b1f1f7bffb7b6832e2a5d11407d475a36f514594d0e5313",
+    "quality/bugbot/evidence/issue974/session-transport.test.cjs": "e4e5a551d82fe49962cf9f4a04b2fe033072b337ce933c25bab0f4a8f8f19406"
+  },
+  "summary": {
+    "lines": {
+      "total": 103,
+      "covered": 103,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 22,
+      "covered": 22,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 134,
+      "covered": 134,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 109,
+      "covered": 109,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "changedModuleGate": true,
+  "qualificationModelCalls": 0,
+  "nativeSdkAcceptance": false,
+  "production": "disabled"
+}

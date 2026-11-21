@@ -1,5 +1,13 @@
 # EV-07 v2 detector qualification — issue #974
 
+## Latest evidence: native attempt5 and session transport
+
+All four actual SDK controls C32–C35 pass on source82f0c14, committed plans13e31eb and immutable image d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35. No partial results are pooled. The six owned scopes are all confirmed removed after their namespace-stop proofs. See [acceptance](../issue-974/controls/native5/acceptance.json) and retained raw text, ledgers and owner-loss/unrelated-scope proofs. All prior native negatives remain retained.
+
+The session transport now has an additional repository provider-fault group; all63 semantic/component groups pass and exact-source AST coverage is100%for134statements/109branches/22functions/103lines. See [coverage evidence](../issue-974/controls/session-transport-coverage/README.md). This closes this measured component gate only. The full Node command now registers240 controls and still needs an execution at the new committed revision.
+
+Qualification remains incomplete: other changed-module/global coverage, final native PR checks/findings, actual CLI sandbox/input-scope checks and full42 scientific/causal-explanation/profile-comparison admission remain unmet. All174/42 model campaigns are unstarted; no profile is qualified, pilot write attempts0 and production disabled. The progress check currently rejects changed gzip evidence as unsupported binary; this evidence-format blocker is separate from native SDK acceptance.
+
 Current preparation: implementation `64da6ec` is pushed and passes all 239 Node
 controls without failures, skips or cancellations, plus its normal SDK hooks.
 The corrected immutable SDK image and four new native-only plans are recorded

@@ -1,0 +1,38 @@
+{
+  "scope": {
+    "event": "scope-created",
+    "identity": {
+      "ownerId": "10b95f3a69a1febc2c55f311e0e69e799ae4a56a79b76b1643fa554a2d80eb40",
+      "operationId": "control:ev974-C34",
+      "planSha256": "811588031c386c3049e5c006bd6dbab97dd4e2964df49949008e1899d29f21d2",
+      "implementation": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+      "imageSha256": "d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+      "purpose": "native-control"
+    },
+    "scopeId": "d92411cf1a93c1827240e39b62360b7011f985048618fe39477315607bf09008",
+    "name": "copilot-qualification-32d6209a2462da40e3d8dd8820aa41790d971f0b543b560d02b92b10bf36d38d"
+  },
+  "outerPid": 8251,
+  "exit": {
+    "code": null,
+    "signal": "SIGKILL"
+  },
+  "actual": {
+    "Image": "sha256:d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+    "State": {
+      "Status": "exited",
+      "Running": false,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": false,
+      "Dead": false,
+      "Pid": 0,
+      "ExitCode": 143,
+      "Error": "",
+      "StartedAt": "2026-11-21T05:06:01.377234694Z",
+      "FinishedAt": "2026-11-21T05:06:08.228384781Z"
+    }
+  },
+  "modelCalls": 0,
+  "outcome": "interrupted-incomplete"
+}

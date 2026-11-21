@@ -1,0 +1,168 @@
+{
+  "scopes": [
+    {
+      "scopeId": "d56c3bb07116e7aec1a6672eee6896a242800277c5a5cc2cb35e568c3bc4b5ce",
+      "identity": {
+        "ownerId": "5ad75ef4575ab19b80b36f323b2a532d321bb14deb71eb726a23b959f35971a4",
+        "operationId": "control:ev974-C35",
+        "planSha256": "660c1c63a7649e3e0b0476196c5cc92f100c7e860fa5992ca8dd6a2dfe7f359d",
+        "implementation": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+        "imageSha256": "d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "purpose": "native-control"
+      },
+      "ledger": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/native-controls-attempt5-tmp/ev974-native-completion-race-OcY5BU/output/native.jsonl"
+    },
+    {
+      "scopeId": "89e5c5493c9d5a2e28e53bf196d95a3c170af7f269a5448b5fb0ab825d6f5d33",
+      "identity": {
+        "ownerId": "af498fc7d86bf540cfcc39ea92ce2154947636d05b9919582a1149ab00b713ab",
+        "operationId": "control:ev974-C35",
+        "planSha256": "660c1c63a7649e3e0b0476196c5cc92f100c7e860fa5992ca8dd6a2dfe7f359d",
+        "implementation": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+        "imageSha256": "d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "purpose": "native-control"
+      },
+      "ledger": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/native-controls-attempt5-tmp/ev974-native-completion-race-OcY5BU/output/native.jsonl"
+    },
+    {
+      "scopeId": "4664a954d4001d44098223a4bc66d17569e3697c3ad648e199b86b3b9d56c0d4",
+      "identity": {
+        "ownerId": "5d759d343b2012a1846a17732dde74f9d056f8a26ce24203a71985703d0961bf",
+        "operationId": "control:ev974-C32",
+        "planSha256": "8a010f27ddcfbbb38e6db0cd79429f572af0378fa451567890d4706c69e8b316",
+        "implementation": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+        "imageSha256": "d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "purpose": "native-control"
+      },
+      "ledger": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/native-controls-attempt5-tmp/ev974-native-ev974-C32-NqYelO/output/native.jsonl"
+    },
+    {
+      "scopeId": "39014d5c66c60c220fb91ebe9970ae0747bb2d3a5676a429949e401837146bd4",
+      "identity": {
+        "ownerId": "0148d06d32049a8943b8dd3afe7e581771212790ad574329aa99904582e52ea1",
+        "operationId": "control:ev974-C33",
+        "planSha256": "897ef6410b299baf0f9e336144112c3fd1ade927c5739d2b4739f89f6537e307",
+        "implementation": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+        "imageSha256": "d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "purpose": "native-control"
+      },
+      "ledger": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/native-controls-attempt5-tmp/ev974-native-ev974-C33-UpkpDL/output/native.jsonl"
+    },
+    {
+      "scopeId": "d92411cf1a93c1827240e39b62360b7011f985048618fe39477315607bf09008",
+      "identity": {
+        "ownerId": "10b95f3a69a1febc2c55f311e0e69e799ae4a56a79b76b1643fa554a2d80eb40",
+        "operationId": "control:ev974-C34",
+        "planSha256": "811588031c386c3049e5c006bd6dbab97dd4e2964df49949008e1899d29f21d2",
+        "implementation": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+        "imageSha256": "d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "purpose": "native-control"
+      },
+      "ledger": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/native-controls-attempt5-tmp/ev974-native-owner-loss-hw6XAz/output/native.jsonl"
+    },
+    {
+      "scopeId": "e63116dd5b934d7be614cb0e016bffb43c22747c6adfb342180f500689e005b1",
+      "identity": {
+        "ownerId": "322069d0868e0b4ce64fa37053025a1dcaf87dd29b3945c02f87dac5ea4e14c2",
+        "operationId": "control:ev974-C34",
+        "planSha256": "811588031c386c3049e5c006bd6dbab97dd4e2964df49949008e1899d29f21d2",
+        "implementation": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+        "imageSha256": "d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "purpose": "native-control"
+      },
+      "ledger": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/native-controls-attempt5-tmp/ev974-native-unrelated-sentinel-5WKy0D/output/native.jsonl"
+    }
+  ],
+  "runs": [
+    {
+      "directory": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/native-controls-attempt5-tmp/ev974-native-completion-race-OcY5BU",
+      "events": [
+        "native-start",
+        "scope-create-start",
+        "scope-created",
+        "operation-start",
+        "scope-start",
+        "scope-stopped",
+        "operation-stopped",
+        "scope-remove-start",
+        "scope-removed",
+        "scope-create-start",
+        "scope-created",
+        "operation-start",
+        "scope-start",
+        "native-ready",
+        "scope-stop-request",
+        "scope-stopped",
+        "operation-stopped",
+        "scope-remove-start",
+        "scope-removed",
+        "native-race-outcome",
+        "native-finish"
+      ],
+      "failureDiagnostics": []
+    },
+    {
+      "directory": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/native-controls-attempt5-tmp/ev974-native-ev974-C32-NqYelO",
+      "events": [
+        "native-start",
+        "scope-create-start",
+        "scope-created",
+        "operation-start",
+        "scope-start",
+        "native-ready",
+        "scope-stop-request",
+        "scope-stopped",
+        "operation-stopped",
+        "scope-remove-start",
+        "scope-removed",
+        "native-finish"
+      ],
+      "failureDiagnostics": []
+    },
+    {
+      "directory": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/native-controls-attempt5-tmp/ev974-native-ev974-C33-UpkpDL",
+      "events": [
+        "native-start",
+        "scope-create-start",
+        "scope-created",
+        "operation-start",
+        "scope-start",
+        "native-ready",
+        "scope-stop-request",
+        "scope-stopped",
+        "operation-stopped",
+        "scope-remove-start",
+        "scope-removed",
+        "native-finish"
+      ],
+      "failureDiagnostics": []
+    },
+    {
+      "directory": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/native-controls-attempt5-tmp/ev974-native-owner-loss-hw6XAz",
+      "events": [
+        "native-start",
+        "scope-create-start",
+        "scope-created",
+        "operation-start",
+        "scope-start"
+      ],
+      "failureDiagnostics": []
+    },
+    {
+      "directory": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/native-controls-attempt5-tmp/ev974-native-unrelated-sentinel-5WKy0D",
+      "events": [
+        "native-start",
+        "scope-create-start",
+        "scope-created",
+        "operation-start",
+        "scope-start",
+        "scope-stop-request",
+        "scope-stopped",
+        "operation-stopped",
+        "scope-remove-start",
+        "scope-removed"
+      ],
+      "failureDiagnostics": []
+    }
+  ]
+}
