@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T17:34:04.161616+00:00",
+  "sourceParent": "dfc295cdc97485c479a827f54e49bbb306061731",
+  "sourceUnchanged": true,
+  "sourceSha256": "71b24a615260277b6371354e488133e6fdcbf8caa4d251e79286fe8c4e1bc7e9",
+  "newSemanticControls": {
+    "collector": 28,
+    "worker": 28
+  },
+  "selectedC31ControlsPassed": 58,
+  "logicalQualificationCaseFloor": 35,
+  "existingIdsOrThresholdsChanged": false,
+  "summary": {
+    "lines": {
+      "total": 232,
+      "covered": 230,
+      "skipped": 0,
+      "pct": 99.13
+    },
+    "functions": {
+      "total": 38,
+      "covered": 37,
+      "skipped": 0,
+      "pct": 97.36
+    },
+    "statements": {
+      "total": 291,
+      "covered": 288,
+      "skipped": 0,
+      "pct": 98.96
+    },
+    "branches": {
+      "total": 130,
+      "covered": 122,
+      "skipped": 0,
+      "pct": 93.84
+    }
+  },
+  "moduleGateSatisfied": true,
+  "globalChangedModuleGateSatisfied": false,
+  "fullShadowCommand": {
+    "command": "pnpm run test:bugbot-shadow-verification",
+    "exit": 0,
+    "passed": 298,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "durationMs": 325546.26475,
+    "log": "complete-shadow.log.txt",
+    "bytes": 35614,
+    "sha256": "d3f2152ae335bfa97f515f9a09d70c3b5bf982a8340e48302ba91d92bdcd3c66",
+    "localUnixListenerPermission": "actual local controlled sockets allowed; no Docker/provider/model run"
+  },
+  "testHelpers": {
+    "quality/bugbot/evidence/issue974/corpus-collector-components.cjs": "ddbf23d902bc7b283cee00932447f7b8681df574e9c424a9c991dc2a4d8f3690",
+    "quality/bugbot/evidence/issue974/corpus-worker-components.cjs": "3874d465fb616651324c20661fee17f705e0f0bd562ecabd33d108bb69b84e3e"
+  },
+  "actualCLIReadonlyAdmission": false,
+  "nativeFinalTupleControls": "pending",
+  "actual174": "unstarted",
+  "actual42": "unstarted",
+  "qualifiedProfile": null,
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "production": "disabled",
+  "boundary": "Exact-source AST instrumented only inside component tests. CLI, agent, provenance and containment dependencies are modeled; private filesystem operations are actual. Synthetic collections are not actual174/42 campaign results.",
+  "catalogGeneration": "PASS",
+  "specificationValidation": "PASS",
+  "graphify": "PASS",
+  "normalHooksAndFinalNativeHead": "still required"
+}

@@ -7,6 +7,8 @@ const os = require('node:os');
 const { createHash } = require('node:crypto');
 const { execFileSync, spawnSync } = require('node:child_process');
 const { test } = require('node:test');
+require('./corpus-collector-components.cjs');
+require('./corpus-worker-components.cjs');
 const root = path.resolve(__dirname, '../../../..');
 const ev07 = path.join(__dirname, '../issue-950/ev07-shadow');
 const sourceProof = require('../issue-950/execution-provenance.cjs');
