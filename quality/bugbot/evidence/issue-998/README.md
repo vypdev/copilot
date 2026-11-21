@@ -65,3 +65,13 @@ against its manifest. Exact commands and mapped controls are in
 and the [companion SDD](../../../../specs/setup-bugbot-publisher-manifest-route.md).
 The canonical operational state remains the
 [#950 index](https://github.com/vypdev/copilot/issues/950#issuecomment-7015916845).
+
+The canonical source5bd4553 passed native build/package parity and static checks,
+but its push progress assessment refused binary evidence under the former
+`quality/setup/evidence/issue-998` path. The packet now uses the existing
+`quality/bugbot/evidence/issue-998` generated-evidence namespace. All original
+gzip and decompressed bytes remain identical; no exclusion policy was changed.
+The two `.json.log.gz` files decompress to their original JSON test reports.
+See `evidence-transport-correction.json` and the retained native failure log.
+These archives are generated evidence metadata, not reviewed application source.
+Final-head native checks and review remain required.
