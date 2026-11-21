@@ -2615,7 +2615,11 @@
         "quality/bugbot/evidence/issue974/corpus-collector-components.cjs",
         "quality/bugbot/evidence/issue974/corpus-worker-components.cjs",
         "quality/bugbot/evidence/issue974/launcher-components.cjs",
-        "quality/bugbot/evidence/issue974/attempt-components.cjs"
+        "quality/bugbot/evidence/issue974/attempt-components.cjs",
+        "quality/bugbot/evidence/issue974/implementation-components.cjs",
+        "quality/bugbot/evidence/issue974/full-review-fault-components.cjs",
+        "quality/bugbot/evidence/issue974/full-review-lifecycle-components.cjs",
+        "quality/bugbot/evidence/issue-974/controls/implementation-full-review-coverage/coverage.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
