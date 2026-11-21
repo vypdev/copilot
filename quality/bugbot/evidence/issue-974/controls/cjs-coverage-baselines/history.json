@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "firstBaseline": "240PASS1FAIL; observer omitted the exact C26 property-export test suffix; not an accepted full command",
+  "observerCorrection": "allow only exact known test suffix after verifying original source bytes; focused smoke3PASS",
+  "currentAttempt2": "completed220PASS20FAIL:19 preregistered-source fixture refusals against the uncommitted ordinary-default source and one C27 ENOTEMPTY cleanup failure",
+  "independentReproduction": "one uninstrumented valid dispatch fixture reproduces the exact src/data/repository/agent_cli_execution.ts provenance refusal before provider work",
+  "executionOrderCorrection": "commit the reviewed source with normal hooks, then validate exact committed source; keep global95/90 gate false until all actual module metrics meet it",
+  "globalGateSatisfied": false,
+  "qualificationModelCalls": 0,
+  "production": "disabled",
+  "coverageGate": "UNMET: explicit per-module measured values remain below95/90; zero values denote unmeasured branches/processes, not proof that they never execute"
+}

@@ -28,7 +28,8 @@ function temporary(t) {
     return directory;
 }
 function gitAt(directory) {
-    return (...args) => execFileSync(sourceProof.trustedGitExecutable(), ['-C', directory, ...args], { encoding: 'utf8',
+    return (...args) => execFileSync(sourceProof.trustedGitExecutable(),
+        ['-c', 'maintenance.auto=false', '-c', 'gc.auto=0', '-C', directory, ...args], { encoding: 'utf8',
         env: { ...sourceProof.gitEnvironment(), GIT_AUTHOR_NAME: 'Fixture', GIT_AUTHOR_EMAIL: 'fixture@example.invalid',
             GIT_COMMITTER_NAME: 'Fixture', GIT_COMMITTER_EMAIL: 'fixture@example.invalid' } }).trim();
 }
@@ -212,6 +213,7 @@ test('ev974-C26 immutable public bootstrap rejects closed profile and CLI byte m
 });
 
 test('ev974-C27 closed containment refuses ambient grants, mutable images, arbitrary mounts/flags and unsafe namespace configuration', async t => {
+    await require('./engine-transport-components.cjs').exerciseEngineTransportFaults();
     const { requireProfile, fixedConfiguration, createOperationContainment, requireFixedMountConfiguration } = require('./operation-containment.cjs');
     const profile = containmentProfile(), directory = fs.realpathSync(temporary(t));
     const input = path.join(directory, 'input'), output = path.join(directory, 'output');

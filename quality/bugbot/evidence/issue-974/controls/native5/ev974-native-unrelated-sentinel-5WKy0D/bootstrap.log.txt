@@ -1,4 +1,0 @@
-Expected values to be strictly equal:
-
-143 !== 0
-

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "exactParentReconciliation": {
+    "startedAt": "2026-11-21T06:22:56.265787+00:00",
+    "finishedAt": "2026-11-21T06:29:24.467913+00:00",
+    "exitCode": 0,
+    "headAfter": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+    "expectedChild": "5e7faa0e57801d3884449b1aaae2833ffcc446d3",
+    "expectedParent": "a7c23ad169bca92ade652c893f268b5c9ef566ab",
+    "actualParents": [
+      "5e7faa0e57801d3884449b1aaae2833ffcc446d3",
+      "a7c23ad169bca92ade652c893f268b5c9ef566ab"
+    ],
+    "statusAfter": "",
+    "log": "/private/tmp/copilot-goal-974-exact-parent-recovery-commit.log",
+    "rawBytes": 535845,
+    "sha256": "1909095bb5904dee913d052e9492087e5a22a7727c254031c1c5e015098de61b",
+    "suiteSummaries": [
+      "Test Suites: 944 passed, 944 total"
+    ],
+    "assertionSummaries": [
+      "Tests:       35 skipped, 18744 passed, 18779 total"
+    ],
+    "normalHooks": true,
+    "pushed": false,
+    "qualificationModelCalls": 0,
+    "production": "disabled"
+  },
+  "normalPush": {
+    "startedAt": "2026-11-21T06:33:25.325658+00:00",
+    "finishedAt": "2026-11-21T06:33:30.840674+00:00",
+    "before": "5e7faa0e57801d3884449b1aaae2833ffcc446d3",
+    "head": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+    "remoteAfter": [
+      "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "refs/heads/chore/974-preregister-and-evaluate-the-luna-xhigh-detector-on-the-unchanged-174-case-ev-07-corpus"
+    ],
+    "exitCode": 0,
+    "normalPush": true,
+    "force": false,
+    "logSha256": "f4f100ba1fa09b41a38fdb02c185f199bd889868f5eaa18ffc6d0daa13169e51",
+    "modelCalls": 0,
+    "production": "disabled"
+  },
+  "full240": {
+    "schemaVersion": 1,
+    "startedAt": "2026-11-21T06:34:08.609028+00:00",
+    "finishedAt": "2026-11-21T06:40:00.492279+00:00",
+    "implementation": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+    "exitCode": 0,
+    "counts": {
+      "tests": 240,
+      "pass": 240,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "log": "/private/tmp/copilot-goal-974-post-reconciliation-240-attempt1.log",
+    "logBytes": 25771,
+    "logSha256": "178bf4e917a8b318f1682f8aba9f7f643e9b88d3a22c50a4ae35563787aec1e6",
+    "hostV8Coverage": null,
+    "allChangedModuleCoverageSatisfied": false,
+    "nativeSdkAcceptance": false,
+    "qualificationModelCalls": 0,
+    "174": "unstarted",
+    "42": "unstarted",
+    "production": "disabled"
+  },
+  "currentSourceNotYetValidated": "later archival/ordinary-default/component changes are local and have their own pending source verification",
+  "production": "disabled"
+}

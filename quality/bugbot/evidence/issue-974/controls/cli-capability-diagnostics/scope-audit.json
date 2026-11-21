@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "knownOwnedMetadataScopes": [
+    {
+      "case": "initial-readonly-home",
+      "observation": "initial-readonly-home.json",
+      "rawBytes": 17209,
+      "rawSha256": "378b451831be091d832aeac2f6ed93b33ad172801879fe69a0cd95e1b945e27e",
+      "created": {
+        "containerId": "d0223a5a88b703a524d6d64485ad3fe026d5b3ba7a686e0ce911315c8c3cb6d6",
+        "image": "sha256:d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "name": "copilot-qualification-capability-82f0c14-help1",
+        "modelCalls": 0
+      },
+      "stopped": {
+        "exit": 0,
+        "state": {
+          "Status": "exited",
+          "Running": false,
+          "Paused": false,
+          "Restarting": false,
+          "OOMKilled": false,
+          "Dead": false,
+          "Pid": 0,
+          "ExitCode": 0,
+          "Error": "",
+          "StartedAt": "2026-11-21T05:12:17.141099372Z",
+          "FinishedAt": "2026-11-21T05:12:18.351647797Z"
+        },
+        "image": "sha256:d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "labels": {
+          "dev.vyp.copilot.qualification.preparation": "82f0c14-help-only"
+        }
+      },
+      "originalPrivateStoppedRecord": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/cli-help-probe-stopped.json",
+      "originalStoppedRecordSha256": "61458c55f0bb97a536ff299f552de24f070f15597a7c572b445e9160fedac63c",
+      "freshRemovalObservation": {
+        "at": "2026-11-21T06:47:33.968129+00:00",
+        "exit": 1,
+        "stderr": "Error response from daemon: No such container: d0223a5a88b703a524d6d64485ad3fe026d5b3ba7a686e0ce911315c8c3cb6d6\n",
+        "removed": true
+      }
+    },
+    {
+      "case": "private-home-help",
+      "observation": "private-home-help.json",
+      "rawBytes": 35455,
+      "rawSha256": "98005b5353afdb29c18de2feb5b6386687cec003e6dd9f273c0181cd09106981",
+      "created": {
+        "containerId": "abab59ea36e6abb4100911180901af4ab74c51cc7222e56dbaa67f16910c2525",
+        "image": "sha256:d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "name": "copilot-qualification-capability-82f0c14-help2",
+        "modelCalls": 0
+      },
+      "stopped": {
+        "exit": 0,
+        "state": {
+          "Status": "exited",
+          "Running": false,
+          "Paused": false,
+          "Restarting": false,
+          "OOMKilled": false,
+          "Dead": false,
+          "Pid": 0,
+          "ExitCode": 0,
+          "Error": "",
+          "StartedAt": "2026-11-21T05:14:02.557145381Z",
+          "FinishedAt": "2026-11-21T05:14:03.596043503Z"
+        },
+        "image": "sha256:d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "labels": {
+          "dev.vyp.copilot.qualification.preparation": "82f0c14-help-private-home"
+        }
+      },
+      "originalPrivateStoppedRecord": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/cli-help-private-home2/cli-help-probe-stopped.json",
+      "originalStoppedRecordSha256": "68bf952104b59680aed5ffc25952bdb42303d426ac674e2dfc725ec9f3a25415",
+      "freshRemovalObservation": {
+        "at": "2026-11-21T06:47:33.998380+00:00",
+        "exit": 1,
+        "stderr": "Error response from daemon: No such container: abab59ea36e6abb4100911180901af4ab74c51cc7222e56dbaa67f16910c2525\n",
+        "removed": true
+      }
+    },
+    {
+      "case": "proper-sandbox-command",
+      "observation": "proper-sandbox-command.json",
+      "rawBytes": 3966,
+      "rawSha256": "93265a5dbc54f04f242959a1e403db2a2ae23ab1ed6f046e003d7c2a680d1e1b",
+      "created": {
+        "containerId": "e4cddd14e6547febd5d1437a33919fd28dba73058c6003a969b5a27b766daf63",
+        "image": "sha256:d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "name": "copilot-qualification-capability-82f0c14-sandbox3",
+        "modelCalls": 0
+      },
+      "stopped": {
+        "exit": 0,
+        "state": {
+          "Status": "exited",
+          "Running": false,
+          "Paused": false,
+          "Restarting": false,
+          "OOMKilled": false,
+          "Dead": false,
+          "Pid": 0,
+          "ExitCode": 0,
+          "Error": "",
+          "StartedAt": "2026-11-21T05:19:49.237622884Z",
+          "FinishedAt": "2026-11-21T05:19:51.453543621Z"
+        },
+        "image": "sha256:d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+        "labels": {
+          "dev.vyp.copilot.qualification.preparation": "82f0c14-sandbox-capability"
+        }
+      },
+      "originalPrivateStoppedRecord": "/private/tmp/copilot-goal-974-native-topology-82f0c14-xm5zs5x1/cli-sandbox-capability3/cli-help-probe-stopped.json",
+      "originalStoppedRecordSha256": "3f2e8f859a37a5d47c78228150b27d634db945aef9716f740f591e09612412f7",
+      "freshRemovalObservation": {
+        "at": "2026-11-21T06:47:34.031217+00:00",
+        "exit": 1,
+        "stderr": "Error response from daemon: No such container: e4cddd14e6547febd5d1437a33919fd28dba73058c6003a969b5a27b766daf63\n",
+        "removed": true
+      }
+    }
+  ],
+  "allThreeStoppedAndRemoved": true,
+  "qualificationModelCalls": 0,
+  "production": "disabled"
+}

@@ -1,21 +1,27 @@
 # EV-07 v2 detector qualification — issue #974
 
-## Latest evidence: native attempt5 and session transport
+## Historical compressed evidence remains losslessly archived
+
+The [archive index](../issue-974/controls/historical-gzip-archive.json) pins every formerly added gzip text log to its exact reachable Git revision/blob, compressed-byte SHA256 and decoded UTF-8 SHA256. The original complete bytes remain in immutable Git history and in the owned local rollback; no commit/history is rewritten. Current delivery uses this reviewable index rather than newly changed binary archives, which the progress reviewer correctly refuses. Historical receipts keep their original observed paths and hashes; resolve those paths through this index.
+
+Retrieve an entry with `git show <archiveRevision>:<path>` and verify its gzipSha256 before decoding. A summary does not replace the raw archive. No inherited/modified binary, product source, check, ignore rule, PR base or scientific criterion is changed by this archival step.
+
+## Latest evidence: native attempt5 and transport components
 
 All four actual SDK controls C32–C35 pass on source82f0c14, committed plans13e31eb and immutable image d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35. No partial results are pooled. The six owned scopes are all confirmed removed after their namespace-stop proofs. See [acceptance](../issue-974/controls/native5/acceptance.json) and retained raw text, ledgers and owner-loss/unrelated-scope proofs. All prior native negatives remain retained.
 
-The session transport now has an additional repository provider-fault group; all63 semantic/component groups pass and exact-source AST coverage is100%for134statements/109branches/22functions/103lines. See [coverage evidence](../issue-974/controls/session-transport-coverage/README.md). This closes this measured component gate only. The full Node command now registers240 controls and still needs an execution at the new committed revision.
+The session transport now has an additional repository provider-fault group; all63 semantic/component groups pass and exact-source AST coverage is100%for134statements/109branches/22functions/103lines. See [coverage evidence](../issue-974/controls/session-transport-coverage/README.md). This closes this measured component gate only. The full Node command registers240 controls: all240 pass without failure/skip/cancellation at both5e7faa0 and the exact-parent reconciliation b8782af. The new engine HTTP fault component is part of existing C27, preserving those240 logical groups; it uses an owned local Unix server with modeled bootstrap proof, not Docker/model execution. Its independent ported C27 run passes: statements98.82%, lines100%, branches93.08%, functions93.61%; see the [exact-source component evidence](../issue-974/controls/engine-transport-coverage/README.md).
 
-Qualification remains incomplete: other changed-module/global coverage, final native PR checks/findings, actual CLI sandbox/input-scope checks and full42 scientific/causal-explanation/profile-comparison admission remain unmet. All174/42 model campaigns are unstarted; no profile is qualified, pilot write attempts0 and production disabled. The progress check currently rejects changed gzip evidence as unsupported binary; this evidence-format blocker is separate from native SDK acceptance.
+Qualification remains incomplete: other changed-module/global coverage, final native PR checks/findings, actual CLI sandbox/input-scope checks and full42 scientific/causal-explanation/profile-comparison admission remain unmet. All174/42 model campaigns are unstarted; no profile is qualified, pilot write attempts0 and production disabled. The earlier progress check rejected newly changed gzip evidence as unsupported binary. The lossless historical archive index now retains all95 original gzip objects in reachable Git history. One sentinel bootstrap log also has a [lossless JSON representation](../issue-974/controls/text-evidence-representations.json), preserving its original content and blank line without weakening the Git whitespace check. Final native verification of this evidence delivery remains pending.
 
-Current preparation: implementation `64da6ec` is pushed and passes all 239 Node
+Historical preparation at `64da6ec` (superseded by the native attempt5 result above): implementation `64da6ec` is pushed and passes all 239 Node
 controls without failures, skips or cancellations, plus its normal SDK hooks.
 The corrected immutable SDK image and four new native-only plans are recorded
 in [the current tuple](../issue-974/native-controls/64da6ec/README.md).
 The first two native commands failed before namespace startup; the third starts
 four namespaces but fails SDK fixture preparation. A local fixture basename and
 private diagnostic correction is separately retained below; actual C32–C35
-acceptance remains 0/4. Changed-module coverage and the complete
+acceptance was 0/4 at that historical revision. Changed-module coverage and the complete
 scientific/comparison gates remain unmet. All174/42 model measurements are
 unstarted and production remains disabled.
 

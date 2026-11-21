@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "attempts": [
+    {
+      "attempt": 1,
+      "supersededPrototype": true,
+      "logBytes": 1511,
+      "logSha256": "fd43bbe8344627fdfc12d1cedb1023682bb013b5e045e99252f0bf0f49042d52"
+    },
+    {
+      "attempt": 2,
+      "supersededPrototype": true,
+      "logBytes": 501,
+      "logSha256": "fb192dde66ef6221c7d8744466ab6e53839b8a88e4ac8875b3d8f9a645f5b923"
+    },
+    {
+      "attempt": 3,
+      "supersededPrototype": true,
+      "logBytes": 1822,
+      "logSha256": "e7ff06ca4adc3337193dcc9e352c7346c3003ea7d81afc4dab93420d7ec797f3"
+    },
+    {
+      "attempt": 4,
+      "supersededPrototype": true,
+      "logBytes": 646,
+      "logSha256": "75c90692c81b556b9c275700a64f740472c99e1d2b3fd2d5eae0b042488dd365"
+    },
+    {
+      "attempt": 5,
+      "supersededPrototype": true,
+      "logBytes": 642,
+      "logSha256": "8fbdc8395a1ee78e9ffd1d0d5d20f22511106dc622015c353a5633e3572c7617",
+      "summary": {
+        "lines": {
+          "total": 262,
+          "covered": 262,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 47,
+          "covered": 44,
+          "skipped": 0,
+          "pct": 93.61
+        },
+        "statements": {
+          "total": 341,
+          "covered": 337,
+          "skipped": 0,
+          "pct": 98.82
+        },
+        "branches": {
+          "total": 159,
+          "covered": 148,
+          "skipped": 0,
+          "pct": 93.08
+        }
+      },
+      "sourceSha256": "6ca0073384a9eca948de6505310c66c8119f919cb362eeaf88bd4e0cf8c3d668",
+      "privateRawCoverage": "/private/tmp/copilot-goal-974-engine-transport-prototype-coverage-attempt5.json",
+      "rawCoverageSha256": "967349694c9aa8223902a99d5ab607cf42b2a91d2bbf29b49d2b64d315f6213d"
+    }
+  ],
+  "allPrivateRawEvidenceRetained": true,
+  "finalRepositoryPortHasIndependentMeasuredReceipt": true,
+  "globalCoverageClaimed": false,
+  "qualificationModelCalls": 0,
+  "production": "disabled"
+}
