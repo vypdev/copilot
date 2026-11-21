@@ -1,9 +1,9 @@
 # EV-07 v2 detector qualification — issue #974
 
-Current preparation: implementation `e4bade2` is pushed and passes all 239 Node
+Current preparation: implementation `64da6ec` is pushed and passes all 239 Node
 controls without failures, skips or cancellations, plus its normal SDK hooks.
 The corrected immutable SDK image and four new native-only plans are recorded
-in [the current tuple](../issue-974/native-controls/e4bade2/README.md).
+in [the current tuple](../issue-974/native-controls/64da6ec/README.md).
 The first two native commands failed before namespace startup; the third starts
 four namespaces but fails SDK fixture preparation. A local fixture basename and
 private diagnostic correction is separately retained below; actual C32–C35
