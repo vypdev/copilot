@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T19:39:07.951397+00:00",
+  "files": [
+    {
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/launcher-attempt-coverage/component-ast.log.gz",
+      "rawBytes": 6009,
+      "rawSha256": "b1f9f6c4311acd1c9ed914996b8408fa5549c9cdf2c4ffbfe9b400bfec562590",
+      "gzipBytes": 1859,
+      "gzipSha256": "c97627c18d2144cbeaf7ccc81276cdf69983c3b045dbc01a168bbecf80286bb5"
+    },
+    {
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/launcher-attempt-coverage/coverage-final.json.log.gz",
+      "rawBytes": 50173,
+      "rawSha256": "b91224ba58ef555e39d179c970e45e13b031f5f42502cfc99b99bfabe7a97537",
+      "gzipBytes": 7773,
+      "gzipSha256": "13d56915de97b6cc10903c6464e13f9669c5a71eeb67735947ff1332ab67a1d5"
+    },
+    {
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/launcher-attempt-coverage/initial-vm-fixture-negative.log.gz",
+      "rawBytes": 15066,
+      "rawSha256": "19b63098f5e692590c74459aa5df8d7ea49e7d23b1f3a479693461353a8f8669",
+      "gzipBytes": 1606,
+      "gzipSha256": "b26897f2cdac9b908b023d2a07e91c6a826cc748f8eca1da37b5cdcacca08031"
+    },
+    {
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/launcher-attempt-coverage/complete-shadow.log.gz",
+      "rawBytes": 40048,
+      "rawSha256": "80813f2356b1bba58cb1488221a1edffbd218bea59857c08cc10dc10045f773e",
+      "gzipBytes": 10495,
+      "gzipSha256": "302d58a633892f1f86b73d267e36271ec22736e928e8f60339f8a703eda31916"
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "production": "disabled"
+}

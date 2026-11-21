@@ -407,3 +407,6 @@ acceptance is inferred from this deterministic command.
 
 
 Generated bulk coverage and hook reports are retained losslessly using the existing .log.gz contract after native progress hit call-budget before its seven assessment batches. Original paths/hashes/Git blobs are mapped in `../issue-974/controls/generated-report-archive.json`. No runtime, selected SDD, limit or test changes. Parent fb1 native CI4/4 passes; fresh final progress remains required. Actual174/42 unstarted, profileNONE, pilotwrites0, productiondisabled.
+
+
+Launcher and attempt-ledger components add32+13 semantic controls without changing runtime/SDK/corpora/plan,35 logical IDs or the selected SDD. The55 selected controls pass; unchanged launcher measures99.15stmt/98.94line/95.91branch/100func and attempt-ledger100%all metrics. Full deterministic command343PASS,0failure/skip/cancellation. See `../issue-974/controls/launcher-attempt-coverage/README.md` and its exact-source/actual-run receipts. Historical and optional metadata exercise modeled admission seams, not current native admission. Global driver coverage, actual readonly CLI/readscope/final native tuple and174/42 remain pending; no profile qualified, pilotwrites0, productiondisabled.
