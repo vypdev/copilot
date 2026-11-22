@@ -1,0 +1,8 @@
+{
+  "comment": "https://github.com/vypdev/copilot/issues/950#issuecomment-7015916845",
+  "updatedAt": "2026-11-22T11:46:24Z",
+  "sha256": "740604e1bbde119711b625a1c091ecf361b1281e7d6898a95df54d47b63a65a5",
+  "utf8Bytes": 63254,
+  "scope": "complete exact live comment through continuation126, including original27issue traceability and all historical negative/status entries",
+  "futureLiveCompaction": "permitted only after this archive is publicly committed and verified; preserve direct immutable link"
+}

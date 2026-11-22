@@ -54,40 +54,79 @@ function probeCommands(runtime) {
       '--config', 'shell_environment_policy.include_only=["PATH"]'] : []), 'sandbox', '--'];
   const read = 'process.stdout.write(require("node:crypto").createHash("sha256").update(require("node:fs").readFileSync(process.argv[1])).digest("hex"))';
   const write = 'try{require("node:fs").writeFileSync(process.argv[1],"owned-write-canary");process.stdout.write("WROTE");process.exitCode=9}catch(e){if(["EACCES","EPERM","EROFS"].includes(e.code))process.stdout.write("DENIED");else process.exitCode=44}';
+  const witness = id => [runtime.node, '-e', 'process.stdout.write(process.argv[1])', id];
+  const transport = [runtime.node, '-e', 'process.stdout.write(process.argv[1]);process.stderr.write(process.argv[2]);process.exitCode=37',
+    'transport-out:' + runtime.fixtureSha256, 'transport-error:' + runtime.fixtureSha256];
+  const transportOutput = transport.at(-2), transportError = transport.at(-1);
   return [
-    ['unshare-user-network', '/usr/bin/unshare', ['--user', '--map-root-user', '--net', '/bin/true']],
-    ['bwrap-user-network', '/usr/bin/bwrap', ['--unshare-user', '--unshare-net', '--ro-bind', '/', '/', '--proc', '/proc', '--dev', '/dev', '/bin/true']],
-    ['bwrap-root-user-network', '/usr/bin/bwrap', ['--unshare-user', '--uid', '0', '--gid', '0', '--unshare-net', '--ro-bind', '/', '/', '--proc', '/proc', '--dev', '/dev', '/bin/true']],
+    ['unshare-user-network', '/usr/bin/unshare', ['--user', '--map-root-user', '--net', ...witness('unshare-user-network')], 'unshare-user-network'],
+    ['bwrap-user-network', '/usr/bin/bwrap', ['--unshare-user', '--unshare-net', '--ro-bind', '/', '/', '--proc', '/proc', '--dev', '/dev', ...witness('bwrap-user-network')], 'bwrap-user-network'],
+    ['bwrap-root-user-network', '/usr/bin/bwrap', ['--unshare-user', '--uid', '0', '--gid', '0', '--unshare-net', '--ro-bind', '/', '/', '--proc', '/proc', '--dev', '/dev', ...witness('bwrap-root-user-network')], 'bwrap-root-user-network'],
     ['codex-empty-start', runtime.codex, [...shellPolicy('none'), '/bin/true']],
     ['codex-path-start', runtime.codex, [...shellPolicy('core'), '/bin/true']],
+    ['node-execution-transport', runtime.node, transport.slice(1), transportOutput, transportError],
+    ['bwrap-execution-transport', '/usr/bin/bwrap', ['--unshare-user', '--uid', '0', '--gid', '0', '--unshare-net', '--ro-bind', '/', '/', '--proc', '/proc', '--dev', '/dev', ...transport], transportOutput, transportError],
+    ['codex-path-execution-transport', runtime.codex, [...shellPolicy('core'), ...transport], transportOutput, transportError],
     ['codex-fixture-read', runtime.codex, [...shellPolicy('core'), runtime.node, '-e', read, runtime.fixture], runtime.fixtureSha256],
     ['codex-write-denial', runtime.codex, [...shellPolicy('core'), runtime.node, '-e', write, runtime.writeTarget], 'DENIED'],
   ];
 }
 
 function initialReceipt(identity) {
-  return { schemaVersion: 1, kind: 'model-free-linux-sandbox-diagnostic', ...identity,
+  return { schemaVersion: 2, kind: 'model-free-linux-sandbox-diagnostic', ...identity,
     preparation: { state: 'unavailable' }, probes: [], qualificationModelCalls: 0, evaluatedPilotWrites: 0,
-    productionSettingChanged: false, qualifiedProfiles: [], actualSdkOrModelToolAcceptance: false };
+    productionSettingChanged: false, qualifiedProfiles: [], executionTransportVerified: false, actualSdkOrModelToolAcceptance: false };
+}
+
+async function observeProbe(ports, [id, executable, args, expected, expectedError]) {
+  const result = await ports.execute(executable, args);
+  const observation = policy.observation(id, result, expected, expectedError);
+  const canaryMismatch = id === 'codex-write-denial' && !await ports.writeAbsent();
+  return { ...observation, ...(canaryMismatch ? { state: 'fail', reason: 'unexpected-write' } : {}),
+    stdout: typeof result.stdout === 'string' ? ports.project(result.stdout) : null,
+    stderr: typeof result.stderr === 'string' ? ports.project(result.stderr) : null,
+    stdoutSha256: typeof result.stdout === 'string' ? hash(result.stdout) : null,
+    stderrSha256: typeof result.stderr === 'string' ? hash(result.stderr) : null, outputTruncated: result.truncated === true };
 }
 
 async function diagnose(ports) {
   const receipt = initialReceipt(ports.identity);
-  let runtime, cancelled = false;
+  let runtime, cancelled = false, executionVerified = false;
   try {
     const candidate = await ports.prepare();
     assert.equal(candidate.version, policy.CODEX_VERSION, 'exact diagnostic CLI version required');
     runtime = candidate;
     receipt.preparation = { state: 'observed', runtime: runtime.identity };
-    for (const [id, executable, args, expected] of probeCommands(runtime)) {
+    const commands = probeCommands(runtime);
+    for (let index = 0; index < commands.length; index++) {
+      const command = commands[index], [id] = command;
+      if (id === policy.TRANSPORT_IDS[0]) {
+        const controls = commands.slice(index, index + policy.TRANSPORT_IDS.length);
+        assert.deepEqual(controls.map(([controlId]) => controlId), policy.TRANSPORT_IDS);
+        // These three harmless payloads are independent; exactly one uses the
+        // private Codex HOME. Settle every sibling before cleanup, even when a
+        // command observation fails. No model work is scheduled here.
+        const settled = await Promise.allSettled(controls.map(control => ports.signal.aborted || cancelled
+          ? Promise.resolve(policy.notRun(control[0], 'cancelled')) : observeProbe(ports, control)));
+        const rows = settled.map((outcome, offset) => {
+          if (outcome.status === 'fulfilled') return outcome.value;
+          receipt.executionIncomplete = true;
+          return policy.notRun(controls[offset][0], ports.signal.aborted ? 'cancelled' : 'observation-unavailable');
+        });
+        receipt.probes.push(...rows);
+        if (rows.some(row => row.state === 'cancelled' || row.reason === 'cancelled')) cancelled = true;
+        executionVerified = rows.every(row => row.state === 'pass');
+        receipt.executionTransportVerified = executionVerified;
+        if (!executionVerified) receipt.executionIncomplete = true;
+        index += policy.TRANSPORT_IDS.length - 1;
+        continue;
+      }
       if (ports.signal.aborted || cancelled) { receipt.executionIncomplete = true; receipt.probes.push(policy.notRun(id, 'cancelled')); continue; }
-      const result = await ports.execute(executable, args);
-      const observation = policy.observation(id, result, expected);
+      if (['codex-fixture-read', 'codex-write-denial'].includes(id) && !executionVerified) {
+        receipt.executionIncomplete = true; receipt.probes.push(policy.notRun(id, 'execution-unverified')); continue;
+      }
+      const observation = await observeProbe(ports, command); receipt.probes.push(observation);
       if (observation.state === 'cancelled') { receipt.executionIncomplete = true; cancelled = true; }
-      const canaryMismatch = id === 'codex-write-denial' && !await ports.writeAbsent();
-      receipt.probes.push({ ...observation, ...(canaryMismatch ? { state: 'fail', reason: 'unexpected-write' } : {}),
-        stdout: ports.project(result.stdout), stderr: ports.project(result.stderr),
-        stdoutSha256: hash(result.stdout), stderrSha256: hash(result.stderr), outputTruncated: result.truncated === true });
     }
   } catch (error) {
     receipt.executionIncomplete = true;
@@ -165,6 +204,22 @@ function engineObservation(signal) {
   return pending.finally(async () => { request?.destroy(); response?.destroy(); await closed; if (responseClosed) await responseClosed; });
 }
 
+function observeSystemBwrap(file = '/usr/bin/bwrap') {
+  try {
+    const canonical = fs.realpathSync(file), before = fs.statSync(canonical);
+    assert(before.isFile() && before.size > 0 && before.size <= 2 * 1024 * 1024, 'bounded regular helper required');
+    const bytes = fs.readFileSync(canonical), after = fs.statSync(canonical);
+    assert(before.dev === after.dev && before.ino === after.ino && before.size === after.size
+      && before.mtimeMs === after.mtimeMs && before.ctimeMs === after.ctimeMs && bytes.length === after.size,
+    'helper identity changed while observing');
+    return { state: 'observed', canonicalPath: canonical, bytes: bytes.length, sha256: hash(bytes),
+      format: bytes.subarray(0, 4).equals(Buffer.from([0x7f, 0x45, 0x4c, 0x46])) ? 'ELF'
+        : bytes.subarray(0, 2).toString('ascii') === '#!' ? 'script' : 'other',
+      ownerUid: after.uid, ownerGid: after.gid, mode: after.mode & 0o7777,
+      payloadExecutionVerified: false };
+  } catch { return { state: 'unavailable', cause: 'identity-unavailable', payloadExecutionVerified: false }; }
+}
+
 function nativePorts(signal, dependencies = {}) {
   let privateRoot;
   try {
@@ -181,7 +236,8 @@ function nativePorts(signal, dependencies = {}) {
   return { signal,
     identity: { sourceCommit: /^[a-f0-9]{40}$/u.test(process.env.GITHUB_SHA || '') ? process.env.GITHUB_SHA : null,
       driverSha256: hash(fs.readFileSync(__filename)), policySha256: hash(fs.readFileSync(require.resolve('./lib/linux-sandbox-diagnostic-policy.cjs'))),
-      os: 'linux', architecture: process.arch, kernel: os.release(), effectiveUid: process.geteuid() },
+      os: 'linux', architecture: process.arch, kernel: os.release(), effectiveUid: process.geteuid(),
+      systemBwrap: observeSystemBwrap() },
     project: text => policy.outputProjection(text, privateRoot), execute: run,
     async prepare() {
       let boundary = 'official-download';
@@ -190,16 +246,28 @@ function nativePorts(signal, dependencies = {}) {
       boundary = 'archive-inventory';
       const list = await run('/usr/bin/tar', ['-tzf', target]);
       assert.equal(list.exitCode, 0); assert(!list.truncated && !list.error && !list.signal);
-      const members = list.stdout.trim().split('\n');
-      assert.deepEqual(members, [`codex-${archive.target}`], 'unexpected official archive inventory');
+      assert.equal(hash(list.stdout), archive.inventorySha256, 'unexpected official package inventory');
       boundary = 'extraction';
-      const extracted = await run('/usr/bin/tar', ['-xzf', target, '-C', privateRoot]);
+      const runtimeRoot = path.join(privateRoot, 'runtime'); fs.mkdirSync(runtimeRoot, { mode: 0o700 });
+      const packageRoot = fs.realpathSync(runtimeRoot);
+      const extracted = await run('/usr/bin/tar', ['-xzf', target, '-C', packageRoot]);
       assert.equal(extracted.exitCode, 0); assert(!extracted.error && !extracted.signal);
       boundary = 'executable-identity';
-      const codex = path.join(privateRoot, members[0]); const stat = fs.lstatSync(codex);
-      assert(stat.isFile() && !stat.isSymbolicLink() && stat.uid === process.getuid());
-      fs.chmodSync(codex, 0o700);
-      const executableSha256 = hash(fs.readFileSync(codex)), nodeSha256 = hash(fs.readFileSync(process.execPath));
+      const packageExecutables = ['bin/codex', 'bin/codex-code-mode-host', 'bin/codex-exec-server', 'codex-path/rg', 'codex-resources/bwrap'].map(member => {
+        const file = path.join(packageRoot, member), stat = fs.lstatSync(file);
+        assert(stat.isFile() && !stat.isSymbolicLink() && stat.uid === process.getuid() && stat.size > 0);
+        assert.equal(fs.realpathSync(file), file, 'package member must not traverse symlinks');
+        fs.chmodSync(file, 0o700);
+        return { path: member, bytes: stat.size, sha256: hash(fs.readFileSync(file)) };
+      });
+      boundary = 'package-metadata';
+      const metadataFile = path.join(packageRoot, 'codex-package.json'), metadataStat = fs.lstatSync(metadataFile);
+      assert(metadataStat.isFile() && !metadataStat.isSymbolicLink() && metadataStat.uid === process.getuid()
+        && metadataStat.size > 0 && metadataStat.size <= 4096);
+      assert.equal(fs.realpathSync(metadataFile), metadataFile);
+      assert.deepEqual(JSON.parse(fs.readFileSync(metadataFile, 'utf8')), archive.manifest, 'unexpected official package metadata');
+      const codex = path.join(packageRoot, 'bin/codex');
+      const executableSha256 = packageExecutables[0].sha256, nodeSha256 = hash(fs.readFileSync(process.execPath));
       boundary = 'version';
       const version = await run(codex, ['--version']);
       assert.equal(version.exitCode, 0); assert(!version.error && !version.signal && !version.truncated);
@@ -209,6 +277,7 @@ function nativePorts(signal, dependencies = {}) {
       const fixtureSha256 = hash(fs.readFileSync(fixture));
       return { version: policy.CODEX_VERSION, codex, node: process.execPath, fixture, writeTarget, fixtureSha256,
         identity: { version: policy.CODEX_VERSION, executableSha256, distributionSha256: archive.sha256,
+          archiveInventorySha256: archive.inventorySha256, packageLayoutVersion: archive.manifest.layoutVersion, packageExecutables,
           nodeVersion: process.versions.node, nodeSha256, fixtureSha256 } };
       } catch (error) { error.diagnosticBoundary = boundary; throw error; }
     },
@@ -255,5 +324,5 @@ async function main(dependencies = {}) {
   } finally { process.removeListener('SIGTERM', abort); process.removeListener('SIGINT', abort); }
 }
 
-module.exports = { execute, probeCommands, diagnose, downloadArchive, engineObservation, nativePorts, main };
+module.exports = { execute, probeCommands, diagnose, downloadArchive, engineObservation, observeSystemBwrap, nativePorts, main };
 if (require.main === module) void main().catch(() => { console.error('Linux diagnostic preparation unavailable; no qualification result.'); process.exitCode = 1; });

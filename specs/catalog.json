@@ -2926,7 +2926,7 @@
       "id": "agent-runtime",
       "title": "Agent runtime, provider, model, and role routing",
       "status": "implemented",
-      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance Standalone Linux diagnostics pin their private CLI distribution and preserve each model-free probe exit independently from qualification, retaining incomplete cancellation and adapter-initialization cleanup, using the pinned native command grammar and a prepared private CLI home.",
+      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance. Standalone Linux diagnostics pin their private CLI distribution, retain each model-free outcome and cleanup, and require three explicit payload/stdio/exit transport witnesses before admitting owned read/write observations; file identity alone never proves execution.",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-22",
       "specs": [

@@ -3,19 +3,23 @@ const assert = require('node:assert/strict');
 
 const CODEX_VERSION = '0.171.0';
 const ARCHIVES = Object.freeze({
-  x64: Object.freeze({ target: 'x86_64-unknown-linux-musl', bytes: 122664925,
-    sha256: '01baa2e47809f8597be5b2f8abd4e4dfe3fb5bcb6e504c2fbaaad97056c15e8d' }),
-  arm64: Object.freeze({ target: 'aarch64-unknown-linux-musl', bytes: 124436451,
-    sha256: 'bcf50b836385e51bd2976ab2bbe92b1b08a1cbe37712eb8dbe378aa78d24871c' }),
+  x64: Object.freeze({ target: 'x86_64-unknown-linux-musl', bytes: 197763180,
+    sha256: '8391d67757496bfd14893eca6cbf0c96994bf2627566ff1f018f70600c9ef6b3' }),
+  arm64: Object.freeze({ target: 'aarch64-unknown-linux-musl', bytes: 199315347,
+    sha256: 'd8c43bee6cf11b01eb18b95f4d7961092bc40228180808859e70dabb7784c1c9' }),
 });
+const TRANSPORT_IDS = Object.freeze(['node-execution-transport', 'bwrap-execution-transport', 'codex-path-execution-transport']);
 const PROBE_IDS = Object.freeze(['unshare-user-network', 'bwrap-user-network', 'bwrap-root-user-network',
-  'codex-empty-start', 'codex-path-start', 'codex-fixture-read', 'codex-write-denial']);
+  'codex-empty-start', 'codex-path-start', ...TRANSPORT_IDS, 'codex-fixture-read', 'codex-write-denial']);
 
 function archiveFor(architecture) {
   assert(Object.hasOwn(ARCHIVES, architecture), 'unsupported diagnostic architecture');
   const archive = ARCHIVES[architecture];
   return Object.freeze({ ...archive, version: CODEX_VERSION,
-    url: `https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-${archive.target}.tar.gz` });
+    inventorySha256: '99caccd38a47e1dd9df829646c99b4efc24e0e751dea0a2781f98698b7045e9e',
+    manifest: Object.freeze({ layoutVersion: 1, version: CODEX_VERSION, target: archive.target, variant: 'codex',
+      entrypoint: 'bin/codex', execServer: 'bin/codex-exec-server', resourcesDir: 'codex-resources', pathDir: 'codex-path' }),
+    url: `https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-package-${archive.target}.tar.gz` });
 }
 
 function outputProjection(text, privateRoot) {
@@ -26,35 +30,47 @@ function outputProjection(text, privateRoot) {
     .replace(/\/(?:home|Users)\/[^/\s"'<>]+/gu, '/<account>');
 }
 
-function observation(id, result, expectedOutput) {
+function observation(id, result, expectedOutput, expectedError) {
   assert(PROBE_IDS.includes(id), 'unknown diagnostic probe');
+  const transport = TRANSPORT_IDS.includes(id), expectedExitCode = transport ? 37 : 0;
   const exitCode = Number.isInteger(result.exitCode) && result.exitCode >= 0 ? result.exitCode : null;
   const signal = typeof result.signal === 'string' && /^SIG[A-Z0-9]{1,20}$/u.test(result.signal) ? result.signal : null;
+  const completeOutput = typeof result.stdout === 'string' && typeof result.stderr === 'string';
+  const proofSpecified = !transport || typeof expectedOutput === 'string' && expectedOutput.length > 0
+    && typeof expectedError === 'string' && expectedError.length > 0;
+  const outputMatches = completeOutput && proofSpecified
+    && (expectedOutput === undefined || result.stdout.trim() === expectedOutput)
+    && (expectedError === undefined || result.stderr.trim() === expectedError);
   const reason = result.cancelled ? 'cancelled' : result.timedOut ? 'technical-timeout'
     : result.error === 'ENOENT' ? 'missing-tool' : result.error ? 'launch-unavailable'
-      : result.truncated ? 'output-incomplete' : exitCode === 0 && !signal && result.signal == null
-        ? expectedOutput === undefined || result.stdout.trim() === expectedOutput ? 'verified' : 'assertion-mismatch'
+      : result.truncated ? 'output-incomplete' : exitCode === expectedExitCode && !signal && result.signal === null
+        ? outputMatches ? 'verified' : 'assertion-mismatch'
         : 'command-failed';
   return Object.freeze({ id, state: reason === 'verified' ? 'pass' : reason === 'missing-tool' || reason === 'launch-unavailable'
-    ? 'unavailable' : reason === 'cancelled' ? 'cancelled' : 'fail', exitCode, signal, reason });
+    ? 'unavailable' : reason === 'cancelled' ? 'cancelled' : 'fail', expectedExitCode,
+    kind: transport ? 'execution-transport' : 'prerequisite', exitCode, signal, reason });
 }
 
 function notRun(id, reason) {
   assert(PROBE_IDS.includes(id));
-  assert(['preparation-failed', 'observation-unavailable', 'cancelled'].includes(reason));
-  return Object.freeze({ id, state: 'not-run', exitCode: null, signal: null, reason });
+  assert(['preparation-failed', 'observation-unavailable', 'cancelled', 'execution-unverified'].includes(reason));
+  const transport = TRANSPORT_IDS.includes(id);
+  return Object.freeze({ id, state: 'not-run', expectedExitCode: transport ? 37 : 0,
+    kind: transport ? 'execution-transport' : 'prerequisite', exitCode: null, signal: null, reason });
 }
 
 function renderSummary(receipt) {
   const lines = ['# Linux sandbox diagnostic', '',
     `Runtime preparation: **${receipt.preparation.state}**. Codex target: **${CODEX_VERSION}**.`, '',
     `Collection: **${receipt.executionIncomplete ? 'incomplete' : 'complete'}**. Cleanup: **${receipt.cleanup ?? 'unavailable'}**.`, '',
-    '| Probe | Observation | Exit | Signal |', '|---|---|---:|---|'];
-  for (const row of receipt.probes) lines.push(`| ${row.id} | ${row.state} (${row.reason}) | ${row.exitCode ?? 'unknown'} | ${row.signal ?? 'none'} |`);
+    '| Probe | Observation | Expected exit | Actual exit | Signal |', '|---|---|---:|---:|---|'];
+  for (const row of receipt.probes) lines.push(`| ${row.id} | ${row.state} (${row.reason}) | ${row.expectedExitCode} | ${row.exitCode ?? 'unknown'} | ${row.signal ?? 'none'} |`);
+  lines.push('', 'Only the three execution-transport controls expect exit37, with exact stdout and stderr markers. Other probes require exit0.',
+    'Owned read/write probes require all three transport controls to verify. Silent exit0 is not execution proof.');
   lines.push('', 'Next: inspect failed or unavailable prerequisites before any qualification attempt.',
     'These are model-free command observations. SDK/model tools, credential/oracle denial and qualification remain unverified.',
     'Production settings were not changed. Qualification model calls: 0. Evaluated-pilot writes: 0.');
   return lines.join('\n') + '\n';
 }
 
-module.exports = { CODEX_VERSION, PROBE_IDS, archiveFor, outputProjection, observation, notRun, renderSummary };
+module.exports = { CODEX_VERSION, PROBE_IDS, TRANSPORT_IDS, archiveFor, outputProjection, observation, notRun, renderSummary };

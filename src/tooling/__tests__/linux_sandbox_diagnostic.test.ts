@@ -22,8 +22,10 @@ function modeledPorts(): Ports {
     prepare: jest.fn(async () => ({ version: '0.171.0', identity: { executableSha256: 'b'.repeat(64) },
       codex: '/private/owned/codex', node: '/private/owned/node', fixture: '/private/owned/fixture',
       writeTarget: '/private/owned/write', fixtureSha256: 'c'.repeat(64) })),
-    execute: jest.fn(async (executable: string, args: string[]) => success(args.includes('-e')
-      ? args.some(value => value.includes('owned-write-canary')) ? 'DENIED' : 'c'.repeat(64) : '')),
+    execute: jest.fn(async (executable: string, args: string[]) => args.includes('process.stdout.write(process.argv[1])')
+      ? success(args.at(-1)) : args.some(value => value.includes('process.exitCode=37'))
+        ? { ...success(args.at(-2)), stderr: args.at(-1), exitCode: 37 }
+        : success(args.includes('-e') ? args.some(value => value.includes('owned-write-canary')) ? 'DENIED' : 'c'.repeat(64) : '')),
     writeAbsent: jest.fn(async () => true), project: (value: string) => policy.outputProjection(value, '/private/owned'),
     engine: jest.fn(async () => ({ state: 'unavailable', cause: 'local-engine-unavailable' })),
     release: jest.fn(async () => undefined) };
@@ -43,18 +45,41 @@ describe('Linux sandbox diagnostic outcome policy', () => {
     ['cancellation with zero', { ...success(), cancelled: true }, undefined, 'cancelled', 'cancelled'],
     ['timeout with zero', { ...success(), timedOut: true }, undefined, 'fail', 'technical-timeout'],
     ['truncated success', { ...success(), truncated: true }, undefined, 'fail', 'output-incomplete'],
+    ['absent stdout', { ...success(), stdout: undefined }, undefined, 'fail', 'assertion-mismatch'],
+    ['absent stderr', { ...success(), stderr: undefined }, undefined, 'fail', 'assertion-mismatch'],
+    ['absent signal', { ...success(), signal: undefined }, undefined, 'fail', 'command-failed'],
   ])('%s retains its distinct real state', (name, result, expected, state, reason) => {
     expect(policy.observation('codex-path-start', result, expected)).toMatchObject({ state, reason });
   });
 
   it('fixes the exact official release identities and rejects unknown architecture/probe/input', () => {
-    expect(policy.archiveFor('x64')).toMatchObject({ version: '0.171.0', bytes: 122664925,
-      sha256: '01baa2e47809f8597be5b2f8abd4e4dfe3fb5bcb6e504c2fbaaad97056c15e8d' });
-    expect(policy.archiveFor('arm64').sha256).toBe('bcf50b836385e51bd2976ab2bbe92b1b08a1cbe37712eb8dbe378aa78d24871c');
+    expect(policy.PROBE_IDS).toEqual(['unshare-user-network', 'bwrap-user-network', 'bwrap-root-user-network',
+      'codex-empty-start', 'codex-path-start', 'node-execution-transport', 'bwrap-execution-transport',
+      'codex-path-execution-transport', 'codex-fixture-read', 'codex-write-denial']);
+    expect(policy.archiveFor('x64')).toMatchObject({ version: '0.171.0', bytes: 197763180,
+      sha256: '8391d67757496bfd14893eca6cbf0c96994bf2627566ff1f018f70600c9ef6b3' });
+    expect(policy.archiveFor('arm64').sha256).toBe('d8c43bee6cf11b01eb18b95f4d7961092bc40228180808859e70dabb7784c1c9');
     expect(() => policy.archiveFor('constructor')).toThrow();
     expect(() => policy.observation('claimed-pass', success())).toThrow();
     expect(() => policy.notRun('codex-path-start', 'already-qualified')).toThrow();
     expect(() => policy.outputProjection('text', '')).toThrow();
+  });
+
+  it.each([
+    ['exact controlled failure', { ...success('out'), stderr: 'err', exitCode: 37 }, 'out', 'err', 'pass'],
+    ['silent zero', success(), 'out', 'err', 'fail'],
+    ['missing stdout witness', { ...success(), stderr: 'err', exitCode: 37 }, 'out', 'err', 'fail'],
+    ['missing stderr witness', { ...success('out'), exitCode: 37 }, 'out', 'err', 'fail'],
+    ['no stdout expectation', { ...success('out'), stderr: 'err', exitCode: 37 }, undefined, 'err', 'fail'],
+    ['empty stdout expectation', { ...success('out'), stderr: 'err', exitCode: 37 }, '', 'err', 'fail'],
+    ['no stderr expectation', { ...success('out'), stderr: 'err', exitCode: 37 }, 'out', undefined, 'fail'],
+    ['empty stderr expectation', { ...success('out'), stderr: 'err', exitCode: 37 }, 'out', '', 'fail'],
+    ['wrong stdout type', { ...success(), stdout: 37, stderr: 'err', exitCode: 37 }, 'out', 'err', 'fail'],
+    ['signal despite expected code', { ...success('out'), stderr: 'err', exitCode: 37, signal: 'SIGTERM' }, 'out', 'err', 'fail'],
+  ])('requires complete execution transport proof: %s', (name, result, out, err, state) => {
+    for (const id of policy.TRANSPORT_IDS) expect(policy.observation(id, result, out, err)).toMatchObject({ state, expectedExitCode: 37, kind: 'execution-transport' });
+    expect(policy.observation('codex-fixture-read', { ...success('out'), stderr: 'err', exitCode: 37 }, 'out', 'err'))
+      .toMatchObject({ state: 'fail', expectedExitCode: 0 });
   });
 
   it('projects account/private paths and keeps diagnostic facts distinct from qualification', () => {
@@ -67,16 +92,28 @@ describe('Linux sandbox diagnostic outcome policy', () => {
     expect(summary).toContain('| SIGTERM |');
     expect(summary).toContain('credential/oracle denial and qualification remain unverified');
     expect(summary).toContain('Production settings were not changed');
+    expect(policy.renderSummary({ preparation: { state: 'observed' }, probes: [policy.notRun('node-execution-transport', 'cancelled')] }))
+      .toContain('| node-execution-transport | not-run (cancelled) | 37 | unknown | none |');
     expect(policy.renderSummary({ preparation: { state: 'observed' }, probes: [], executionIncomplete: true, cleanup: 'completed' }))
       .toContain('Collection: **incomplete**. Cleanup: **completed**.');
   });
 });
 
+const PACKAGE_LISTING = "bin/\nbin/codex\nbin/codex-code-mode-host\nbin/codex-exec-server\ncodex-package.json\ncodex-path/\ncodex-path/rg\ncodex-resources/\ncodex-resources/bwrap\ncodex-resources/voice/\ncodex-resources/voice/NOTICE.md\ncodex-resources/voice/bin/\ncodex-resources/voice/bin/codex-voice-host\ncodex-resources/voice/lib/\ncodex-resources/voice/lib/gstreamer-1.0/\ncodex-resources/voice/lib/gstreamer-1.0/libgstapp.so\ncodex-resources/voice/lib/gstreamer-1.0/libgstaudioconvert.so\ncodex-resources/voice/lib/gstreamer-1.0/libgstaudioresample.so\ncodex-resources/voice/lib/gstreamer-1.0/libgstcoreelements.so\ncodex-resources/voice/lib/gstreamer-1.0/libgstopus.so\ncodex-resources/voice/lib/gstreamer-1.0/libgstrtp.so\ncodex-resources/voice/lib/gstreamer-1.0/libgstrtpmanager.so\ncodex-resources/voice/lib/libffi.so.8\ncodex-resources/voice/lib/libgio-2.0.so.0\ncodex-resources/voice/lib/libglib-2.0.so.0\ncodex-resources/voice/lib/libgmodule-2.0.so.0\ncodex-resources/voice/lib/libgobject-2.0.so.0\ncodex-resources/voice/lib/libgstallocators-1.0.so.0\ncodex-resources/voice/lib/libgstapp-1.0.so.0\ncodex-resources/voice/lib/libgstaudio-1.0.so.0\ncodex-resources/voice/lib/libgstbase-1.0.so.0\ncodex-resources/voice/lib/libgstnet-1.0.so.0\ncodex-resources/voice/lib/libgstpbutils-1.0.so.0\ncodex-resources/voice/lib/libgstreamer-1.0.so.0\ncodex-resources/voice/lib/libgstrtp-1.0.so.0\ncodex-resources/voice/lib/libgsttag-1.0.so.0\ncodex-resources/voice/lib/libgstvideo-1.0.so.0\ncodex-resources/voice/lib/libintl.so.8\ncodex-resources/voice/lib/libopus.so.0\ncodex-resources/voice/lib/libpcre2-8.so.0\ncodex-resources/voice/lib/libz.so.1\ncodex-resources/voice/licenses/\ncodex-resources/voice/licenses/LGPL-2.1.txt\ncodex-resources/voice/licenses/Opus.txt\ncodex-resources/voice/licenses/PCRE2.md\ncodex-resources/voice/licenses/libffi.txt\ncodex-resources/voice/licenses/proxy-libintl.txt\ncodex-resources/voice/licenses/sljit.txt\ncodex-resources/voice/licenses/zlib.txt\ncodex-resources/voice/manifest.json\ncodex-resources/voice/runtime.json\ncodex-resources/voice/sources.json\n";
+const PACKAGE_MANIFEST = { layoutVersion: 1, version: '0.171.0', target: 'x86_64-unknown-linux-musl',
+  variant: 'codex', entrypoint: 'bin/codex', execServer: 'bin/codex-exec-server', resourcesDir: 'codex-resources', pathDir: 'codex-path' };
+
 describe('fixed diagnostic orchestration', () => {
+  it.each(['unshare-user-network', 'bwrap-user-network', 'bwrap-root-user-network'])('does not certify namespace payload execution from silent zero: %s', async id => {
+    const ports = modeledPorts(); ports.execute.mockResolvedValue(success());
+    const receipt = await diagnostic.diagnose(ports);
+    expect(receipt.probes.find((row: any) => row.id === id)).toMatchObject({ state: 'fail', reason: 'assertion-mismatch', exitCode: 0 });
+  });
+
   it('uses the pinned CLI root configuration grammar before the host sandbox command', async () => {
     const ports = modeledPorts(), runtime = await ports.prepare();
     const rows = diagnostic.probeCommands(runtime).filter((row: any[]) => row[1] === runtime.codex);
-    expect(rows).toHaveLength(4);
+    expect(rows).toHaveLength(5);
     for (const [, , args] of rows) {
       const boundary = args.indexOf('sandbox'); expect(boundary).toBeGreaterThan(0);
       expect(args.slice(boundary, boundary + 2)).toEqual(['sandbox', '--']);
@@ -92,30 +129,35 @@ describe('fixed diagnostic orchestration', () => {
     }
   });
 
-  it('retains all seven commands and actual read/denial checks without inheriting command inputs', async () => {
+  it('retains ten fixed observations and actual read/denial checks without inheriting command inputs', async () => {
     const ports = modeledPorts(); const receipt = await diagnostic.diagnose(ports);
     expect(receipt.probes.map((row: any) => row.id)).toEqual(policy.PROBE_IDS);
     expect(receipt.probes.every((row: any) => row.state === 'pass')).toBe(true);
-    expect(ports.execute).toHaveBeenCalledTimes(7); expect(ports.release).toHaveBeenCalledTimes(1);
+    expect(ports.execute).toHaveBeenCalledTimes(10); expect(ports.release).toHaveBeenCalledTimes(1);
     const calls = ports.execute.mock.calls;
     expect(calls[3][1]).toEqual(expect.arrayContaining(['shell_environment_policy.inherit="none"']));
     expect(calls[4][1]).toEqual(expect.arrayContaining(['shell_environment_policy.include_only=["PATH"]']));
     expect(calls.flat(3)).not.toContain('exec');
-    expect(receipt).toMatchObject({ qualificationModelCalls: 0, evaluatedPilotWrites: 0, actualSdkOrModelToolAcceptance: false });
+    const node = '/private/owned/node', direct = [node, ...calls[5][1]];
+    expect(calls[6][1].slice(calls[6][1].indexOf(node))).toEqual(direct);
+    expect(calls[7][1].slice(calls[7][1].indexOf('--') + 1)).toEqual(direct);
+    expect(receipt).toMatchObject({ schemaVersion: 2, executionTransportVerified: true,
+      qualificationModelCalls: 0, evaluatedPilotWrites: 0, actualSdkOrModelToolAcceptance: false });
   });
 
   it('keeps a startup failure negative even when a write-denial result was expected', async () => {
     const ports = modeledPorts(); ports.execute.mockResolvedValue({ ...success(), exitCode: 37, stderr: 'EPERM' });
     const receipt = await diagnostic.diagnose(ports);
-    expect(receipt.probes).toHaveLength(7);
-    expect(receipt.probes.every((row: any) => row.state === 'fail' && row.exitCode === 37)).toBe(true);
-    expect(ports.writeAbsent).toHaveBeenCalledTimes(1);
+    expect(receipt.probes).toHaveLength(10);
+    expect(receipt.probes.slice(0, 8).every((row: any) => row.state === 'fail' && row.exitCode === 37)).toBe(true);
+    expect(receipt.probes.slice(8).every((row: any) => row.state === 'not-run' && row.reason === 'execution-unverified')).toBe(true);
+    expect(ports.writeAbsent).not.toHaveBeenCalled(); expect(receipt.executionIncomplete).toBe(true);
   });
 
   it('requires independent post-command absence rather than a denial string alone', async () => {
     const ports = modeledPorts(); ports.writeAbsent.mockResolvedValue(false);
     const receipt = await diagnostic.diagnose(ports);
-    expect(receipt.probes[6]).toMatchObject({ state: 'fail', reason: 'unexpected-write', exitCode: 0 });
+    expect(receipt.probes.find((row: any) => row.id === 'codex-write-denial')).toMatchObject({ state: 'fail', reason: 'unexpected-write', exitCode: 0 });
   });
 
   it.each(['missing', 'version', 'download', 'cancelled'])('retains preparation %s and cleans owned resources', async failure => {
@@ -133,7 +175,7 @@ describe('fixed diagnostic orchestration', () => {
   });
 
   it('settles partial execution, observer failure and cleanup uncertainty separately', async () => {
-    const ports = modeledPorts(); ports.execute.mockImplementationOnce(async () => success()).mockRejectedValue(new Error('observer unavailable'));
+    const ports = modeledPorts(); ports.execute.mockImplementationOnce(async () => success('unshare-user-network')).mockRejectedValue(new Error('observer unavailable'));
     ports.engine.mockRejectedValue(new Error('engine observation failed')); ports.release.mockRejectedValue(new Error('cleanup failed'));
     const receipt = await diagnostic.diagnose(ports);
     expect(receipt.preparation.state).toBe('observed'); expect(receipt.executionIncomplete).toBe(true);
@@ -148,7 +190,7 @@ describe('fixed diagnostic orchestration', () => {
     expect(receipt.probes.slice(1).every((row: any) => row.reason === 'cancelled')).toBe(true);
   });
 
-  it.each(['engine', 'release'])('keeps late cancellation during %s incomplete after all seven observations', async boundary => {
+  it.each(['engine', 'release'])('keeps late cancellation during %s incomplete after all ten observations', async boundary => {
     const ports = modeledPorts(); ports[boundary].mockImplementation(async () => { ports.controller.abort(); return { state: 'unavailable', cause: 'cancelled' }; });
     const receipt = await diagnostic.diagnose(ports);
     expect(receipt.probes.every((row: any) => row.state === 'pass')).toBe(true);
@@ -162,9 +204,84 @@ describe('fixed diagnostic orchestration', () => {
     expect(ports.signal.aborted).toBe(false);
     expect(ports.execute).toHaveBeenCalledTimes(1);
   });
+
+  it.each(['silent', 'missing-output', 'missing-error', 'signal'])('skips read/write when Codex transport is %s despite an observed wrapper exit', async fault => {
+    const ports = modeledPorts(), execute = ports.execute.getMockImplementation()!;
+    ports.execute.mockImplementation(async (file: string, args: string[]) => {
+      if (file === '/private/owned/codex' && args.some(value => value.includes('process.exitCode=37'))) {
+        if (fault === 'silent') return success();
+        if (fault === 'missing-output') return { ...success(), stdout: undefined, exitCode: 37 };
+        if (fault === 'missing-error') return { ...success('transport-out:' + 'c'.repeat(64)), stderr: undefined, exitCode: 37 };
+        return { ...success(), signal: 'SIGTERM', exitCode: 37 };
+      }
+      return execute(file, args);
+    });
+    const receipt = await diagnostic.diagnose(ports);
+    expect(receipt).toMatchObject({ executionTransportVerified: false, executionIncomplete: true });
+    expect(receipt.probes.slice(-2).map((row: any) => [row.id, row.state, row.reason])).toEqual([
+      ['codex-fixture-read', 'not-run', 'execution-unverified'], ['codex-write-denial', 'not-run', 'execution-unverified'],
+    ]);
+    expect(ports.execute).toHaveBeenCalledTimes(8); expect(ports.writeAbsent).not.toHaveBeenCalled();
+    if (fault === 'missing-output') expect(receipt.probes[7]).toMatchObject({ stdout: null, stdoutSha256: null });
+    if (fault === 'missing-error') expect(receipt.probes[7]).toMatchObject({ stderr: null, stderrSha256: null });
+  });
+
+  it('waits for every admitted transport sibling after one observation rejects', async () => {
+    const ports = modeledPorts(), execute = ports.execute.getMockImplementation()!;
+    const controls: Array<{ resolve: (value: Outcome) => void; reject: (error: Error) => void }> = [];
+    ports.execute.mockImplementation((file: string, args: string[]) => args.some(value => value.includes('process.exitCode=37'))
+      ? new Promise<Outcome>((resolve, reject) => { controls.push({ resolve, reject }); }) : execute(file, args));
+    const proof = { ...success('transport-out:' + 'c'.repeat(64)), stderr: 'transport-error:' + 'c'.repeat(64), exitCode: 37 };
+    const operation = diagnostic.diagnose(ports);
+    try {
+      await new Promise(resolve => setImmediate(resolve)); expect(controls).toHaveLength(3);
+      controls[0].reject(new Error('private observer detail')); controls[1].resolve(proof);
+      await new Promise(resolve => setImmediate(resolve)); expect(ports.release).not.toHaveBeenCalled();
+      expect(ports.execute).toHaveBeenCalledTimes(8);
+      controls[2].resolve(proof); const receipt = await operation;
+      expect(receipt.probes[5]).toMatchObject({ state: 'not-run', reason: 'observation-unavailable' });
+      expect(receipt.probes.slice(-2).every((row: any) => row.reason === 'execution-unverified')).toBe(true);
+      expect(receipt.executionIncomplete).toBe(true); expect(JSON.stringify(receipt)).not.toContain('private observer detail');
+      expect(ports.release).toHaveBeenCalledTimes(1);
+    } finally { for (const control of controls) control.resolve(proof); await operation; }
+  });
+
+  it('keeps cancelled transport incomplete until all admitted observations settle', async () => {
+    const ports = modeledPorts(), execute = ports.execute.getMockImplementation()!;
+    const controls: Array<(value: Outcome) => void> = [];
+    ports.execute.mockImplementation((file: string, args: string[]) => args.some(value => value.includes('process.exitCode=37'))
+      ? new Promise<Outcome>(resolve => { controls.push(resolve); }) : execute(file, args));
+    const closed = { ...success(), cancelled: true };
+    const operation = diagnostic.diagnose(ports);
+    try {
+      await new Promise(resolve => setImmediate(resolve)); expect(controls).toHaveLength(3); ports.controller.abort();
+      controls[0](closed); controls[1](closed); await new Promise(resolve => setImmediate(resolve));
+      expect(ports.release).not.toHaveBeenCalled(); controls[2](closed); const receipt = await operation;
+      expect(receipt.probes.slice(5, 8).every((row: any) => row.state === 'cancelled')).toBe(true);
+      expect(receipt.probes.slice(-2).every((row: any) => row.reason === 'cancelled')).toBe(true);
+      expect(receipt).toMatchObject({ executionIncomplete: true, executionTransportVerified: false });
+      expect(ports.execute).toHaveBeenCalledTimes(8); expect(ports.release).toHaveBeenCalledTimes(1);
+    } finally { for (const resolve of controls) resolve(closed); await operation; }
+  });
 });
 
 posixDescribe('real owned diagnostic processes and archives', () => {
+  it('cancels three real owned process groups and closes them before releasing the transport phase', async () => {
+    const ports = modeledPorts(), execute = ports.execute.getMockImplementation()!;
+    const closed: Outcome[] = []; let admitted = 0;
+    ports.execute.mockImplementation((file: string, args: string[]) => {
+      if (!args.some(value => value.includes('process.exitCode=37'))) return execute(file, args);
+      const operation = diagnostic.execute(process.execPath, ['-e', 'setInterval(()=>{},1000)'],
+        { cwd: process.cwd(), env: {}, signal: ports.signal }).then((result: Outcome) => { closed.push(result); return result; });
+      if (++admitted === 3) queueMicrotask(() => ports.controller.abort());
+      return operation;
+    });
+    ports.release.mockImplementation(async () => { expect(closed).toHaveLength(3); });
+    const receipt = await diagnostic.diagnose(ports);
+    expect(closed).toHaveLength(3); expect(closed.every(row => row.cancelled && ['SIGTERM', 'SIGKILL'].includes(row.signal!))).toBe(true);
+    expect(receipt.executionIncomplete).toBe(true); expect(ports.writeAbsent).not.toHaveBeenCalled();
+  });
+
   it('preserves an actual exit37 with stdout/stderr and closes the process', async () => {
     const result = await diagnostic.execute(process.execPath, ['-e', 'process.stdout.write("out");process.stderr.write("err");process.exitCode=37'],
       { cwd: process.cwd(), env: { PATH: path.dirname(process.execPath) }, signal: new AbortController().signal });
@@ -216,9 +333,43 @@ posixDescribe('real owned diagnostic processes and archives', () => {
   });
 });
 
+posixDescribe('system helper identity observations do not certify execution', () => {
+  it.each([
+    ['ELF', Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0])],
+    ['script', Buffer.from('#!/bin/sh\nexit 0\n')],
+    ['other', Buffer.from('controlled bytes')],
+  ])('records exact %s bytes without promoting them to payload proof', (format, bytes) => {
+    const root = mkdtempSync(path.join(tmpdir(), 'diagnostic-helper-')), file = path.join(root, 'bwrap');
+    try {
+      writeFileSync(file, bytes, { mode: 0o700 });
+      expect(diagnostic.observeSystemBwrap(file)).toMatchObject({ state: 'observed', canonicalPath: nativeFs.realpathSync(file),
+        bytes: bytes.length, sha256: digest(bytes), format, mode: 0o700, payloadExecutionVerified: false });
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it.each(['missing', 'directory', 'empty', 'oversized'])('keeps %s helper metadata unavailable', fault => {
+    const root = mkdtempSync(path.join(tmpdir(), 'diagnostic-helper-negative-')), file = path.join(root, 'bwrap');
+    try {
+      if (fault === 'directory') nativeFs.mkdirSync(file);
+      else if (fault !== 'missing') writeFileSync(file, fault === 'empty' ? '' : Buffer.alloc(2 * 1024 * 1024 + 1));
+      expect(diagnostic.observeSystemBwrap(file)).toEqual({ state: 'unavailable', cause: 'identity-unavailable', payloadExecutionVerified: false });
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('rejects a helper that changes during the byte observation', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'diagnostic-helper-drift-')), file = path.join(root, 'bwrap');
+    writeFileSync(file, 'before'); const read = nativeFs.readFileSync, canonical = nativeFs.realpathSync(file); let changed = false;
+    const probe = jest.spyOn(nativeFs, 'readFileSync').mockImplementation(((name: any, ...args: any[]) => {
+      const value = (read as any)(name, ...args); if (name === canonical) { writeFileSync(file, 'changed after reading'); changed = true; } return value;
+    }) as any);
+    try { expect(diagnostic.observeSystemBwrap(file).state).toBe('unavailable'); expect(changed).toBe(true); }
+    finally { probe.mockRestore(); rmSync(root, { recursive: true, force: true }); }
+  });
+});
+
 posixDescribe('native adapter with modeled release/process ports and real private files', () => {
   function fixture(options: { downloadError?: boolean; listing?: string; extractionError?: boolean; symlink?: boolean;
-    missingBinary?: boolean; version?: Outcome } = {}): Ports {
+    missingBinary?: boolean; missingMember?: string; symlinkMember?: string; manifest?: any; version?: Outcome } = {}): Ports {
     const events: Ports = { root: null, environment: null, calls: [] };
     const downloadArchive = jest.fn(async (archive: any, target: string) => {
       events.root = path.dirname(target);
@@ -228,12 +379,19 @@ posixDescribe('native adapter with modeled release/process ports and real privat
     });
     const execute = jest.fn(async (executable: string, args: string[], context: Ports) => {
       events.environment = context.env; events.calls.push({ executable, args });
-      if (args[0] === '-tzf') return success(options.listing ?? 'codex-x86_64-unknown-linux-musl\n');
+      if (args[0] === '-tzf') return success(options.listing ?? PACKAGE_LISTING);
       if (args[0] === '-xzf') {
         if (options.extractionError) return { ...success(), exitCode: 37 };
-        const binary = path.join(context.cwd, 'codex-x86_64-unknown-linux-musl');
-        if (options.symlink) { writeFileSync(path.join(context.cwd, 'target'), 'owned'); symlinkSync('target', binary); }
-        else if (!options.missingBinary) writeFileSync(binary, 'controlled non-executable model', { mode: 0o700 });
+        const root = args[args.indexOf('-C') + 1];
+        for (const member of ['bin/codex', 'bin/codex-code-mode-host', 'bin/codex-exec-server', 'codex-path/rg', 'codex-resources/bwrap']) {
+          const binary = path.join(root, member); nativeFs.mkdirSync(path.dirname(binary), { recursive: true });
+          if (options.missingMember === member || options.missingBinary && member === 'bin/codex') continue;
+          if (options.symlinkMember === member || options.symlink && member === 'bin/codex') {
+            const target = path.join(root, 'target'); writeFileSync(target, 'owned'); symlinkSync(target, binary);
+          } else writeFileSync(binary, 'controlled non-executable model', { mode: 0o700 });
+        }
+        const manifest = options.manifest ?? PACKAGE_MANIFEST;
+        writeFileSync(path.join(root, 'codex-package.json'), typeof manifest === 'string' ? manifest : JSON.stringify(manifest));
         return success();
       }
       return options.version ?? success('codex-cli 0.171.0\n');
@@ -241,6 +399,39 @@ posixDescribe('native adapter with modeled release/process ports and real privat
     const ports = diagnostic.nativePorts(new AbortController().signal, { platform: 'linux', architecture: 'x64', downloadArchive, execute });
     return { ports, events, downloadArchive, execute };
   }
+
+  it('uses the official full package with adjacent resources even when CLI bytes match', async () => {
+    const f = fixture();
+    try {
+      const runtime = await f.ports.prepare();
+      expect(runtime.codex).toMatch(/\/runtime\/bin\/codex$/u);
+      expect(runtime.identity.packageLayoutVersion).toBe(1);
+      expect(runtime.identity.packageExecutables.map((row: any) => row.path)).toEqual([
+        'bin/codex', 'bin/codex-code-mode-host', 'bin/codex-exec-server', 'codex-path/rg', 'codex-resources/bwrap']);
+      expect(runtime.identity.packageExecutables.every((row: any) => row.sha256 === digest('controlled non-executable model'))).toBe(true);
+      expect(runtime.identity.archiveInventorySha256).toBe(digest(PACKAGE_LISTING));
+      expect(policy.archiveFor('x64').url).toContain('/codex-package-x86_64-unknown-linux-musl.tar.gz');
+      expect(policy.archiveFor('arm64').bytes).toBe(199315347);
+    } finally { await f.ports.release(); }
+  });
+
+  it.each([
+    ['missing bwrap', { missingMember: 'codex-resources/bwrap' }, 'executable-identity'],
+    ['symlink bwrap', { symlinkMember: 'codex-resources/bwrap' }, 'executable-identity'],
+    ['missing rg', { missingMember: 'codex-path/rg' }, 'executable-identity'],
+    ['missing execution server', { missingMember: 'bin/codex-exec-server' }, 'executable-identity'],
+    ['missing code mode host', { missingMember: 'bin/codex-code-mode-host' }, 'executable-identity'],
+    ['malformed package metadata', { manifest: '{' }, 'package-metadata'],
+    ['wrong layout version', { manifest: { ...PACKAGE_MANIFEST, layoutVersion: 2 } }, 'package-metadata'],
+    ['wrong package version', { manifest: { ...PACKAGE_MANIFEST, version: '0.160.0' } }, 'package-metadata'],
+    ['wrong package target', { manifest: { ...PACKAGE_MANIFEST, target: 'aarch64-unknown-linux-musl' } }, 'package-metadata'],
+  ])('rejects full package %s before CLI version execution', async (name, options, boundary) => {
+    const f = fixture(options);
+    try {
+      await expect(f.ports.prepare()).rejects.toMatchObject({ diagnosticBoundary: boundary });
+      expect(f.events.calls.some((row: any) => row.args[0] === '--version')).toBe(false);
+    } finally { await f.ports.release(); }
+  });
 
   it('binds exact observed bytes, uses a credential-free HOME and removes its owned fixture', async () => {
     const previous = process.env.CONTROL_DIAGNOSTIC_SECRET; process.env.CONTROL_DIAGNOSTIC_SECRET = 'not-a-real-credential';
@@ -430,7 +621,8 @@ describe('actual receipt and summary publication with modeled command ports', ()
       if (withSummary) process.env.GITHUB_STEP_SUMMARY = path.join(directory, 'summary'); else delete process.env.GITHUB_STEP_SUMMARY;
       const ports = modeledPorts(); await diagnostic.main({ nativePorts: () => ports });
       const receiptPath = path.join(directory, 'copilot-linux-sandbox-123-1.json');
-      expect(JSON.parse(readFileSync(receiptPath, 'utf8')).probes).toHaveLength(7);
+      expect(JSON.parse(readFileSync(receiptPath, 'utf8'))).toMatchObject({ schemaVersion: 2, executionTransportVerified: true });
+      expect(JSON.parse(readFileSync(receiptPath, 'utf8')).probes).toHaveLength(10);
       expect(process.exitCode).toBe(0);
       if (process.platform !== 'win32') expect(lstatSync(receiptPath).mode & 0o777).toBe(0o600);
       else expect(lstatSync(receiptPath).isFile()).toBe(true);

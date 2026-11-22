@@ -941,7 +941,7 @@ Intentional contract: the existing manual Linux diagnostic MUST provision the
 official standalone Codex0.171.0 distribution privately in the same job as
 Node24.21.0. The closed x64/arm64 release table pins complete archive sizes and
 SHA256digests from the official release. The adapter MUST verify the full
-download and exact one-file archive inventory before extraction/execution,
+download and pinned full-package inventory before extraction/execution,
 record actual native executable and Node byte hashes, and require the exact
 reported version before probing. No global CLI installation, npm lifecycle,
 model request, public input, repository Variable or runtime fallback is added.
@@ -949,26 +949,72 @@ model request, public input, repository Variable or runtime fallback is added.
 ```mermaid
 flowchart LR
     D[Manual Linux diagnostic] --> P[Verify fixed private distribution]
-    P --> O[Observe seven fixed commands separately]
-    O --> C[Close commands and remove owned fixture]
+    P --> O[Observe five namespace and startup commands]
+    O --> T[Compare three independent execution transports]
+    T --> G[Admit owned read and write only after transport proof]
+    G --> C[Close every command and remove owned fixture]
     C --> R[Retain receipt and job summary]
 ```
 
 Text equivalent: trusted workflow selection precedes private preparation. Only
-verified preparation admits the seven fixed probes. Completion closes owned
+verified preparation admits five namespace/startup probes, then three independent
+transport controls in parallel. Only all three verified controls admit the two
+owned read/write probes. Completion closes every owned
 processes, retains each observation, cleans the private fixture and publishes
 one receipt plus one Job Summary. None of those steps grants qualification.
 
-The seven fixed observations are unprivileged user/network namespace creation,
+The schemaVersion2 receipt has ten fixed observations: unprivileged user/network namespace creation,
 two existing bubblewrap configurations, Codex empty-environment startup,
-Codex PATH-only startup, an owned fixture read/hash, and an owned write-denial
-canary. Every executed probe MUST retain its actual exit or signal, explicit
+Codex PATH-only startup, three execution-transport controls, an owned fixture
+read/hash, and an owned write-denial canary. Namespace probes MUST produce their
+exact Node stdout witness as well as exit0; silent success does not prove payload
+execution. Every executed probe MUST retain its actual exit or signal, explicit
 pass/fail/unavailable/cancelled state and bounded privacy-projected output.
 Absent or malformed status, signal termination, launch errors, truncation and
 wrong expected output cannot pass. Write denial requires the expected actual
 child result and trusted post-command absence; a sandbox startup failure or a
 created canary cannot become a successful denial. Probe results are never
 collapsed into the aggregate workflow exit code.
+
+The distribution MUST be `codex-package-<target>.tar.gz`, matching the layout
+selected by the reviewed official installer, never the individual CLI archive.
+Both complete x64/arm64 packages have been checksum-verified and their full
+member/type/size/hash inventories retained without executing Linux programs.
+They share the exact pinned name-list digest. The x64 CLI bytes equal those of
+the former individual archive, but that archive omits the bundled resources:
+version/executable identity alone is not composition identity. Preserve all
+package members under a fresh owned runtime directory. Require owned regular
+non-symlink Codex, code-mode host, exec server, rg and bwrap files before any CLI
+version command; paths MUST NOT traverse symlinks. Record their actual byte
+counts/hashes. Bounded owned package metadata MUST exactly match the fixed
+layout/version/target/entrypoint/resource/path fields. A missing resource,
+malformed or wrong metadata, or inventory drift fails preparation. There is no
+fallback to the individual archive or npm lifecycle, and no global installation.
+See the reviewed [official installer](https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/scripts/install/install.sh)
+and [0.171.0 release](https://github.com/openai/codex/releases/tag/rust-v0.171.0).
+
+The three transport IDs are `node-execution-transport`,
+`bwrap-execution-transport` and `codex-path-execution-transport`. Each MUST run
+the identical harmless Node payload and verify its exact stdout marker, stderr
+marker and exit37 with an explicit null signal. Only those three fixed IDs may
+pass with37; the seven other IDs still require0. Missing/string-invalid output,
+missing status/signal, truncation, timeout, cancellation or absent expected
+markers cannot pass. Actual empty output has its empty-byte digest; unavailable
+output is null with a null digest. A failed or unavailable transport leaves
+`executionTransportVerified=false`, both owned probes `not-run` with
+`execution-unverified`, collection incomplete and exit1. The three independent
+commands MUST all settle, including rejection and cancellation, before cleanup;
+no sibling remains active after the owned directory is removed. Only one
+transport invokes Codex and its private home. This bounded three-command
+concurrency does not schedule model work or change command/job bounds.
+
+The native receipt MAY retain fixed `/usr/bin/bwrap` canonical path, byte count,
+SHA256, ELF/script/other format, owner UID/GID and mode. Observation requires a
+nonempty regular file at most2MiB, with device/inode/size/time identity unchanged
+across its read. Unavailable or drifting metadata cannot become a byte identity.
+This passive observation always leaves `payloadExecutionVerified=false`; a
+hash, executable format or owner is not execution or sandbox proof. The path and
+bound are fixed, with no public helper/socket/backend selector.
 
 The fixed Codex arguments MUST follow the pinned CLI's actual host-sandbox
 grammar: root `--config` pairs precede `sandbox -- <owned command>`. The
@@ -986,7 +1032,7 @@ and [host sandbox arguments](https://github.com/openai/codex/blob/rust-v0.171.0/
 | Preparation failed/missing | Failed boundary; all remaining probes not-run | Inspect the retained receipt before a changed attempt |
 | Mixed observations | Separate failed/unavailable and positive rows | Investigate the actual failed prerequisite |
 | Cancelled | Actual child cancellation and remaining not-run rows | Preserve incomplete observations; no blind replay |
-| Observation complete | All seven rows and exact byte identities retained | Independently verify actual SDK/read-denial composition |
+| Observation complete | All ten rows and exact byte identities retained | Independently verify actual SDK/read-denial composition |
 
 Representative Job Summary (illustrative):
 
@@ -1027,7 +1073,7 @@ an interrupted collection cannot.
 
 Adapter-construction failures, including unsupported hosts and private-directory
 initialization failures, MUST retain the same exclusive receipt and summary,
-failed preparation, seven not-run rows and exit1. Initialization removes only
+failed preparation, ten not-run rows and exit1. Initialization removes only
 its newly owned root before propagating the original failure. Its receipt
 distinguishes `not-created`, `completed`, `failed` and unavailable cleanup;
 cleanup failure cannot replace the first failure or imply success. Engine
@@ -1085,6 +1131,47 @@ case and the refined existing real-filesystem case extend the risk budget.
 Only a new committed source identity and passing source gates permit a changed
 native diagnostic. Do not repeat45016512460 or infer CLI/tool acceptance from
 the positive bubblewrap rows.
+
+The changed native diagnostic45020212032/job137201216439 ran once on
+ubuntu-runner-2 at5eebe639 with the same verified Codex/Node executable hashes.
+Under the retained schemaVersion1 contract its seven outcomes were3PASS/4FAIL:
+unshare exit1 (uid_map), both bare bubblewrap commands exit0, empty-environment
+Codex exit101 (neither PATH nor adjacent bundled bwrap available), PATH startup
+exit0, and read/write both exit0 with empty stdout and stderr. The last two were
+assertion mismatches, never accepted read/denial. Engine remained unavailable;
+cleanup completed. The actual loss of payload execution/output is unresolved.
+Pinned upstream sources preserve argument vectors and inherited stdout/stderr;
+source inspection does not prove where this native loss occurs. Preserve both
+original schemaVersion1 receipts without retroactive reclassification.
+
+The execution-proof correction adds31 distinct cases to the prior69: three
+silent-zero namespace rejections,13 pure typed-output/transport policies, six
+transport admission and sibling-settlement/cancellation races, eight real-file
+helper-identity cases, and one cancellation of three actual Node process groups.
+The last case uses modeled routing, not actual Codex/bubblewrap or nativeC34.
+The same72test bytes first reproduce69PASS/3FAIL on the prior driver, then72PASS
+with namespace witnesses; expanded controls pass100/100. Retain the first
+71PASS/1FAIL partial-success fixture mismatch and the98PASS/1FAIL helper-drift
+fixture failure separately: the latter did not inject its fault across macOS
+path aliases, and correcting that fixture did not change product source.
+Pure policy is100% across metrics; adapter lines99.5%, statements96.1%,
+branches89.3%, functions94.23% exceed unchanged floors. Updated schema/table
+assertions refine existing cases rather than double-counting them. New native
+acceptance requires a new committed source and all source gates before one
+changed diagnostic; never repeat45020212032 unchanged or claim its cause fixed.
+
+The package-composition extension adds ten cases (110 total): one same-byte
+causal positive demonstrates rejection of the complete official layout by the
+prior individual-archive driver, then acceptance after correction; nine reject
+missing bwrap/rg/exec-server/code-mode-host, symlink bwrap, malformed metadata
+and wrong layout/version/target before CLI version execution. The first new
+control attempt did not compile because its fixture referenced an unimported
+filesystem name; preserve it separately from the subsequent actual causal
+failure. A source-capture guard also stopped before changes because one appended
+newline broke the reviewed installer checksum; its corrected snapshot matches
+the exact approved checksum. Neither controller failure is native evidence.
+The package correction explains missing bundled resources in the empty-PATH
+observation; the native PATH payload/output cause remains unresolved.
 
 Acceptance and traceability: fixed archive mismatch or version mismatch rejects
 before probes; every negative/missing/signal/cancelled probe has its own preserved

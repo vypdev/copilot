@@ -106,8 +106,11 @@ Codex acceptance run is required or scheduled.
 
 The Linux diagnostic now prepares official standalone Codex0.171.0 privately
 in the same job as Node24.21.0. It checks the fixed distribution checksum and
-actual executable bytes before probes; the runner's global installation stays
-untouched. Start `Copilot - Runner diagnostics` on the reviewed source revision.
+actual executable bytes before probes. It retains the full official package,
+including adjacent bwrap/rg and execution helpers, and checks its fixed layout
+and resource identities before the CLI version check. A matching standalone
+executable/version alone is insufficient when resources are missing. The
+runner's global installation stays untouched. Start `Copilot - Runner diagnostics` on the reviewed source revision.
 Its Job Summary shows each actual exit/signal and links through the run to the
 `linux-sandbox-prerequisites` artifact. Download the receipt within its one-day
 retention period when retaining investigation evidence.
@@ -121,12 +124,33 @@ a failed unshare uid-map write and four such parser failures; it did not prove
 a CLI tool read or write denial. Its unavailable local Engine observation is
 independent of those results.
 
-The seven observations distinguish unprivileged namespace/bubblewrap checks,
-empty-environment versus PATH-only Codex startup, an owned fixture read/hash,
-and an owned write-denial canary. A startup failure cannot certify denied
-writing. Positive read output must match the trusted digest; successful denial
-must leave the canary absent. An optional local Engine version observation is
-separate and creates no image/container/workload.
+The schemaVersion2 receipt retains ten observations. Five check namespace or
+bubblewrap execution and empty-environment versus PATH-only Codex startup.
+Namespace commands require their actual Node output witness and exit0. Three
+controls then run the same harmless Node payload directly, through bubblewrap
+and through Codex. Each requires both output markers and exit37. Only those
+three named execution-transport rows expect37; ordinary rows still require0.
+The summary shows expected and actual exit separately. Silent success does not
+prove that the enclosed command ran.
+
+All three independent transport commands must close before cleanup. If any
+fails or is unavailable, the owned read/hash and write-denial probes stay
+`not-run (execution-unverified)` and collection is incomplete. A verified read
+must match its trusted digest; a successful denial must produce the expected
+result and leave the canary absent. Missing output is null; actual empty output
+has an empty-byte hash. The report also observes the bounded fixed system bwrap
+file's hash, format, ownership and mode; metadata alone never proves execution.
+An optional local Engine version observation is separate and creates no
+image/container/workload.
+
+The changed run45020212032 on ubuntu-runner-2 retained its original seven-row
+receipt: unshare failed, both bare bubblewrap checks returned0, Codex without
+PATH could not find bwrap, PATH startup returned0, and read/write both returned0
+with empty output. Those read/write results failed their assertions. The cause
+of missing payload output remains unresolved; neither CLI version nor the two
+bare bubblewrap rows establish sandbox acceptance. Preserve both original
+seven-row receipts. A new source revision introduces the execution witnesses
+and three-way comparison; do not repeat the old diagnostic unchanged.
 
 Preparation failure leaves probes `not-run`. Missing tools are `unavailable`;
 nonzero/signal/mismatched/truncated observations are failures. Cancellation
