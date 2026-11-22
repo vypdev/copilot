@@ -182,6 +182,21 @@ stream fallback; they do not establish the exact runner's syscall trace. The
 changed output method still requires a new source identity, passing source gates
 and one changed real diagnostic before any new admission claim.
 
+The latest [run 45038779876](https://github.com/vypdev/copilot/actions/runs/45038779876),
+on ubuntu-runner-4, executed source `94d76006` after its complete CI and review
+passed. Its schema 4 receipt retains eight passing and two failing observations.
+Direct Node, system bubblewrap and Codex PATH returned both output markers and 37;
+the owned read matched its digest and the write-denial canary remained absent.
+Unshare and empty-PATH bundled bubblewrap still failed with EPERM. Engine was
+unavailable and cleanup completed. The completed job means all observations
+were retained; those negative prerequisites did not become passes. The original
+receipt, complete logs, identity pins and preceding source-gate evidence are
+preserved with [PR 1003](https://github.com/vypdev/copilot/pull/1003) under
+`quality/bugbot/evidence/issue-1002/controls/native-raw-fd-observation`.
+Evidence/documentation changes do not justify another unchanged diagnostic.
+SDK/model-tool access, credential/oracle exclusion and the contained runtime's
+C32–C35 still need their own actual evidence before 174/42 qualification.
+
 Preparation failure leaves probes `not-run`. Missing tools are `unavailable`;
 nonzero/signal/mismatched/truncated observations are failures. Cancellation
 settles the owned command and marks remaining probes `not-run`; cleanup failure

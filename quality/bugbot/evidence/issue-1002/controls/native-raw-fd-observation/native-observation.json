@@ -1,0 +1,378 @@
+{
+  "schemaVersion": 4,
+  "kind": "model-free-linux-sandbox-diagnostic",
+  "sourceCommit": "94d760065b208488432f6644b69a1991ad8b5597",
+  "driverSha256": "2374aa72925dacf1c17dafa2c7825e73514d94e9888580763cefa2ca77b87d8d",
+  "policySha256": "3c11796ddb336f8c95801a637b96945cc82f5e0822a294940060274337c607dd",
+  "os": "linux",
+  "architecture": "x64",
+  "kernel": "7.0.0-43-generic",
+  "effectiveUid": 1001,
+  "systemBwrap": {
+    "state": "observed",
+    "canonicalPath": "/usr/bin/bwrap",
+    "bytes": 80424,
+    "sha256": "523da3e7399044be5163aee6f57a77a6bef7454376e28f0a0627920bae1b76b6",
+    "format": "ELF",
+    "ownerUid": 0,
+    "ownerGid": 0,
+    "mode": 493,
+    "payloadExecutionVerified": false
+  },
+  "preparation": {
+    "state": "observed",
+    "runtime": {
+      "version": "0.171.0",
+      "executableSha256": "b76a027d6b210f9a8da7aaf321dd235c700f0ef7a794d4a5314b9af6c134f0f0",
+      "distributionSha256": "8391d67757496bfd14893eca6cbf0c96994bf2627566ff1f018f70600c9ef6b3",
+      "archiveInventorySha256": "99caccd38a47e1dd9df829646c99b4efc24e0e751dea0a2781f98698b7045e9e",
+      "packageLayoutVersion": 1,
+      "packageExecutables": [
+        {
+          "path": "bin/codex",
+          "bytes": 315109048,
+          "sha256": "b76a027d6b210f9a8da7aaf321dd235c700f0ef7a794d4a5314b9af6c134f0f0"
+        },
+        {
+          "path": "bin/codex-code-mode-host",
+          "bytes": 70072856,
+          "sha256": "f49bd4f0c0cc73cf1ec3a719009e07ce5b6e100520d023c760cc203fb37e5c6f"
+        },
+        {
+          "path": "bin/codex-exec-server",
+          "bytes": 77627248,
+          "sha256": "da2b3636f0b050e4b97da5cf8ed6b3f85621d7611105f58ee9748d8c7e2266fe"
+        },
+        {
+          "path": "codex-path/rg",
+          "bytes": 5408904,
+          "sha256": "e62198eb19b136b88c330af83647b5a962cb99b6b1f066758568f12de1974849"
+        },
+        {
+          "path": "codex-resources/bwrap",
+          "bytes": 492984,
+          "sha256": "91a245ea678a7ae642f383a22576c3c476d0d6d3e2321a553f3ed8d4d487ed74"
+        }
+      ],
+      "nodeVersion": "24.21.0",
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "fixtureSha256": "68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e"
+    }
+  },
+  "probes": [
+    {
+      "id": "unshare-user-network",
+      "state": "fail",
+      "expectedExitCode": 0,
+      "kind": "prerequisite",
+      "exitCode": 1,
+      "signal": null,
+      "reason": "command-failed",
+      "stdout": "",
+      "stderr": "unshare: write failed /proc/self/uid_map: Operation not permitted\n",
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "6b50086233b9e3c0f8f5ac5e8094da06d7a05f1c3be0b88baf49578943392a94",
+      "outputCapture": {
+        "textEncoding": "utf8-replacement",
+        "limitBytesPerChannel": 65536,
+        "stdout": {
+          "observedBytes": 0,
+          "retainedBytes": 0,
+          "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr": {
+          "observedBytes": 66,
+          "retainedBytes": 66,
+          "observedSha256": "6b50086233b9e3c0f8f5ac5e8094da06d7a05f1c3be0b88baf49578943392a94",
+          "retainedSha256": "6b50086233b9e3c0f8f5ac5e8094da06d7a05f1c3be0b88baf49578943392a94"
+        }
+      },
+      "outputTruncated": false
+    },
+    {
+      "id": "bwrap-user-network",
+      "state": "pass",
+      "expectedExitCode": 0,
+      "kind": "prerequisite",
+      "exitCode": 0,
+      "signal": null,
+      "reason": "verified",
+      "stdout": "bwrap-user-network",
+      "stderr": "",
+      "stdoutSha256": "dbe7790e4a855f7fd89afe0714fc70d0deea619f6c292c572c10b0e9d1b69fc1",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "outputCapture": {
+        "textEncoding": "utf8-replacement",
+        "limitBytesPerChannel": 65536,
+        "stdout": {
+          "observedBytes": 18,
+          "retainedBytes": 18,
+          "observedSha256": "dbe7790e4a855f7fd89afe0714fc70d0deea619f6c292c572c10b0e9d1b69fc1",
+          "retainedSha256": "dbe7790e4a855f7fd89afe0714fc70d0deea619f6c292c572c10b0e9d1b69fc1"
+        },
+        "stderr": {
+          "observedBytes": 0,
+          "retainedBytes": 0,
+          "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "outputTruncated": false
+    },
+    {
+      "id": "bwrap-root-user-network",
+      "state": "pass",
+      "expectedExitCode": 0,
+      "kind": "prerequisite",
+      "exitCode": 0,
+      "signal": null,
+      "reason": "verified",
+      "stdout": "bwrap-root-user-network",
+      "stderr": "",
+      "stdoutSha256": "30d33370fadba5dc5b9131f2ba285efb2d4698728d6087c10f6d47502646b059",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "outputCapture": {
+        "textEncoding": "utf8-replacement",
+        "limitBytesPerChannel": 65536,
+        "stdout": {
+          "observedBytes": 23,
+          "retainedBytes": 23,
+          "observedSha256": "30d33370fadba5dc5b9131f2ba285efb2d4698728d6087c10f6d47502646b059",
+          "retainedSha256": "30d33370fadba5dc5b9131f2ba285efb2d4698728d6087c10f6d47502646b059"
+        },
+        "stderr": {
+          "observedBytes": 0,
+          "retainedBytes": 0,
+          "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "outputTruncated": false
+    },
+    {
+      "id": "codex-empty-start",
+      "state": "fail",
+      "expectedExitCode": 0,
+      "kind": "prerequisite",
+      "exitCode": 1,
+      "signal": null,
+      "reason": "command-failed",
+      "stdout": "",
+      "stderr": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted\n",
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "ed3471f7900377f86150471417911309833a36d664cb5af7409e139103f67ddf",
+      "outputCapture": {
+        "textEncoding": "utf8-replacement",
+        "limitBytesPerChannel": 65536,
+        "stdout": {
+          "observedBytes": 0,
+          "retainedBytes": 0,
+          "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr": {
+          "observedBytes": 61,
+          "retainedBytes": 61,
+          "observedSha256": "ed3471f7900377f86150471417911309833a36d664cb5af7409e139103f67ddf",
+          "retainedSha256": "ed3471f7900377f86150471417911309833a36d664cb5af7409e139103f67ddf"
+        }
+      },
+      "outputTruncated": false
+    },
+    {
+      "id": "codex-path-start",
+      "state": "pass",
+      "expectedExitCode": 0,
+      "kind": "prerequisite",
+      "exitCode": 0,
+      "signal": null,
+      "reason": "verified",
+      "stdout": "",
+      "stderr": "",
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "outputCapture": {
+        "textEncoding": "utf8-replacement",
+        "limitBytesPerChannel": 65536,
+        "stdout": {
+          "observedBytes": 0,
+          "retainedBytes": 0,
+          "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr": {
+          "observedBytes": 0,
+          "retainedBytes": 0,
+          "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "outputTruncated": false
+    },
+    {
+      "id": "node-execution-transport",
+      "state": "pass",
+      "expectedExitCode": 37,
+      "kind": "execution-transport",
+      "exitCode": 37,
+      "signal": null,
+      "reason": "verified",
+      "stdout": "transport-out:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+      "stderr": "transport-error:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+      "stdoutSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+      "stderrSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+      "outputCapture": {
+        "textEncoding": "utf8-replacement",
+        "limitBytesPerChannel": 65536,
+        "stdout": {
+          "observedBytes": 78,
+          "retainedBytes": 78,
+          "observedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+          "retainedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a"
+        },
+        "stderr": {
+          "observedBytes": 80,
+          "retainedBytes": 80,
+          "observedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+          "retainedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746"
+        }
+      },
+      "outputTruncated": false
+    },
+    {
+      "id": "bwrap-execution-transport",
+      "state": "pass",
+      "expectedExitCode": 37,
+      "kind": "execution-transport",
+      "exitCode": 37,
+      "signal": null,
+      "reason": "verified",
+      "stdout": "transport-out:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+      "stderr": "transport-error:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+      "stdoutSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+      "stderrSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+      "outputCapture": {
+        "textEncoding": "utf8-replacement",
+        "limitBytesPerChannel": 65536,
+        "stdout": {
+          "observedBytes": 78,
+          "retainedBytes": 78,
+          "observedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+          "retainedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a"
+        },
+        "stderr": {
+          "observedBytes": 80,
+          "retainedBytes": 80,
+          "observedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+          "retainedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746"
+        }
+      },
+      "outputTruncated": false
+    },
+    {
+      "id": "codex-path-execution-transport",
+      "state": "pass",
+      "expectedExitCode": 37,
+      "kind": "execution-transport",
+      "exitCode": 37,
+      "signal": null,
+      "reason": "verified",
+      "stdout": "transport-out:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+      "stderr": "transport-error:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+      "stdoutSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+      "stderrSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+      "outputCapture": {
+        "textEncoding": "utf8-replacement",
+        "limitBytesPerChannel": 65536,
+        "stdout": {
+          "observedBytes": 78,
+          "retainedBytes": 78,
+          "observedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+          "retainedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a"
+        },
+        "stderr": {
+          "observedBytes": 80,
+          "retainedBytes": 80,
+          "observedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+          "retainedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746"
+        }
+      },
+      "outputTruncated": false
+    },
+    {
+      "id": "codex-fixture-read",
+      "state": "pass",
+      "expectedExitCode": 0,
+      "kind": "prerequisite",
+      "exitCode": 0,
+      "signal": null,
+      "reason": "verified",
+      "stdout": "68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+      "stderr": "",
+      "stdoutSha256": "1b34d83eff3de1eef04a9cc9a0bb184612a240911c640170825ef9e517f77f34",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "outputCapture": {
+        "textEncoding": "utf8-replacement",
+        "limitBytesPerChannel": 65536,
+        "stdout": {
+          "observedBytes": 64,
+          "retainedBytes": 64,
+          "observedSha256": "1b34d83eff3de1eef04a9cc9a0bb184612a240911c640170825ef9e517f77f34",
+          "retainedSha256": "1b34d83eff3de1eef04a9cc9a0bb184612a240911c640170825ef9e517f77f34"
+        },
+        "stderr": {
+          "observedBytes": 0,
+          "retainedBytes": 0,
+          "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "outputTruncated": false
+    },
+    {
+      "id": "codex-write-denial",
+      "state": "pass",
+      "expectedExitCode": 0,
+      "kind": "prerequisite",
+      "exitCode": 0,
+      "signal": null,
+      "reason": "verified",
+      "stdout": "DENIED",
+      "stderr": "",
+      "stdoutSha256": "fc2efd7036582a0827d74e346366df1c1330d284f94d0db97e252aff1efdf1fa",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "outputCapture": {
+        "textEncoding": "utf8-replacement",
+        "limitBytesPerChannel": 65536,
+        "stdout": {
+          "observedBytes": 6,
+          "retainedBytes": 6,
+          "observedSha256": "fc2efd7036582a0827d74e346366df1c1330d284f94d0db97e252aff1efdf1fa",
+          "retainedSha256": "fc2efd7036582a0827d74e346366df1c1330d284f94d0db97e252aff1efdf1fa"
+        },
+        "stderr": {
+          "observedBytes": 0,
+          "retainedBytes": 0,
+          "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "outputTruncated": false
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "productionSettingChanged": false,
+  "qualifiedProfiles": [],
+  "payloadOutputTransport": "node-fd-write-sync",
+  "nodeStreamCompatibility": "not-measured",
+  "outputTextEncoding": "utf8-replacement",
+  "executionTransportVerified": true,
+  "actualSdkOrModelToolAcceptance": false,
+  "engine": {
+    "state": "unavailable",
+    "cause": "local-engine-unavailable"
+  },
+  "cleanup": "completed"
+}

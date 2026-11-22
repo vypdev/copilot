@@ -1259,6 +1259,29 @@ Variable fixtures; HTTP/runtime/research/qualification limits do not change.
 A separate one-time6s post-real-fsync delay contrasts the old and corrected test
 budget; it models slow storage and is not a trace of that native failure.
 
+The changed [run 45038779876](https://github.com/vypdev/copilot/actions/runs/45038779876)
+executed immutable source `94d760065b208488432f6644b69a1991ad8b5597` on
+ubuntu-runner-4 after all source gates passed and the review validated 10/10
+partitions with all six threads resolved. It verified the full Codex 0.171.0
+distribution and Node 24.21.0, then retained eight passing and two failing rows.
+All three transport controls returned both exact markers and 37. Owned read
+matched the fixture digest; owned write returned DENIED and the trusted canary
+absence check passed. Unshare still failed uid_map with EPERM, and the
+empty-PATH bundled bubblewrap still failed loopback RTM_NEWADDR with EPERM.
+Engine remained unavailable; collection and cleanup completed. These negatives
+remain part of the successful collection, not successful prerequisite outcomes.
+The schema 4 original receipt, complete job log, raw byte identities, artifact
+metadata and full preceding CI/Commit/Review are preserved in the catalogued
+`quality/bugbot/evidence/issue-1002/controls/native-raw-fd-observation` packet.
+The preflight initially stopped before any POST because its optional neutral
+approval check was attached to Commit rather than Branch Sync. The corrected
+guard verified that exact out-of-scope assessment, with every critical gate and
+all resolved threads still required, before sending its only diagnostic POST.
+An evidence-only publication MUST NOT repeat this observation or claim its new
+Git commit was executed. SDK/model-tool acceptance, credential/oracle exclusion
+and common native C32–C35 remain independently unobserved. No 174/42 campaign or
+production activation follows from these model-free results.
+
 Acceptance and traceability: fixed archive mismatch or version mismatch rejects
 before probes; every negative/missing/signal/cancelled probe has its own preserved
 status; fixture read matches its trusted digest; successful denial leaves no

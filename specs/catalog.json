@@ -3061,7 +3061,8 @@
         "docs/security-operations/security/self-hosted-runners.mdx",
         "docs/security-operations/operations/upgrade-rollback.mdx",
         "docs/security-operations/operations/smoke-tests.mdx",
-        "docs/development/testing.mdx"
+        "docs/development/testing.mdx",
+        "quality/bugbot/evidence/issue-1002/controls/native-raw-fd-observation/README.md"
       ]
     },
     {
