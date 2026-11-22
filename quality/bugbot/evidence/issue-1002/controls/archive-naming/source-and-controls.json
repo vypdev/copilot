@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "issue": 1002,
+  "pr": 1003,
+  "parent": "a01610d0a8044f52fc5847b7398a51f4b2d28ae4",
+  "scope": "Use the existing generated log archive naming for six generated reports/historical evidence; no application, diagnostic, test assertion, provider, source-capacity, model or policy change",
+  "nativeNegative": {
+    "run": 45057913181,
+    "job": 137317159150,
+    "runner": "ubuntu-runner-1",
+    "conclusion": "failure",
+    "code": "validation.evidence-unavailable",
+    "protocol": "immutable-tree-v1",
+    "reason": "binary",
+    "observedPaths": 692,
+    "supportedLimit": 0,
+    "firstUnsupported": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/cohort.jest.json.gz",
+    "retryable": false,
+    "actualProgressModelAssessment": "not started; no partial assessment accepted"
+  },
+  "causalMoves": [
+    {
+      "old": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/cohort.jest.json.gz",
+      "new": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/cohort.jest.json.log.gz",
+      "bytes": 12928,
+      "sha256": "dce5797a01943794ee2c276846eaad04fafd10d1484c91ced12f21d43f00d02c"
+    },
+    {
+      "old": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/controlled-green-journal.jest.json.gz",
+      "new": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/controlled-green-journal.jest.json.log.gz",
+      "bytes": 1666,
+      "sha256": "9c248452371ae63a47b305b87b6e937ae7fc4d2738b1f455d4fc238faba0f81f"
+    },
+    {
+      "old": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/controlled-green-renderer.jest.json.gz",
+      "new": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/controlled-green-renderer.jest.json.log.gz",
+      "bytes": 1670,
+      "sha256": "74e20872bfc880ab22c9a265415d04a0e56bc2d215509b9fac7a5a105a361c5d"
+    },
+    {
+      "old": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/controlled-red-journal.jest.json.gz",
+      "new": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/controlled-red-journal.jest.json.log.gz",
+      "bytes": 2529,
+      "sha256": "9fe179c54dafc8ebce00b2a64272f84215aa9cbce2d72502fffe45494dcae721"
+    },
+    {
+      "old": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/controlled-red-renderer.jest.json.gz",
+      "new": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/controlled-red-renderer.jest.json.log.gz",
+      "bytes": 4698,
+      "sha256": "5874f71c5f317de98a8fe89ff11f8ea5baa89299d486e71735b022fbdc536df2"
+    },
+    {
+      "old": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/original-ambiguous-manifest.json.gz",
+      "new": "quality/bugbot/evidence/issue-1002/controls/fixture-readiness/original-ambiguous-manifest.json.log.gz",
+      "bytes": 7086,
+      "sha256": "10c701edc21e61c95ae9081f1e7b62d04eac2f93ed6322c39568f3c20960bc17"
+    }
+  ],
+  "allMovedCompressedAndDecodedBytesUnchanged": true,
+  "component": {
+    "realOwnedGitObjects": true,
+    "actualRepositoryModulesUnmodified": true,
+    "comparisonProviderMetadata": "controlled capped prefix; not live GitHub",
+    "paths": 305,
+    "generatedBuildPaths": 298,
+    "archivePaths": 6,
+    "reviewableActualSourcePaths": 1,
+    "red": "binary/validation.evidence-unavailable at exact305/limit0",
+    "green": "all305requiredpaths/305units/1partition; actual compiler-helper source retained in full;11tree/blob requests",
+    "onlyChangedInput": "six archive paths",
+    "runtimeOrModelAcceptance": false
+  },
+  "unchangedActualSourceSha256": {
+    "src/application/policies/progress_generated_artifact_policy.ts": "5ce2cd09b1d840418041aaca88d442fb86d04d3baa3f865302224ef7735c6ff7",
+    "src/data/repository/complete_progress_diff_repository.ts": "99fc8a0f28d07d5b07ad139f632b75d0292a52c67bf5f036bfcc439d6d855a97",
+    "src/data/repository/immutable_progress_content_repository.ts": "55958f1296c906002c11e3883eb6e8cf14b25bd66d7c6a08fcd965fb915b91f8",
+    "src/application/policies/progress_inventory_profile_policy.ts": "70e882784f2941d0f9477091e7ef117aeb5e5d2771bae0c9120924d0ed58571e"
+  },
+  "previousCanonical": {
+    "file": "goal-950-canonical-through-continuation134.md",
+    "bytes": 5777,
+    "sha256": "87ad1bb1c0719371126e98dc54e3f7de0e66bf511faaa8921ea9383c05ff8944"
+  },
+  "archiveMap": [
+    {
+      "file": "native-a016-commit.log.gz",
+      "rawBytes": 166062,
+      "rawSha256": "dfd748d2ec72deb12601a1fb1272921d743163e46d595128b63466bd505ebd3c",
+      "gzipBytes": 18911,
+      "gzipSha256": "b1b8f24952259586dba8a11e915385de7c7df8233f7ebf979e72a12adebc4212"
+    },
+    {
+      "file": "component.log.gz",
+      "rawBytes": 772,
+      "rawSha256": "1c433f4d335e255aed7d71a965a7b673d8ad6e111c960ea2bc031c7d35020a2e",
+      "gzipBytes": 423,
+      "gzipSha256": "a34063aa9e7d365b4f70bbcebf0e2151b38a2e977e952e4088bdace51ae1e360"
+    },
+    {
+      "file": "component-receipt.json.log.gz",
+      "rawBytes": 15733,
+      "rawSha256": "b6484214b46bea3f519e6be76c8054faba122de4faf28b50d205a7dd2ee802b2",
+      "gzipBytes": 2529,
+      "gzipSha256": "4a069f79df3901b3671a6fd632d74223e38933cc00e82275f08ff746c6da0a8e"
+    },
+    {
+      "file": "component-driver.cjs.log.gz",
+      "rawBytes": 5877,
+      "rawSha256": "7daa98edd96035d949898dc9a2f93bbc072a43e76bfcccba607822a60091b02e",
+      "gzipBytes": 2457,
+      "gzipSha256": "e85b8f04477827c8826b15bc0dc45dd6bd61a13e39d81cf8642ba3b97eeeda0f"
+    },
+    {
+      "file": "full-source-adjudication.log.gz",
+      "rawBytes": 706,
+      "rawSha256": "af6c9cc7e519df76fc768680793962756d67a5f779597252d1fed82a5d4579da",
+      "gzipBytes": 440,
+      "gzipSha256": "e7285228e626c3730591704fce302af05d6ae66e9fd4733f80051c149cc0ba4d"
+    },
+    {
+      "file": "full-source-adjudication.json.log.gz",
+      "rawBytes": 775,
+      "rawSha256": "59e00320373beca01b481a1a670ff35cfe1b5cf0075042ba609926314d4c6535",
+      "gzipBytes": 449,
+      "gzipSha256": "87b1492a10ad6214169282df9f94a87440cd402af421704e51baea1d4078866e"
+    },
+    {
+      "file": "full-source-adjudication-driver.cjs.log.gz",
+      "rawBytes": 3566,
+      "rawSha256": "0cad751c7d9054eaa2d77e962fb8c19b9564097f0253a7b449edb3af1b4b8dba",
+      "gzipBytes": 1706,
+      "gzipSha256": "05e2e12c127c3ebec72019ad2783b808ff033ffc037d1a72056de9e074022606"
+    }
+  ],
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "newNativeDiagnosticDispatched": false,
+  "qualifiedProfiles": [],
+  "productionVerification": "disabled",
+  "fullSourceAdjudication": {
+    "at": "2026-11-22T19:09:11.268Z",
+    "state": "PASS",
+    "purpose": "Strengthen the first control substring check with exact complete recovered-text byte equality on the same existing fixed fixture; original contrast remains untouched",
+    "fixtureHead": "bf5b3fccd71f3f7755740ab305d3c543a7d58b1e",
+    "requiredPaths": 305,
+    "totalUnits": 305,
+    "generatedMetadataUnits": 304,
+    "exactRecoveredSourceUnits": 1,
+    "expectedSourceBytes": 2958,
+    "recoveredSourceBytes": 2958,
+    "expectedSha256": "f28ceb22102ab29d4f5955e10fc156f2c5ab373711786700010304f4d2bfc0f8",
+    "recoveredSha256": "f28ceb22102ab29d4f5955e10fc156f2c5ab373711786700010304f4d2bfc0f8",
+    "byteForByteEqual": true,
+    "nativeGitHub": false,
+    "modelCalls": 0,
+    "pilotWrites": 0,
+    "DONE_DO_NOT_REPEAT": true
+  }
+}

@@ -163,7 +163,7 @@
   },
   "provenanceCorrection": {
     "finding": "PRRT_kwDONSeBW866mzTo",
-    "originalRetained": "original-ambiguous-manifest.json.gz",
+    "originalRetained": "original-ambiguous-manifest.json.log.gz",
     "fourPublicationHashesUnchanged": true,
     "distinctRevisionNowExplicit": true,
     "fourComparisons": [
@@ -217,7 +217,7 @@
       "gzipSha256": "c50d99da521a7f0cac5e42b7ac864975c259f8c8d9846d9f8dfe4e898193bec3"
     },
     {
-      "file": "controlled-red-renderer.jest.json.gz",
+      "file": "controlled-red-renderer.jest.json.log.gz",
       "rawBytes": 209434,
       "rawSha256": "4d6f9209e7178a100545da7a742bafe3e7530064f293756fe9d2173c3107017f",
       "gzipBytes": 4698,
@@ -231,7 +231,7 @@
       "gzipSha256": "00c998e65e55f13dfdb72db1f2cfd4cfc3b36bf45e92b0084ccac440162a9d39"
     },
     {
-      "file": "controlled-red-journal.jest.json.gz",
+      "file": "controlled-red-journal.jest.json.log.gz",
       "rawBytes": 27886,
       "rawSha256": "346acbbccf5512b1a44b95d23a75fc82040e530c7aef44ae3126c8be876b204d",
       "gzipBytes": 2529,
@@ -245,7 +245,7 @@
       "gzipSha256": "ddf901bb5c8417337380783001cba9be88b947bdb8916b35a8182e256bd367e0"
     },
     {
-      "file": "controlled-green-renderer.jest.json.gz",
+      "file": "controlled-green-renderer.jest.json.log.gz",
       "rawBytes": 19016,
       "rawSha256": "8e8298c70fea8ff971923da7d1026f5449aa25f7c1c970a0c979ce265a675670",
       "gzipBytes": 1670,
@@ -259,7 +259,7 @@
       "gzipSha256": "663196c1715872c8449d94015a9797d352e0745070560f76bdcbf7ae01e09575"
     },
     {
-      "file": "controlled-green-journal.jest.json.gz",
+      "file": "controlled-green-journal.jest.json.log.gz",
       "rawBytes": 22682,
       "rawSha256": "8aa23efea694069a6e9d2de180fcc01271a7c1599277cb012e7ffd1647f67677",
       "gzipBytes": 1666,
@@ -273,7 +273,7 @@
       "gzipSha256": "bff7eaf3075ffe283c8a33504ced277d9b8061c1dccd4488125b63a4ebc3a902"
     },
     {
-      "file": "cohort.jest.json.gz",
+      "file": "cohort.jest.json.log.gz",
       "rawBytes": 194322,
       "rawSha256": "9711708b5aecbd9ee523d9668abcc6fe9221da5aec2540410aa170340dc5a8f3",
       "gzipBytes": 12928,
@@ -315,7 +315,7 @@
       "gzipSha256": "21fc91385c6a2fb9f061b120adb84d7e017972d50392294995324ae786698c17"
     },
     {
-      "file": "original-ambiguous-manifest.json.gz",
+      "file": "original-ambiguous-manifest.json.log.gz",
       "rawBytes": 31395,
       "rawSha256": "dacce50f64c5ab87d2e8c2dd45239727f21e3920797eb5728b0a3e77711de47c",
       "gzipBytes": 7086,
