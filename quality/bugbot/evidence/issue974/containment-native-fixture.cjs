@@ -47,7 +47,36 @@ async function untilNative(predicate, interrupted = () => false) {
 
 function descendant(role) {
     const input = requireNativeWorker(), directory = '/qualification-output/native';
-    assert(['ignored', 'inherited', 'intermediate'].includes(role));
+    assert(['ignored', 'inherited', 'intermediate', 'nested-launcher', 'nested'].includes(role));
+    if (role === 'nested-launcher') {
+        assert.equal(input.slot.caseId, 'ev974-C32');
+        const triple = { arm64: 'aarch64-unknown-linux-musl', x64: 'x86_64-unknown-linux-musl' }[process.arch];
+        assert(triple, 'native nested namespace control requires a supported pinned CLI architecture');
+        const bwrap = '/opt/codex/node_modules/@openai/codex-linux-' + process.arch
+            + '/vendor/' + triple + '/codex-resources/bwrap';
+        const stat = fs.lstatSync(bwrap);
+        assert(stat.isFile() && !stat.isSymbolicLink() && !(stat.mode & 0o6000), 'regular non-SUID bundled bubblewrap required');
+        const namespaces = Object.fromEntries(['user', 'pid', 'mnt', 'ipc', 'net'].map(name =>
+            [name, fs.readlinkSync('/proc/self/ns/' + name)]));
+        const stdout = fs.openSync(path.join(directory, 'nested-bwrap.stdout'), 'wx', 0o600);
+        const stderr = fs.openSync(path.join(directory, 'nested-bwrap.stderr'), 'wx', 0o600);
+        let child;
+        try {
+            child = spawn(bwrap, ['--new-session', '--unshare-user', '--unshare-pid', '--unshare-ipc', '--unshare-net',
+                '--ro-bind', '/', '/', '--bind', '/qualification-output', '/qualification-output', '--proc', '/proc',
+                '--cap-drop', 'ALL', '--', process.execPath, fixtureFile, '--native-descendant', 'nested'],
+            { stdio: ['ignore', stdout, stderr] });
+        } finally { fs.closeSync(stdout); fs.closeSync(stderr); }
+        const failed = details => {
+            write(path.join(directory, 'nested-failure.json'), { ...details, modelCalls: 0 }); process.exit(1);
+        };
+        child.once('error', error => failed({ stage: 'spawn', message: error.message }));
+        child.once('exit', (code, signal) => failed({ stage: 'exit', code, signal }));
+        child.once('spawn', () => write(path.join(directory, 'nested-launcher.json'), {
+            ...processState(process.pid), namespaces, bwrap, bwrapSha256: hash(fs.readFileSync(bwrap)), bwrapPid: child.pid,
+        }));
+        return;
+    }
     if (role === 'intermediate') {
         const child = spawn(process.execPath, [fixtureFile, '--native-descendant', 'inherited'], {
             detached: true, stdio: ['ignore', process.stdout, process.stderr],
@@ -56,7 +85,14 @@ function descendant(role) {
         return;
     }
     process.on('SIGTERM', () => undefined);
-    write(path.join(directory, 'descendant.json'), { caseId: input.slot.caseId, ...processState(process.pid) });
+    const nested = role === 'nested';
+    if (nested) assert.equal(input.slot.caseId, 'ev974-C32');
+    write(path.join(directory, nested ? 'nested.json' : 'descendant.json'), {
+        caseId: input.slot.caseId, ...processState(process.pid), ...(nested ? {
+            namespaces: Object.fromEntries(['user', 'pid', 'mnt', 'ipc', 'net'].map(name =>
+                [name, fs.readlinkSync('/proc/self/ns/' + name)])),
+        } : {}),
+    });
     setInterval(() => undefined, 1000);
 }
 
@@ -75,6 +111,12 @@ function fixtureCli() {
         detached: true, stdio: inherited ? ['ignore', process.stdout, process.stderr] : 'ignore',
     });
     child.once('error', () => process.exit(1));
+    if (input.slot.caseId === 'ev974-C32') {
+        const nested = spawn(process.execPath, [fixtureFile, '--native-descendant', 'nested-launcher'], {
+            detached: true, stdio: 'ignore',
+        });
+        nested.once('error', () => process.exit(1));
+    }
     child.once('spawn', () => {
         write('/qualification-output/native/leader.json', processState(process.pid));
         if (input.slot.caseId === 'ev974-C34') { setInterval(() => undefined, 1000); return; }
@@ -110,12 +152,29 @@ async function runWorker(output, plan, operation) {
     const pid = JSON.parse(fs.readFileSync(descendantFile, 'utf8')).pid;
     await untilNative(() => processState(pid).ppid === 1);
     const state = processState(pid); assert.notEqual(state.state, 'Z'); assert.equal(state.session, pid);
+    let nestedNamespace = null;
+    if (operation.slot.caseId === 'ev974-C32') {
+        const launcherFile = path.join(output, 'nested-launcher.json'), nestedFile = path.join(output, 'nested.json');
+        await untilNative(() => {
+            assert(!fs.existsSync(path.join(output, 'nested-failure.json')), 'nested bubblewrap failed; inspect its retained raw stdout/stderr');
+            return fs.existsSync(launcherFile) && fs.existsSync(nestedFile);
+        });
+        const launcher = JSON.parse(fs.readFileSync(launcherFile, 'utf8'));
+        const nested = JSON.parse(fs.readFileSync(nestedFile, 'utf8'));
+        await untilNative(() => processState(launcher.pid).ppid === 1);
+        const launcherState = processState(launcher.pid);
+        assert.notEqual(launcherState.state, 'Z'); assert.equal(launcherState.session, launcher.pid);
+        for (const name of ['user', 'pid', 'mnt', 'ipc', 'net']) {
+            assert.notEqual(nested.namespaces[name], launcher.namespaces[name], 'actual nested ' + name + ' namespace required');
+        }
+        nestedNamespace = { launcher: { ...launcher, ...launcherState }, nested };
+    }
     if (['ev974-C32', 'ev974-C35'].includes(operation.slot.caseId)) await executing;
     else assert.equal(settled, false, 'inherited pipes or live SDK execution must still be pending');
     write(path.join(output, 'sdk-ready.json'), { schemaVersion: 1, caseId: operation.slot.caseId,
         scopeId: operation.scopeId, identity: operation.identity, realCli, fixtureCliSha256: hash(fs.readFileSync(fixture)),
         preparedVersion: prepared.runtimeContract.version, qualificationInvestigation: prepared.qualificationInvestigation,
-        sdkSettled: settled, descendant: state, result: result ?? null, modelCalls: 0 });
+        sdkSettled: settled, descendant: state, nestedNamespace, result: result ?? null, modelCalls: 0 });
     if (operation.slot.caseId === 'ev974-C35') return { status: 'completed' };
     // C32 is deliberately quiet after its ordinary executor settled. C33 is
     // blocked by inherited pipes. C34 is waiting when its real outer owner dies.

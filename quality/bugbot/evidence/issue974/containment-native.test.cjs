@@ -263,6 +263,13 @@ for (const id of ids.slice(0, 2)) test(id + ' actual contained SDK cancels escap
         const ledger = run.ledger(), ready = ledger.find(row => row.event === 'native-ready');
         assert(ready); assert.equal(ready.evidence.sdkSettled, id === 'ev974-C32');
         assert.equal(ready.evidence.descendant.ppid, 1); assert.equal(ready.evidence.modelCalls, 0);
+        if (id === 'ev974-C32') {
+            const { launcher, nested } = ready.evidence.nestedNamespace;
+            assert.equal(launcher.ppid, 1); assert.equal(launcher.session, launcher.pid);
+            assert.notEqual(launcher.state, 'Z'); assert.notEqual(nested.state, 'Z');
+            assert.match(launcher.bwrapSha256, /^[a-f0-9]{64}$/u);
+            for (const name of ['user', 'pid', 'mnt', 'ipc', 'net']) assert.notEqual(nested.namespaces[name], launcher.namespaces[name]);
+        }
         const end = ledger.find(row => row.event === 'operation-stopped');
         assert.equal(end.namespaceInitStopped, true); assert.equal(end.interrupted, true);
         assert.equal(ledger.filter(row => row.event === 'scope-removed').length, 1);

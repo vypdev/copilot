@@ -10,6 +10,7 @@ const { createHash } = require('node:crypto');
 const { isDeepStrictEqual } = require('node:util');
 const { tmpdir } = require('node:os');
 const { randomBytes } = require('node:crypto');
+const qualificationSeccomp = require('./qualification-seccomp.cjs');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const imagePattern = /^sha256:[a-f0-9]{64}$/u;
 const idPattern = /^[a-f0-9]{64}$/u;
@@ -79,7 +80,8 @@ function fixedConfiguration(profile, identity, inputDirectory, outputDirectory, 
         HostConfig: {
             ReadonlyRootfs: true, Privileged: false, AutoRemove: true, RestartPolicy: { Name: 'no', MaximumRetryCount: 0 },
             PidMode: '', IpcMode: 'private', NetworkMode: 'bridge',
-            CapDrop: ['ALL'], CapAdd: ['SETUID', 'SETGID'], SecurityOpt: ['no-new-privileges:true'],
+            CapDrop: ['ALL'], CapAdd: ['SETUID', 'SETGID'],
+            SecurityOpt: ['no-new-privileges:true', 'seccomp=' + qualificationSeccomp],
             Mounts: [
                 { Type: 'bind', Source: inputDirectory, Target: '/qualification-input', ReadOnly: true,
                     BindOptions: { Propagation: 'rprivate', NonRecursive: true } },

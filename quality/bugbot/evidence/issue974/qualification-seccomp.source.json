@@ -1,0 +1,175 @@
+{
+  "source": "https://github.com/moby/moby/blob/8af9fe3/vendor/github.com/moby/profiles/seccomp/default.json",
+  "upstreamDependencyVersion": "github.com/moby/profiles/seccomp v0.2.3",
+  "baselineRepresentation": "semantic JSON projection; original bytes not claimed",
+  "baselineSemanticSha256": "b9aaf73b79aa9088c675399b494b358c579aa1221a722cf32da9aded5c4a40c1",
+  "proposedExportedProfileSha256": "fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b",
+  "additionalRules": [
+    {
+      "names": [
+        "clone"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 0,
+          "value": 268566545,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    },
+    {
+      "names": [
+        "clone"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 0,
+          "value": 805437457,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    },
+    {
+      "names": [
+        "clone"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 0,
+          "value": 402784273,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    },
+    {
+      "names": [
+        "clone"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 0,
+          "value": 939655185,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    },
+    {
+      "names": [
+        "clone"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 0,
+          "value": 1342308369,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    },
+    {
+      "names": [
+        "clone"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 0,
+          "value": 1879179281,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    },
+    {
+      "names": [
+        "clone"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 0,
+          "value": 1476526097,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    },
+    {
+      "names": [
+        "clone"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 0,
+          "value": 2013397009,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    },
+    {
+      "names": [
+        "unshare"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 0,
+          "value": 268435456,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    },
+    {
+      "names": [
+        "unshare"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 0,
+          "value": 1342177280,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    },
+    {
+      "names": [
+        "mount"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "names": [
+        "pivot_root"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "names": [
+        "umount2"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 1,
+          "value": 2,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    }
+  ],
+  "license": "Apache-2.0",
+  "context": "qualification only; never applies to ordinary consumer/default runner configuration",
+  "runtimeApproval": "Separate explicit authorization required before first application; previous diagnostic authorization does not cover this profile",
+  "sourceReason": "MatcheddefaultEPERMversusapprovedexactunshareUSERNETPASS;fullCLIrequiresprivateUSER/MNT/PID/IPC/NETsetupandmountoperations",
+  "pinnedCodexSource": "rust-v0.171.0/codex-rs/linux-sandbox/src/bwrap.rs",
+  "pinnedBwrapSource": "rust-v0.171.0/codex-rs/vendor/bubblewrap/bubblewrap.c",
+  "noPrivilegedModeOrHostCapabilitiesAdded": true,
+  "setnsClone3AndAllOtherExistingRulesUnchanged": true,
+  "readableProposalSha256": "177d486f6abc5d8d5b50d4070ecfac11e55d9310f6dd85484bfd2a555e019f54",
+  "exportRepresentation": "compact JSON; all baseline semantics and 13 additions unchanged",
+  "licenseRepresentation": "Complete Apache-2.0 text; one redundant trailing blank line normalized to a single final LF for git diff --check"
+}

@@ -2487,7 +2487,10 @@
         "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
         "quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile",
         "quality/bugbot/evidence/issue974/qualification-requirements.toml",
-        "quality/bugbot/evidence/issue974/containment-native-fixture.cjs"
+        "quality/bugbot/evidence/issue974/containment-native-fixture.cjs",
+        "quality/bugbot/evidence/issue974/qualification-seccomp.cjs",
+        "quality/bugbot/evidence/issue974/qualification-seccomp.source.json",
+        "quality/bugbot/evidence/issue974/qualification-seccomp.LICENSE"
       ],
       "tests": [
         "src/application/policies/__tests__/bugbot_shadow_configuration_policy.test.ts",
@@ -2635,7 +2638,8 @@
         "quality/bugbot/evidence/issue974/managed-requirements-components.cjs",
         "src/infrastructure/agents/__tests__/qualification_investigation.test.ts",
         "src/infrastructure/agents/__tests__/qualification_process_fixture_cleanup.ts",
-        "src/infrastructure/agents/__tests__/qualification_process_fixture_cleanup.test.ts"
+        "src/infrastructure/agents/__tests__/qualification_process_fixture_cleanup.test.ts",
+        "quality/bugbot/evidence/issue974/seccomp-components.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

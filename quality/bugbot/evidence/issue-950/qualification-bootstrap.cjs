@@ -153,7 +153,7 @@ function reviewedPlan(repository, revision, planPath, planSha256, bootstrapSha25
     const base = prefix + (mode === 'normal-flow' ? 'normal-flow-shadow/' : 'ev07-shadow/');
     const inventory = mode === 'normal-flow' ? normal : plan.schemaVersion === 2 ? [...ev07,
         '../../issue974/corpus-selection.cjs', '../../issue974/attempt-ledger.cjs', ...(plan.containment
-            ? ['operation-containment.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'qualification-requirements.toml', 'containment-native-fixture.cjs']
+            ? ['operation-containment.cjs', 'qualification-seccomp.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'qualification-requirements.toml', 'containment-native-fixture.cjs']
                 .map(name => '../../issue974/' + name) : [])] : ev07;
     const expected = mode === 'normal-flow' ? plan.drivers : plan.inspectedArtifacts;
     const admitted = [];

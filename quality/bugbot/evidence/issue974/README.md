@@ -542,3 +542,52 @@ credential/oracle exclusion and C32–C35 receipts, then a committed preregistra
 before174. Existing SDK flags, scientific thresholds and historical evidence
 remain unchanged. Actual174/42 remain unstarted, profileNONE, pilotwrites0 and
 productiondisabled.
+
+### Fixed qualification seccomp profile
+
+The current CLI starts and reports its pinned version, but its bubblewrap
+sandbox fails under the built-in Docker filter on the observed arm64 runtime.
+One separately authorized, credential-free USER/NET unshare trial passed; its
+matched default-filter control failed with EPERM. That diagnostic authorization
+is consumed. It does not authorize the complete filter or establish CLI/tool
+exclusion. The runs occurred locally on the physical Mac hosting the
+self-hosted runners, not as GitHub Actions jobs.
+
+[`qualification-seccomp.cjs`](qualification-seccomp.cjs) is fixed compact JSON
+derived from the Moby baseline. Its [provenance](qualification-seccomp.source.json)
+and [Apache2.0 license](qualification-seccomp.LICENSE) remain adjacent. It keeps
+every baseline rule and adds13 rules for exact USER/MNT clone combinations,
+exact USER or USER/NET unshare, private mount/pivot_root, and lazy umount2.
+It adds no setns/clone3 permission, host capability, privileged mode, SUID helper,
+daemon setting or runner change. These syscalls still widen the per-container
+kernel surface and require the separate concrete runtime review.
+
+The existing adapter sends the fixed bytes with no-new-privileges and inspects
+them before start. The public bootstrap, implementation and provenance loader
+pin the data module in the closed18-driver inventory before import. There is no
+public filter path, override field or environment grant. Missing/changed/linked
+module bytes and missing/changed/unconfined inspected filters reject admission.
+The12 cases in `seccomp-components.cjs` cover baseline/rule boundaries, actual
+Unix HTTP with a modeled Engine, and actual public-bootstrap refusals. They
+execute no Docker workload or model.
+
+```text
+Prepare source/image -> review exact exception -> actual CLI and SDK checks
+ -> commit scientific preregistration ->174 -> only same-tuple PASS permits42
+```
+
+Actual acceptance additionally requires13 CLI cases: positive workspace read,
+nine private-root denials, symlink alias denial, write denial and network denial.
+Use dummy canaries and require positive sandbox entry so a startup failure
+cannot pass a denial. Actual ordinary SDK/model-tool credential/oracle exclusion
+remains separate. Fresh C32–C35 on the common tuple remain mandatory: C32 now
+holds both the original escaped descendant and a nested bubblewrap workload,
+records different USER/MNT/PID/IPC/NET identities, then proves whole-scope stop.
+This expands an existing case; it does not add another logical test or scope.
+
+Retain every negative. A refused/uncertain start requires causal investigation
+and a new reviewed tuple rather than replay or filter broadening. Roll back to
+the preceding immutable implementation/image when needed; never rewrite old
+plans or receipts. A deterministic PASS, build, syscall trial or native-only
+control does not qualify a profile. Production remains disabled and evaluated
+pilot writes remain0.

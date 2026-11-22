@@ -1261,6 +1261,52 @@ reviewed source/plan bytes, and freeze a fresh common tuple before another
 explicit native attempt. The Git/filesystem component controls use a modeled
 process port and do not execute the bootstrap or establish native acceptance.
 
+### Qualification sandbox readiness
+
+The qualification runtime uses a fixed seccomp profile for the pinned CLI's
+private bubblewrap namespaces. The immutable profile is admitted with the
+driver inventory and sent by the existing container adapter; operators cannot
+select arbitrary filters through flags, environment or plan fields. The adapter
+rejects missing, changed or unconfined inspected filters before start.
+
+```text
+Source/image preparation -> exact runtime review -> CLI exclusion and SDK cleanup
+ -> committed scientific plan ->174 -> same-tuple PASS ->42
+```
+
+Text equivalent: a prepared runtime needs a separately reviewed per-container
+exception and actual CLI/SDK proof before scientific preregistration. A previous
+single-syscall diagnostic authorization cannot authorize the full profile.
+The filter preserves the Moby baseline and adds only the fixed namespace and
+filesystem setup operations documented in the
+[qualification packet](https://github.com/vypdev/copilot/tree/develop/quality/bugbot/evidence/issue974).
+It widens that container's kernel surface, without adding host capabilities,
+privileged mode, SUID helpers or persistent runner/daemon settings.
+
+`The fixed filter is prepared` means no campaign has started. Follow the exact
+review link in the existing canonical issue comment when authorization is
+required. `CLI isolation was not established` blocks174: retain the private
+negative and investigate its demonstrated cause. Do not repeat an uncertain
+create/start or broaden the filter. `CLI exclusion passed; SDK containment is
+still pending` is partial runtime evidence. Only separate same-tuple receipts
+and the committed scientific plan can admit174. Runtime acceptance does not
+mean a qualified profile or production activation.
+
+The deterministic filter controls use actual local Unix HTTP with a modeled
+Engine. They do not execute Docker or prove isolation. Actual CLI controls must
+show positive workspace access and denial of all fixed private roots, symlink
+aliases, writes and tool network access, using dummy canaries. Actual ordinary
+SDK/model-tool credential/oracle exclusion remains required. Native C32 also
+holds a live nested USER/MNT/PID/IPC/NET workload during cancellation; C33–C35
+retain inherited-pipe, owner-loss, race and unrelated-sentinel checks. A killed
+namespace and a completed investigation remain different facts.
+
+Keep earlier failed attempts and original source/runtime identities. Rollback
+uses the preceding immutable image and implementation, never an edited old
+plan. Host-local execution on a machine running self-hosted listeners must be
+identified as local execution; it is not a GitHub Actions job. These Linux
+runtime checks establish no Desktop Setup or human/platform acceptance.
+
 ### Deletion-only citation metadata
 
 A deletion-only hunk contains no new-side changed lines. A citation spanning

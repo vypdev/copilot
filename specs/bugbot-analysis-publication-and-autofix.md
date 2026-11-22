@@ -5215,6 +5215,138 @@ its independent Git-environment sanitation; this correction changes only test
 fixtures, their source/test identity and documentation, not runtime policy,
 admission rules, credentials, native acceptance or scientific gates.
 
+#### Fixed qualification seccomp profile — issue #974
+
+Status: implementation preparation; application to a real container requires a
+separate reviewed authorization. The earlier authorization covered one exact
+`unshare(USER|NET)` diagnostic only and was consumed. It grants no permission
+for this profile, model calls, a campaign, branch recovery or installation.
+
+Observed evidence on the Darwin arm64 host of the self-hosted runners: the
+Linux arm64 SDK image admits Codex0.171.0 bytes and version, and its committed
+C32–C35 model-free controls pass. The CLI cannot enter its bubblewrap sandbox
+with Docker's built-in seccomp filter. A matched, credential-free, cap-dropALL,
+network-none contrast kept image/user/entrypoint/argv/mounts/capabilities equal:
+the default filter returned EPERM; the one authorized exact unshare rule passed.
+This identifies one blocking cause, not complete CLI compatibility or managed
+filesystem enforcement. Execution was local on that physical Mac, not a GitHub
+Actions job. Previous negatives and original native receipts remain immutable.
+
+The selected correction MUST preserve every field and rule of the semantic
+Moby profiles/seccomp v0.2.3 baseline vendored by Engine8af9fe3. It adds only:
+
+| Operation | Fixed additional permission | Boundary |
+|---|---|---|
+| `clone` | Eight exact arg0 values: SIGCHLD, USER and MNT, plus each combination of PID/IPC/NET | No UTS, CGROUP, TIME, PARENT or arbitrary flags; USER and MNT are mandatory. |
+| `unshare` | Exact arg0 USER, or USER plus NET | No other namespace or sharing flags. |
+| `mount`, `pivot_root` | Private filesystem setup | Kernel checks still require capabilities in the created user namespace; no host SYS_ADMIN is added. |
+| `umount2` | Exact arg1 MNT_DETACH | No additional unmount mode. |
+
+There are13 added rules across five syscall names. Existing setns, clone3,
+default ERRNO and all other baseline rules MUST remain unchanged. The source
+and Apache2.0 attribution/license travel with the fixed data. The reviewed
+profile is exported as immutable compact JSON; whitespace is not an ambient
+choice. A local Node/macOS HTTP negative with the pretty representation is
+retained; compact serialization changes no syscall semantics. This observation
+does not establish a general request-size limit or Docker transport defect.
+
+The [pinned Codex bubblewrap composition](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/linux-sandbox/src/bwrap.rs)
+uses USER/PID/IPC, optionally NET, and private filesystem setup. The
+[vendored bubblewrap implementation](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/vendor/bubblewrap/bubblewrap.c)
+provides the clone/unshare/mount operations. The
+[Moby baseline](https://github.com/moby/moby/blob/8af9fe3/vendor/github.com/moby/profiles/seccomp/default.json)
+is a semantic reference, not independent byte attestation of a daemon's built-in
+profile. No claim of compatibility with another CLI/engine/kernel is made.
+
+The existing Node-core container adapter owns the fixed Engine API payload.
+It MUST send both no-new-privileges and the exact profile bytes, and inspect
+them before start and authority-bearing cleanup. A missing, changed or
+unconfined filter rejects admission. The public bootstrap, source-provenance
+loader and selected-driver inventory MUST admit `qualification-seccomp.cjs`
+before its import; missing, modified or linked bytes reject before application
+imports/probes/scopes. This is the18th contained driver, not a directory grant.
+The profile is primitive data with no input, environment, file lookup or process
+side effects. No new SDK semantic port, public flag, profile field, environment
+grant, arbitrary path, syscall list or Docker selector is introduced.
+
+The closed nine-field containment profile and existing operation lifetime,
+mounts, read-only root, private PID/IPC namespaces, CapDropALL, trusted PID1's
+SETUID/SETGID-only transition and nonzero worker remain unchanged. Kernel
+user-namespace capabilities are distinct from host capabilities. The additional
+mount/namespace syscalls nevertheless widen the per-container kernel surface;
+the explicit review must identify that risk. No unconfined/privileged mode,
+SUID helper, daemon/runner setting, persistent service or fallback is permitted.
+
+```text
+Source/profile controls -> reviewed implementation/image -> exact authorization
+ -> real CLI exclusion + nested SDK containment -> committed campaign plan ->174
+```
+Text equivalent: prepare and verify source, review the concrete per-container
+exception, verify actual CLI isolation and SDK cleanup, then freeze the complete
+scientific preregistration. A namespace diagnostic, image build or deterministic
+PASS alone never admits174. Only the unchanged same-tuple174 PASS admits42.
+
+The canonical progress comment remains the sole GitHub status surface. It MUST
+preserve earlier attempts and expose status before technical details:
+
+| State | Representative first content and next action |
+|---|---|
+| Preparing | `The fixed filter is prepared. No campaign has started. Source checks and the exact image review are next.` |
+| Action required | `The runtime exception is ready for review. Inspect the exact profile, image and bounded operations in the linked review before authorizing application.` |
+| Blocked/failed | `CLI isolation was not established. Retain the linked negative and correct its demonstrated cause; the174 cases remain unstarted.` |
+| Partial | `CLI exclusion passed; SDK containment is still pending. Inspect the separate receipts; do not start174.` |
+| Accepted runtime | `The runtime prerequisites passed on the recorded tuple. Commit the complete preregistration before174; no profile is qualified yet.` |
+
+Each state links to its retained source/receipt/review in the existing comment.
+No new notification, label, check, localization mechanism or evaluated-PR write
+is added. Existing text-first, narrow-view, sanitization and disclosure rules
+apply. No human/platform or accessibility observation is a gate for this Linux
+qualification change. Missing authorization/capability stops before applying the
+exception. A failed or uncertain application retains all effects and cannot
+silently retry, broaden the filter or replace earlier evidence. Rollback is to
+the preceding immutable implementation/image; it does not erase a negative or
+reuse a plan for a different tuple. Nothing changes on the daemon or runners.
+
+The risk-derived minimum is **29 distinct verification cases**, counted once:
+
+| Area | Cases | Required behavior |
+|---|---:|---|
+| Deterministic fixed policy/configuration |5| Preserve the entire baseline; constrain clone; constrain unshare; constrain filesystem additions; reject public override fields. |
+| Actual local HTTP with modeled Engine |4| Send exact bytes with unchanged capabilities; reject missing, changed and unconfined filter inspections before start. |
+| Public immutable bootstrap |3| Reject missing, changed and linked profile modules before imports/probes/scopes. |
+| Actual CLI isolation |13| Positive workspace read; denial of each of the nine fixed private roots; linked alias denial; write denial; network denial. |
+| Actual common-tuple native SDK |4| Existing C32–C35, with C32 additionally holding a detached nested USER/MNT/PID/IPC/NET bubblewrap workload during abort. |
+| **Total** |**29**| The13 CLI cases and four native cases remain separate runtime acceptance, not deterministic test credit. |
+
+`seccomp-components.cjs` owns the12 deterministic cases. The existing35 logical
+qualification IDs and scientific174/42 inventories stay unchanged. C32 retains
+its original escaped descendant and also MUST record different actual inner
+namespace identities, a live reparented outer launcher and a live nested child
+before cancellation. Whole outer namespace stop/removal then proves cleanup;
+test cleanup cannot supply acceptance. No new native case or scope is counted
+for the nested arm. The other native cases retain their historical assertions,
+including late-callback cancellation and the untouched sentinel.
+
+CLI controls MUST use dummy canaries, never real credential/oracle contents. A
+positive sandbox command marker is required so startup failure cannot masquerade
+as successful denial. Actual ordinary SDK/CLI model-tool composition and
+credential/oracle exclusion remain separate mandatory evidence before174;
+model-free CLI commands alone do not close them. No scientific model retry or
+research deadline is added. Unchanged global/changed-module coverage floors,
+ordinary hooks, architecture/package checks, full deterministic regressions,
+specification/catalog/documentation validation and Graphify remain required.
+The engine component coverage includes the fixed data module and hashes the new
+test source before loading it; instrumentation never enters native execution.
+
+Acceptance maps EV974-S01 to the three bootstrap refusals; EV974-S02/S03 to the
+five policy and four HTTP cases plus actual CLI exclusions; and EV974-S04 to
+fresh C32–C35 including the nested arm. Definition of Done requires all29 on the
+same reviewed tuple, actual SDK model-tool exclusion, final source checks and
+committed scientific preregistration. No preparation state closes acceptance.
+The quality operations page and evidence README MUST describe the fixed filter,
+authorization, distinction between component/native evidence, recovery and
+rollback; the catalog includes source, provenance/license and component tests.
+
 | Path | Change |
 |---|---|
 | `specs/bugbot-analysis-publication-and-autofix.md` | update |
@@ -5234,6 +5366,10 @@ admission rules, credentials, native acceptance or scientific gates.
 | `quality/bugbot/evidence/issue974/qualification-supervisor.cjs` | create |
 | `quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile` | create |
 | `quality/bugbot/evidence/issue974/qualification-requirements.toml` | create |
+| `quality/bugbot/evidence/issue974/qualification-seccomp.cjs` | create |
+| `quality/bugbot/evidence/issue974/qualification-seccomp.source.json` | create |
+| `quality/bugbot/evidence/issue974/qualification-seccomp.LICENSE` | create |
+| `quality/bugbot/evidence/issue974/seccomp-components.cjs` | create |
 | `quality/bugbot/evidence/issue974/managed-requirements-components.cjs` | create |
 | `quality/bugbot/evidence/issue974/containment-native.test.cjs` | create |
 | `quality/bugbot/evidence/issue974/containment-native-fixture.cjs` | create |

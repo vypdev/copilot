@@ -142,7 +142,9 @@ function publicBootstrapFixture(t, moduleFence = false, containment) {
     const drivers = implementation.selectedQualificationDrivers(p);
     for (const file of drivers) write(path.posix.normalize(prefix + 'ev07-shadow/' + file), 'module.exports={};\n');
     for (const file of ['execution-provenance.cjs', 'qualification-bootstrap.cjs']) write(prefix + file, fs.readFileSync(path.join(__dirname, '../issue-950', file)));
-    if (containment) write('quality/bugbot/evidence/issue974/operation-containment.cjs', fs.readFileSync(path.join(__dirname, 'operation-containment.cjs')));
+    if (containment) for (const name of ['operation-containment.cjs', 'qualification-seccomp.cjs']) {
+        write('quality/bugbot/evidence/issue974/' + name, fs.readFileSync(path.join(__dirname, name)));
+    }
     write(prefix + 'ev07-shadow/corpus.cjs', `require('node:fs').writeFileSync(${JSON.stringify(marker)},'entered');
         exports.run=()=>{require('node:child_process').execFileSync(process.execPath,['-e',${JSON.stringify(`require('node:fs').writeFileSync(${JSON.stringify(probe)},'probe');`)}]);};\n`);
     if (moduleFence) {
@@ -816,3 +818,4 @@ require('./late-cancellation-components.cjs');
 require('./native-bootstrap-components.cjs');
 require('./owner-loss-components.cjs');
 require('./managed-requirements-components.cjs');
+require('./seccomp-components.cjs').registerBootstrapControls(t => publicBootstrapFixture(t, false, () => {}));
