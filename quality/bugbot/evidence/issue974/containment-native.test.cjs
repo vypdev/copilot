@@ -128,6 +128,58 @@ function engine(entry, method, route) {
     });
 }
 
+// Independent host observation. This is not a production scope capability or
+// model-output receipt; the native test supplies its positively inspected ID.
+function nativeWait(entry, scopeId, condition) {
+    assert.match(scopeId, /^[a-f0-9]{64}$/u); assert(['next-exit', 'removed'].includes(condition));
+    const profile = requireProfile(entry.plan.containment);
+    let acknowledge, rejectAcknowledgment, complete, rejectCompletion, requestClosed, responseClosed, req, response, settled = false;
+    const registered = new Promise((resolve, reject) => { acknowledge = resolve; rejectAcknowledgment = reject; });
+    const result = new Promise((resolve, reject) => { complete = resolve; rejectCompletion = reject; });
+    const closed = new Promise(resolve => { requestClosed = resolve; });
+    const fail = error => {
+        if (settled) return;
+        settled = true; rejectAcknowledgment(error); rejectCompletion(error); req?.destroy(); response?.destroy();
+    };
+    void registered.catch(() => undefined); void result.catch(() => undefined);
+    try {
+        req = http.request({ socketPath: profile.socketPath, method: 'POST', agent: false, timeout: 0,
+            path: '/v' + profile.engine.apiVersion + '/containers/' + scopeId + '/wait?condition=' + condition }, incoming => {
+            response = incoming; responseClosed = new Promise(resolve => incoming.once('close', resolve));
+            incoming.once('error', fail); incoming.once('aborted', () => fail(new Error('Independent native wait response aborted.')));
+            incoming.once('close', () => { if (!incoming.complete) fail(new Error('Independent native wait closed before completion.')); });
+            if (settled) { incoming.destroy(); return; }
+            if (incoming.statusCode !== 200) { fail(new Error('Independent native wait registration failed.')); return; }
+            acknowledge(); const chunks = []; let length = 0;
+            incoming.on('data', chunk => {
+                if (settled) return;
+                length += chunk.length;
+                if (length > 2 * 1024 * 1024) fail(new Error('Independent native wait metadata exceeded its bound.'));
+                else chunks.push(chunk);
+            });
+            incoming.once('end', () => {
+                if (settled) return;
+                try {
+                    const value = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+                    assert(value && !Array.isArray(value) && typeof value === 'object');
+                    assert(Object.keys(value).every(key => key === 'StatusCode' || key === 'Error'));
+                    assert(Number.isSafeInteger(value.StatusCode) && value.StatusCode >= 0);
+                    if (Object.hasOwn(value, 'Error')) {
+                        assert(value.Error && !Array.isArray(value.Error) && typeof value.Error === 'object');
+                        assert.deepEqual(Object.keys(value.Error), ['Message']); assert.equal(value.Error.Message, '');
+                    }
+                    settled = true; complete({ StatusCode: value.StatusCode });
+                } catch { fail(new Error('Independent native wait terminal evidence invalid.')); }
+            });
+        });
+        req.once('error', fail); req.once('close', requestClosed); req.end();
+    } catch (error) { fail(error); if (!req) requestClosed(); }
+    return { registered, result, async close() {
+        fail(new Error('Independent native wait closed without terminal evidence.')); req?.destroy(); response?.destroy();
+        await closed; if (responseClosed) await responseClosed;
+    } };
+}
+
 function validateScope(run, scope) {
     assert.match(scope.scopeId, /^[a-f0-9]{64}$/u);
     assert.match(scope.identity.ownerId, /^[a-f0-9]{64}$/u);
@@ -185,11 +237,21 @@ async function cleanupKnownScopes(run) {
         try { actual = await inspectOwned(run, scope); }
         catch (error) { if (error.statusCode === 404) continue; throw error; }
         const forced = actual.State.Running;
-        if (forced) await engine(run.entry, 'POST', '/containers/' + scope.scopeId + '/kill?signal=SIGKILL');
-        await until(async () => { actual = await inspectOwned(run, scope); return !actual.State.Running && actual.State.Pid === 0; });
+        if (forced) {
+            try { await engine(run.entry, 'POST', '/containers/' + scope.scopeId + '/kill?signal=SIGKILL'); }
+            catch (error) { if (error.statusCode !== 404) throw error; }
+        }
+        let absent = false;
+        await until(async () => {
+            try { actual = await inspectOwned(run, scope); return !actual.State.Running && actual.State.Pid === 0; }
+            catch (error) { if (error.statusCode !== 404) throw error; absent = true; return true; }
+        });
         fs.appendFileSync(path.join(run.directory, 'test-cleanup.jsonl'), JSON.stringify({ scope, forced,
-            state: actual.State, acceptanceEvidence: false }) + '\n', { mode: 0o600 });
-        await engine(run.entry, 'DELETE', '/containers/' + scope.scopeId + '?force=0&v=0');
+            absent, state: absent ? null : actual.State, acceptanceEvidence: false }) + '\n', { mode: 0o600 });
+        if (!absent) {
+            try { await engine(run.entry, 'DELETE', '/containers/' + scope.scopeId + '?force=0&v=0'); }
+            catch (error) { if (error.statusCode !== 404) throw error; }
+        }
     }
 }
 
@@ -208,24 +270,35 @@ for (const id of ids.slice(0, 2)) test(id + ' actual contained SDK cancels escap
     } finally { await stopOwner(run); await cleanupKnownScopes(run); }
 });
 
-test('ev974-C34 actual outer SIGKILL closes Engine lifetime and retains incomplete evidence', { timeout: 360_000 }, async t => {
+test('ev974-C34 actual outer SIGKILL independently removes its namespace and retains incomplete evidence', { timeout: 360_000 }, async t => {
     const entry = prepared().find(row => row.caseId === 'ev974-C34'), run = launch(entry, 'owner-loss');
     cancelWithTest(t, run);
-    let scope;
+    let scope, exitObservation, removalObservation;
+    const cancelObservation = () => { void Promise.allSettled([exitObservation, removalObservation].filter(Boolean).map(observation => observation.close())); };
+    t.signal.addEventListener('abort', cancelObservation, { once: true });
     try {
         ({ scope } = await ready(run));
-        assert((await inspectOwned(run, scope)).State.Running);
-        run.child.kill('SIGKILL'); const exit = await run.done; assert.equal(exit.signal, 'SIGKILL');
-        let actual;
-        await until(async () => { actual = await inspectOwned(run, scope); return !actual.State.Running && actual.State.Pid === 0; });
-        assert.equal(actual.State.Restarting, false);
+        const before = await inspectOwned(run, scope);
+        assert.equal(before.State.Running, true); assert(before.State.Pid > 0); assert.equal(before.State.Restarting, false);
+        assert.equal(before.HostConfig.AutoRemove, true); assert.equal(before.HostConfig.RestartPolicy.Name, 'no');
+        exitObservation = nativeWait(entry, scope.scopeId, 'next-exit'); removalObservation = nativeWait(entry, scope.scopeId, 'removed');
+        if (t.signal.aborted) cancelObservation();
+        await Promise.all([exitObservation.registered, removalObservation.registered]);
+        assert.equal((await inspectOwned(run, scope)).State.Running, true);
+        assert(run.child.kill('SIGKILL')); const exit = await run.done; assert.equal(exit.signal, 'SIGKILL');
+        const namespaceExit = await exitObservation.result, namespaceRemoved = await removalObservation.result;
+        assert.equal(namespaceExit.StatusCode, 143); assert.equal(namespaceRemoved.StatusCode, namespaceExit.StatusCode);
+        await assert.rejects(inspectOwned(run, scope), error => error.statusCode === 404);
         assert(!run.ledger().some(row => ['operation-stopped', 'native-finish'].includes(row.event)));
         fs.writeFileSync(path.join(run.directory, 'owner-loss-proof.json'), JSON.stringify({ scope,
-            outerPid: run.child.pid, exit, actual: { Image: actual.Image, State: actual.State }, modelCalls: 0,
-            outcome: 'interrupted-incomplete' }, null, 2), { flag: 'wx', mode: 0o600 });
-        // Only this positively correlated, already-stopped scope is removed.
-        await engine(entry, 'DELETE', '/containers/' + scope.scopeId + '?force=0&v=0');
-    } finally { await stopOwner(run); await cleanupKnownScopes(run); }
+            outerPid: run.child.pid, exit, before: { Image: before.Image, State: before.State, autoRemove: before.HostConfig.AutoRemove },
+            namespaceExit, namespaceRemoved, exactIdAbsent: true, manualDeleteIssued: false,
+            source: 'independent-host-engine-observer', modelCalls: 0, outcome: 'interrupted-incomplete' }, null, 2), { flag: 'wx', mode: 0o600 });
+    } finally {
+        t.signal.removeEventListener('abort', cancelObservation);
+        await Promise.allSettled([exitObservation, removalObservation].filter(Boolean).map(observation => observation.close()));
+        await stopOwner(run); await cleanupKnownScopes(run);
+    }
 });
 
 test('ev974-C35 actual completion/cancel races preserve identity and leave an unrelated owned scope running', { timeout: 360_000 }, async t => {

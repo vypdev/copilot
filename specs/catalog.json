@@ -2630,6 +2630,7 @@
         "quality/bugbot/evidence/issue974/component-evidence-integrity-components.cjs",
         "quality/bugbot/evidence/issue974/late-cancellation-components.cjs",
         "quality/bugbot/evidence/issue974/native-bootstrap-components.cjs",
+        "quality/bugbot/evidence/issue974/owner-loss-components.cjs",
         "src/infrastructure/agents/__tests__/qualification_investigation.test.ts",
         "src/infrastructure/agents/__tests__/qualification_process_fixture_cleanup.ts",
         "src/infrastructure/agents/__tests__/qualification_process_fixture_cleanup.test.ts"

@@ -1,0 +1,31 @@
+{
+  "commit": "8af9fe3a36bab3e039862a2ab1cef1880c9b4d03",
+  "files": [
+    {
+      "url": "https://github.com/moby/moby/blob/8af9fe3a36bab3e039862a2ab1cef1880c9b4d03/daemon/server/router/container/container_routes.go",
+      "sourceBytes": 44302,
+      "sourceSha256": "800b1109da81fa68c3e60882c78372e0f82d65721fc3216925b129e6ceaffc09"
+    },
+    {
+      "url": "https://github.com/moby/moby/blob/8af9fe3a36bab3e039862a2ab1cef1880c9b4d03/daemon/container/state.go",
+      "sourceBytes": 13098,
+      "sourceSha256": "e2363c464584e8ef8a72cd2c15fa35c1c55035476794b4104e20f336b8c23fc7"
+    },
+    {
+      "url": "https://github.com/moby/moby/blob/8af9fe3a36bab3e039862a2ab1cef1880c9b4d03/daemon/monitor.go",
+      "sourceBytes": 13780,
+      "sourceSha256": "2ff6135e638be051dbd0802ba1570a54cc4064fc545fda43d7c7b872bb1c013d"
+    },
+    {
+      "url": "https://github.com/moby/moby/blob/8af9fe3a36bab3e039862a2ab1cef1880c9b4d03/daemon/wait.go",
+      "sourceBytes": 941,
+      "sourceSha256": "8622be48e59e0a337f0434b3deb7bca5cb4e780bdbb87b5d9a9efdfdfb3a0b66"
+    }
+  ],
+  "fullPrimarySourcesRetainedPrivately": true,
+  "observedContracts": [
+    "router registers ContainerWait before HTTP200/Flush",
+    "removal wakes next-exit even for a never-started container",
+    "daemon automatic removal follows actual process stop"
+  ]
+}

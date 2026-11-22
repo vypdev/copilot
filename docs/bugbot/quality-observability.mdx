@@ -1188,6 +1188,25 @@ committed model-free native-control plans in the actual SDK image. Missing
 plans/capability fail rather than skip. It tests escaped descendants, inherited
 pipes, actual outer SIGKILL/EOF and completion/cancellation races while another
 owned sentinel remains running. Test cleanup is separate from acceptance proof.
+The fixed scope uses daemon automatic removal. Before start, the outer adapter
+inspects ownership/configuration and registers both exit and removal observations.
+Headers acknowledge registration; a terminal result is a separate event. An
+acknowledged start or an actual owned running observation is required before a
+wait result can prove execution. A404 or removal-woken wait alone cannot do so.
+Started scopes finish only after matching exit/removal evidence and exact-ID
+absence; created-only cleanup uses its separately inspected path. Owner loss
+leaves an incomplete operation even when the daemon removes its namespace.
+Private host evidence/staging remains retained when the outer owner cannot
+establish complete delivery. Unknown start effects are not replayed.
+
+Malformed/truncated metadata, runtime errors and failed registration retain
+uncertainty. `Owned wait terminal evidence is invalid or reports a runtime
+failure` means that completion was not proven. Preserve the private negative
+receipt and inspect the exact tuple before a new attempt. The adapter closes its
+owned observation and lifetime callbacks before finalization. C34's independent
+host observer must confirm actual exit/removal after owner SIGKILL with no test
+DELETE; fallback test cleanup cannot supply that proof.
+
 Preparation and current evidence are in the
 [qualification packet](https://github.com/vypdev/copilot/tree/develop/quality/bugbot/evidence/issue974).
 These controls make no model calls and establish no Desktop Setup or human

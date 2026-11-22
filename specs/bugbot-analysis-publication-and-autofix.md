@@ -4930,6 +4930,88 @@ evidence and the closed test/driver inventory must retain this distinction.
 
 Update runtime/Bugbot owners, execution guidance, quality operations, evidence README/plan/results, architecture/coverage contracts and exact closed source/driver inventory together. Documentation must explain invocation, all states, relevant immutable runtime/CLI prerequisites, unknown ownership, explicit abort/EOF, technical cleanup, negative retention and no-replay recovery. The plan remains deliberately not-preregistered until actual source/runtime pins are committed; no preparation result becomes acceptance.
 
+#### Independent owner-loss removal — C27/C34 amendment
+
+Observed defect: the fixed `AutoRemove=false` policy stops the namespace on
+owner EOF but retains the stopped container. C34's explicit test DELETE does not
+prove independent runtime cleanup. Two separate actual model-free provider
+experiments on the same pinned Engine/image show that original retention and
+automatic removal with `AutoRemove=true`; neither is actual SDK acceptance.
+
+The fixed containment policy MUST enable daemon-owned removal and retain all
+existing privilege, image, mount, credential, network and no-restart boundaries.
+Before start, the outer adapter MUST inspect the complete owned configuration,
+register exact-ID `next-exit` and `removed` observations, and await successful
+HTTP registration acknowledgments. Acknowledgment is not a terminal result.
+The adapter MUST separately establish an acknowledged start or an actual owned
+running observation before admitting an exit result as process execution proof.
+Removal can wake `next-exit` for a never-started container; neither that result
+nor404 alone grants execution or namespace-stop authority.
+
+```mermaid
+flowchart LR
+    C[Create and inspect exact owned scope] --> W[Register exit and removal observations]
+    W --> A[Await both registration acknowledgments]
+    A --> S[Attach owner lifetime and acknowledge start]
+    S --> X[Confirm namespace exit]
+    X --> R[Confirm daemon removal and exact-ID absence]
+    R --> F[Clean host staging and finalize outcome]
+```
+
+Text equivalent: ownership/configuration precedes wait registration and start.
+Exit and removal are distinct observations. Host cleanup and a completed result
+require both; unknown effects retain private evidence and cannot be replayed.
+
+| State | Required evidence and cleanup | Result |
+|---|---|---|
+| Created, never started | Inspect stopped PID0/created state, then remove only the exact owned scope | No process execution claim |
+| Start acknowledged or owned running observed | Registered valid exit result, then valid matching removal result and exact-ID404 | Preserve actual exit/interruption |
+| Start response unknown and already absent |404/removal-woken exit is insufficient | Retain incomplete evidence and staging |
+| Owner dies after running | PID1 observes lifetime EOF; daemon removes after exit | Incomplete operation; independent observer proves cleanup |
+| Protocol, callback or durable record fails | Settle every issued observation; preserve first cause and uncertainty | No success, adoption or blind retry |
+
+Wait metadata MUST be bounded and validated as closed JSON with a nonnegative
+safe-integer exit code and the supported optional runtime error shape. Malformed,
+oversized, truncated, failed or aborted observations MUST NOT become stop proof.
+Cancellation before registration settles both registration and terminal promises.
+Once registered for a started scope, operation abort MUST retain the authoritative
+exit observation through termination. Final cleanup MUST settle the owned request
+and response callbacks, not merely their wrapper promises. Provider payloads and
+host locators remain private; public diagnostics identify the failed boundary.
+In particular, a failed/cancelled lifetime attachment MUST await its actual close
+callbacks before rejecting startup. An error event alone is not quiescence.
+An admitted lifetime retains its private request/socket closure until final cleanup.
+
+Started scopes MUST use daemon removal without a test or host DELETE to fabricate
+acceptance. Created-only removal remains an explicitly inspected path. Unknown
+creation or start is not replayed. The existing technical escalation starts only
+after termination is requested; no research deadline, heartbeat, extra runner
+privilege or configurable bypass is added. The semantic SDK scope API stays the
+same; provider tickets and evidence remain in the containment adapter.
+
+The concrete increment is28 named deterministic scenarios: twelve for wait
+registration, terminal validation, transport failure/cancellation and callback
+closure; fourteen for fast exit, preparation/start cancellation, failed/unknown
+start, ownership, durable faults and distinct started/created removal; two for
+the separate native-host observer. The terminal-schema scenario contains twelve
+invalid forms and the host-observer negative contains six protocol forms.
+These extend the506-control Node command to a planned534; preserve all earlier
+cases,35logical IDs and coverage floors. Actual execution counts and matrix
+expansions MUST be recorded rather than inferred from this budget. A fixed
+ten-second readiness/cleanup bound applies only to these modeled local fixtures,
+never to SDK/model investigation or a measured operation.
+C34 MUST independently register observations for its positively correlated running
+scope, kill the actual outer owner, and observe exit/removal/absence without a test
+DELETE. Fallback test cleanup remains visibly separate and cannot satisfy C34.
+Fresh common committed C32–C35, including the untouched sentinel, remain required.
+
+Update exact driver/test inventories, catalog, quality operations and retained
+evidence together. Full local controls, required changed-module/global coverage,
+normal hooks, documentation/specification validation and Graphify remain required.
+The provider prototypes and deterministic fixtures do not prove actual SDK,
+CLI/read-scope, credential exclusion or scientific qualification. Historical plans
+and negatives stay immutable;174/42 remain unstarted until all their gates pass.
+
 #### POSIX process-fixture cleanup — C03 amendment
 
 C03's SDK process fixture MUST retain the actual child handle returned by its
@@ -5058,6 +5140,7 @@ the complete qualification ready.
 | `quality/bugbot/evidence/issue974/corpus-selection.cjs` | update |
 | `quality/bugbot/evidence/issue974/qualification.test.cjs` | update |
 | `quality/bugbot/evidence/issue974/native-bootstrap-components.cjs` | create |
+| `quality/bugbot/evidence/issue974/owner-loss-components.cjs` | create |
 | `quality/bugbot/evidence/issue974/operation-containment.cjs` | create |
 | `quality/bugbot/evidence/issue974/qualification-supervisor.cjs` | create |
 | `quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile` | create |

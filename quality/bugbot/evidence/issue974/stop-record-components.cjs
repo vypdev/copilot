@@ -14,11 +14,14 @@ for(const reason of ['cancelled','failed'])for(const recovered of [false,true])f
    fs.renameSync(file,file+'.retained');fs.mkdirSync(file);
    await assert.rejects(scope.stop(reason),error=>error===first&&error.code==='EISDIR');
    assert.equal(f.running,false,'journal failure must not prevent the owned lifetime stop');
-   assert(f.requests.some(r=>r.route.endsWith('/wait?condition=not-running')));
-   assert(f.requests.filter(r=>r.route==='/containers/'+scope.scopeId+'/json').length>=inspected+2,'stop must inspect identity and confirm actual stopped state');
+   assert(f.requests.some(r=>r.route.endsWith('/wait?condition=next-exit')));
+   assert(f.requests.findIndex(r=>r.route.endsWith('/wait?condition=next-exit'))<f.requests.findIndex(r=>r.route.endsWith('/start')),'exit observation must register before start');
+   assert(f.requests.filter(r=>r.route==='/containers/'+scope.scopeId+'/json').length>=inspected+1,'stop must inspect identity; the pre-registered Engine exit confirms namespace termination');
    assert.equal(f.requests.filter(r=>r.route.includes('/kill?')).length,escalated?1:0);
    assert.equal(written.some(row=>row.event==='scope-stopped'),recovered);
-   assert.equal(f.removed,false,'journal failure cannot become completed delivery or unproved cleanup');
+   await f.whenRemoved();assert.equal(f.removed,true,'daemon cleanup must survive a journal failure');
+   assert.equal(f.requests.filter(r=>r.method==='DELETE').length,0);
+   assert.equal(written.some(row=>row.event==='scope-removed'),false,'physical daemon cleanup is not completed delivery');
   });
  });
 for(const reason of ['cancelled','failed'])test('owned stop record fault: '+reason+' before start confirms the created scope without starting it',async()=>{
@@ -36,6 +39,6 @@ for(const reason of ['cancelled','failed'])test('owned stop record fault: '+reas
 for(const reason of ['cancelled','failed'])test('owned stop record fault: '+reason+' preserves a later confirmation-record error after requesting termination',async()=>{
  await withEngineFixture({recordFailure:'scope-stopped'},async f=>{
   const scope=await f.create();await scope.start();await assert.rejects(scope.stop(reason),/unit durable record failure/);
-  assert.equal(f.running,false);assert.equal(f.removed,false);assert(f.events.some(row=>row.event==='scope-stop-request'));
+  assert.equal(f.running,false);await f.whenRemoved();assert.equal(f.removed,true);assert.equal(f.requests.filter(row=>row.method==='DELETE').length,0);assert(f.events.some(row=>row.event==='scope-stop-request'));
  });
 });

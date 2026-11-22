@@ -232,7 +232,7 @@ test('ev974-C27 closed containment refuses ambient grants, mutable images, arbit
     const config = fixedConfiguration(profile, identity, input, output, ['PATH=/usr/local/bin:/usr/bin:/bin']);
     assert.equal(config.HostConfig.Privileged, false); assert.equal(config.HostConfig.PidMode, '');
     assert.equal(config.HostConfig.Mounts.length, 2); assert.equal(config.Tty, false);
-    assert.equal(config.OpenStdin, true); assert.equal(config.StdinOnce, true); assert.equal(config.HostConfig.AutoRemove, false);
+    assert.equal(config.OpenStdin, true); assert.equal(config.StdinOnce, true); assert.equal(config.HostConfig.AutoRemove, true);
     for (const delta of [{ image: 'node:latest' }, { flags: ['--privileged'] }, { hostPid: true }, { socketMount: '/var/run/docker.sock' },
         { mounts: ['/'] }, { environment: { QUALIFIED: 'true' } }, { workerUid: 0 }, { workerGid: 0 }]) {
         assert.throws(() => requireProfile({ ...profile, ...delta }));
@@ -814,3 +814,4 @@ require('./stop-record-components.cjs');
 require('./startup-stop-components.cjs');
 require('./late-cancellation-components.cjs');
 require('./native-bootstrap-components.cjs');
+require('./owner-loss-components.cjs');

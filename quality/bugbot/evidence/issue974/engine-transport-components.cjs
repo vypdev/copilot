@@ -23,12 +23,32 @@ async function fixture(options = {}) {
     fs.writeFileSync(planFile, JSON.stringify(plan));
     const proof = { planPath: 'plan.json', planSha256: hash(fs.readFileSync(planFile)), planCommit: 'e'.repeat(40) };
     const identity = { ownerId: 'b'.repeat(64), operationId: 'control:C27', planSha256: proof.planSha256, implementation: plan.implementation, imageSha256: image.slice(7), purpose: 'native-control' };
-    const id = 'f'.repeat(64), requests = [], events = [], connections = new Set(), waiters = [], timers = [];
-    let config, running = false, pid = 0, status = 'created', removed = false, lifetime;
+    const id = 'f'.repeat(64), requests = [], events = [], clientRequests = new Set(), connections = new Set(), waiters = [], exitWaiters = [], removalWaiters = [], timers = [];
+    let config, running = false, pid = 0, status = 'created', removed = false, lifetime, ownerChannel, hasRun = false, stdinClosed = false;
+    let releaseRemoval, releaseStart, releaseRegistration, resolveRemoved;
+    const whenRemoved = new Promise(resolve => { resolveRemoved = resolve; });
     let lifetimeEnds = 0, attachDestructions = 0;
-    function stopped() { running = false; pid = 0; status = 'exited'; for (const response of waiters.splice(0))
-        json(response, options.waitResult ?? { StatusCode: 0 }); }
-    function json(response, value, code = 200) { response.writeHead(code, { 'content-type': 'application/json' }); response.end(JSON.stringify(value)); }
+    function json(response, value, code = 200) {
+        if (response.destroyed) return;
+        if (!response.headersSent) response.writeHead(code, { 'content-type': 'application/json' });
+        response.end(JSON.stringify(value));
+    }
+    function removeNow() {
+        if (removed) return;
+        removed = true; resolveRemoved();
+        for (const response of removalWaiters.splice(0)) json(response, options.removalResult ?? options.waitResult ?? { StatusCode: 0 });
+        // Docker removal also wakes next-exit on a never-started container.
+        for (const response of exitWaiters.splice(0)) json(response, options.waitResult ?? { StatusCode: 0 });
+    }
+    function stopped() {
+        if (!hasRun || status === 'exited') return;
+        running = false; pid = 0; status = 'exited';
+        for (const response of [...waiters.splice(0), ...exitWaiters.splice(0)]) json(response, options.waitResult ?? { StatusCode: 0 });
+        if (config.HostConfig.AutoRemove) {
+            if (options.holdRemoval) { releaseRemoval = removeNow; options.onHeldRemoval?.(removeNow); }
+            else setImmediate(removeNow);
+        }
+    }
     const server = http.createServer((request, response) => {
         const chunks = [];
         request.on('data', c => chunks.push(c));
@@ -61,19 +81,33 @@ async function fixture(options = {}) {
                 return json(response, { Id: options.unknownCreateId ? 'unknown' : id }, 201);
             }
             if (route === '/containers/' + id + '/json') {
-                const actual = { Id: id, Image: image, Config: { ...config }, HostConfig: config.HostConfig, Mounts: config.HostConfig.Mounts.map(m => ({ Destination: m.Target, Source: m.Source, Type: m.Type, Mode: '', Propagation: m.BindOptions.Propagation, RW: !m.ReadOnly })), State: { Running: running, Pid: pid, Restarting: false, Status: status, ExitCode: 0 } };
-                options.inspect?.(actual, { running, pid, status });
-                if (options.holdInspection?.()) { options.onHeldInspection(() => json(response, actual)); return; }
-                return json(response, actual);
+                const actual = removed ? undefined : { Id: id, Image: image, Config: { ...config }, HostConfig: config.HostConfig, Mounts: config.HostConfig.Mounts.map(m => ({ Destination: m.Target, Source: m.Source, Type: m.Type, Mode: '', Propagation: m.BindOptions.Propagation, RW: !m.ReadOnly })), State: { Running: running, Pid: pid, Restarting: false, Status: status, ExitCode: 0 } };
+                if (actual) options.inspect?.(actual, { running, pid, status });
+                const reply = () => actual ? json(response, actual) : json(response, {}, 404);
+                // A held metadata response can authoritatively be404 too.
+                // Never substitute a live/stopped container just for a test.
+                if (options.holdInspection?.()) { options.onHeldInspection(reply); return; }
+                return reply();
             }
             if (route === '/containers/' + id + '/start') {
-                running = true;
-                pid = 123;
-                status = 'running';
-                response.writeHead(204);
-                response.end();
-                if (options.completeOnStart)
-                    setImmediate(stopped);
+                running = true; hasRun = true; pid = 123; status = 'running';
+                const reply = () => { if (!response.destroyed) { response.writeHead(options.startStatus ?? 204); response.end(); } };
+                if (options.holdStartReply) { releaseStart = reply; options.onHeldStart?.(reply); }
+                else if (options.lostStartReply) response.destroy();
+                else reply();
+                if (options.completeOnStart || stdinClosed && !options.ignoreLifetimeEof) setImmediate(stopped);
+                return;
+            }
+            if (['next-exit', 'removed'].some(condition => route === '/containers/' + id + '/wait?condition=' + condition)) {
+                const condition = route.slice(route.lastIndexOf('=') + 1);
+                const register = () => {
+                    if (response.destroyed) return;
+                    response.writeHead(200, { 'content-type': 'application/json' }); response.flushHeaders();
+                    if (removed) { json(response, options.removalResult ?? options.waitResult ?? { StatusCode: 0 }); return; }
+                    (condition === 'next-exit' ? exitWaiters : removalWaiters).push(response);
+                };
+                if (options.holdWaitRegistration === condition) { releaseRegistration = register; options.onHeldRegistration?.(register); }
+                else register();
                 return;
             }
             if (route === '/containers/' + id + '/wait?condition=not-running') {
@@ -92,7 +126,7 @@ async function fixture(options = {}) {
                 return;
             }
             if (route === '/containers/' + id + '?force=0&v=0' && request.method === 'DELETE') {
-                removed = true;
+                removeNow();
                 response.writeHead(204);
                 response.end();
                 return;
@@ -112,8 +146,7 @@ async function fixture(options = {}) {
         if (options.holdAttachment) { options.onHeldAttachment(() => connection.destroy()); return; }
         connection.write('HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n' + (options.attachHead ? 'unexpected' : ''));
         connection.on('data', () => { });
-        connection.on('end', () => { if (!options.ignoreLifetimeEof)
-            stopped(); });
+        connection.on('end', () => { stdinClosed = true; if (!options.ignoreLifetimeEof) stopped(); });
     });
     try {
         await new Promise((resolve, reject) => { server.once('error', reject); server.listen(socket, resolve); });
@@ -129,17 +162,19 @@ async function fixture(options = {}) {
     fs.writeFileSync(authFile, 'COMPONENT_ONLY_SESSION');
     const observedHttp = { ...http, request(...args) {
         const req = http.request(...args);
+        clientRequests.add(req); req.once('close', () => clientRequests.delete(req));
         if (args[0]?.path?.includes('/attach?')) {
             const destroy = req.destroy;
             req.destroy = function (...values) { attachDestructions += 1; return destroy.apply(this, values); };
             req.once('upgrade', (_response, socket) => {
+                ownerChannel = socket;
                 const end = socket.end;
                 socket.end = function (...values) { lifetimeEnds += 1; return end.apply(this, values); };
             });
         }
         return req;
     } };
-    const context = { module, require: name => name === 'node:http' ? observedHttp : name === '../issue-950/execution-provenance.cjs' ? provenance : name === '../issue-950/ev07-shadow/load.cjs' ? {} : name.endsWith('/src/data/repository/agent_authentication') ? { buildAgentCliEnvironment: () => options.selectedCredentials ?? {}, codexChatGptSessionFile: () => options.sessionFile ? authFile : undefined } : name.endsWith('/src/data/repository/agent_credential_policy') ? { allowedCredentialVariables: () => ['OPENAI_API_KEY'] } : nativeRequire(name), process: isolatedProcess, Buffer, AbortController, AbortSignal, __dirname: path.dirname(file), __coverage__: globalThis.__coverage__, setTimeout: (callback, delay) => { assert.equal(delay, 5000); const timer = { callback }; timers.push(timer); return timer; }, clearTimeout: timer => { const index = timers.indexOf(timer); if (index >= 0)
+    const context = { module, require: name => name === 'node:http' ? observedHttp : name === '../issue-950/execution-provenance.cjs' ? provenance : name === '../issue-950/ev07-shadow/load.cjs' ? {} : name.endsWith('/src/data/repository/agent_authentication') ? { buildAgentCliEnvironment: () => options.selectedCredentials ?? {}, codexChatGptSessionFile: () => options.sessionFile ? authFile : undefined } : name.endsWith('/src/data/repository/agent_credential_policy') ? { allowedCredentialVariables: () => ['OPENAI_API_KEY'] } : nativeRequire(name), process: isolatedProcess, Buffer, AbortController, AbortSignal, __dirname: path.dirname(file), __coverage__: globalThis.__coverage__, setTimeout: (callback, delay) => { assert.equal(delay, 5000); const timer = { callback }; timers.push(timer); if (options.escalateOnWait) setImmediate(() => { const index = timers.indexOf(timer); if (index >= 0) { timers.splice(index, 1); callback(); } }); return timer; }, clearTimeout: timer => { const index = timers.indexOf(timer); if (index >= 0)
             timers.splice(index, 1); } };
     vm.runInNewContext(raw, context, { filename: file });
     const record = async (event) => { events.push(JSON.parse(JSON.stringify(event))); if (event.event === 'operation-start') {
@@ -147,8 +182,12 @@ async function fixture(options = {}) {
         assert.deepEqual(credentials.environment, options.selectedCredentials?.OPENAI_API_KEY === undefined ? {} : { OPENAI_API_KEY: options.selectedCredentials.OPENAI_API_KEY });
         assert.equal(credentials.codexAuth, options.sessionFile ? 'COMPONENT_ONLY_SESSION' : null);
     } if (options.recordFailure === event.event)
-        throw Error('unit durable record failure'); };
-    return { api: module.exports, directory, input, output, identity, profile, plan, requests, events, proof, get lifetimeEnds() { return lifetimeEnds; }, get attachDestructions() { return attachDestructions; }, get running() { return running; }, get removed() { return removed; }, record,
+        throw Error('unit durable record failure'); if (options.onRecord) await options.onRecord(event); };
+    return { api: module.exports, directory, input, output, identity, profile, plan, requests, events, proof, get lifetimeEnds() { return lifetimeEnds; }, get attachDestructions() { return attachDestructions; }, get running() { return running; }, get removed() { return removed; }, get config() { return config; }, get activeClientRequests() { return clientRequests.size; }, get ownerChannelClosed() { return ownerChannel?.closed ?? true; }, record,
+        whenRemoved() { return whenRemoved; },
+        loseOwner() { assert(ownerChannel); ownerChannel.destroy(); },
+        finish() { stopped(); }, releaseRemoval() { assert(releaseRemoval); releaseRemoval(); },
+        releaseStart() { assert(releaseStart); releaseStart(); }, releaseRegistration() { assert(releaseRegistration); releaseRegistration(); },
         async create() { return module.exports.createOperationContainment({ root: directory, identity, inputDirectory: input, outputDirectory: output, record }); },
         async close() { lifetime?.destroy(); for (const connection of connections)
             connection.destroy(); await new Promise(resolve => server.close(resolve)); for (const event of events.filter(e => e.event === 'operation-incomplete' && e.inputDirectory)) {
@@ -184,7 +223,7 @@ async function exerciseEngineTransportFaults() {
             await assert.rejects(f.create(), /creation record failed/);
             return;
         } const scope = await f.create(); await assert.rejects(scope.start()); await scope.stop('failed'); await scope.remove(); });
-    await use({ completeOnStart: true, waitResult: { StatusCode: 1, Error: { Message: 'runtime failure' } } }, async (f) => { const scope = await f.create(); await scope.start(); await assert.rejects(scope.wait(), /runtime failure/); await scope.stop('failed'); await scope.remove(); });
+    await use({ completeOnStart: true, waitResult: { StatusCode: 1, Error: { Message: 'runtime failure' } } }, async (f) => { const scope = await f.create(); await scope.start(); await assert.rejects(scope.wait(), /runtime failure/); await assert.rejects(scope.stop('failed')); await assert.rejects(scope.remove()); assert.equal(f.events.some(row => row.event === 'scope-stopped'), false); assert.equal(f.requests.filter(row => row.method === 'DELETE').length, 0); });
     for (const aborted of [false, true])
         await use({ completeOnStart: !aborted }, async (f) => { const cancel = new AbortController(); if (aborted)
             cancel.abort(); const result = await f.api.runContainedOperation({ root: f.directory, plan: f.plan, mode: 'native-control', slot: { caseId: 'ev974-C32' }, outputDirectory: path.join(f.directory, 'outer-output'), record: f.record, signal: cancel.signal }); assert.equal(result.interrupted, aborted); assert.equal(result.namespaceInitStopped, true); assert.equal(f.removed, true); });

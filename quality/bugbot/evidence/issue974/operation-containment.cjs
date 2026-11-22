@@ -15,6 +15,7 @@ const imagePattern = /^sha256:[a-f0-9]{64}$/u;
 const idPattern = /^[a-f0-9]{64}$/u;
 const labelPrefix = 'dev.vyp.copilot.qualification.';
 const unreturnedOwnedScopes = new WeakMap();
+const attachedClosures = new WeakMap();
 
 function canonical(value) {
     if (Array.isArray(value)) return value.map(canonical);
@@ -76,7 +77,7 @@ function fixedConfiguration(profile, identity, inputDirectory, outputDirectory, 
         WorkingDir: '/sdk', User: '0:0', Env: [...imageEnvironment], Labels: labels(identity),
         AttachStdin: true, AttachStdout: false, AttachStderr: false, OpenStdin: true, StdinOnce: true, Tty: false,
         HostConfig: {
-            ReadonlyRootfs: true, Privileged: false, AutoRemove: false, RestartPolicy: { Name: 'no', MaximumRetryCount: 0 },
+            ReadonlyRootfs: true, Privileged: false, AutoRemove: true, RestartPolicy: { Name: 'no', MaximumRetryCount: 0 },
             PidMode: '', IpcMode: 'private', NetworkMode: 'bridge',
             CapDrop: ['ALL'], CapAdd: ['SETUID', 'SETGID'], SecurityOpt: ['no-new-privileges:true'],
             Mounts: [
@@ -91,50 +92,147 @@ function fixedConfiguration(profile, identity, inputDirectory, outputDirectory, 
 }
 
 /** No research deadline or heartbeat. These requests can wait as long as the operation. */
-function request(socketPath, apiVersion, method, route, body) {
+function request(socketPath, apiVersion, method, route, body, expectedStatus, signal) {
     const bytes = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
-    return new Promise((resolve, reject) => {
-        const req = http.request({ socketPath, method, path: '/v' + apiVersion + route, agent: false, timeout: 0,
-            headers: bytes ? { 'content-type': 'application/json', 'content-length': bytes.length } : {} }, response => {
-            const chunks = []; let size = 0;
-            response.on('data', chunk => {
-                size += chunk.length;
-                // Only bounded engine metadata uses this path; model output is
-                // retained in the private operation directory, never parsed here.
-                if (size > 2 * 1024 * 1024) response.destroy(new Error('Engine metadata exceeded its closed contract.'));
-                else chunks.push(chunk);
+    let req, response, responseClosed, resolveClosed;
+    const closed = new Promise(resolve => { resolveClosed = resolve; });
+    const abort = () => { req?.destroy(new Error('Owned metadata request cancelled.')); response?.destroy(); };
+    const pending = new Promise((resolve, reject) => {
+        try {
+            req = http.request({ socketPath, method, path: '/v' + apiVersion + route, agent: false, timeout: 0,
+                headers: bytes ? { 'content-type': 'application/json', 'content-length': bytes.length } : {} }, incoming => {
+                response = incoming;
+                responseClosed = new Promise(done => incoming.once('close', done));
+                const chunks = []; let size = 0;
+                incoming.on('data', chunk => {
+                    size += chunk.length;
+                    if (size > 2 * 1024 * 1024) incoming.destroy(new Error('Engine metadata exceeded its closed contract.'));
+                    else chunks.push(chunk);
+                });
+                incoming.once('error', reject);
+                incoming.once('aborted', () => reject(new Error('Owned metadata response aborted.')));
+                incoming.once('end', () => {
+                    if (incoming.statusCode !== expectedStatus) {
+                        const error = new Error('Owned engine request failed: HTTP ' + incoming.statusCode);
+                        error.statusCode = incoming.statusCode; reject(error); return;
+                    }
+                    try { const text = Buffer.concat(chunks).toString('utf8'); resolve(text ? JSON.parse(text) : undefined); }
+                    catch { reject(new Error('Invalid engine metadata.')); }
+                });
             });
-            response.once('error', reject);
-            response.once('end', () => {
-                const text = Buffer.concat(chunks).toString('utf8');
-                if (response.statusCode < 200 || response.statusCode >= 300) return reject(new Error('Owned engine request failed: HTTP ' + response.statusCode));
-                try { resolve(text ? JSON.parse(text) : undefined); } catch { reject(new Error('Invalid engine metadata.')); }
-            });
-        });
-        req.once('error', reject); req.end(bytes);
+            req.once('close', resolveClosed); req.once('error', reject);
+            signal?.addEventListener('abort', abort, { once: true });
+            if (signal?.aborted) abort(); else req.end(bytes);
+        } catch (error) { reject(error); if (!req) resolveClosed(); }
     });
+    return pending.finally(async () => {
+        signal?.removeEventListener('abort', abort); req?.destroy(); response?.destroy();
+        await closed; if (responseClosed) await responseClosed;
+    });
+}
+
+/** Registration and terminal evidence are distinct. No operation/research timeout. */
+function registerWait(socketPath, apiVersion, id, condition, signal) {
+    assert.match(id, idPattern); assert(['next-exit', 'removed'].includes(condition));
+    let resolveReady, rejectReady, resolveResult, rejectResult, resolveClosed, responseClosed;
+    let req, response, terminal = false;
+    const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+    const result = new Promise((resolve, reject) => { resolveResult = resolve; rejectResult = reject; });
+    const requestClosed = new Promise(resolve => { resolveClosed = resolve; });
+    const clear = () => signal.removeEventListener('abort', abort);
+    const fail = error => {
+        if (terminal) return;
+        terminal = true; clear(); rejectReady(error); rejectResult(error);
+        req?.destroy(); response?.destroy();
+    };
+    const abort = () => fail(new Error('Owned wait registration cancelled.'));
+    void ready.catch(() => undefined); void result.catch(() => undefined);
+    signal.addEventListener('abort', abort, { once: true });
+    if (signal.aborted) { abort(); resolveClosed(); }
+    else {
+        try {
+            req = http.request({ socketPath, method: 'POST', agent: false, timeout: 0,
+                path: '/v' + apiVersion + '/containers/' + id + '/wait?condition=' + condition }, incoming => {
+                response = incoming;
+                responseClosed = new Promise(resolve => incoming.once('close', resolve));
+                incoming.once('error', fail);
+                incoming.once('aborted', () => fail(new Error('Owned wait response aborted.')));
+                incoming.once('close', () => { if (!incoming.complete) fail(new Error('Owned wait response closed before completion.')); });
+                if (terminal) { incoming.destroy(); return; }
+                if (incoming.statusCode !== 200) { fail(new Error('Owned wait registration was not acknowledged.')); return; }
+                clear(); resolveReady();
+                const chunks = []; let size = 0;
+                incoming.on('data', bytes => {
+                    if (terminal) return;
+                    size += bytes.length;
+                    if (size > 2 * 1024 * 1024) fail(new Error('Owned wait metadata exceeded its closed contract.'));
+                    else chunks.push(bytes);
+                });
+                incoming.once('end', () => {
+                    if (terminal) return;
+                    try {
+                        const value = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+                        assert(value && typeof value === 'object' && !Array.isArray(value));
+                        assert(Object.keys(value).every(key => ['StatusCode', 'Error'].includes(key)));
+                        assert(Number.isSafeInteger(value.StatusCode) && value.StatusCode >= 0);
+                        if (Object.hasOwn(value, 'Error')) {
+                            assert(value.Error && typeof value.Error === 'object' && !Array.isArray(value.Error));
+                            assert.deepEqual(Object.keys(value.Error), ['Message']);
+                            assert.equal(typeof value.Error.Message, 'string');
+                            assert(!value.Error.Message, 'owned scope reported a runtime failure');
+                        }
+                        terminal = true; resolveResult(Object.freeze({ StatusCode: value.StatusCode }));
+                    } catch { fail(new Error('Owned wait terminal evidence is invalid or reports a runtime failure.')); }
+                });
+            });
+            req.once('close', resolveClosed); req.once('error', fail); req.end();
+        } catch (error) { fail(error); if (!req) resolveClosed(); }
+    }
+    return Object.freeze({ ready, result, async close() {
+        fail(new Error('Owned wait observation closed before its terminal result.'));
+        req?.destroy(); response?.destroy();
+        await requestClosed; if (responseClosed) await responseClosed;
+    } });
 }
 
 /** Only the outer immutable bootstrap owns this writer; child/model stdio is unrelated. */
 function attachLifetime(socketPath, apiVersion, id, signal) {
     assert.match(id, idPattern);
     return new Promise((resolve, reject) => {
-        const req = http.request({ socketPath, method: 'POST', agent: false, timeout: 0,
-            path: '/v' + apiVersion + '/containers/' + id + '/attach?stream=1&stdin=1&stdout=0&stderr=0',
-            headers: { Connection: 'Upgrade', Upgrade: 'tcp' } });
-        const abort = () => req.destroy(new Error('Owned stdin attachment cancelled.'));
+        let req, response, socket, responseClosed, socketClosed, resolveRequestClosed, failed = false, admitted = false;
+        const requestClosed = new Promise(done => { resolveRequestClosed = done; });
         const clear = () => signal.removeEventListener('abort', abort);
-        req.once('upgrade', (response, socket, head) => {
-            clear();
-            if (signal.aborted || response.statusCode !== 101 || head.length) { socket.destroy(); reject(new Error('Owned stdin upgrade was not admitted.')); return; }
-            // Unexpected bytes cannot serve as authority or block the lifetime
-            // channel. The PID1 control input accepts EOF, never model output.
-            socket.setTimeout(0); socket.resume(); resolve(socket);
-        });
-        req.once('response', response => { clear(); response.resume(); reject(new Error('Owned stdin upgrade unavailable.')); });
-        req.once('error', error => { clear(); reject(error); });
+        const fail = error => {
+            if (failed || admitted) return;
+            failed = true; clear(); req?.destroy(); response?.destroy(); socket?.destroy();
+            // Rejection is not quiescence: drain the actual owned close
+            // callbacks before allowing startup/outer cancellation to settle.
+            void Promise.all([requestClosed, responseClosed, socketClosed].filter(Boolean)).then(() => reject(error));
+        };
+        const abort = () => fail(new Error('Owned stdin attachment cancelled.'));
         signal.addEventListener('abort', abort, { once: true });
-        if (signal.aborted) abort(); else req.end();
+        if (signal.aborted) { resolveRequestClosed(); abort(); return; }
+        try {
+            req = http.request({ socketPath, method: 'POST', agent: false, timeout: 0,
+                path: '/v' + apiVersion + '/containers/' + id + '/attach?stream=1&stdin=1&stdout=0&stderr=0',
+                headers: { Connection: 'Upgrade', Upgrade: 'tcp' } });
+            req.once('close', resolveRequestClosed); req.once('error', fail);
+            req.once('upgrade', (incoming, upgraded, head) => {
+                socket = upgraded; socketClosed = new Promise(done => upgraded.once('close', done));
+                upgraded.once('error', fail);
+                if (failed) { upgraded.destroy(); return; }
+                if (signal.aborted || incoming.statusCode !== 101 || head.length) {
+                    fail(new Error('Owned stdin upgrade was not admitted.')); return;
+                }
+                clear(); upgraded.setTimeout(0); upgraded.resume(); admitted = true;
+                attachedClosures.set(upgraded, Promise.all([requestClosed, socketClosed])); resolve(upgraded);
+            });
+            req.once('response', incoming => {
+                response = incoming; responseClosed = new Promise(done => incoming.once('close', done));
+                incoming.once('error', fail); fail(new Error('Owned stdin upgrade unavailable.'));
+            });
+            if (failed) req.destroy(); else req.end();
+        } catch (error) { if (!req) resolveRequestClosed(); fail(error); }
     });
 }
 
@@ -181,7 +279,8 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
     assert(stat.isSocket() && [0, process.getuid()].includes(stat.uid), 'reviewed local Unix socket unavailable');
     assert.equal(sha256(fs.readFileSync(path.join(root, 'quality/bugbot/evidence/issue974/qualification-supervisor.cjs'))),
         profile.supervisorSha256, 'immutable supervisor differs');
-    const api = (method, route, body) => request(profile.socketPath, profile.engine.apiVersion, method, route, body);
+    const api = (method, route, body, signal) => request(profile.socketPath, profile.engine.apiVersion, method, route, body,
+        method === 'GET' ? 200 : route.startsWith('/containers/create?') ? 201 : 204, signal);
     assert.deepEqual(observedEngine(await api('GET', '/version')), profile.engine, 'observed engine tuple differs');
     const image = await api('GET', '/images/' + profile.image + '/json');
     assert.equal(image.Id, profile.image, 'actual immutable image differs');
@@ -197,8 +296,9 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
     const created = await api('POST', '/containers/create?name=' + name, config);
     assert.match(created?.Id ?? '', idPattern, 'scope creation identity is unknown');
     const id = created.Id;
-    let lifetime, starting = false, stopping = false, removed = false, stoppedProof, confirmation, startRequest, stopRequest, waitRequest;
-    const attachment = new AbortController();
+    let lifetime, lifetimeClosed, starting = false, startAcknowledged = false, observedRunning = false, stopping = false, removed = false;
+    let stoppedProof, stopObservation, confirmation, startRequest, stopRequest, waitRequest, removeRequest, exitWait, removalWait;
+    const attachment = new AbortController(), registration = new AbortController(), startCancellation = new AbortController();
     async function inspect() {
         assert(!removed, 'owned scope already removed');
         const actual = await api('GET', '/containers/' + id + '/json');
@@ -216,18 +316,37 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
         }
         return actual;
     }
+    async function closeWaits() {
+        lifetime?.destroy(); if (lifetimeClosed) await lifetimeClosed;
+        const outcomes = await Promise.allSettled([exitWait, removalWait].filter(Boolean).map(wait => wait.close()));
+        const failure = outcomes.find(value => value.status === 'rejected');
+        if (failure) throw failure.reason;
+    }
     function confirmStopped() {
         confirmation ??= (async () => {
-            const actual = await inspect();
-            assert.equal(actual.State.Running, false, 'owned scope is still running');
-            assert.equal(actual.State.Pid, 0, 'owned namespace init is not confirmed stopped');
-            assert.equal(actual.State.Restarting, false);
-            assert(['exited', 'created', 'dead'].includes(actual.State.Status), 'owned scope stop state is unknown');
-            const proof = Object.freeze({ identity: Object.freeze({ ...identity }), scopeId: id, namespaceInitStopped: true });
-            await record({ event: 'scope-stopped', ...proof, exitCode: actual.State.ExitCode, started: starting,
-                actualImage: actual.Image, namespaceState: { running: actual.State.Running, pid: actual.State.Pid,
-                    restarting: actual.State.Restarting, status: actual.State.Status } });
-            stoppedProof = proof;
+            let namespaceState, exitCode, started;
+            if (startAcknowledged || observedRunning) {
+                assert(exitWait && removalWait, 'registered owned observations required');
+                const result = await exitWait.result;
+                exitCode = result.StatusCode; started = true;
+                // Engine next-exit is the namespace init's exit, bound to the
+                // inspected immutable ID before this acknowledged/observed start.
+                namespaceState = { source: 'registered-next-exit', running: false, pid: 0, restarting: false, status: 'exited' };
+            } else {
+                const actual = await inspect();
+                assert.equal(actual.State.Running, false, 'owned scope is still running');
+                assert.equal(actual.State.Pid, 0, 'owned namespace init is not confirmed stopped');
+                assert.equal(actual.State.Restarting, false);
+                assert(starting ? ['created', 'exited', 'dead'].includes(actual.State.Status) : actual.State.Status === 'created',
+                    'owned scope stop state is unknown');
+                exitCode = actual.State.ExitCode; started = actual.State.Status === 'created' ? false : null;
+                namespaceState = { source: 'inspection', running: actual.State.Running, pid: actual.State.Pid,
+                    restarting: actual.State.Restarting, status: actual.State.Status };
+            }
+            const proof = Object.freeze({ identity, scopeId: id, namespaceInitStopped: true });
+            await record({ event: 'scope-stopped', ...proof, exitCode, started, startAcknowledged,
+                actualImage: profile.image, namespaceState });
+            stopObservation = { exitCode, started, namespaceState }; stoppedProof = proof;
             return proof;
         })();
         return confirmation;
@@ -236,26 +355,31 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
         start() {
             assert(!startRequest && !stopping && !stoppedProof, 'owned operation cannot be replayed');
             startRequest = (async () => {
-                await inspect();
+                const actual = await inspect();
+                assert.equal(actual.State.Running, false); assert.equal(actual.State.Pid, 0);
+                assert.equal(actual.State.Restarting, false); assert.equal(actual.State.Status, 'created');
+                assert(!stopping, 'scope was stopped before startup');
+                exitWait = registerWait(profile.socketPath, profile.engine.apiVersion, id, 'next-exit', registration.signal);
+                removalWait = registerWait(profile.socketPath, profile.engine.apiVersion, id, 'removed', registration.signal);
+                await Promise.all([exitWait.ready, removalWait.ready]);
                 assert(!stopping, 'scope was stopped before startup');
                 lifetime = await attachLifetime(profile.socketPath, profile.engine.apiVersion, id, attachment.signal);
+                lifetimeClosed = attachedClosures.get(lifetime); assert(lifetimeClosed, 'owned lifetime closure required');
                 lifetime.once('error', () => { /* Channel loss never becomes successful research. */ });
                 assert(!stopping, 'scope was stopped before startup');
                 await record({ event: 'scope-start', identity, scopeId: id });
                 assert(!stopping, 'scope was stopped before startup');
                 starting = true;
-                await api('POST', '/containers/' + id + '/start');
+                await api('POST', '/containers/' + id + '/start', undefined, startCancellation.signal); startAcknowledged = true;
             })();
             return startRequest;
         },
         wait() {
-            assert(starting, 'owned operation has not started');
+            assert(starting && startAcknowledged, 'owned operation has not acknowledged start');
             waitRequest ??= (async () => {
-                const result = await api('POST', '/containers/' + id + '/wait?condition=not-running');
-                assert(!result.Error?.Message, 'owned scope reported a runtime failure');
                 const proof = await confirmStopped();
                 lifetime?.destroy();
-                return { ...proof, exitCode: result.StatusCode };
+                return { ...proof, exitCode: stopObservation.exitCode };
             })();
             return waitRequest;
         },
@@ -265,44 +389,73 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
             if (stopRequest) return stopRequest;
             stopping = true;
             stopRequest = (async () => {
-                // The already-owned lifetime channel is the stop capability.
-                // Request it before any metadata/journal wait; inspection still
-                // gates later Engine effects, confirmation and cleanup.
-                attachment.abort(); lifetime?.end();
-                // Escalation begins AFTER an actual termination request only.
-                // It never caps investigation/run/wait/heartbeat duration.
-                let escalation;
-                const force = setTimeout(() => { escalation = inspect().then(actual => actual.State.Running
-                    ? api('POST', '/containers/' + id + '/kill?signal=SIGKILL') : undefined);
-                void escalation.catch(() => undefined); }, 5_000);
+                // Lifetime termination precedes metadata and durable callbacks.
+                // A registered started-scope observer survives operation abort.
+                if (!starting) registration.abort();
+                attachment.abort(); lifetime?.end(); startCancellation.abort();
+                let escalation, failure, answer;
+                const retain = cause => { failure ??= { cause }; };
+                const observe = async () => {
+                    try {
+                        const actual = await inspect();
+                        if (starting && exitWait && removalWait && actual.State.Running === true && actual.State.Pid > 0
+                            && actual.State.Restarting === false) observedRunning = true;
+                        return actual;
+                    } catch (error) {
+                        // Missing metadata is provisional only. Exit/stop proof
+                        // still needs an acknowledged/observed start or inspection.
+                        if (error.statusCode !== 404 || !starting || !exitWait || !removalWait) throw error;
+                        return undefined;
+                    }
+                };
+                const force = setTimeout(() => {
+                    escalation = observe().then(actual => actual?.State.Running
+                        ? api('POST', '/containers/' + id + '/kill?signal=SIGKILL') : undefined);
+                    void escalation.catch(() => undefined);
+                }, 5_000);
                 try {
-                    await inspect();
-                    let recordFailure;
+                    await observe();
                     try { await record({ event: 'scope-stop-request', identity, scopeId: id, reason }); }
-                    catch (cause) { recordFailure = { cause }; }
+                    catch (cause) { retain(cause); }
                     if (startRequest) await startRequest.catch(() => undefined);
                     lifetime?.end();
-                    if (starting) await api('POST', '/containers/' + id + '/wait?condition=not-running');
-                    let proof;
-                    try { proof = await confirmStopped(); }
-                    catch (cause) { throw recordFailure ? recordFailure.cause : cause; }
-                    if (recordFailure) throw recordFailure.cause;
-                    return proof;
-                } finally {
+                    try { answer = await confirmStopped(); } catch (cause) { retain(cause); }
+                } catch (cause) { retain(cause); }
+                finally {
                     clearTimeout(force); lifetime?.destroy();
-                    // Settle any already-issued owned effect before cleanup.
-                    if (escalation) await escalation;
+                    if (escalation) { try { await escalation; } catch (cause) { retain(cause); } }
+                    if (!stoppedProof) { try { await closeWaits(); } catch (cause) { retain(cause); } }
                 }
+                if (failure) throw failure.cause;
+                return answer;
             })();
             return stopRequest;
         },
         async remove() {
             assert(stoppedProof, 'confirm stopped scope before cleanup');
-            const actual = await inspect();
-            assert.equal(actual.State.Running, false); assert.equal(actual.State.Pid, 0);
-            await record({ event: 'scope-remove-start', identity, scopeId: id });
-            await api('DELETE', '/containers/' + id + '?force=0&v=0'); removed = true;
-            await record({ event: 'scope-removed', identity, scopeId: id });
+            assert(!removed, 'owned scope already removed');
+            removeRequest ??= (async () => {
+                try {
+                    await record({ event: 'scope-remove-start', identity, scopeId: id });
+                    if (stopObservation.started === false) {
+                        const actual = await inspect();
+                        assert.equal(actual.State.Running, false); assert.equal(actual.State.Pid, 0);
+                        assert.equal(actual.State.Status, 'created');
+                        await api('DELETE', '/containers/' + id + '?force=0&v=0');
+                    } else {
+                        assert(removalWait, 'registered owned removal observation required');
+                        const result = await removalWait.result;
+                        assert.equal(result.StatusCode, stopObservation.exitCode, 'owned exit/removal evidence differs');
+                        let absent = false;
+                        try { await inspect(); }
+                        catch (error) { if (error.statusCode !== 404) throw error; absent = true; }
+                        assert(absent, 'owned removal observation did not establish absence');
+                    }
+                    removed = true;
+                    await record({ event: 'scope-removed', identity, scopeId: id });
+                } finally { await closeWaits(); }
+            })();
+            return removeRequest;
         },
     });
     try { await record({ event: 'scope-created', identity, scopeId: id, name }); }

@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "parent": "20300658d259f3821abcb09c6ead4be8702fa6d7",
+  "sourceSha256": {
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "ba77f589bf870ef89981f9b1c211018da33e65a13bf27dc0b6e7e97dee66289f",
+    "quality/bugbot/evidence/issue974/engine-transport-components.cjs": "b1dd2eb06681f9d2ab57c0d13025ce76113da5b3334e144c978329699f66b72c",
+    "quality/bugbot/evidence/issue974/owner-loss-components.cjs": "209ec4a0e87bda33a31f6cec135eef44afdada479b1ac7beaff1508047d7ea07",
+    "quality/bugbot/evidence/issue974/stop-record-components.cjs": "c03e4b9ac70213bc490cbd1f6aa256f02ba298151c55bfd1fa3921cc07e83ce5",
+    "quality/bugbot/evidence/issue974/startup-stop-components.cjs": "6adf6f4988271d654015d105e163c713e49631db4a3106cb21a91e9c17766e83",
+    "quality/bugbot/evidence/issue974/late-cancellation-components.cjs": "0b21d26de2e10e89603fe3a1e547ee68e2bd77e17ba19713d6b70cfa9b7599ec",
+    "quality/bugbot/evidence/issue974/containment-native.test.cjs": "34ee8e152702f4a205a4d87b34c3e21c9b5ed076a0ab5dcea2f47815d1211e63",
+    "quality/bugbot/evidence/issue974/native-bootstrap-components.cjs": "46ad5f1fc57fa2a8c22991c0c213a601388e44d8be1a47b2dab6f635e5ef1051",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "b9b10584337d3b05769b06e91fd59b39daa2bb0038af9dd8a92cca8cbf23e617",
+    "quality/bugbot/evidence/issue-974/controls/engine-transport-coverage/coverage.cjs": "154db7eeb38e1634f593a5a31e182f0655abe9fe5f0e6dd1d00ca96248209148",
+    "quality/bugbot/evidence/issue-974/controls/implementation-full-review-coverage/coverage.cjs": "1922b5a0ced4fa3dc61dfe52cfe6e24bf7b8a6eeae140c53fc43eed2ba35d24e",
+    "quality/bugbot/evidence/issue-974/controls/launcher-attempt-coverage/coverage.cjs": "0d094dcb0b50cf74295918b8a418e43b343b851bcca9806341b938aee02acd6a"
+  },
+  "fixedPolicy": "AutoRemove=true; acknowledged pre-start next-exit+removed registration; known start/running separate from terminal evidence; no404-only execution proof",
+  "newNamedNodeScenarios": 28,
+  "logicalQualificationCaseIdsUnchanged": 35,
+  "numericBudget": {
+    "waitAndCallbackScenarios": 12,
+    "scopeStartCleanupScenarios": 14,
+    "independentHostObserverScenarios": 2,
+    "invalidWaitFormsInOneMatrix": 12,
+    "invalidHostFormsInOneMatrix": 6
+  },
+  "originalThreeCaseContrast": {
+    "pass": 0,
+    "fail": 3,
+    "sameSelectedActualTestBodies": true,
+    "wholeFinalTestFileIdentical": false,
+    "scope": "exact20300658 driver, source-read-only private fixture seam; final test file later added callback scenario"
+  },
+  "firstFocusedNegative": {
+    "pass": 49,
+    "fail": 2,
+    "kind": "old fixture bypassed held metadata callback on404; one verified owned hung test child terminated; raw/source/termination retained"
+  },
+  "intermediateFocused": [
+    {
+      "pass": 52,
+      "fail": 0
+    },
+    {
+      "pass": 70,
+      "fail": 0
+    }
+  ],
+  "initialWeakCloseProbe": {
+    "pass": 1,
+    "fail": 0,
+    "causalProof": false,
+    "reason": "whole-scope two-immediate ordering did not establish network closure ordering"
+  },
+  "deterministicCloseContrast": {
+    "red": {
+      "pass": 0,
+      "fail": 1
+    },
+    "green": {
+      "pass": 1,
+      "fail": 0
+    },
+    "sameTestAndFixtureBytes": true,
+    "seam": "actual Unix pending attachment; actual error and close observed separately; only close callback deferred"
+  },
+  "finalFocused": {
+    "pass": 71,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "models": 0,
+    "scope": "real private Unix HTTP; modeled Engine, SDK admission and cleanup clock; independently implemented native-host helper tested through VM"
+  },
+  "finalQualificationCoverage": {
+    "pass": 316,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "scope": "exact-source AST operation-containment component only; no global/changed-path/native acceptance",
+    "sourceSha256": "ba77f589bf870ef89981f9b1c211018da33e65a13bf27dc0b6e7e97dee66289f",
+    "summary": {
+      "lines": {
+        "total": 398,
+        "covered": 396,
+        "skipped": 0,
+        "pct": 99.49
+      },
+      "functions": {
+        "total": 82,
+        "covered": 78,
+        "skipped": 0,
+        "pct": 95.12
+      },
+      "statements": {
+        "total": 584,
+        "covered": 559,
+        "skipped": 0,
+        "pct": 95.71
+      },
+      "branches": {
+        "total": 255,
+        "covered": 231,
+        "skipped": 0,
+        "pct": 90.58
+      }
+    },
+    "unchangedFloors": {
+      "statements": 95,
+      "lines": 95,
+      "branches": 90,
+      "functions": 90
+    },
+    "gate": true
+  },
+  "physicalProviderPrototypes": {
+    "original": "NEGATIVE_RETAINED;namespace exit143 but stopped container retained; exact-owned fallback DELETE separately recorded",
+    "candidate": "PASS_PROVIDER_MECHANISM_ONLY;exit143,removed143,exact-ID404;no manual container stop/delete",
+    "sameEngineImageAndStdinMechanism": true,
+    "sameControllerBytes": false,
+    "actualSdkAcceptance": false,
+    "actualFreshC32C35": false
+  },
+  "typesDocsSpecificationsCatalogGraphify": "PASS; validation-attempt2",
+  "normalHooks": "PENDING",
+  "plannedExactCommittedFullNodeControls": 534,
+  "fullCommittedRun": "PENDING",
+  "qualificationModelCalls": 0,
+  "pilotWrites": 0,
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "actualNativeC32C35": "UNEXECUTED_ON_NEW_COMMON_SOURCE_DRIVER_RUNTIME_TUPLE",
+  "qualifiedProfiles": [],
+  "production": "disabled",
+  "pendingRecoverySnapshotsUnchanged": true,
+  "remotePublication": false,
+  "privilegeOrResearchLimitChanges": false,
+  "archiveCount": 92,
+  "archiveMap": "archive-map.json",
+  "priorNegativesAndNativePlansUnchanged": true
+}

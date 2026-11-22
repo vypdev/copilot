@@ -14,6 +14,32 @@ unstarted; production remains disabled and pilot writes0.
 
 # EV-07 v2 detector qualification — issue #974
 
+## Independent removal after owner loss
+
+The fixed containment policy now enables daemon automatic removal. Exact owned
+configuration and pre-start exit/removal registration precede lifetime attachment
+and start. Acknowledged start or observed running state is separate from terminal
+wait evidence. Started scopes require matching exit/removal results and exact-ID
+absence; never-started scopes have their own inspected cleanup path.404 and a
+removal-woken wait cannot grant execution authority. Lost responses and failed
+records retain uncertainty; observation/lifetime callbacks settle before final
+cleanup. Private host evidence/staging can remain after owner death or unknown
+delivery, while the namespace is independently released.
+
+The actual native C34 harness now registers independent observations while its
+positively correlated scope is running, kills the real outer owner and requires
+exit143, removal143 and exact-ID absence without test DELETE. Its fallback
+cleanup stays separate and cannot establish acceptance. Fresh committed common
+C32–C35 remain unexecuted on this new source; prior native tuples are immutable.
+The new Unix HTTP/model-Engine controls, retained original-source negatives and
+two physical provider prototypes are separate evidence, with no SDK/model or
+scientific acceptance inferred from the prototypes. Actual174/42 remain unstarted.
+
+[Retained controls and negatives](../issue-974/controls/owner-loss-removal/README.md)
+include exact source hashes, final71focused controls and316qualification controls
+with the unchanged driver coverage floors. Full committed-source checks remain
+separate.
+
 ## POSIX process-fixture cleanup
 
 C03's SDK process fixture separately uses actual captured child handles, with
