@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict');
 
 const CODEX_VERSION = '0.171.0';
+const PAYLOAD_OUTPUT_TRANSPORT = 'node-fd-write-sync';
 const ARCHIVES = Object.freeze({
   x64: Object.freeze({ target: 'x86_64-unknown-linux-musl', bytes: 197763180,
     sha256: '8391d67757496bfd14893eca6cbf0c96994bf2627566ff1f018f70600c9ef6b3' }),
@@ -63,6 +64,7 @@ function renderSummary(receipt) {
   const lines = ['# Linux sandbox diagnostic', '',
     `Runtime preparation: **${receipt.preparation.state}**. Codex target: **${CODEX_VERSION}**.`, '',
     `Collection: **${receipt.executionIncomplete ? 'incomplete' : 'complete'}**. Cleanup: **${receipt.cleanup ?? 'unavailable'}**.`, '',
+    `Payload transport: **${PAYLOAD_OUTPUT_TRANSPORT}**. Node stream compatibility: **not measured**.`, '',
     '| Probe | Observation | Expected exit | Actual exit | Signal |', '|---|---|---:|---:|---|'];
   for (const row of receipt.probes) lines.push(`| ${row.id} | ${row.state} (${row.reason}) | ${row.expectedExitCode} | ${row.exitCode ?? 'unknown'} | ${row.signal ?? 'none'} |`);
   lines.push('', 'Only the three execution-transport controls expect exit37, with exact stdout and stderr markers. Other probes require exit0.',
@@ -73,4 +75,4 @@ function renderSummary(receipt) {
   return lines.join('\n') + '\n';
 }
 
-module.exports = { CODEX_VERSION, PROBE_IDS, TRANSPORT_IDS, archiveFor, outputProjection, observation, notRun, renderSummary };
+module.exports = { CODEX_VERSION, PAYLOAD_OUTPUT_TRANSPORT, PROBE_IDS, TRANSPORT_IDS, archiveFor, outputProjection, observation, notRun, renderSummary };

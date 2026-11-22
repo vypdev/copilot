@@ -52,10 +52,12 @@ function probeCommands(runtime) {
   const shellPolicy = mode => ['--config', 'sandbox_mode="read-only"', '--config', `shell_environment_policy.inherit="${mode}"`,
     ...(mode === 'core' ? ['--config', 'shell_environment_policy.ignore_default_excludes=false',
       '--config', 'shell_environment_policy.include_only=["PATH"]'] : []), 'sandbox', '--'];
-  const read = 'process.stdout.write(require("node:crypto").createHash("sha256").update(require("node:fs").readFileSync(process.argv[1])).digest("hex"))';
-  const write = 'try{require("node:fs").writeFileSync(process.argv[1],"owned-write-canary");process.stdout.write("WROTE");process.exitCode=9}catch(e){if(["EACCES","EPERM","EROFS"].includes(e.code))process.stdout.write("DENIED");else process.exitCode=44}';
-  const witness = id => [runtime.node, '-e', 'process.stdout.write(process.argv[1])', id];
-  const transport = [runtime.node, '-e', 'process.stdout.write(process.argv[1]);process.stderr.write(process.argv[2]);process.exitCode=37',
+  // Restricted socket introspection can make Node select dummy stdio streams.
+  // These owned witnesses use raw descriptors without changing sandbox policy.
+  const read = 'require("node:fs").writeSync(1,require("node:crypto").createHash("sha256").update(require("node:fs").readFileSync(process.argv[1])).digest("hex"))';
+  const write = 'try{require("node:fs").writeFileSync(process.argv[1],"owned-write-canary");require("node:fs").writeSync(1,"WROTE");process.exitCode=9}catch(e){if(["EACCES","EPERM","EROFS"].includes(e.code))require("node:fs").writeSync(1,"DENIED");else process.exitCode=44}';
+  const witness = id => [runtime.node, '-e', 'require("node:fs").writeSync(1,process.argv[1])', id];
+  const transport = [runtime.node, '-e', 'require("node:fs").writeSync(1,process.argv[1]);require("node:fs").writeSync(2,process.argv[2]);process.exitCode=37',
     'transport-out:' + runtime.fixtureSha256, 'transport-error:' + runtime.fixtureSha256];
   const transportOutput = transport.at(-2), transportError = transport.at(-1);
   return [
@@ -73,9 +75,10 @@ function probeCommands(runtime) {
 }
 
 function initialReceipt(identity) {
-  return { schemaVersion: 2, kind: 'model-free-linux-sandbox-diagnostic', ...identity,
+  return { schemaVersion: 3, kind: 'model-free-linux-sandbox-diagnostic', ...identity,
     preparation: { state: 'unavailable' }, probes: [], qualificationModelCalls: 0, evaluatedPilotWrites: 0,
-    productionSettingChanged: false, qualifiedProfiles: [], executionTransportVerified: false, actualSdkOrModelToolAcceptance: false };
+    productionSettingChanged: false, qualifiedProfiles: [], payloadOutputTransport: policy.PAYLOAD_OUTPUT_TRANSPORT,
+    nodeStreamCompatibility: 'not-measured', executionTransportVerified: false, actualSdkOrModelToolAcceptance: false };
 }
 
 async function observeProbe(ports, [id, executable, args, expected, expectedError]) {

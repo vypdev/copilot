@@ -22,7 +22,7 @@ function modeledPorts(): Ports {
     prepare: jest.fn(async () => ({ version: '0.171.0', identity: { executableSha256: 'b'.repeat(64) },
       codex: '/private/owned/codex', node: '/private/owned/node', fixture: '/private/owned/fixture',
       writeTarget: '/private/owned/write', fixtureSha256: 'c'.repeat(64) })),
-    execute: jest.fn(async (executable: string, args: string[]) => args.includes('process.stdout.write(process.argv[1])')
+    execute: jest.fn(async (executable: string, args: string[]) => ['unshare-user-network', 'bwrap-user-network', 'bwrap-root-user-network'].includes(args.at(-1) ?? '')
       ? success(args.at(-1)) : args.some(value => value.includes('process.exitCode=37'))
         ? { ...success(args.at(-2)), stderr: args.at(-1), exitCode: 37 }
         : success(args.includes('-e') ? args.some(value => value.includes('owned-write-canary')) ? 'DENIED' : 'c'.repeat(64) : '')),
@@ -92,6 +92,7 @@ describe('Linux sandbox diagnostic outcome policy', () => {
     expect(summary).toContain('| SIGTERM |');
     expect(summary).toContain('credential/oracle denial and qualification remain unverified');
     expect(summary).toContain('Production settings were not changed');
+    expect(summary).toContain('Payload transport: **node-fd-write-sync**. Node stream compatibility: **not measured**.');
     expect(policy.renderSummary({ preparation: { state: 'observed' }, probes: [policy.notRun('node-execution-transport', 'cancelled')] }))
       .toContain('| node-execution-transport | not-run (cancelled) | 37 | unknown | none |');
     expect(policy.renderSummary({ preparation: { state: 'observed' }, probes: [], executionIncomplete: true, cleanup: 'completed' }))
@@ -141,7 +142,8 @@ describe('fixed diagnostic orchestration', () => {
     const node = '/private/owned/node', direct = [node, ...calls[5][1]];
     expect(calls[6][1].slice(calls[6][1].indexOf(node))).toEqual(direct);
     expect(calls[7][1].slice(calls[7][1].indexOf('--') + 1)).toEqual(direct);
-    expect(receipt).toMatchObject({ schemaVersion: 2, executionTransportVerified: true,
+    expect(receipt).toMatchObject({ schemaVersion: 3, executionTransportVerified: true,
+      payloadOutputTransport: 'node-fd-write-sync', nodeStreamCompatibility: 'not-measured',
       qualificationModelCalls: 0, evaluatedPilotWrites: 0, actualSdkOrModelToolAcceptance: false });
   });
 
@@ -266,6 +268,64 @@ describe('fixed diagnostic orchestration', () => {
 });
 
 posixDescribe('real owned diagnostic processes and archives', () => {
+  async function payloadWithModeledNodeStreamFallback(id: string, options: { missingFixture?: boolean; deniedWrite?: boolean } = {}) {
+    const root = mkdtempSync(path.join(tmpdir(), 'diagnostic-fd-payload-'));
+    const fixtureBytes = 'owned raw-fd read fixture';
+    const runtime = { node: process.execPath, codex: '/unused/controlled-codex', fixture: path.join(root, 'fixture'),
+      fixtureSha256: digest(fixtureBytes), writeTarget: path.join(root, 'write-canary') };
+    if (!options.missingFixture) writeFileSync(runtime.fixture, fixtureBytes);
+    const row = diagnostic.probeCommands(runtime).find((value: any[]) => value[0] === id);
+    const args = row[2], scriptIndex = args.indexOf('-e') + 1;
+    expect(scriptIndex).toBeGreaterThan(0);
+    // Model Node's documented unknown-handle stream fallback. The output
+    // descriptors and filesystem operations remain real owned Node processes.
+    const fallback = 'const {Writable}=require("node:stream");for(const key of ["stdout","stderr"])Object.defineProperty(process,key,{value:new Writable({write(chunk,encoding,callback){callback()}})});';
+    const denial = options.deniedWrite ? 'require("node:fs").writeFileSync=()=>{const error=new Error("controlled EROFS");error.code="EROFS";throw error;};' : '';
+    try {
+      const result: Outcome = await diagnostic.execute(process.execPath, ['-e', fallback + denial + args[scriptIndex], ...args.slice(scriptIndex + 1)],
+        { cwd: root, env: {}, signal: new AbortController().signal });
+      return { result, expected: row[3], expectedError: row[4], fixtureSha256: runtime.fixtureSha256,
+        canaryCreated: existsSync(runtime.writeTarget), canaryBytes: existsSync(runtime.writeTarget) ? readFileSync(runtime.writeTarget, 'utf8') : null };
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  }
+
+  it('retains a namespace payload witness through modeled dummy Node streams', async () => {
+    const actual = await payloadWithModeledNodeStreamFallback('bwrap-user-network');
+    expect(actual.result).toMatchObject({ stdout: 'bwrap-user-network', stderr: '', exitCode: 0, signal: null });
+    expect(policy.observation('bwrap-user-network', actual.result, actual.expected).state).toBe('pass');
+  });
+
+  it('retains both transport channels and exit37 through modeled dummy Node streams', async () => {
+    const actual = await payloadWithModeledNodeStreamFallback('node-execution-transport');
+    expect(actual.result).toMatchObject({ stdout: actual.expected, stderr: actual.expectedError, exitCode: 37, signal: null });
+    expect(policy.observation('node-execution-transport', actual.result, actual.expected, actual.expectedError).state).toBe('pass');
+  });
+
+  it('retains an actual owned read digest through modeled dummy Node streams', async () => {
+    const actual = await payloadWithModeledNodeStreamFallback('codex-fixture-read');
+    expect(actual.result).toMatchObject({ stdout: actual.fixtureSha256, exitCode: 0, signal: null });
+    expect(policy.observation('codex-fixture-read', actual.result, actual.fixtureSha256).state).toBe('pass');
+  });
+
+  it('rejects an actual missing fixture even with modeled dummy Node streams', async () => {
+    const actual = await payloadWithModeledNodeStreamFallback('codex-fixture-read', { missingFixture: true });
+    expect(actual.result.exitCode).not.toBe(0);
+    expect(policy.observation('codex-fixture-read', actual.result, actual.fixtureSha256).state).toBe('fail');
+  });
+
+  it('retains modeled EROFS denial output through dummy Node streams', async () => {
+    const actual = await payloadWithModeledNodeStreamFallback('codex-write-denial', { deniedWrite: true });
+    expect(actual.result).toMatchObject({ stdout: 'DENIED', exitCode: 0, signal: null });
+    expect(actual.canaryCreated).toBe(false);
+  });
+
+  it('retains an actual unexpected write and exit9 through modeled dummy Node streams', async () => {
+    const actual = await payloadWithModeledNodeStreamFallback('codex-write-denial');
+    expect(actual.result).toMatchObject({ stdout: 'WROTE', exitCode: 9, signal: null });
+    expect(actual.canaryBytes).toBe('owned-write-canary');
+    expect(policy.observation('codex-write-denial', actual.result, actual.expected).state).toBe('fail');
+  });
+
   it('cancels three real owned process groups and closes them before releasing the transport phase', async () => {
     const ports = modeledPorts(), execute = ports.execute.getMockImplementation()!;
     const closed: Outcome[] = []; let admitted = 0;
@@ -621,7 +681,8 @@ describe('actual receipt and summary publication with modeled command ports', ()
       if (withSummary) process.env.GITHUB_STEP_SUMMARY = path.join(directory, 'summary'); else delete process.env.GITHUB_STEP_SUMMARY;
       const ports = modeledPorts(); await diagnostic.main({ nativePorts: () => ports });
       const receiptPath = path.join(directory, 'copilot-linux-sandbox-123-1.json');
-      expect(JSON.parse(readFileSync(receiptPath, 'utf8'))).toMatchObject({ schemaVersion: 2, executionTransportVerified: true });
+      expect(JSON.parse(readFileSync(receiptPath, 'utf8'))).toMatchObject({ schemaVersion: 3, executionTransportVerified: true,
+      payloadOutputTransport: 'node-fd-write-sync', nodeStreamCompatibility: 'not-measured' });
       expect(JSON.parse(readFileSync(receiptPath, 'utf8')).probes).toHaveLength(10);
       expect(process.exitCode).toBe(0);
       if (process.platform !== 'win32') expect(lstatSync(receiptPath).mode & 0o777).toBe(0o600);

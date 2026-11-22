@@ -963,7 +963,7 @@ owned read/write probes. Completion closes every owned
 processes, retains each observation, cleans the private fixture and publishes
 one receipt plus one Job Summary. None of those steps grants qualification.
 
-The schemaVersion2 receipt has ten fixed observations: unprivileged user/network namespace creation,
+The schemaVersion3 receipt has ten fixed observations: unprivileged user/network namespace creation,
 two existing bubblewrap configurations, Codex empty-environment startup,
 Codex PATH-only startup, three execution-transport controls, an owned fixture
 read/hash, and an owned write-denial canary. Namespace probes MUST produce their
@@ -992,6 +992,19 @@ malformed or wrong metadata, or inventory drift fails preparation. There is no
 fallback to the individual archive or npm lifecycle, and no global installation.
 See the reviewed [official installer](https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/scripts/install/install.sh)
 and [0.171.0 release](https://github.com/openai/codex/releases/tag/rust-v0.171.0).
+
+All owned Node witness/read/denial payloads MUST emit their evidence with
+synchronous raw descriptor writes (`fs.writeSync` to1/2). They MUST NOT depend
+on `process.stdout` or `process.stderr` stream classification. This changes the
+measurement channel only: fixed payload content, expected markers, exit codes,
+sandbox permissions and admission rules remain authoritative. SchemaVersion3
+MUST declare `payloadOutputTransport=node-fd-write-sync` and
+`nodeStreamCompatibility=not-measured`; neither the receipt nor summary may infer
+that arbitrary Node streams, SDK/model tools or qualification are supported.
+The Job Summary MUST show that measurement method and compatibility limit.
+Earlier schemaVersion1/2 receipts remain immutable under their original methods.
+No network/seccomp relaxation, proxy bypass or new transport/config selector is
+permitted to recover output.
 
 The three transport IDs are `node-execution-transport`,
 `bwrap-execution-transport` and `codex-path-execution-transport`. Each MUST run
@@ -1172,6 +1185,46 @@ newline broke the reviewed installer checksum; its corrected snapshot matches
 the exact approved checksum. Neither controller failure is native evidence.
 The package correction explains missing bundled resources in the empty-PATH
 observation; the native PATH payload/output cause remains unresolved.
+
+Third changed-source native observation45028875562/job137227815416 at8e61dbe1
+ran once on ubuntu-runner-2 with the full verified0.171package and Node24.21.0.
+Its original schemaVersion2 receipt retains5PASS/3FAIL/2not-run. Direct Node and
+system bwrap both deliver identical stdout/stderr markers and exit37; namespace
+bwrap commands also deliver witnesses. Codex PATH returns37 but both streams
+are empty, so transport fails and read/write remain not-run. Unshare uid_map
+fails; empty-environment Codex reaches its now-present bundled bwrap and fails
+loopback RTM_NEWADDR with EPERM. Engine remains unavailable; cleanup completes.
+This narrows loss to the Codex/Node output path and preserves the failed gate.
+
+Pinned [Codex0.171 seccomp policy](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/linux-sandbox/src/seccomp.rs)
+denies socket-introspection calls under restricted networking. Pinned
+[Node24.21/libuv classification](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/src/unix/tty.c)
+returns unknown when those calls fail on socket-backed descriptors, and
+[Node's stream initialization](https://github.com/nodejs/node/blob/v24.21.0/lib/internal/bootstrap/switches/is_main_thread.js)
+then installs a dummy Writable. The [upstream report](https://github.com/openai/codex/issues/18473)
+describes the matching symptom. Source and that report support the mechanism;
+we have not independently traced syscalls on our exact native tuple.
+
+A separate actual local Linux component contrast, using existing Node24.20ARM
+as UID1001 with no capabilities/network/host mounts, applies only the three
+additional introspection denials. Its four fixed cases show that socket-backed
+Node streams become dummy Writable/outputless while synchronous raw FD output
+survives; unfiltered stream and FD baselines both work. The initial Python
+launcher exited127 before any case because Python was absent. The corrected
+launcher uses already-present Perl without installing dependencies or granting
+privileges. This is actual syscall/Node component evidence, not Codex, SDK,
+namespace isolation or the exact self-hosted24.21x64 composition.
+
+The correction adds six distinct Jest cases to110 (116 total): namespace
+witness1, two-channel transport1, actual read/missing-file2, modeled EROFS
+and actual unexpected canary write2. These use real owned Node processes and
+output descriptors with explicitly modeled dummy streams. They do not claim
+actual sandbox denial. The same116test-file bytes retain111PASS/5FAIL before
+and116PASS after changing only payload writes. Subsequent schema/UI assertions
+refine existing cases without increasing the count. Preserve both native and
+component negatives. A new committed source and source gates MUST precede one
+changed native observation; do not retry45028875562 or infer high-level Node
+stream compatibility from the new raw-FD probes. All coverage floors remain.
 
 Acceptance and traceability: fixed archive mismatch or version mismatch rejects
 before probes; every negative/missing/signal/cancelled probe has its own preserved

@@ -1,0 +1,388 @@
+{
+  "schemaVersion": 1,
+  "issue": 1002,
+  "pr": 1003,
+  "parent": "8e61dbe1ee14b6527d725616eeea370030cdaebc",
+  "sourceSha256": {
+    "docs/security-operations/security/self-hosted-runners.mdx": "d313f71c32fed22a96f011d0953b3c3f8ae9cfabb0c8aa7bef318f190fb30d74",
+    "scripts/diagnose-linux-sandbox-prerequisites.cjs": "5793e95c4529e2511bb70c8ce5bf088c4293152aefb93686b559e15701a7bc60",
+    "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "4899c1c8015d1d4812681c691922aac94f6e924cb88f77e6a05a9f335e339726",
+    "specs/CATALOG.md": "7796e13a2a2fa837cff6ee8a9c90a2edf89ce68ec7aee49f3496598db2ea6c47",
+    "specs/agent-runtime-provider-and-model-routing.md": "ad2d39945207b141c2f52ac0e31541012dd1c903a97519d109b386465c20715e",
+    "specs/catalog.json": "55ae279351516e96bfb6c13edf115fd0f3f175967de19f0b23ea4b4707e657b6",
+    "src/tooling/__tests__/linux_sandbox_diagnostic.test.ts": "2a2659f5acf799f6cc141ad9158c0429b6e14a6efc966ec73993d4b9964a41cc"
+  },
+  "scope": "diagnostic measurement correction from Node streams to rawFD output without sandbox permission changes",
+  "sourceContrast": {
+    "same116TestFileBytes": true,
+    "before": {
+      "pass": 111,
+      "fail": 5
+    },
+    "after": {
+      "pass": 116,
+      "fail": 0,
+      "skip": 0
+    },
+    "matchedGreenWriterOnlyDriverSha256": "347e0f482297501801c814ea871d49e63d240137646e218c33c3b4c0e9d6c677",
+    "finalSchemaMetadataRefinement": "same six new cases; original tests refined for schema3/method/compatibility, no doublecount"
+  },
+  "moduleCoverage": {
+    "at": "2026-11-22T14:09:14.026512+00:00",
+    "pass": 116,
+    "fail": 0,
+    "skip": 0,
+    "modules": [
+      {
+        "module": "scripts/diagnose-linux-sandbox-prerequisites.cjs",
+        "metrics": {
+          "lines": 99.52,
+          "statements": 96.25,
+          "branches": 89.69,
+          "functions": 94.33
+        },
+        "floors": {
+          "lines": 90,
+          "statements": 90,
+          "branches": 82,
+          "functions": 88
+        },
+        "gate": true
+      },
+      {
+        "module": "scripts/lib/linux-sandbox-diagnostic-policy.cjs",
+        "metrics": {
+          "lines": 100,
+          "statements": 100,
+          "branches": 100,
+          "functions": 100
+        },
+        "floors": {
+          "lines": 95,
+          "statements": 95,
+          "branches": 90,
+          "functions": 90
+        },
+        "gate": true
+      }
+    ],
+    "focusedRawExit": 1,
+    "unrelatedMissingGlobalOwners": [
+      "web/src",
+      "specification_catalog_publication.cjs"
+    ],
+    "globalAcceptance": false,
+    "noThresholdSuppressed": true,
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "validation": {
+    "at": "2026-11-22T14:09:37.568651+00:00",
+    "results": [
+      {
+        "check": "generate",
+        "command": [
+          "pnpm",
+          "run",
+          "generate:specifications"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-fd-transport-round5-validation-attempt1-generate.log",
+        "bytes": 2470,
+        "sha256": "4972637a8fb66550b1092793ee13151bc7a30fdb4382c6a396588fd14bf5c732"
+      },
+      {
+        "check": "specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:specifications"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-fd-transport-round5-validation-attempt1-specifications.log",
+        "bytes": 2457,
+        "sha256": "fe0e2dab25a5dd86cbcf133f9b3f6f218ec2da8f4fed66cefed1a0221a746ffa"
+      },
+      {
+        "check": "workflows",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:workflows"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-fd-transport-round5-validation-attempt1-workflows.log",
+        "bytes": 203,
+        "sha256": "3b2d3e6ce562c39076ace9e533166c3be6c393dc32a8ca0e4735c721ead2e23d"
+      },
+      {
+        "check": "types",
+        "command": [
+          "pnpm",
+          "run",
+          "typecheck"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-fd-transport-round5-validation-attempt1-types.log",
+        "bytes": 559,
+        "sha256": "d77320d599d448364f222a7ffe872bf25ad411c77186d4ccae583d2fedd0b640"
+      },
+      {
+        "check": "docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:documentation"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-fd-transport-round5-validation-attempt1-docs.log",
+        "bytes": 307,
+        "sha256": "03467c1b98ffc37d26de76250db345fb357b26954f0c32ec36f8655f142f73b5"
+      },
+      {
+        "check": "agent-docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:agent-docs"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-fd-transport-round5-validation-attempt1-agent-docs.log",
+        "bytes": 206,
+        "sha256": "d01f3d24297b9178d3b4c81ffd5b265fe08cf5839b8fd6dd3f601bbba99ddfcc"
+      },
+      {
+        "check": "lint",
+        "command": [
+          "pnpm",
+          "run",
+          "lint"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-fd-transport-round5-validation-attempt1-lint.log",
+        "bytes": 87,
+        "sha256": "e2c69811f34bf1391f67370bc30e0565df864888d15055b63a88d8f607fffd1c"
+      },
+      {
+        "check": "graphify",
+        "command": [
+          "graphify",
+          "update",
+          "."
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-fd-transport-round5-validation-attempt1-graphify.log",
+        "bytes": 3619,
+        "sha256": "a888858f30dfc50b83f6a44d4265aa62d633207454fa27741c727f2c3af8cace"
+      }
+    ],
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "nativeBaseline": {
+    "run": 45028875562,
+    "job": 137227815416,
+    "artifact": 14757031747,
+    "head": "8e61dbe1ee14b6527d725616eeea370030cdaebc",
+    "runner": "ubuntu-runner-2",
+    "retainedSchema": 2,
+    "outcomes": [
+      {
+        "id": "unshare-user-network",
+        "state": "fail",
+        "exitCode": 1,
+        "reason": "command-failed"
+      },
+      {
+        "id": "bwrap-user-network",
+        "state": "pass",
+        "exitCode": 0,
+        "reason": "verified"
+      },
+      {
+        "id": "bwrap-root-user-network",
+        "state": "pass",
+        "exitCode": 0,
+        "reason": "verified"
+      },
+      {
+        "id": "codex-empty-start",
+        "state": "fail",
+        "exitCode": 1,
+        "reason": "command-failed"
+      },
+      {
+        "id": "codex-path-start",
+        "state": "pass",
+        "exitCode": 0,
+        "reason": "verified"
+      },
+      {
+        "id": "node-execution-transport",
+        "state": "pass",
+        "exitCode": 37,
+        "reason": "verified"
+      },
+      {
+        "id": "bwrap-execution-transport",
+        "state": "pass",
+        "exitCode": 37,
+        "reason": "verified"
+      },
+      {
+        "id": "codex-path-execution-transport",
+        "state": "fail",
+        "exitCode": 37,
+        "reason": "assertion-mismatch"
+      },
+      {
+        "id": "codex-fixture-read",
+        "state": "not-run",
+        "exitCode": null,
+        "reason": "execution-unverified"
+      },
+      {
+        "id": "codex-write-denial",
+        "state": "not-run",
+        "exitCode": null,
+        "reason": "execution-unverified"
+      }
+    ],
+    "readWriteAccepted": false,
+    "engine": {
+      "state": "unavailable",
+      "cause": "local-engine-unavailable"
+    },
+    "cleanup": "completed"
+  },
+  "mechanismEvidence": {
+    "primary": "exact0.171seccomp and24.21Node/libuv verifiedGitblobs; upstream18473 matchingreport",
+    "actualLocalComponent": {
+      "kind": "controlled-linux-node-stdio-syscall-component-contrast",
+      "architecture": "arm64",
+      "kernel": "7.2.12-orbstack-00394-gbecdd6130068",
+      "effectiveUid": 1001,
+      "nodeVersion": "v24.20.0",
+      "nodeSha256": "23a5637c2470fde09fcc1acc77c1b92e04e3d7e3e6e80ff7df6f5831958d1477",
+      "deniedSyscalls": [
+        "getsockname",
+        "getpeername",
+        "getsockopt"
+      ],
+      "deniedSyscallNumbers": [
+        204,
+        205,
+        209
+      ],
+      "socketpairChannels": true,
+      "cases": [
+        {
+          "restricted": false,
+          "mode": "node-stream",
+          "exit": 37,
+          "signal": null,
+          "stdout": "owned-out",
+          "stderr": "owned-err",
+          "classification": {
+            "stdoutType": "Socket",
+            "stderrType": "Socket",
+            "stdoutHandle": true,
+            "stderrHandle": true,
+            "stdoutSocket": true,
+            "stderrSocket": true
+          },
+          "error": null,
+          "timedOut": false,
+          "expectedNegative": false,
+          "controlPassed": true,
+          "payloadSha256": "9076101c9c79575fba9842989496a351db40d0ddfb0ea3a9ba047290cd336a66"
+        },
+        {
+          "restricted": false,
+          "mode": "raw-fd",
+          "exit": 37,
+          "signal": null,
+          "stdout": "owned-out",
+          "stderr": "owned-err",
+          "classification": {
+            "stdoutType": "Socket",
+            "stderrType": "Socket",
+            "stdoutHandle": true,
+            "stderrHandle": true,
+            "stdoutSocket": true,
+            "stderrSocket": true
+          },
+          "error": null,
+          "timedOut": false,
+          "expectedNegative": false,
+          "controlPassed": true,
+          "payloadSha256": "3b3cfe429d9ceb3130b7291b157097efc2ee2a61aef2c692cbccd1745fdd3970"
+        },
+        {
+          "restricted": true,
+          "mode": "node-stream",
+          "exit": 37,
+          "signal": null,
+          "stdout": "",
+          "stderr": "",
+          "classification": {
+            "stdoutType": "Writable",
+            "stderrType": "Writable",
+            "stdoutHandle": false,
+            "stderrHandle": false,
+            "stdoutSocket": true,
+            "stderrSocket": true
+          },
+          "error": null,
+          "timedOut": false,
+          "expectedNegative": true,
+          "controlPassed": true,
+          "payloadSha256": "9076101c9c79575fba9842989496a351db40d0ddfb0ea3a9ba047290cd336a66"
+        },
+        {
+          "restricted": true,
+          "mode": "raw-fd",
+          "exit": 37,
+          "signal": null,
+          "stdout": "owned-out",
+          "stderr": "owned-err",
+          "classification": {
+            "stdoutType": "Writable",
+            "stderrType": "Writable",
+            "stdoutHandle": false,
+            "stderrHandle": false,
+            "stdoutSocket": true,
+            "stderrSocket": true
+          },
+          "error": null,
+          "timedOut": false,
+          "expectedNegative": false,
+          "controlPassed": true,
+          "payloadSha256": "3b3cfe429d9ceb3130b7291b157097efc2ee2a61aef2c692cbccd1745fdd3970"
+        }
+      ],
+      "actualCodexOrBubblewrapExecuted": false,
+      "actualSDKExecuted": false,
+      "sourceQualificationTuple": false,
+      "qualificationCalls": 0,
+      "pilotWrites": 0,
+      "pass": true
+    },
+    "initialLauncherNegative": "Pythonmissingexit127;zero componentcases;no dependencyinstallation",
+    "exactNativeSyscallTrace": "UNOBSERVED;componentplusprimarysource supports mechanism,not exactsamekernel/runtime tuple"
+  },
+  "receiptProtocol": "schema3;node-fd-write-sync;nodeStreamCompatibility not-measured;tenfixedIDs;three37+bothmarkers;otherseven0;strictsignals/truncation/cancellation/allSettled/readwritegates unchanged",
+  "upstreamReviewAdjudication": "one new cross-attemptartifactcollision claim refuted using exact2.3.2publishedclientcontract; publicreply and resolution; no workflowrerun/sourcechange; neutralReview is not approval",
+  "parentNativeSourceGates": "all4CI/Commit/Verification/BranchSyncPASS;Review8/8completed;five threadsresolved;reviewstatePASS;neutralFindingcheck retained;SDK94618854+35;extension3855291",
+  "normalHooks": "PENDING_AT_PACKET_CREATION",
+  "newHeadNativeCI": "PENDING",
+  "native4": "UNEXECUTED;newcommittedsourceandallgatesrequired",
+  "actualSDKOrModelToolAcceptance": false,
+  "nativeCommonC32C35": "UNEXECUTED_ON_NEW_TUPLE",
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "qualifiedProfiles": [],
+  "productionOrRunnerPrivilegesChanged": false,
+  "frozenRecoverySnapshots": "unchanged;develop5ebbbasepreserved",
+  "archiveCount": 114
+}

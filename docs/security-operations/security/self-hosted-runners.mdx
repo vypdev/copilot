@@ -124,7 +124,7 @@ a failed unshare uid-map write and four such parser failures; it did not prove
 a CLI tool read or write denial. Its unavailable local Engine observation is
 independent of those results.
 
-The schemaVersion2 receipt retains ten observations. Five check namespace or
+The schemaVersion3 receipt retains ten observations. Five check namespace or
 bubblewrap execution and empty-environment versus PATH-only Codex startup.
 Namespace commands require their actual Node output witness and exit0. Three
 controls then run the same harmless Node payload directly, through bubblewrap
@@ -132,6 +132,14 @@ and through Codex. Each requires both output markers and exit37. Only those
 three named execution-transport rows expect37; ordinary rows still require0.
 The summary shows expected and actual exit separately. Silent success does not
 prove that the enclosed command ran.
+
+The owned Node payloads write their evidence directly to stdout/stderr file
+descriptors. Restricted socket introspection can make Node silently discard its
+ordinary streams even though the command returns its expected exit. The receipt
+and summary declare `node-fd-write-sync` and mark Node stream compatibility as
+not measured. This measurement method does not relax sandbox/network policy or
+certify arbitrary Node tools, SDK/model tools or qualification. Preserve earlier
+schema1/2 receipts under their original output methods.
 
 All three independent transport commands must close before cleanup. If any
 fails or is unavailable, the owned read/hash and write-denial probes stay
@@ -151,6 +159,17 @@ of missing payload output remains unresolved; neither CLI version nor the two
 bare bubblewrap rows establish sandbox acceptance. Preserve both original
 seven-row receipts. A new source revision introduces the execution witnesses
 and three-way comparison; do not repeat the old diagnostic unchanged.
+
+Run45028875562 on ubuntu-runner-2 retained the full verified package and
+Node24.21.0, then found that direct Node and system bwrap deliver both output
+markers and37, while Codex PATH returns37 with empty output. Read/write safely
+remain not-run. Its bundled bwrap now reaches loopback setup and fails with
+EPERM; unshare and Engine observations remain negative/unavailable. Preserve
+that failed ten-row receipt. Exact-version source and a separate unprivileged
+Linux component contrast explain why raw descriptor output avoids Node's dummy
+stream fallback; they do not establish the exact runner's syscall trace. The
+changed output method still requires a new source identity, passing source gates
+and one changed real diagnostic before any new admission claim.
 
 Preparation failure leaves probes `not-run`. Missing tools are `unavailable`;
 nonzero/signal/mismatched/truncated observations are failures. Cancellation
