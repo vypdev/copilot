@@ -14,6 +14,26 @@ unstarted; production remains disabled and pilot writes0.
 
 # EV-07 v2 detector qualification — issue #974
 
+## Native-control bootstrap input binding
+
+Native preparation now binds each supplied bootstrap to the public bootstrap in
+the reviewed host Git revision and checks the executing harness against that
+revision. Dirty working-copy files cannot become the reference. It rejects
+self-authorizing hashes, unsafe file forms
+and post-open changes, and retains verified bytes as private entry authority.
+Each launch executes an exclusive read-only copy in its owned private directory;
+replacing or deleting the supplied path afterward cannot select new executable
+bytes. The [sixteen C26 component controls](./native-bootstrap-components.cjs)
+use actual Git/private files and a modeled process port. They execute no bootstrap,
+Engine, provider or model. Full updated controls, normal hooks and the fresh
+common committed C32–C35 source/driver/runtime tuple remain separate requirements.
+The [retained bootstrap packet](../issue-974/controls/native-bootstrap-admission/README.md)
+records the negative controls, the stronger committed-host-source correction,
+sixteen passing local controls and the final506PASS/0fail/skip/cancel command.
+The35logical IDs, original floors, production-disabled state and unstarted174/42
+campaigns remain unchanged. Credentials, owner-loss cleanup and actual CLI/read
+scope admission are still pending.
+
 ## Late cancellation through owned cleanup
 
 The outer operation now retains explicit cancellation through its final awaited

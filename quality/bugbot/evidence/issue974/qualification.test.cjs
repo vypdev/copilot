@@ -813,3 +813,4 @@ require('./stop-record-components.cjs');
 
 require('./startup-stop-components.cjs');
 require('./late-cancellation-components.cjs');
+require('./native-bootstrap-components.cjs');

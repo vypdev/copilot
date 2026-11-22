@@ -2628,7 +2628,8 @@
         "quality/bugbot/evidence/issue974/startup-stop-components.cjs",
         "quality/bugbot/evidence/issue974/attempt-durability-components.cjs",
         "quality/bugbot/evidence/issue974/component-evidence-integrity-components.cjs",
-        "quality/bugbot/evidence/issue974/late-cancellation-components.cjs"
+        "quality/bugbot/evidence/issue974/late-cancellation-components.cjs",
+        "quality/bugbot/evidence/issue974/native-bootstrap-components.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

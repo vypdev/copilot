@@ -4930,6 +4930,81 @@ evidence and the closed test/driver inventory must retain this distinction.
 
 Update runtime/Bugbot owners, execution guidance, quality operations, evidence README/plan/results, architecture/coverage contracts and exact closed source/driver inventory together. Documentation must explain invocation, all states, relevant immutable runtime/CLI prerequisites, unknown ownership, explicit abort/EOF, technical cleanup, negative retention and no-replay recovery. The plan remains deliberately not-preregistered until actual source/runtime pins are committed; no preparation result becomes acceptance.
 
+#### Native-control bootstrap admission — C26 amendment
+
+Observed defect: the native-control manifest could supply executable bytes and
+their own digest. Its committed plan bound the harness, but did not independently
+bind that executable to the reviewed public bootstrap. Reopening the supplied
+path at launch also allowed replacement after preparation. This amendment changes
+only native-control host preparation/launch; consumer APIs and measured campaign
+execution keep their existing contracts.
+
+The reviewed host harness MUST capture its own committed host revision, verify
+its executing harness bytes against that revision and derive the bootstrap
+reference from the same Git object tree with replacements disabled. A manifest
+MUST NOT choose that reference. Dirty bootstrap files on disk are not reference
+bytes: canonical committed input remains eligible, while resigning dirty bytes
+or a dirty executing harness cannot grant authority. Each row's
+digest and bounded regular-file snapshot MUST match those reference bytes before
+any child launch. Symlinks, nonregular files, size/content mismatches, replaced
+inodes, growth during inspection and read failures MUST reject and close the opened
+descriptor. The existing seven-field manifest schema remains unchanged; no new
+override, trust flag, timeout, permission or retry is configurable.
+
+Successful preparation MUST retain the verified bytes as private process-local
+authority bound to the actual prepared entry. An environment value, serialized
+lookalike or copied public record MUST NOT grant launch authority. Each launch
+MUST create an exclusive owner-read-only bootstrap copy inside its owned private
+directory and execute that copy, preserving the existing interpreter and argument
+contract. Replacing or deleting the supplied input path after admission MUST NOT
+change the selected executable. Trusted source, manifest interpretation, private
+filesystem staging and the child-process adapter remain distinct boundaries;
+component-only exports and the modeled process port are never execution authority.
+
+```mermaid
+flowchart LR
+    H[Reviewed host checkout] --> P[Independent bootstrap bytes]
+    M[Native-control manifest] --> V[Verify bounded snapshot and committed plans]
+    P --> V
+    V --> A[Private prepared-entry authority]
+    A --> C[Exclusive read-only copy in private directory]
+    C --> N[Native control child]
+    V --> F[Reject before child launch]
+```
+
+Text equivalent: the reviewed host checkout supplies the reference; input rows
+are checked against it and their committed plan. Only an admitted entry can create
+and execute a private copy. Invalid rows fail before a child exists.
+
+The existing Node test surface reports pending plans, preparation failures and
+actual native outcomes separately. For example, `bootstrap must match the
+independently trusted source pin` means that native controls did not start: retain
+the negative input/receipt, prepare reviewed matching bootstrap/plan bytes, and
+freeze a new tuple before another explicit native attempt. A successful component
+preparation is not a native PASS. This amendment creates no progress-comment
+stream or new consumer/localization surface; diagrams have this textual fallback.
+
+C26 gains exactly sixteen deterministic subscenarios: eight canonical/source/authority/copy
+cases, five supplied-file forms and three post-open race/read-failure cases.
+They use real Git and private filesystem effects with a modeled child-process
+port; no bootstrap, Engine, provider or model subprocess is executed. They extend
+the retained490-control command to a planned506, preserve all35 logical IDs and
+all earlier floors, and retain the original negative outcomes. Existing pure,
+runtime/planner/containment, global/changed-path and scientific coverage gates
+remain required. The native harness and test inventory hashes change, so fresh
+common committed C32–C35 source/driver/runtime proof remains mandatory before174.
+
+Acceptance maps the noncanonical self-digest, replaced input and copied-entry
+cases to `native-bootstrap-components.cjs`; its file-form and descriptor controls
+cover rejection and cleanup. `test:bugbot-shadow-verification`, unchanged SDK
+hooks, documentation/specification/catalog checks, exact driver/test inventories
+and the later actual native tuple are all Definition-of-Done requirements. The
+quality operations page and evidence README MUST explain the matching-source
+recovery and component/native distinction. Historical native records remain
+immutable. Credential exclusion, owner-loss cleanup and actual CLI/read-scope
+admission remain separate unresolved prerequisites; this amendment does not mark
+the complete qualification ready.
+
 | Path | Change |
 |---|---|
 | `specs/bugbot-analysis-publication-and-autofix.md` | update |
@@ -4943,6 +5018,7 @@ Update runtime/Bugbot owners, execution guidance, quality operations, evidence R
 | `quality/bugbot/evidence/issue974/attempt-ledger.cjs` | update |
 | `quality/bugbot/evidence/issue974/corpus-selection.cjs` | update |
 | `quality/bugbot/evidence/issue974/qualification.test.cjs` | update |
+| `quality/bugbot/evidence/issue974/native-bootstrap-components.cjs` | create |
 | `quality/bugbot/evidence/issue974/operation-containment.cjs` | create |
 | `quality/bugbot/evidence/issue974/qualification-supervisor.cjs` | create |
 | `quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile` | create |

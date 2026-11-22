@@ -1193,6 +1193,20 @@ Preparation and current evidence are in the
 These controls make no model calls and establish no Desktop Setup or human
 acceptance or profile qualification.
 
+The native-control manifest's bootstrap must match the public bootstrap in the
+reviewed host Git revision, with the executing harness bound to that revision.
+Changing local bootstrap files does not change this reference. Supplying a
+program together with its own hash does not
+authorize it. Preparation verifies a bounded regular-file snapshot, closes its
+descriptor on failure and retains the verified bytes privately. Each actual
+launch uses its own read-only copy in the private operation directory; changing
+or deleting the supplied input afterward cannot change that executable.
+`bootstrap must match the independently trusted source pin` means that native
+controls did not start. Retain the negative input and receipt, prepare matching
+reviewed source/plan bytes, and freeze a fresh common tuple before another
+explicit native attempt. The Git/filesystem component controls use a modeled
+process port and do not execute the bootstrap or establish native acceptance.
+
 ### Deletion-only citation metadata
 
 A deletion-only hunk contains no new-side changed lines. A citation spanning

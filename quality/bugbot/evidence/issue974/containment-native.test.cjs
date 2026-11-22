@@ -11,30 +11,55 @@ const { spawn, execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const { test } = require('node:test');
 const { requireProfile } = require('./operation-containment.cjs');
-const { trustedGitExecutable, gitEnvironment } = require('../issue-950/execution-provenance.cjs');
+const { trustedGitExecutable, gitEnvironment, pinnedGit } = require('../issue-950/execution-provenance.cjs');
 const ids = ['ev974-C32', 'ev974-C33', 'ev974-C34', 'ev974-C35'];
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const ownedChildren = new Set();
+const verifiedBootstraps = new WeakMap();
 
 function prepared() {
     assert(process.env.COPILOT_NATIVE_CONTROL_PLANS, 'Prepare the four committed native-control plans before this explicit native command.');
     const file = path.resolve(process.env.COPILOT_NATIVE_CONTROL_PLANS);
     assert(fs.lstatSync(file).isFile() && !fs.lstatSync(file).isSymbolicLink());
     const records = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const hostRoot = path.resolve(__dirname, '../../../..');
+    const hostGit = pinnedGit(hostRoot);
+    const trustedHostCommit = hostGit('rev-parse', 'HEAD').toString('utf8').trim();
+    assert.match(trustedHostCommit, /^[a-f0-9]{40}$/u, 'committed native-control host source required');
+    const committed = relative => hostGit('show', trustedHostCommit + ':' + relative);
+    assert(hash(committed('quality/bugbot/evidence/issue974/containment-native.test.cjs')) === hash(fs.readFileSync(__filename)),
+        'native harness must match its committed host source');
+    const trustedBootstrapBytes = committed('quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs');
+    const trustedBootstrapSha256 = hash(trustedBootstrapBytes);
     assert.deepEqual(records.map(row => row.caseId), ids);
     const plans = records.map(row => {
         assert.deepEqual(Object.keys(row).sort(), ['bootstrapPath', 'bootstrapSha256', 'caseId', 'planPath', 'planSha256', 'repository', 'revision']);
         assert.match(row.revision, /^[a-f0-9]{40}$/u); assert.match(row.planSha256, /^[a-f0-9]{64}$/u);
         assert.match(row.bootstrapSha256, /^[a-f0-9]{64}$/u);
         assert.equal(fs.realpathSync(row.repository), row.repository);
-        assert.equal(hash(fs.readFileSync(row.bootstrapPath)), row.bootstrapSha256);
+        assert.equal(row.bootstrapSha256, trustedBootstrapSha256, 'bootstrap must match the independently trusted source pin');
+        const supplied = fs.lstatSync(row.bootstrapPath);
+        assert(supplied.isFile() && !supplied.isSymbolicLink() && supplied.size === trustedBootstrapBytes.length,
+            'bootstrap must be an exact regular-file snapshot');
+        const descriptor = fs.openSync(row.bootstrapPath, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
+        try {
+            const opened = fs.fstatSync(descriptor);
+            assert(opened.isFile() && opened.dev === supplied.dev && opened.ino === supplied.ino && opened.size === supplied.size,
+                'bootstrap changed before snapshot verification');
+            const bytes = Buffer.alloc(trustedBootstrapBytes.length + 1);
+            const size = fs.readSync(descriptor, bytes, 0, bytes.length, 0);
+            assert(size === trustedBootstrapBytes.length && hash(bytes.subarray(0, size)) === trustedBootstrapSha256,
+                'bootstrap bytes differ from the independently trusted source');
+        } finally { fs.closeSync(descriptor); }
         const bytes = execFileSync(trustedGitExecutable(), ['-C', row.repository, 'show', row.revision + ':' + row.planPath],
             { env: gitEnvironment(), maxBuffer: 4 * 1024 * 1024 });
         assert.equal(hash(bytes), row.planSha256);
         const plan = JSON.parse(bytes); assert.equal(plan.purpose, 'native-control');
         assert.equal(plan.nativeControl.selectedCase, row.caseId); requireProfile(plan.containment);
         assert.equal(hash(fs.readFileSync(__filename)), plan.nativeControl.harnessSha256);
-        return { ...row, plan };
+        const entry = Object.freeze({ ...row, plan });
+        verifiedBootstraps.set(entry, Buffer.from(trustedBootstrapBytes));
+        return entry;
     });
     const common = entry => ({ ...entry.plan, nativeControl: { ...entry.plan.nativeControl, selectedCase: null } });
     for (const entry of plans.slice(1)) assert.deepEqual(common(entry), common(plans[0]), 'native cases must use the same frozen tuple');
@@ -60,12 +85,16 @@ async function until(predicate) {
 }
 
 function launch(entry, name) {
+    const bootstrapBytes = verifiedBootstraps.get(entry);
+    assert(bootstrapBytes, 'native launch requires its private prepared bootstrap authority');
     const directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ev974-native-' + name + '-')));
     fs.chmodSync(directory, 0o700);
+    const verifiedBootstrap = path.join(directory, 'verified-bootstrap.cjs');
+    fs.writeFileSync(verifiedBootstrap, bootstrapBytes, { flag: 'wx', mode: 0o400 });
     const output = path.join(directory, 'output'), log = path.join(directory, 'bootstrap.log');
     const fd = fs.openSync(log, 'wx', 0o600);
     const env = { ...process.env, NODE_OPTIONS: '', NODE_PATH: '', BUGBOT_VERIFICATION_MODE: 'disabled' };
-    const child = spawn(process.execPath, [entry.bootstrapPath, entry.repository, entry.revision, entry.planPath,
+    const child = spawn(process.execPath, [verifiedBootstrap, entry.repository, entry.revision, entry.planPath,
         entry.planSha256, entry.bootstrapSha256, 'native-control', output], { env, stdio: ['ignore', fd, fd] });
     ownedChildren.add(child);
     const done = new Promise((resolve, reject) => {
