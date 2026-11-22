@@ -87,6 +87,47 @@ function admitCliBytes(runtime) {
     assert.equal(sha256(fs.readFileSync(process.execPath)), runtime.nodeSha256, 'CLI interpreter differs before imports/probes');
 }
 
+/** Admit only the immutable image's reviewed policy file, not its enforcement. */
+function admitManagedFilesystemRequirements(trust, implementation) {
+    const relative = 'quality/bugbot/evidence/issue974/qualification-requirements.toml';
+    const policy = '/etc/codex/requirements.toml';
+    const expected = committed(trust.git, implementation, relative);
+    for (const directory of ['/etc', '/etc/codex']) {
+        const stat = fs.lstatSync(directory, { bigint: true });
+        assert(stat.isDirectory() && !stat.isSymbolicLink() && stat.uid === 0n && (stat.mode & 0o022n) === 0n,
+            'managed requirements parent must be a protected root-owned directory');
+        assert.equal(fs.realpathSync(directory), directory, 'managed requirements parent cannot traverse links');
+    }
+    assert.equal(fs.realpathSync(policy), policy, 'managed requirements must be a canonical file');
+    assert(Number.isInteger(fs.constants.O_NOFOLLOW) && fs.constants.O_NOFOLLOW > 0,
+        'managed requirements admission needs physical-file open support');
+    const fd = fs.openSync(policy, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+    try {
+        const before = fs.fstatSync(fd, { bigint: true });
+        assert(before.isFile() && before.uid === 0n && (before.mode & 0o7777n) === 0o444n,
+            'managed requirements must be a root-owned0444 regular file');
+        assert.equal(before.size, BigInt(expected.length), 'managed requirements size differs from committed source');
+        const bytes = Buffer.alloc(expected.length + 1);
+        let length = 0;
+        while (length < bytes.length) {
+            const count = fs.readSync(fd, bytes, length, bytes.length - length, length);
+            assert(Number.isInteger(count) && count >= 0 && count <= bytes.length - length, 'invalid managed requirements read');
+            if (count === 0) break;
+            length += count;
+        }
+        assert(length === expected.length && bytes.subarray(0, length).equals(expected),
+            'managed requirements bytes differ from committed source');
+        const after = fs.fstatSync(fd, { bigint: true }), current = fs.lstatSync(policy, { bigint: true });
+        for (const key of ['dev', 'ino', 'size', 'uid', 'gid', 'mode', 'mtimeNs', 'ctimeNs']) {
+            assert.equal(after[key], before[key], 'managed requirements changed during admission');
+            assert.equal(current[key], after[key], 'managed requirements path changed during admission');
+        }
+        assert.equal(fs.realpathSync(policy), policy, 'managed requirements path cannot become a link');
+        return { path: policy, bytes: expected.length, sha256: sha256(expected), ownerUid: 0, mode: '0444',
+            enforcementObserved: false };
+    } finally { fs.closeSync(fd); }
+}
+
 function reviewedPlan(repository, revision, planPath, planSha256, bootstrapSha256, mode) {
     assert(!process.env.NODE_OPTIONS && !process.env.NODE_PATH && process.execArgv.length === 0,
         'bootstrap requires trusted Node without preloads or loader overrides');
@@ -112,7 +153,7 @@ function reviewedPlan(repository, revision, planPath, planSha256, bootstrapSha25
     const base = prefix + (mode === 'normal-flow' ? 'normal-flow-shadow/' : 'ev07-shadow/');
     const inventory = mode === 'normal-flow' ? normal : plan.schemaVersion === 2 ? [...ev07,
         '../../issue974/corpus-selection.cjs', '../../issue974/attempt-ledger.cjs', ...(plan.containment
-            ? ['operation-containment.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'containment-native-fixture.cjs']
+            ? ['operation-containment.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'qualification-requirements.toml', 'containment-native-fixture.cjs']
                 .map(name => '../../issue974/' + name) : [])] : ev07;
     const expected = mode === 'normal-flow' ? plan.drivers : plan.inspectedArtifacts;
     const admitted = [];
@@ -343,6 +384,7 @@ async function launchContainedWorker() {
     staged.git('checkout', '--quiet', '--detach', proof.planCommit);
     const { plan } = reviewedPlan(root, proof.planCommit, proof.planPath, proof.planSha256, proof.bootstrapSha256, input.mode);
     admitCliBytes(plan.runtime);
+    const managedRequirements = admitManagedFilesystemRequirements(imageTrust, plan.implementation);
     assert(plan.containment, 'contained worker profile missing');
     assert.equal(plan.containment.workerUid, owner.workerUid); assert.equal(plan.containment.workerGid, owner.workerGid);
     assert.equal(sha256(fs.readFileSync('/qualification-supervisor.cjs')), plan.containment.supervisorSha256);
@@ -357,6 +399,9 @@ async function launchContainedWorker() {
     fs.cpSync('/sdk/node_modules', path.join(root, 'node_modules'),
         { recursive: true, verbatimSymlinks: true, dereference: false, mode: fs.constants.COPYFILE_FICLONE });
     verifier.attestRuntime(root, plan.runtime);
+    fs.writeFileSync('/qualification-output/managed-requirements.json', JSON.stringify({
+        sourceImplementation: plan.implementation, ...managedRequirements,
+    }) + '\n', { flag: 'wx', mode: 0o600 });
     process.env.COPILOT_EV07_PLAN = path.join(root, proof.planPath);
     process.env.COPILOT_QUALIFICATION_MANIFEST_SHA256 = proof.planSha256;
     process.env.COPILOT_QUALIFICATION_PLAN_COMMIT = proof.planCommit;

@@ -502,3 +502,31 @@ Attempt durability follow-up reproduces1PASS13FAIL then14PASS for actual private
 Scope reuse follow-up fixes duplicate admission before the callback:17PASS10FAIL becomes27PASS;12newcases cover4siblingaliases/6terminalreuses/2independence-validation controls. Changedscopeandpureidentitypolicy100%allmetrics;3-file67PASS+1unchangedplannerskip;precommit456PASS23source-fenceFAIL;cleancommitted479PASS stillrequired. [Source and controls](../issue-974/controls/scope-reuse-coverage/source-and-controls.json) retain rawnegatives, schemas/scopes and allboundaries. CLI/Actionbundleschange;API/recovery stayidentical. SDK/native/global/scientific qualification remains separate and unproven.
 
 The scope-reuse packet retains the initial normal-hook fixture collision and85-pass corrected four-suite cohort. Its and the preceding durability packet's report archives use the existing .log.gz evidence contract with byte-identical lossless renames. Final clean committed479validation and native qualification remain separate pending gates.
+
+## Managed requirements preparation
+
+The qualification-only image installs
+[`qualification-requirements.toml`](qualification-requirements.toml) at the
+Codex0.171.0 system path `/etc/codex/requirements.toml`, root-owned0444. It denies
+the fixed nine private process/SDK/source/auth/input/oracle/output surfaces.
+The bootstrap admits exact committed bytes through a bounded physical descriptor
+and checks canonical protected parents and stable metadata before application
+imports or credentials. The closed driver inventory includes this artifact.
+`--ignore-user-config` does not remove system requirements in the pinned loader;
+the owning SDD links the exact upstream sources. This source fact is separate
+from observed enforcement.
+
+`managed-requirements-components.cjs` contains14 deterministic controls: real
+Git and private file effects with modeled root Linux metadata, plus the fixed
+artifact contract. They cover missing/linked/unsupported files, owner/mode and
+byte/size mismatches, replacement/mutation, and descriptor failure cleanup.
+They run no image, CLI or model tool. Native Windows evidence is not inferred.
+
+The private `managed-requirements.json` receipt deliberately records
+`enforcementObserved:false`. A file mismatch blocks startup and preserves the
+private diagnostic; prepare matching reviewed source/image bytes rather than
+an override. A matched file still requires fresh common-tuple actual CLI/tool,
+credential/oracle exclusion and C32–C35 receipts, then a committed preregistration
+before174. Existing SDK flags, scientific thresholds and historical evidence
+remain unchanged. Actual174/42 remain unstarted, profileNONE, pilotwrites0 and
+productiondisabled.

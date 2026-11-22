@@ -1,0 +1,14 @@
+# Qualification-image requirements, supported by pinned Codex 0.171.0.
+# This is a system requirements file, never a user/project configuration.
+[permissions.filesystem]
+deny_read = [
+  "/proc",
+  "/sdk",
+  "/tmp/bugbot-contained-worker-*/source",
+  "/tmp/bugbot-contained-worker-*/home/.codex/auth.json",
+  "/qualification-input/private-credentials.json",
+  "/qualification-input/invocation.json",
+  "/qualification-input/plan.bundle",
+  "/qualification-input/campaign/corpus-v3",
+  "/qualification-output"
+]

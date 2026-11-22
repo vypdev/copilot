@@ -5126,6 +5126,80 @@ immutable. Credential exclusion, owner-loss cleanup and actual CLI/read-scope
 admission remain separate unresolved prerequisites; this amendment does not mark
 the complete qualification ready.
 
+#### Qualification-image managed filesystem requirements — issue #974
+
+The qualification Dockerfile previously installed no system requirements file.
+Pinned Codex 0.171.0 supports `permissions.filesystem.deny_read` in
+`/etc/codex/requirements.toml`; its exec loader's `--ignore-user-config` excludes
+user configuration while retaining system requirements. These are source facts,
+not observations that a model tool was denied access. Primary sources are the
+[requirements schema](https://github.com/openai/codex/blob/ccf9be8cc458bd6b8336fe84d68d8893f2691a5e/codex-rs/config/src/config_requirements.rs),
+[loader](https://github.com/openai/codex/blob/ccf9be8cc458bd6b8336fe84d68d8893f2691a5e/codex-rs/config/src/loader/mod.rs)
+and [exec composition](https://github.com/openai/codex/blob/ccf9be8cc458bd6b8336fe84d68d8893f2691a5e/codex-rs/exec/src/lib.rs).
+
+EV974-S01 and EV974-S03 additionally require the qualification image to install
+the committed `qualification-requirements.toml` at that fixed system path,
+root-owned and mode0444 beneath canonical protected root-owned parents. The
+contained bootstrap MUST compare its physical descriptor's bounded bytes and
+stable metadata with the implementation's regular Git blob before credential
+loading or application imports. Missing, linked, writable, foreign-owned,
+different, replaced or unreadable files MUST reject admission; descriptors close
+on success and failure. No arbitrary path, per-user override or new public
+configuration is introduced. The image build accepts only Codex0.171.0 until
+another reviewed implementation and exact runtime tuple establish compatibility.
+
+```text
+Committed policy -> immutable image system file -> physical bootstrap admission
+ -> same-tuple CLI/model-tool denial probes -> committed preregistration -> 174
+```
+Text equivalent: installing and admitting the file prepares the runtime; actual
+CLI/model-tool enforcement and the remaining native prerequisites must pass
+before measurement. File admission alone does not permit a campaign.
+
+The fixed policy denies `/proc`, `/sdk`, the private scratch SDK source and
+Codex auth file, the credential/invocation/bundle inputs, independent corpus
+oracles, and qualification output. The complete nine literal/glob entries live
+in the reviewed TOML and its contract test. Subject workspaces remain governed
+by the existing ordinary read-only provider and evidence boundaries. Neither
+the dataset nor a global `/tmp` denial becomes configurable. Existing network,
+tool, credential and oracle exclusion requirements remain effective.
+
+| Operator state | Meaning and next action |
+|---|---|
+| Preparing image | Freeze the reviewed implementation and build its exact runtime; no model work has started. |
+| Policy file rejected | Retain the private negative diagnostic, correct the image/source mismatch and prepare a new reviewed tuple. Credentials remain unloaded. |
+| Policy file admitted; enforcement pending | Inspect `managed-requirements.json`; `enforcementObserved:false` means actual CLI/model-tool exclusion is still required. |
+| Actual tuple accepted | Retain the separate native/CLI/model-tool receipts and commit the complete preregistration before174; this is not a qualified profile. |
+
+The bootstrap owns this admission using Node core and authenticated Git bytes;
+the image owns installation, and Codex owns enforcing its system requirements.
+The closed driver inventories in the bootstrap, implementation and provenance
+loader MUST include the TOML explicitly. The existing loader fence remains
+closed to neighboring files and the public bootstrap exports remain unchanged.
+The exclusive private0600 metadata receipt contains source identity, size,
+digest, owner/mode and `enforcementObserved:false`; it contains no secret bytes.
+Cancellation/owner loss retain the existing incomplete-operation and stopped
+scope rules. There is no retry, fallback or automatic policy migration. A changed
+policy requires a new image, common runtime proof and committed plan; older
+campaigns remain reproducible from their original commits. Consumer flags,
+profiles, research limits, scientific floors and production defaults do not
+change. No new GitHub notification or human/platform acceptance is introduced.
+
+C26 gains **14 distinct deterministic component controls** in
+`managed-requirements-components.cjs`: one valid committed-file admission, four
+missing/link/platform cases, two owner/mode cases, two byte/size cases, two
+descriptor/path race cases, two read/close failure cases and one fixed-policy
+artifact contract. Thirteen use real Git/files with explicitly modeled Linux
+root metadata and are POSIX-only; the artifact case is platform independent.
+They execute no image, CLI, SDK model tool or native denial probe. All previous
+logical case IDs, global/changed-module coverage gates and actual C32–C35
+requirements remain. Acceptance requires those14 cases, complete shadow
+regressions, ordinary SDK hooks, specification/catalog/docs validation and
+Graphify, followed separately by fresh actual common-tuple denial and native
+receipts. Deterministic PASS does not close runtime or scientific acceptance.
+The evidence README and quality operations page document the fixed policy,
+recovery and this distinction; the catalog records both new artifacts.
+
 | Path | Change |
 |---|---|
 | `specs/bugbot-analysis-publication-and-autofix.md` | update |
@@ -5144,6 +5218,8 @@ the complete qualification ready.
 | `quality/bugbot/evidence/issue974/operation-containment.cjs` | create |
 | `quality/bugbot/evidence/issue974/qualification-supervisor.cjs` | create |
 | `quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile` | create |
+| `quality/bugbot/evidence/issue974/qualification-requirements.toml` | create |
+| `quality/bugbot/evidence/issue974/managed-requirements-components.cjs` | create |
 | `quality/bugbot/evidence/issue974/containment-native.test.cjs` | create |
 | `quality/bugbot/evidence/issue974/containment-native-fixture.cjs` | create |
 | `src/domain/agent_execution_plan.ts` | update |

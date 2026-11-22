@@ -815,3 +815,4 @@ require('./startup-stop-components.cjs');
 require('./late-cancellation-components.cjs');
 require('./native-bootstrap-components.cjs');
 require('./owner-loss-components.cjs');
+require('./managed-requirements-components.cjs');

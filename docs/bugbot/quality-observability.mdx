@@ -992,6 +992,32 @@ the frozen thresholds or writing the public record. Selecting a different plan
 to rescore existing trials is rejected. Interrupted, correctly bound slots stay
 visible as incomplete results.
 
+### Qualification-image read policy
+
+The contained qualification image installs the committed fixed read-denial
+policy at `/etc/codex/requirements.toml` for pinned Codex0.171.0. Before loading
+credentials or application modules, the bootstrap requires canonical protected
+root-owned parents and an unlinked root-owned0444 file whose physical descriptor
+has the exact committed bytes and stable metadata. A mismatch prevents startup.
+Retain the negative diagnostic and prepare matching reviewed source/image bytes;
+editing user configuration cannot repair this admission.
+
+The policy covers process metadata, SDK and private scratch source, private auth
+and invocation inputs, independent corpus oracles, and output evidence. It adds
+no consumer setting. The normal read-only subject workspace, tool and credential
+rules still apply. A different CLI or policy needs a new reviewed runtime and
+plan; historical campaigns retain their original identities.
+
+The private `managed-requirements.json` receipt records file admission with
+`enforcementObserved:false`. It establishes that the image file matched, while
+actual CLI/model-tool denial, credential/oracle exclusion and the common native
+controls remain separate prerequisites. The14 Git/filesystem component controls
+model protected Linux metadata and make no model calls. Neither their PASS nor
+the installed file qualifies a profile. See the
+[qualification packet](https://github.com/vypdev/copilot/tree/develop/quality/bugbot/evidence/issue974)
+for the fixed artifact, controls and retained evidence. Production remains
+disabled and evaluated-pilot write attempts remain zero.
+
 ### Live source and cancellation
 
 Receipt-bearing reviews pin the live target ref independently of GitHub's

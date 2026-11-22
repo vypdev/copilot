@@ -2486,6 +2486,7 @@
         "quality/bugbot/evidence/issue974/operation-containment.cjs",
         "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
         "quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile",
+        "quality/bugbot/evidence/issue974/qualification-requirements.toml",
         "quality/bugbot/evidence/issue974/containment-native-fixture.cjs"
       ],
       "tests": [
@@ -2631,6 +2632,7 @@
         "quality/bugbot/evidence/issue974/late-cancellation-components.cjs",
         "quality/bugbot/evidence/issue974/native-bootstrap-components.cjs",
         "quality/bugbot/evidence/issue974/owner-loss-components.cjs",
+        "quality/bugbot/evidence/issue974/managed-requirements-components.cjs",
         "src/infrastructure/agents/__tests__/qualification_investigation.test.ts",
         "src/infrastructure/agents/__tests__/qualification_process_fixture_cleanup.ts",
         "src/infrastructure/agents/__tests__/qualification_process_fixture_cleanup.test.ts"
