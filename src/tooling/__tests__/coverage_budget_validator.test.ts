@@ -253,3 +253,17 @@ describe('coverage budget validator', () => {
             .toThrow('Coverage configuration contains duplicate budget names.');
     });
 });
+
+it('publisher977-C103: delivery port error constructors have an independent runtime coverage gate', () => {
+    const config = require('../../../scripts/coverage-budgets.json');
+    const raw = config.budgets.find((budget: { name: string }) => budget.name === 'Reviewed publisher installation');
+    const normalized = normalizeBudgetConfiguration(config);
+    const budget = normalized.find((item: { name: string }) => item.name === raw.name);
+    const file = 'src/application/ports/setup_installation_delivery_ports.ts';
+    const report = summary(Object.fromEntries(raw.rules.flatMap((rule: { files: string[] }) => rule.files).map((path: string) => [path, coverage(100)])));
+    expect(coverageBudgetFailures(report, '/repo', budget)).toEqual([]);
+    expect(coverageBudgetFailures({ ...report, ['/repo/' + file]: coverage(89) }, '/repo', budget))
+        .toEqual(expect.arrayContaining([file + ' lines 89% < 95%', file + ' functions 89% < 90%']));
+    const absent = { ...report }; delete absent['/repo/' + file];
+    expect(() => coverageBudgetFailures(absent, '/repo', budget)).toThrow('Missing reviewed publisher installation module coverage entry for ' + file);
+});

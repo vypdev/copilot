@@ -102,6 +102,9 @@ A local or remote step Action, container Action, or reusable-workflow reference 
 keeps publisher inventory unknown and blocks the proposal. A local path, remote
 workflow pin or a
 non-publisher selector alone cannot prove that no publisher already exists.
+An uninspected `run` script also stays unknown: delegated scripts, constructed
+markers and direct GitHub API calls need independent inspection. Missing literal
+markers cannot prove absence.
 Resolve that inventory before preparing a new preview; an older preview cannot
 authorize Apply after this result changes.
 
@@ -154,7 +157,8 @@ copilot setup --publisher-manifest /absolute/path/publisher-proposal.json --resu
 ```
 
 Resume needs current credentials and fresh review of the same purpose, actor,
-repository/default/base, source and approved bytes. Bare `--resume-operation`
+repository/default/base, source and approved bytes. An invalid resume UUID is a local input error: correct the ID before inspecting
+repository access or retained effects. Bare `--resume-operation`
 still selects ordinary batch recovery. Legacy v1 records cannot become publisher
 v2 authority. Completed facts and uncertainty appear before approval. If a
 tree/commit POST may have succeeded without returning its identity, preserve and

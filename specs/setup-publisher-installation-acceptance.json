@@ -2444,6 +2444,82 @@
           "test": "actual shared Git delivery composition with controlled provider rejects invalid approved files before transport: oversized receipt"
         }
       ]
+    },
+    {
+      "id": "publisher977-C101",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Opaque workflow scripts remain unknown unless their behavior is independently inspected; missing literal publisher markers do not prove absence.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C101: opaque run cannot establish absence: ${{ inputs.script }}"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C101: opaque run cannot establish absence: curl --request POST https://api.github.com/repos/owner/project/actions/workflows/renamed.yml/dispatches"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C101: opaque run cannot establish absence: node -e \"const name = ['publish_bugbot', 'status_card_action'].join('_'); require('./action')[name]()\""
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C101: opaque run cannot establish absence: node scripts/dispatch-status.js"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "publisher977-C101: actual composition blocks an opaque script before preview, approval or provider writes"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C102",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G07"
+      ],
+      "assertion": "Malformed resume identities report invalid input before terminal, credential or provider work.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C102: malformed resume  reports invalid input before terminal or provider work"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C102: malformed resume ../other-operation reports invalid input before terminal or provider work"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C102: malformed resume 11111111-1111-1111-8111-111111111111 reports invalid input before terminal or provider work"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C102: malformed resume invalid-operation reports invalid input before terminal or provider work"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C103",
+      "area": "Packaged integration/security",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G07"
+      ],
+      "assertion": "Executable delivery-port error constructors have an independent per-module coverage gate that rejects missing and below-threshold entries.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/tooling/__tests__/coverage_budget_validator.test.ts",
+          "test": "publisher977-C103: delivery port error constructors have an independent runtime coverage gate"
+        }
+      ]
     }
   ]
 }

@@ -1583,6 +1583,7 @@
           "files": [
             "src/application/usecases/setup/apply_setup_publisher_use_case.ts",
             "src/application/usecases/setup/deliver_setup_installation_use_case.ts",
+            "src/application/ports/setup_installation_delivery_ports.ts",
             "src/application/usecases/setup/review_setup_publisher_use_case.ts",
             "src/cli/setup_publisher_proposal_file.ts",
             "src/infrastructure/setup_batch_journal_adapter.ts",

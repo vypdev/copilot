@@ -954,7 +954,7 @@ The selected companion establishes the immutable original **64-case baseline**: 
 12 application/recovery, ten provider/delivery, 12 CLI/content and six packaged/
 security. Preserve the companion's C01–C64 IDs, all earlier numeric budgets and
 100% pure policy. The executable publisher budget lists six exhaustive pure
-modules and 19 runtime modules at 95% lines/statements and 90% branches/functions.
+modules and 20 runtime modules at 95% lines/statements and 90% branches/functions.
 The final uploaded report still requires no incomplete executable changed lines;
 passing a private focused cohort is not that report. All four static catalogs and
 atomic English fallback must preserve approved bytes and authority.
@@ -1235,3 +1235,43 @@ C97/C98 -> PU977-G01/G07 -> workflow inventory; C99/C100 -> PU977-G03/G07 ->
 Git reader and delivery byte admission. Operator provisioning documents each
 recovery/inventory boundary. Default inventory must be re-evaluated after this
 correction; a prepared PR or these model-free controls cannot prove installation.
+
+
+#### Opaque execution inventory and bounded resume input (2026-11-22)
+
+A workflow `run` body is executable behavior. Missing literal publisher markers
+MUST NOT establish absence: it can delegate to a script, invoke GitHub's API,
+construct a marker or receive dynamic input. Until that behavior is independently
+inspected, the workflow MUST remain unknown, including beside an exact canonical
+publisher. Explicit publisher markers still take precedence as a conflict.
+No script/action allowlist, declaration of trust or new override is introduced.
+This conservative source fix does not resolve the current default's inventory;
+#977 still needs complete independently supported inventory before preview.
+
+A malformed explicit resume UUID MUST yield the existing localized invalid-input
+message and exit1 before opening a terminal, reading credentials or creating a
+provider. It MUST NOT imply that a retained operation or repository-access check
+failed. Valid purpose-bound resume and every durable recovery rule stay unchanged.
+
+Both executable error constructors in the delivery port MUST be included in the
+existing per-module runtime budget:95% lines/statements and90% branches/functions.
+Missing entries and below-floor values MUST fail independently of global coverage.
+
+| Case | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C101 | Read-only planning/freshness | PU977-G01, PU977-G07 | Opaque workflow scripts remain unknown unless their behavior is independently inspected; missing literal publisher markers do not prove absence. |
+| publisher977-C102 | CLI/content | PU977-G02, PU977-G07 | Malformed resume identities report invalid input before terminal, credential or provider work. |
+| publisher977-C103 | Packaged integration/security | PU977-G06, PU977-G07 | Executable delivery-port error constructors have an independent per-module coverage gate that rejects missing and below-threshold entries. |
+
+These three distinct obligations extend the current cumulative minimum to
+**103 logical IDs / 99 mapped Jest cases plus four extracted-package cases**.
+C101 has four opaque-command scenarios, each alone and beside the exact workflow;
+C102 has four invalid string identities; C103 checks passing, missing and below-
+threshold reports. Every C01–C100 ledger object and the Action-selected companion
+MUST remain unchanged. All C01–C103 MUST retain published rows and executable
+mappings; the validator's independent minimum is103. The20runtime and six pure
+module gates, global/changed-line, package, docs and final-head native gates
+remain required. These model-free controls prove no installation, native canary,
+platform observation or qualification. Provisioning guidance explains the unknown
+inventory and invalid-resume next actions; source and catalogue evidence stay
+coordinated. No new configuration, permission, schema or retry is introduced.

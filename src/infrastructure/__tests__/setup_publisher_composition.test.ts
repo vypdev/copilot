@@ -103,3 +103,12 @@ it.each(['en-US', 'es-ES', 'fr-FR', 'pt-BR'])('connects real approval and exact 
   expect(raw).not.toContain('private-factory-fixture'); expect(JSON.parse(raw)).toMatchObject({ purpose: 'bugbot-status-publisher', effects: ['tree', 'commit', 'branch', 'pull-request'], preparedCommit: commit });
   expect(JSON.stringify(f.install)).not.toContain('private-factory-fixture');
 });
+
+it('publisher977-C101: actual composition blocks an opaque script before preview, approval or provider writes', async () => {
+  const f = fixture();
+  f.replace('ci.yml', 'on: push\njobs:\n  status:\n    steps:\n      - run: node scripts/dispatch-status.js\n');
+  await expect(f.execute(false)).rejects.toMatchObject({ reason: 'installation-unsupported' });
+  expect(f.present).not.toHaveBeenCalled(); expect(f.confirm).not.toHaveBeenCalled();
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+  expect(await readdir(mockJournalRoot)).toEqual([]);
+});

@@ -3,7 +3,7 @@ import { inspectSetupPublisherWorkflows } from '../setup_publisher_workflow_inve
 
 const expected = 'name: Publisher\non: workflow_dispatch\njobs:\n  publish:\n    steps:\n      - uses: vypdev/copilot@full-sha\n        env:\n          COPILOT_BUGBOT_STATUS_CARD_WORKFLOW: write-v1\n';
 const workflow = (content: string, path = '.github/workflows/ci.yml', mode = '100644') => ({ path, mode, content });
-const ci = 'name: CI\non: push\njobs:\n  ci:\n    steps:\n      - run: echo test\n';
+const ci = 'name: CI\non: push\njobs:\n  ci:\n    steps: []\n';
 it('proves absence only from a complete ordinary workflow inventory', () => {
   expect(inspectSetupPublisherWorkflows([], expected)).toEqual({ kind: 'absent', paths: [] });
   expect(inspectSetupPublisherWorkflows([workflow(ci)], expected)).toEqual({ kind: 'absent', paths: [] });
@@ -28,17 +28,17 @@ it('finds a semantically equivalent renamed publisher rather than matching a dis
 });
 it.each([
   ['unknown', 'name: CI\n# COPILOT_BUGBOT_STATUS_CARD_WORKFLOW: write-v1\non: push\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@v5\n'],
-  ['absent', 'name: Copilot - Bugbot Status Card\non: push\njobs:\n  test:\n    steps:\n      - run: echo harmless\n'],
+  ['unknown', 'name: Copilot - Bugbot Status Card\non: push\njobs:\n  test:\n    steps:\n      - run: echo harmless\n'],
   ['unknown', 'on: push\njobs:\n  test:\n    steps:\n      - uses: vypdev/copilot@sha\n        with:\n          single-action: another_action\n'],
   ['unknown', 'on: push\njobs:\n  test:\n    steps:\n      - uses: vypdev/copilot@sha\n        with:\n          token: ${{ secrets.PAT }}\n'],
-  ['absent', 'on: push\njobs:\n  test:\n    steps: &ordinary\n      - run: echo harmless\n  other:\n    steps: *ordinary\n'],
+  ['unknown', 'on: push\njobs:\n  test:\n    steps: &ordinary\n      - run: echo harmless\n  other:\n    steps: *ordinary\n'],
 ])('does not treat comments, titles, ordinary Copilot steps or acyclic aliases as publisher authority', (kind, content) => {
   expect(inspectSetupPublisherWorkflows([workflow(content)], expected).kind).toBe(kind);
 });
 it.each([
   'defaults:\n  run:\n    shell: bash\n' + ci,
-  'on:\n  workflow_dispatch:\n    inputs:\n      env:\n        type: string\n      run:\n        type: string\njobs:\n  ci:\n    steps:\n      - run: echo harmless\n',
-  'on: push\njobs:\n  ci:\n    strategy:\n      matrix:\n        env: [one, two]\n        uses: [compiler-a, compiler-b]\n        run: [unit, integration]\n    steps:\n      - run: echo harmless\n',
+  'on:\n  workflow_dispatch:\n    inputs:\n      env:\n        type: string\n      run:\n        type: string\njobs:\n  ci:\n    steps: []\n',
+  'on: push\njobs:\n  ci:\n    strategy:\n      matrix:\n        env: [one, two]\n        uses: [compiler-a, compiler-b]\n        run: [unit, integration]\n    steps: []\n',
 ])('interprets execution fields in their actual workflow scope, including observed defaults.run mappings', content => {
   expect(inspectSetupPublisherWorkflows([workflow(content)], expected).kind).toBe('absent');
 });
@@ -100,3 +100,14 @@ it.each(['workflow', 'job', 'step', 'run'])(
         : `on: push\njobs:\n  ci:\n    runs-on: windows-latest\n    steps:\n      - ${scope === 'step' ? `uses: vypdev/copilot@${'a'.repeat(40)}\n        env:\n          ${marker}: write-v1` : `run: $env:${marker}='write-v1'; node action.js`}\n`;
     expect(inspectSetupPublisherWorkflows([workflow(content)], expected)).toEqual({ kind: 'foreign', paths: ['.github/workflows/ci.yml'] });
   });
+
+it.each([
+  'curl --request POST https://api.github.com/repos/owner/project/actions/workflows/renamed.yml/dispatches',
+  'node scripts/dispatch-status.js',
+  'node -e "const name = [\'publish_bugbot\', \'status_card_action\'].join(\'_\'); require(\'./action\')[name]()"',
+  '${{ inputs.script }}',
+])('publisher977-C101: opaque run cannot establish absence: %s', run => {
+  const content = 'on: push\njobs:\n  ci:\n    steps:\n      - run: ' + JSON.stringify(run) + '\n';
+  expect(inspectSetupPublisherWorkflows([workflow(content)], expected)).toEqual({ kind: 'unknown', paths: ['.github/workflows/ci.yml'] });
+  expect(inspectSetupPublisherWorkflows([workflow(expected, SETUP_PUBLISHER_WORKFLOW_PATH), workflow(content)], expected).kind).toBe('unknown');
+});

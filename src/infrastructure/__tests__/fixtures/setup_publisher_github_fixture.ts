@@ -9,7 +9,7 @@ export const operation = '11111111-1111-4111-8111-111111111111';
 export function setupPublisherGithubFixture() {
   const f = setupPublisherGithubSourceFixture(), baseline = setupPublisherFixture();
   const files = [baseline.inspection.installation.manifest!, ...baseline.inspection.installation.guidance,
-    { path: '.github/workflows/ci.yml', mode: '100755', content: 'name: CI\non: push\njobs:\n  ci:\n    steps:\n      - run: echo tests\n' }];
+    { path: '.github/workflows/ci.yml', mode: '100755', content: 'name: CI\non: push\njobs:\n  ci:\n    steps: []\n' }];
   const baseFiles = new Map(files.map(file => [file.path, file.content]));
   const modes = new Map(files.map(file => [file.path, file.mode as '100644' | '100755']));
   const actual = setupInstallationTreeFixture(baseFiles, modes), root = actual.root;

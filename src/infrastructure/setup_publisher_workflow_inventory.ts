@@ -71,6 +71,9 @@ function meaning(content: string): Meaning {
       if (step && own(scope, 'run')) {
         if (typeof scope.run !== 'string') unknown = true;
         else if (/COPILOT_BUGBOT_STATUS_CARD_WORKFLOW|publish_bugbot_status_card_action/iu.test(scope.run)) publisher = true;
+        // A script may invoke a publisher indirectly or construct its marker.
+        // Literal marker absence cannot establish executable behavior absence.
+        else unknown = true;
       }
     };
     environment(document);

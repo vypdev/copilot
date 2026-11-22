@@ -128,6 +128,16 @@ it.each(['stale', 'delivery'] as const)('keeps an active-session %s Apply failur
   expect(f.text()).toContain(resolveStaticSetupPublisherCatalog().message(reason === 'stale' ? 'stale' : 'blocked'));
   expect(f.text()).not.toContain('Installation stopped');
 });
+it.each(['', 'invalid-operation', '../other-operation', '11111111-1111-1111-8111-111111111111'])(
+  'publisher977-C102: malformed resume %s reports invalid input before terminal or provider work', async resumeOperation => {
+    const f = fixture();
+    await f.run({ explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation });
+    expect(process.exitCode).toBe(1);
+    expect(f.text()).toBe(resolveStaticSetupPublisherCatalog().message('invalid') + '\n');
+    expect(createInteractiveTerminalDriver).not.toHaveBeenCalled();
+    expect(createSetupPublisherInstallationCompositionRoot).not.toHaveBeenCalled();
+    expect(f.execute).not.toHaveBeenCalled();
+  });
 it('validates explicit resume identity before transport and passes a valid selection through', async () => {
   const f = fixture(); await f.run({ explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation: 7 }); expect(f.execute).not.toHaveBeenCalled();
   await f.run({ explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation: f.operation.operationId }); expect(f.execute).toHaveBeenCalledWith(expect.objectContaining({ operationId: f.operation.operationId, resume: true }));

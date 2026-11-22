@@ -42,7 +42,8 @@ export async function executeSetupPublisherCommand(input: SetupPublisherCommandI
     const resume = explicitOptions.includes('resumeOperation');
     const operationId = resume ? resumeOperation : randomUUID();
     if (typeof operationId !== 'string') throw new PublisherCommandError('invalid');
-    setupBatchBranch(operationId);
+    try { setupBatchBranch(operationId); }
+    catch { throw new PublisherCommandError('invalid'); }
     terminal = createInteractiveTerminalDriver();
     if (!dryRun && !terminal) throw new PublisherCommandError('interactiveRequired');
     let token: unknown = explicitOptions.includes('token') ? providedToken : process.env.PERSONAL_ACCESS_TOKEN;

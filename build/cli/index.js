@@ -95675,7 +95675,12 @@ async function executeSetupPublisherCommand(input) {
         const operationId = resume ? resumeOperation : (0, node_crypto_1.randomUUID)();
         if (typeof operationId !== 'string')
             throw new PublisherCommandError('invalid');
-        (0, setup_batch_policy_1.setupBatchBranch)(operationId);
+        try {
+            (0, setup_batch_policy_1.setupBatchBranch)(operationId);
+        }
+        catch {
+            throw new PublisherCommandError('invalid');
+        }
         terminal = (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
         if (!dryRun && !terminal)
             throw new PublisherCommandError('interactiveRequired');
@@ -129689,6 +129694,10 @@ function meaning(content) {
                     unknown = true;
                 else if (/COPILOT_BUGBOT_STATUS_CARD_WORKFLOW|publish_bugbot_status_card_action/iu.test(scope.run))
                     publisher = true;
+                // A script may invoke a publisher indirectly or construct its marker.
+                // Literal marker absence cannot establish executable behavior absence.
+                else
+                    unknown = true;
             }
         };
         environment(document);
