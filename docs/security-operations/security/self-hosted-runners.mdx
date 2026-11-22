@@ -122,7 +122,12 @@ separate and creates no image/container/workload.
 Preparation failure leaves probes `not-run`. Missing tools are `unavailable`;
 nonzero/signal/mismatched/truncated observations are failures. Cancellation
 settles the owned command and marks remaining probes `not-run`; cleanup failure
-stays visible. Preserve the receipt and fix the demonstrated cause before a
+stays visible. Cancellation during the final Engine observation or cleanup also
+leaves the collection incomplete and fails the job. The summary shows collection
+completeness and cleanup independently of earlier passing rows. Adapter startup
+errors retain a failed-preparation receipt; private-root initialization cleans
+only its owned directory and records any cleanup uncertainty. Engine identities
+require string version fields. Preserve the receipt and fix the demonstrated cause before a
 changed attempt. A completed diagnostic job means observations were collected,
 including negatives; its green status alone does not certify a sandbox.
 

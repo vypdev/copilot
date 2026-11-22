@@ -64,31 +64,36 @@ function probeCommands(runtime) {
   ];
 }
 
-async function diagnose(ports) {
-  const receipt = { schemaVersion: 1, kind: 'model-free-linux-sandbox-diagnostic', ...ports.identity,
+function initialReceipt(identity) {
+  return { schemaVersion: 1, kind: 'model-free-linux-sandbox-diagnostic', ...identity,
     preparation: { state: 'unavailable' }, probes: [], qualificationModelCalls: 0, evaluatedPilotWrites: 0,
     productionSettingChanged: false, qualifiedProfiles: [], actualSdkOrModelToolAcceptance: false };
-  let runtime;
+}
+
+async function diagnose(ports) {
+  const receipt = initialReceipt(ports.identity);
+  let runtime, cancelled = false;
   try {
     const candidate = await ports.prepare();
     assert.equal(candidate.version, policy.CODEX_VERSION, 'exact diagnostic CLI version required');
     runtime = candidate;
     receipt.preparation = { state: 'observed', runtime: runtime.identity };
     for (const [id, executable, args, expected] of probeCommands(runtime)) {
-      if (ports.signal.aborted) { receipt.probes.push(policy.notRun(id, 'cancelled')); continue; }
+      if (ports.signal.aborted || cancelled) { receipt.executionIncomplete = true; receipt.probes.push(policy.notRun(id, 'cancelled')); continue; }
       const result = await ports.execute(executable, args);
       const observation = policy.observation(id, result, expected);
+      if (observation.state === 'cancelled') { receipt.executionIncomplete = true; cancelled = true; }
       const canaryMismatch = id === 'codex-write-denial' && !await ports.writeAbsent();
       receipt.probes.push({ ...observation, ...(canaryMismatch ? { state: 'fail', reason: 'unexpected-write' } : {}),
         stdout: ports.project(result.stdout), stderr: ports.project(result.stderr),
         stdoutSha256: hash(result.stdout), stderrSha256: hash(result.stderr), outputTruncated: result.truncated === true });
     }
   } catch (error) {
+    receipt.executionIncomplete = true;
     if (!runtime) receipt.preparation = { state: ports.signal.aborted ? 'cancelled' : 'failed',
       cause: error.code === 'ENOENT' ? 'missing-prerequisite' : 'preparation-or-provenance-failed',
       boundary: ['official-download', 'archive-inventory', 'extraction', 'executable-identity', 'version', 'fixture'].includes(error.diagnosticBoundary)
         ? error.diagnosticBoundary : 'unknown' };
-    else receipt.executionIncomplete = true;
     for (const id of policy.PROBE_IDS.slice(receipt.probes.length)) receipt.probes.push(policy.notRun(id,
       ports.signal.aborted ? 'cancelled' : runtime ? 'observation-unavailable' : 'preparation-failed'));
   } finally {
@@ -96,6 +101,7 @@ async function diagnose(ports) {
     catch { receipt.engine = { state: 'unavailable', cause: 'observation-unavailable' }; }
     try { await ports.release(); receipt.cleanup = 'completed'; }
     catch { receipt.cleanup = 'failed'; }
+    if (ports.signal.aborted) receipt.executionIncomplete = true;
   }
   return receipt;
 }
@@ -137,6 +143,7 @@ function engineObservation(signal) {
         try {
           const value = JSON.parse(data);
           assert.equal(incoming.statusCode, 200);
+          assert.equal(typeof value.Version, 'string'); assert.equal(typeof value.ApiVersion, 'string');
           assert(/^[0-9][0-9A-Za-z.+-]{0,63}$/u.test(value.Version));
           assert(/^\d{1,3}\.\d{1,3}$/u.test(value.ApiVersion));
           finish({ state: 'observed', version: value.Version, apiVersion: value.ApiVersion, workloadExecuted: false });
@@ -158,9 +165,11 @@ function engineObservation(signal) {
 }
 
 function nativePorts(signal, dependencies = {}) {
+  let privateRoot;
+  try {
   assert.equal(dependencies.platform ?? process.platform, 'linux', 'Linux diagnostic only');
   const archive = policy.archiveFor(dependencies.architecture ?? process.arch);
-  const privateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-linux-sandbox-')); fs.chmodSync(privateRoot, 0o700);
+  privateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-linux-sandbox-')); fs.chmodSync(privateRoot, 0o700);
   const home = path.join(privateRoot, 'home'), temporary = path.join(privateRoot, 'tmp');
   fs.mkdirSync(home, { mode: 0o700 }); fs.mkdirSync(temporary, { mode: 0o700 });
   const env = { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, HOME: home, CODEX_HOME: path.join(home, '.codex'),
@@ -205,6 +214,14 @@ function nativePorts(signal, dependencies = {}) {
     engine: () => engineObservation(signal),
     release: async () => fs.rmSync(privateRoot, { recursive: true, force: true }),
   };
+  } catch (error) {
+    error.diagnosticCleanup = 'not-created';
+    if (privateRoot) {
+      try { fs.rmSync(privateRoot, { recursive: true, force: true }); error.diagnosticCleanup = 'completed'; }
+      catch { error.diagnosticCleanup = 'failed'; }
+    }
+    throw error;
+  }
 }
 
 async function main(dependencies = {}) {
@@ -215,7 +232,19 @@ async function main(dependencies = {}) {
   const controller = new AbortController(), abort = () => controller.abort();
   process.once('SIGTERM', abort); process.once('SIGINT', abort);
   try {
-    const receipt = await diagnose((dependencies.nativePorts ?? nativePorts)(controller.signal));
+    let ports, receipt;
+    try { ports = (dependencies.nativePorts ?? nativePorts)(controller.signal); }
+    catch (error) {
+      receipt = { ...initialReceipt({
+        sourceCommit: /^[a-f0-9]{40}$/u.test(process.env.GITHUB_SHA || '') ? process.env.GITHUB_SHA : null,
+        os: process.platform, architecture: process.arch,
+      }), preparation: { state: controller.signal.aborted ? 'cancelled' : 'failed',
+        cause: 'adapter-initialization-failed', boundary: 'adapter-initialization' },
+      probes: policy.PROBE_IDS.map(id => policy.notRun(id, controller.signal.aborted ? 'cancelled' : 'preparation-failed')),
+      engine: { state: 'unavailable', cause: 'preparation-unavailable' }, executionIncomplete: true,
+      cleanup: ['not-created', 'completed', 'failed'].includes(error?.diagnosticCleanup) ? error.diagnosticCleanup : 'unavailable' };
+    }
+    if (ports) receipt = await diagnose(ports);
     fs.writeFileSync(report, JSON.stringify(receipt, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
     const summary = policy.renderSummary(receipt);
     if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);

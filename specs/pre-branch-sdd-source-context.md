@@ -338,6 +338,15 @@ local Git objects, deterministic clocks, native fake executables and no live mod
 credentials or network. Coverage/fault tests beyond this floor remain necessary
 when implementation reveals additional branches.
 
+Deadline case C38 controls the monotonic clock and semantic workspace/integrity
+ports while exercising the real planner, unchanged admitted deadline, execution
+admission, no-child-launch boundary and private-root cleanup. It MUST reject a
+deadline-reset mutant. The surrounding Git materialization, tamper and native
+execution cases retain real Git/source views. This separation keeps Git setup
+scheduling from consuming the deadline-focused assertion; it changes no
+production or fixture deadline. Native CI45011100858's original C38 setup
+timeout remains negative evidence; its Git delay's cause is unproven.
+
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain/configuration/pure planning | 12 | C01–C12 binding, purpose and invariants |

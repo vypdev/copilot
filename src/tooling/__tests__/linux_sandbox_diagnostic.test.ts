@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { EventEmitter } from 'node:events';
 const http = require('node:http') as typeof import('node:http');
+const nativeFs = require('node:fs') as typeof import('node:fs');
 import * as yaml from 'js-yaml';
 
 type Outcome = { stdout: string; stderr: string; exitCode: number | null; signal: string | null;
@@ -66,6 +67,8 @@ describe('Linux sandbox diagnostic outcome policy', () => {
     expect(summary).toContain('| SIGTERM |');
     expect(summary).toContain('credential/oracle denial and qualification remain unverified');
     expect(summary).toContain('Production settings were not changed');
+    expect(policy.renderSummary({ preparation: { state: 'observed' }, probes: [], executionIncomplete: true, cleanup: 'completed' }))
+      .toContain('Collection: **incomplete**. Cleanup: **completed**.');
   });
 });
 
@@ -124,6 +127,21 @@ describe('fixed diagnostic orchestration', () => {
     const receipt = await diagnostic.diagnose(ports);
     expect(ports.execute).toHaveBeenCalledTimes(1); expect(receipt.probes[0].state).toBe('cancelled');
     expect(receipt.probes.slice(1).every((row: any) => row.reason === 'cancelled')).toBe(true);
+  });
+
+  it.each(['engine', 'release'])('keeps late cancellation during %s incomplete after all seven observations', async boundary => {
+    const ports = modeledPorts(); ports[boundary].mockImplementation(async () => { ports.controller.abort(); return { state: 'unavailable', cause: 'cancelled' }; });
+    const receipt = await diagnostic.diagnose(ports);
+    expect(receipt.probes.every((row: any) => row.state === 'pass')).toBe(true);
+    expect(receipt.executionIncomplete).toBe(true); expect(receipt.cleanup).toBe('completed');
+    expect(ports.release).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains a command cancellation even when a command port has not aborted the shared signal', async () => {
+    const ports = modeledPorts(); ports.execute.mockResolvedValueOnce({ ...success(), cancelled: true });
+    expect((await diagnostic.diagnose(ports)).executionIncomplete).toBe(true);
+    expect(ports.signal.aborted).toBe(false);
+    expect(ports.execute).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -279,6 +297,39 @@ posixDescribe('native adapter with modeled release/process ports and real privat
       const ports = diagnostic.nativePorts(new AbortController().signal); await ports.release();
     } else expect(() => diagnostic.nativePorts(new AbortController().signal)).toThrow('Linux');
   });
+
+  it('removes only its newly owned root when adapter directory initialization fails', () => {
+    const originalTemp = nativeFs.mkdtempSync, originalMkdir = nativeFs.mkdirSync;
+    let owned: string | undefined;
+    const temp = jest.spyOn(nativeFs, 'mkdtempSync').mockImplementation(((...args: any[]) => {
+      owned = (originalTemp as any)(...args); return owned;
+    }) as any);
+    const mkdir = jest.spyOn(nativeFs, 'mkdirSync').mockImplementation(((target: any, ...args: any[]) => {
+      if (String(target).endsWith(path.sep + 'home')) throw Object.assign(new Error('controlled directory failure'), { code: 'EACCES' });
+      return (originalMkdir as any)(target, ...args);
+    }) as any);
+    try {
+      expect(() => diagnostic.nativePorts(new AbortController().signal, { platform: 'linux', architecture: 'x64' })).toThrow('controlled directory failure');
+      expect(owned).toBeDefined(); expect(existsSync(owned!)).toBe(false);
+    } finally {
+      temp.mockRestore(); mkdir.mockRestore(); if (owned) rmSync(owned, { recursive: true, force: true });
+    }
+  });
+
+  it.each([false, true])('preserves the first initialization failure and reports cleanup uncertainty=%s', cleanupFails => {
+    const originalTemp = nativeFs.mkdtempSync; let owned: string | undefined;
+    const temp = jest.spyOn(nativeFs, 'mkdtempSync').mockImplementation(((...args: any[]) => {
+      owned = (originalTemp as any)(...args); return owned;
+    }) as any);
+    const failure = Object.assign(new Error('controlled chmod failure'), { code: 'EACCES' });
+    const chmod = jest.spyOn(nativeFs, 'chmodSync').mockImplementation(() => { throw failure; });
+    const remove = cleanupFails ? jest.spyOn(nativeFs, 'rmSync').mockImplementation(() => { throw new Error('controlled cleanup failure'); }) : undefined;
+    try {
+      expect(() => diagnostic.nativePorts(new AbortController().signal, { platform: 'linux', architecture: 'x64' })).toThrow(failure);
+      expect(failure).toMatchObject({ diagnosticCleanup: cleanupFails ? 'failed' : 'completed' });
+      expect(existsSync(owned!)).toBe(cleanupFails);
+    } finally { temp.mockRestore(); chmod.mockRestore(); remove?.mockRestore(); if (owned) rmSync(owned, { recursive: true, force: true }); }
+  });
 });
 
 describe('independent local Engine observation with controlled HTTP events', () => {
@@ -336,6 +387,12 @@ describe('independent local Engine observation with controlled HTTP events', () 
       expect(value).toEqual({ state: 'unavailable', cause: 'local-engine-unavailable' });
     } finally { mock.mockRestore(); }
   });
+
+  it.each([{ Version: 29, ApiVersion: '1.56' }, { Version: '29.8.2', ApiVersion: 1.56 }])('rejects non-string Engine metadata %j', async metadata => {
+    const f = fixture(response => { response.emit('data', Buffer.from(JSON.stringify(metadata))); response.emit('end'); });
+    try { expect((await diagnostic.engineObservation(new AbortController().signal)).state).toBe('unavailable'); }
+    finally { f.close(); f.mock.mockRestore(); }
+  });
 });
 
 describe('actual receipt and summary publication with modeled command ports', () => {
@@ -385,6 +442,30 @@ describe('actual receipt and summary publication with modeled command ports', ()
       expect(JSON.parse(readFileSync(path.join(directory, 'copilot-linux-sandbox-123-2.json'), 'utf8')).preparation.state).toBe('failed');
       process.argv = [process.execPath, 'diagnostic.cjs', '--unsupported'];
       await expect(diagnostic.main()).rejects.toThrow('accepts no arguments');
+    } finally {
+      process.argv = originalArgv; process.exitCode = originalExit; output.mockRestore();
+      for (const name of names) { if (saved[name] === undefined) delete process.env[name]; else process.env[name] = saved[name]; }
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it.each(['cancelled', 'factory-failed'])('retains %s as an incomplete failing diagnostic with a receipt', async failure => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'sandbox-diagnostic-review-'));
+    const originalArgv = process.argv, originalExit = process.exitCode;
+    const names = ['GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'RUNNER_TEMP', 'GITHUB_STEP_SUMMARY'];
+    const saved = Object.fromEntries(names.map(name => [name, process.env[name]]));
+    const output = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    try {
+      process.argv = [process.execPath, 'diagnostic.cjs'];
+      Object.assign(process.env, { GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '3', RUNNER_TEMP: directory }); delete process.env.GITHUB_STEP_SUMMARY;
+      const ports = modeledPorts();
+      ports.execute.mockImplementationOnce(async () => { ports.controller.abort(); return { ...success(), cancelled: true }; });
+      const factory = failure === 'factory-failed' ? () => { throw new Error('controlled factory failure'); } : () => ports;
+      await expect(diagnostic.main({ nativePorts: factory })).resolves.toBeUndefined();
+      const receipt = JSON.parse(readFileSync(path.join(directory, 'copilot-linux-sandbox-123-3.json'), 'utf8'));
+      expect(process.exitCode).toBe(1);
+      if (failure === 'cancelled') expect(receipt.executionIncomplete).toBe(true);
+      else { expect(receipt.preparation.state).toBe('failed'); expect(receipt.probes.every((row: any) => row.state === 'not-run')).toBe(true); }
     } finally {
       process.argv = originalArgv; process.exitCode = originalExit; output.mockRestore();
       for (const name of names) { if (saved[name] === undefined) delete process.env[name]; else process.env[name] = saved[name]; }

@@ -1008,7 +1008,22 @@ turn/read/token/heartbeat limits. No sudo, privilege, seccomp, sysctl, AppArmor,
 sandbox-bypass, runner registration or global configuration change is permitted.
 
 Cancellation MUST reach the actual owned command and settle its close before
-cleanup. Private temporary files MUST be removed after successful or failed
+cleanup. Cancellation during a probe, the independent Engine observation or
+final cleanup MUST leave `executionIncomplete=true` and exit1, even when all
+earlier rows passed. No later probe is admitted after a cancelled command.
+The Job Summary MUST show collection completeness and cleanup separately from
+probe outcomes. Fully collected negative probe observations may still exit0;
+an interrupted collection cannot.
+
+Adapter-construction failures, including unsupported hosts and private-directory
+initialization failures, MUST retain the same exclusive receipt and summary,
+failed preparation, seven not-run rows and exit1. Initialization removes only
+its newly owned root before propagating the original failure. Its receipt
+distinguishes `not-created`, `completed`, `failed` and unavailable cleanup;
+cleanup failure cannot replace the first failure or imply success. Engine
+version and API-version fields MUST be strings before format validation;
+JSON numbers cannot become observed identities through regular-expression coercion.
+Private temporary files MUST be removed after successful or failed
 preparation/probes; cleanup failure stays visible. A read-only local Engine
 version observation is independent: unavailable or present does not establish
 a conforming container, and no image/container/workload is created. The workflow
@@ -1030,6 +1045,20 @@ where this Linux-only adapter cannot run; retain portable policy/use-case/HTTP/
 workflow cases and every existing Windows SDK/global gate. No new Windows Codex
 job or platform-success claim is introduced. Modeled ports
 cannot substitute for the actual same-job self-hosted observation.
+
+Review correction evidence adds ten distinct controls beyond the first58:
+five reproduce the four review defects (two numeric Engine fields), three
+cover late/independent cancellation, and two cover initialization cleanup and
+its failure. The same63controls retain the causal58PASS/5FAIL→63PASS contrast;
+the expanded68controls retain the additional boundaries. Native CI45011100858
+passed all first58diagnostic controls but failed source-context-C38 while Git
+preparation exhausted its original30s deadline before the intended assertion.
+That delay's cause is unknown. The deadline-focused C38 fixture now uses a
+controlled monotonic clock and semantic workspace/integrity ports with the
+actual planner, execution admission and owned-directory cleanup. Its unchanged
+plan must expire before child launch; an intentional deadline-reset mutant
+must fail the same control. All other real Git/source integration controls and
+all production deadlines remain. Neither component proof replaces native CI.
 
 Acceptance and traceability: fixed archive mismatch or version mismatch rejects
 before probes; every negative/missing/signal/cancelled probe has its own preserved

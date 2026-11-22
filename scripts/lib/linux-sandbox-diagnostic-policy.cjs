@@ -48,6 +48,7 @@ function notRun(id, reason) {
 function renderSummary(receipt) {
   const lines = ['# Linux sandbox diagnostic', '',
     `Runtime preparation: **${receipt.preparation.state}**. Codex target: **${CODEX_VERSION}**.`, '',
+    `Collection: **${receipt.executionIncomplete ? 'incomplete' : 'complete'}**. Cleanup: **${receipt.cleanup ?? 'unavailable'}**.`, '',
     '| Probe | Observation | Exit | Signal |', '|---|---|---:|---|'];
   for (const row of receipt.probes) lines.push(`| ${row.id} | ${row.state} (${row.reason}) | ${row.exitCode ?? 'unknown'} | ${row.signal ?? 'none'} |`);
   lines.push('', 'Next: inspect failed or unavailable prerequisites before any qualification attempt.',

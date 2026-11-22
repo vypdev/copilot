@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "issue": 1002,
+  "pr": 1003,
+  "parent": "15a46a9da074f1374661331f341af63fe1e1d1e8",
+  "sourceSha256": {
+    "docs/security-operations/security/self-hosted-runners.mdx": "0513e031582d2827cb9d8634351031d6fe59b3fef9c34ad386a3860ece27e7a1",
+    "scripts/diagnose-linux-sandbox-prerequisites.cjs": "023ac11cc8f051d0a6d49ffa45bfa074aad6794a8535f2b1889f74bfbbd4402c",
+    "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "5aeb570f85424130998ea9328db60ac2905ad6b35fb22b0f25bf307d65af33b6",
+    "specs/CATALOG.md": "a5851bb04ec9af30738a27a97d1b30468d04c17b18cf77fa48472b45d94d4360",
+    "specs/agent-runtime-provider-and-model-routing.md": "6a6177446799f182bdc9de3f53eb9514bc6cdec7c5bb9a89850cfba66d9ec9b7",
+    "specs/catalog.json": "970eeef838dfde18a8ec974a07246b7a748230d51b63cd8e44c615a7d6af44f9",
+    "specs/pre-branch-sdd-source-context.md": "5984fbd0a0a07b3a88dedb2dd7c2058866c4f61ab49c820ea3167dc7303faa23",
+    "src/infrastructure/agents/__tests__/agent_source_snapshot_workspace.test.ts": "19eccd5b929fcc30bcc6a1a50b9be421c87790910160fd0726a74064cc2c846d",
+    "src/tooling/__tests__/linux_sandbox_diagnostic.test.ts": "b0aec2a5fdb5049e7e0033e022b5d6fa1019f182f3539208e735366bed54958a"
+  },
+  "scope": "four causally reproduced diagnostic review defects and isolated deterministic C38 fixture correction; no production deadline or source adapter change",
+  "reviewContrast": {
+    "sameTestBytes": true,
+    "before": {
+      "pass": 58,
+      "fail": 5
+    },
+    "after": {
+      "pass": 63,
+      "fail": 0
+    },
+    "final": {
+      "pass": 68,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "moduleCoverage": {
+    "at": "2026-11-22T10:43:59.084559+00:00",
+    "pass": 68,
+    "fail": 0,
+    "skip": 0,
+    "modules": [
+      {
+        "module": "scripts/diagnose-linux-sandbox-prerequisites.cjs",
+        "metrics": {
+          "lines": 99.41,
+          "functions": 93.18,
+          "statements": 95.36,
+          "branches": 86.32
+        },
+        "floors": {
+          "lines": 90,
+          "statements": 90,
+          "branches": 82,
+          "functions": 88
+        },
+        "gate": true
+      },
+      {
+        "module": "scripts/lib/linux-sandbox-diagnostic-policy.cjs",
+        "metrics": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "floors": {
+          "lines": 95,
+          "statements": 95,
+          "branches": 90,
+          "functions": 90
+        },
+        "gate": true
+      }
+    ],
+    "focusedRawExit": 1,
+    "unrelatedMissingGlobalOwners": [
+      "web/src",
+      "specification_catalog_publication.cjs"
+    ],
+    "globalAcceptance": false,
+    "noThresholdSuppressed": true,
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "sourceSuites": {
+    "pass": 33,
+    "fail": 0,
+    "skip": 0
+  },
+  "c38Mutant": "same controlled test rejects intentional reset-deadline mutant with category output instead of pre-spawn timeout; runner final overly-specific resolved-promise assertion failed and remains retained; no rerun",
+  "nativeNegative": {
+    "run": 45011100858,
+    "job": 137173400418,
+    "head": "15a46a9da074f1374661331f341af63fe1e1d1e8",
+    "pass": 18801,
+    "fail": 1,
+    "skip": 35,
+    "cause": "C38 Git setup exhausted original30s before assertion; reason for Git delay unknown; not an accepted run"
+  },
+  "retainedHistoricalPacket": "../linux-sandbox-diagnostic/",
+  "normalHooks": "PENDING_AT_PACKET_CREATION",
+  "newExactHeadNativeCI": "PENDING",
+  "actualNewNativeDiagnostic": "UNEXECUTED",
+  "actualLinuxCodexExecutedLocally": false,
+  "qualificationCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "qualifiedProfiles": [],
+  "productionConfigurationChanged": false,
+  "frozenRecoverySnapshots": "unchanged; explicit approval pending; no develop merge",
+  "archiveCount": 68
+}
