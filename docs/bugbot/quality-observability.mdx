@@ -1193,6 +1193,12 @@ Preparation and current evidence are in the
 These controls make no model calls and establish no Desktop Setup or human
 acceptance or profile qualification.
 
+The C03 POSIX SDK fixture now retains its actual spawned child for cleanup. A
+missing startup file or failed graceful marker cannot skip force termination.
+The test retains the first failure, settles each captured fixture and restores
+its spawn observer before removing private files. These test-support controls
+do not establish namespace, Windows or scientific acceptance.
+
 The native-control manifest's bootstrap must match the public bootstrap in the
 reviewed host Git revision, with the executing harness bound to that revision.
 Changing local bootstrap files does not change this reference. Supplying a

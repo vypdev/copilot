@@ -4930,6 +4930,45 @@ evidence and the closed test/driver inventory must retain this distinction.
 
 Update runtime/Bugbot owners, execution guidance, quality operations, evidence README/plan/results, architecture/coverage contracts and exact closed source/driver inventory together. Documentation must explain invocation, all states, relevant immutable runtime/CLI prerequisites, unknown ownership, explicit abort/EOF, technical cleanup, negative retention and no-replay recovery. The plan remains deliberately not-preregistered until actual source/runtime pins are committed; no preparation result becomes acceptance.
 
+#### POSIX process-fixture cleanup — C03 amendment
+
+C03's SDK process fixture MUST retain the actual child handle returned by its
+ordinary spawn adapter. A leader PID file is diagnostic content, not cleanup
+authority. Missing startup observations MUST NOT prevent termination of that
+captured group. The fixture stop helper MUST attempt force termination in its
+final path even when reading the descendant observation, sending the graceful
+signal or waiting for the graceful marker fails. Only an absent file or process
+is tolerated; other failures remain failures, and the first cause survives a
+later cleanup failure. A malformed owner identity MUST cause no signal.
+
+| Fixture state | Required cleanup | Recorded test outcome |
+|---|---|---|
+| Descendant observation absent | Signal the captured owner's group and force termination | No assertion of graceful descendant completion |
+| Graceful marker/read/signal fails | Force termination and settle known descendant observation | Retain the first failure |
+| Owned group already absent | Accept ESRCH without a retry | Preserve the surrounding test's result |
+
+Cleanup promises are retained per captured child so final cleanup cannot repeat
+a completed signal against a stale numeric PID. Every launched fixture receives
+that cleanup before its private files are removed; the spawn observer is restored
+on exit. Observation, signal and bounded fixture readiness ports belong entirely
+to test support. No production SDK policy, timeout, namespace mechanism,
+configuration or user-facing workflow changes.
+
+The numeric increment is exactly nine deterministic Jest scenarios: two missing
+observation/owner-file cases, one unreadable observation, one failed marker wait,
+three signal/first-error cases, one invalid-owner matrix and one already-absent
+group. The existing real POSIX C03 process control remains and MUST pass with
+captured handles, descendant cancellation and runtime cleanup. The separate Node
+command remains506 controls and the35logical qualification IDs remain unchanged.
+The same nine tests against the extracted original cleanup MUST retain their
+negative result; modeled ports do not prove native namespace acceptance.
+
+Catalog evidence, quality operations and the C03 retained packet MUST describe
+this distinction. Focused SDK controls, normal build/test/lint hooks, type,
+documentation/specification checks and Graphify remain required. Actual fresh
+C32–C35 and the independent runtime/credential/owner-loss prerequisites remain
+separate; fixing this test cleanup does not make174 or42 eligible.
+
 #### Native-control bootstrap admission — C26 amendment
 
 Observed defect: the native-control manifest could supply executable bytes and

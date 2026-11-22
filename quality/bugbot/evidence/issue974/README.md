@@ -14,6 +14,17 @@ unstarted; production remains disabled and pilot writes0.
 
 # EV-07 v2 detector qualification — issue #974
 
+## POSIX process-fixture cleanup
+
+C03's SDK process fixture separately uses actual captured child handles, with
+force termination on failed startup/graceful cleanup paths. The focused SDK
+cohort passes36 assertions, including nine new cleanup scenarios and the existing
+real POSIX control. The same nine cases against the extracted original helper
+give1PASS/8FAIL. These modeled fault controls and ordinary POSIX fixtures are
+distinct from actual namespace and scientific qualification.
+The [C03 retained packet](../issue-974/controls/c03-fixture-cleanup/README.md)
+preserves the original negative, intermediate lint failure and final focused proof.
+
 ## Native-control bootstrap input binding
 
 Native preparation now binds each supplied bootstrap to the public bootstrap in

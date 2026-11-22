@@ -1,6 +1,8 @@
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { ChildProcess } from 'node:child_process';
+import { stopOwnedQualificationFixture } from './qualification_process_fixture_cleanup';
 import type { AgentCapability } from '../../../domain/agent';
 import type { AgentExecutionPlan } from '../../../domain/agent_execution_plan';
 import { createAgentProcessLifecycle, runAgentCli } from '../../../data/repository/agent_cli_execution';
@@ -127,19 +129,29 @@ it('ev974-C02 retains canonical workspace, ordinary read-only Codex argv, native
     chmodSync(executable, 0o700);
     const planner = new AgentExecutionPlanner({ resolveWorkspace: () => f.root,
         resolveExecutable: () => executable, readVersion: () => 'codex-cli 0.169.1' });
-    async function stopFixture(graceful: boolean) {
-        const pid = Number(readFileSync(leader, 'utf8')), child = Number(readFileSync(ready, 'utf8'));
-        try { process.kill(-pid, 'SIGTERM'); } catch { /* Owned fixture may already have exited. */ }
-        if (graceful) await until(() => existsSync(stopped));
-        try { process.kill(-pid, 'SIGKILL'); } catch { /* Owned group already stopped. */ }
-        await until(() => { try { process.kill(child, 0); return false; } catch (error) {
-            if ((error as NodeJS.ErrnoException).code === 'ESRCH') return true; throw error;
-        } });
+    const processes = jest.requireActual<typeof import('node:child_process')>('node:child_process');
+    const nativeSpawn = processes.spawn, children: ChildProcess[] = [], cleanups = new Map<ChildProcess, Promise<void>>();
+    function stopOwner(child: ChildProcess, graceful: boolean) {
+        let cleanup = cleanups.get(child);
+        if (!cleanup) {
+            cleanup = stopOwnedQualificationFixture(child.pid!, ready, stopped, graceful, {
+                readText: file => readFileSync(file, 'utf8'), exists: existsSync, kill: process.kill.bind(process), until,
+            });
+            cleanups.set(child, cleanup);
+        }
+        return cleanup;
     }
+    const stopFixture = (graceful: boolean) => children.length ? stopOwner(children.at(-1)!, graceful) : Promise.resolve();
     const c = controller(), p = scopedPrepare(planner, request(c.signal));
     stopHooks.set(c.signal, () => stopFixture(true));
+    const spawnObserver = jest.spyOn(processes, 'spawn').mockImplementation(((...args: unknown[]) => {
+        const child = Reflect.apply(nativeSpawn, processes, args) as ChildProcess;
+        if (args[0] === executable) children.push(child);
+        return child;
+    }) as typeof processes.spawn);
     const started = performance.now();
     const outcome = runAgentCli(p, 'Fixture input', c.signal).catch(error => error);
+    let fixtureFailure: { cause: unknown } | undefined;
     try {
         await until(() => existsSync(ready) && performance.now() - started > p.timeoutMs);
         expect(process.kill(Number(readFileSync(ready, 'utf8')), 0)).toBe(true);
@@ -158,26 +170,36 @@ it('ev974-C02 retains canonical workspace, ordinary read-only Codex argv, native
         const other = controller(), second = scopedPrepare(planner, request(other.signal));
         stopHooks.set(other.signal, () => stopFixture(false));
         const running = runAgentCli(second, 'Fixture input', other.signal).catch(error => error);
-        let pid: number | undefined;
         try {
-            await until(() => existsSync(ready)); pid = Number(readFileSync(ready, 'utf8'));
+            await until(() => existsSync(ready));
             other.abort(); expect(await running).toMatchObject({ category: 'cancelled' });
             // The stop hook already observed this exact descendant's ESRCH
             // before confirming. Require that ordering before SDK settlement;
             // a later bare PID lookup cannot identify the completed operation.
             expect(completedFixtureStops.has(other.signal)).toBe(true);
-            pid = undefined;
             expect(existsSync(second.runtimeDirectory)).toBe(false);
         } finally {
-            other.abort(); await running;
-            if (pid) { try { process.kill(pid, 'SIGKILL'); } catch { /* Owned fixture already exited. */ } }
-            rmSync(second.runtimeDirectory, { recursive: true, force: true });
+            other.abort();
+            try { await stopFixture(false); await running; }
+            finally { rmSync(second.runtimeDirectory, { recursive: true, force: true }); }
         }
-    } finally {
-        c.abort(); await outcome;
-        rmSync(directory, { recursive: true, force: true });
-        rmSync(p.runtimeDirectory, { recursive: true, force: true });
+    } catch (cause) { fixtureFailure = { cause }; }
+    finally {
+        c.abort();
+        try {
+            const cleanup = await Promise.allSettled(children.map(child => stopOwner(child, false)));
+            await outcome;
+            const failed = cleanup.find((value): value is PromiseRejectedResult => value.status === 'rejected');
+            if (failed) fixtureFailure ??= { cause: failed.reason };
+        } catch (cause) { fixtureFailure ??= { cause }; }
+        finally {
+            try { spawnObserver.mockRestore(); } catch (cause) { fixtureFailure ??= { cause }; }
+            for (const file of [directory, p.runtimeDirectory]) {
+                try { rmSync(file, { recursive: true, force: true }); } catch (cause) { fixtureFailure ??= { cause }; }
+            }
+        }
     }
+    if (fixtureFailure) throw fixtureFailure.cause;
 }, 15_000);
 
 it('ev974-C04 rejects fixer capability before preparing any runtime or process', () => {

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "parent": "c70ceb58ca7218b760d62fae836b502038635272",
+  "sourceSha256": {
+    "src/infrastructure/agents/__tests__/qualification_investigation.test.ts": "5969e822fa9b16b66e4ab4961e1f2a8ad3d627b3f0d53b109419cc49ea5e9093",
+    "src/infrastructure/agents/__tests__/qualification_process_fixture_cleanup.ts": "7335b5d448c4341f53bce22d8fba7813a36fd29f0d7da862fdcc340fa787b44b",
+    "src/infrastructure/agents/__tests__/qualification_process_fixture_cleanup.test.ts": "12418316f68e8b7ee130f9bf14fdb1d90fa14b18ffd1c76f710ad4c6f063f90e"
+  },
+  "sameNineTestBytes": true,
+  "originalExtractedCleanup": {
+    "pass": 1,
+    "fail": 8,
+    "ports": "modeled filesystem/process; exact original function in private adapter"
+  },
+  "candidateFocused": {
+    "suites": 2,
+    "pass": 36,
+    "fail": 0,
+    "skip": 0,
+    "includesExistingRealPosixC03": true
+  },
+  "newJestScenarios": 9,
+  "testSupportOnly": true,
+  "intermediateFocused36NotFinal": true,
+  "initialLintFailureRetained": "no-unsafe-finally; final integration retains first body/cleanup failure then throws after cleanup",
+  "typesDocsSpecsCatalogLint": "PASS",
+  "normalHooks": "PENDING",
+  "nodeShadowControlCountUnchanged": 506,
+  "logicalQualificationCaseIdsUnchanged": 35,
+  "qualificationModelCalls": 0,
+  "pilotWrites": 0,
+  "actualNativeC32C35": "UNEXECUTED_ON_NEW_SOURCE",
+  "qualifiedProfiles": [],
+  "production": "disabled",
+  "pendingRecoverySnapshotsUnchanged": true
+}
