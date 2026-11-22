@@ -6,10 +6,27 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
+function syncDescriptor(file, flags, write) {
+    const descriptor = fs.openSync(file, flags, 0o600);
+    try { write(descriptor); fs.fsyncSync(descriptor); }
+    catch (error) {
+        try { fs.closeSync(descriptor); } catch { /* Preserve the first write/sync error. */ }
+        throw error;
+    }
+    fs.closeSync(descriptor);
+}
+
 function durableWrite(file, bytes, flag) {
-    const descriptor = fs.openSync(file, flag, 0o600);
-    try { fs.writeFileSync(descriptor, bytes); fs.fsyncSync(descriptor); }
-    finally { fs.closeSync(descriptor); }
+    // Appends require the existing ledger; never recreate lost attempt history.
+    const flags = flag === 'a' ? fs.constants.O_WRONLY | fs.constants.O_APPEND : flag;
+    syncDescriptor(file, flags, descriptor => fs.writeFileSync(descriptor, bytes));
+    if (flag === 'wx') {
+        // Persist the new file name and the entry of its newly created artifact
+        // directory before dispatch/completion. File fsync alone is insufficient.
+        const directory = path.dirname(file);
+        syncDescriptor(directory, 'r', () => {});
+        syncDescriptor(path.dirname(directory), 'r', () => {});
+    }
 }
 
 function createDurableRecorder(file) {

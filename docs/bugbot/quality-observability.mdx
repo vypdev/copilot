@@ -1113,6 +1113,16 @@ findings lifecycle removes only the investigation timer and retains explicit
 cancellation, descendant cleanup and ordinary read-only integrity controls.
 Ordinary consumer and immutable SDD source deadlines keep their existing scope.
 
+New attempt ledgers and request/response artifacts synchronize their file contents,
+then the containing directory and its parent before dispatch or completion is
+acknowledged. Appends require the existing ledger; a lost ledger cannot silently
+restart its history. A failed write or synchronization prevents the next step and
+retains the first error even if closing that descriptor also fails. These controls
+exercise actual private filesystem calls with injected faults; they do not prove
+survival of a host power loss or qualify another filesystem/runtime. Component
+coverage captures test hashes before imports and refuses a receipt if those bytes
+change before exit.
+
 Each application CLI call has a durable start, delivered prompt/schema hashes,
 ordinary observer facts, actual response or bounded failure, and terminal state.
 Preparation/admission is distinct from proof that a process spawned. Configured

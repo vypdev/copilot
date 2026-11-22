@@ -11,6 +11,8 @@ require('./corpus-collector-components.cjs');
 require('./corpus-worker-components.cjs');
 require('./launcher-components.cjs');
 require('./attempt-components.cjs');
+require('./attempt-durability-components.cjs');
+require('./component-evidence-integrity-components.cjs');
 require('./implementation-components.cjs');
 require('./full-review-fault-components.cjs');
 require('./full-review-lifecycle-components.cjs');
