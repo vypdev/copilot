@@ -1173,6 +1173,16 @@ summaries, missing terminals, reused/orphaned scopes and an interrupted schedule
 cannot become completed research. Collection failure aborts siblings and waits
 for every dispatched operation. Unknown effects stay retained without replay.
 
+Cancellation remains live through the last awaited cleanup callback. A physical
+namespace stop can be followed by interrupted delivery: a late abort returns an
+interrupted outcome and appends a durable `operation-incomplete` record. The
+normalizer retains that record even after an earlier completed stop, so the
+complete inventory cannot admit the next phase. Preflight records keep their
+marker; raw negative prefixes remain unchanged. Component tests using actual
+Unix HTTP transport establish source behavior with a modeled Engine. Updated
+native C35 must separately prove the three late-cleanup cancellations, five
+removed owned scopes and the untouched unrelated sentinel on the frozen tuple.
+
 The explicit `pnpm run test:bugbot-native-containment` command requires four
 committed model-free native-control plans in the actual SDK image. Missing
 plans/capability fail rather than skip. It tests escaped descendants, inherited

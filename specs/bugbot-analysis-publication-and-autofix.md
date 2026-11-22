@@ -2925,6 +2925,18 @@ older plan. Missing history never means resolved.
 
 ### 11. Security, permissions, and privacy
 
+Late-cancellation amendment: cancellation remains live through every awaited
+stop, metadata, cleanup and observer callback before return. Physical namespace
+stop does not freeze the delivered research outcome. Cancellation during final
+cleanup returns interrupted and appends a durable explicit-cancellation
+`operation-incomplete` record even after an earlier successful stop observation.
+Every issued stop settles before return. Preflight records retain their marker.
+Authority normalization preserves every non-preflight incomplete record; a later
+cancellation or runtime/ownership failure makes the complete operation inventory
+ineligible. Original raw prefixes remain immutable. Exact owned identity and
+confirmed stop still gate cleanup; no timeout, retry, extra process effect,
+privilege or public configuration is introduced.
+
 Allow only authorized repository objects and immutable comparisons. Validate
 path traversal, case/normalization, symlink/gitlink, external links, redirects,
 object type, provider scope and maximum sizes before reads. Keep developer
@@ -4899,6 +4911,20 @@ This appendix adds exactly the minimum10 distinct cases below, not35 new cases a
 | ev974-C33 | Actual native contained SDK | EV974-S04 | Inherited pipes and a double-fork/reparented descendant cannot prevent complete scope cancellation/cleanup. |
 | ev974-C34 | Actual native contained SDK | EV974-S04, EV974-S05, EV974-S06 | Abrupt outer-owner death/disconnection closes its verified lifetime channel, removes the complete scope and preserves incomplete evidence. |
 | ev974-C35 | Actual native contained SDK | EV974-S04, EV974-S06, EV974-S08 | Successful completion and cancellation races retain the correct outcome, exact owned-scope identity and no surviving scope; unrelated running scopes remain untouched. |
+
+The late-cancellation amendment extends C29/C31 with eleven deterministic
+scenarios: four cleanup callbacks, an asynchronous abort during actual Unix HTTP
+inspection, and six normalization controls (clean success, four incomplete
+reason/confirmation pairs and an explicitly marked unrelated preflight). These
+exercise actual source/HTTP/policy behavior with modeled Engine/runtime/admission;
+they do not establish actual native acceptance. C35 additionally completes three
+real SDK namespaces and cancels at `operation-stopped`, `scope-remove-start` and
+`scope-removed`, proving interrupted returned outcomes, durable incomplete
+evidence, all five owned scopes removed and the unrelated sentinel still running.
+The 35 logical IDs and all prior numeric floors and coverage/scientific gates
+remain unchanged. Changed native harness bytes require a fresh common committed
+source/driver/runtime tuple for C32–C35 before any measurement. Documentation,
+evidence and the closed test/driver inventory must retain this distinction.
 
 ### 15. Documentation and discoverability
 

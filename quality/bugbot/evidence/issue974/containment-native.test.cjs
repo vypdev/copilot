@@ -209,10 +209,17 @@ test('ev974-C35 actual completion/cancel races preserve identity and leave an un
         cancelWithTest(t, target);
         const exit = await target.done; assert.equal(exit.code, 0, fs.readFileSync(target.log, 'utf8'));
         const ledger = target.ledger(), stopped = ledger.filter(row => row.event === 'operation-stopped');
-        assert.equal(stopped.length, 2); assert.equal(new Set(stopped.map(row => row.scopeId)).size, 2);
+        assert.equal(stopped.length, 5); assert.equal(new Set(stopped.map(row => row.scopeId)).size, 5);
         assert(stopped.every(row => row.namespaceInitStopped === true && row.scopeId !== scope.scopeId));
         assert.equal(stopped[0].interrupted, false); assert.equal(stopped[0].exitCode, 0);
-        assert.equal(ledger.filter(row => row.event === 'scope-removed').length, 2);
+        assert.equal(ledger.filter(row => row.event === 'scope-removed').length, 5);
+        const late = ledger.filter(row => row.event === 'native-late-cancellation-proof');
+        assert.deepEqual(late.map(row => row.stage), ['operation-stopped', 'scope-remove-start', 'scope-removed']);
+        assert(late.every(row => row.interrupted === true && row.namespaceInitStopped === true && row.modelCalls === 0));
+        assert.deepEqual(late.map(row => row.scopeId), stopped.slice(2).map(row => row.scopeId));
+        const incomplete = ledger.filter(row => row.event === 'operation-incomplete');
+        assert.equal(incomplete.length, 3);
+        assert(incomplete.every(row => row.reason === 'explicit-cancellation' && row.stoppedConfirmed === true && row.removed === true));
         const actual = await inspectOwned(sentinel, scope);
         assert.equal(actual.State.Running, true); assert(actual.State.Pid > 0);
         fs.writeFileSync(path.join(target.directory, 'unrelated-scope-proof.json'), JSON.stringify({ scope,

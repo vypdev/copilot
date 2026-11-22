@@ -301,10 +301,12 @@ async function runContainedCorpus(destination, preflight) {
 }
 
 function containedOperationRecords(rows) {
-    return rows.filter(row => !row.preflight && ['operation-start', 'operation-stopped'].includes(row.event)).map(row =>
+    return rows.filter(row => !row.preflight && ['operation-start', 'operation-stopped', 'operation-incomplete'].includes(row.event)).map(row =>
         row.event === 'operation-start' ? { event: 'start', identity: row.identity, scopeId: row.scopeId }
-            : { event: 'stopped', identity: row.identity, scopeId: row.scopeId, namespaceInitStopped: row.namespaceInitStopped,
-                outcome: row.interrupted ? 'interrupted' : row.exitCode === 0 ? 'completed' : 'failed' });
+            : { event: 'stopped', identity: row.identity, scopeId: row.scopeId, namespaceInitStopped: row.namespaceInitStopped ?? row.stoppedConfirmed,
+                outcome: row.event === 'operation-incomplete'
+                    ? row.reason === 'explicit-cancellation' ? 'interrupted' : 'failed'
+                    : row.interrupted ? 'interrupted' : row.exitCode === 0 ? 'completed' : 'failed' });
 }
 
 module.exports = { run: (destination, flag) => run(destination, flag === '--preflight'), containedOperationRecords };

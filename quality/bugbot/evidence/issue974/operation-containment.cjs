@@ -402,6 +402,16 @@ async function runContainedOperation({ root, plan, mode, slot, outputDirectory, 
             interrupted: cancelled || signal.aborted || [130, 143].includes(terminal.exitCode), outputDirectory, preflight };
         await record({ event: 'operation-stopped', ...outcome });
         await scope.remove(); removed = true;
+        if (stopping) await stopping;
+        // Cancellation stays live through every awaited cleanup callback. A
+        // stop observation is not delivery completion; retain a late explicit
+        // cancellation even when the namespace was already confirmed stopped.
+        if (!outcome.interrupted && (cancelled || signal.aborted)) {
+            outcome.interrupted = true;
+            await record({ event: 'operation-incomplete', identity, scopeId: scope.scopeId,
+                stoppedConfirmed: confirmed, removed, inputDirectory: input, outputDirectory, preflight,
+                reason: 'explicit-cancellation' });
+        }
         return outcome;
     } catch (error) {
         scope ??= unreturnedOwnedScopes.get(error);
@@ -413,7 +423,7 @@ async function runContainedOperation({ root, plan, mode, slot, outputDirectory, 
             } catch { /* Exact owned IDs and unknown effects remain in the durable ledger. */ }
         }
         await record({ event: 'operation-incomplete', identity, scopeId: scope?.scopeId ?? null,
-            stoppedConfirmed: confirmed, removed, inputDirectory: input, outputDirectory,
+            stoppedConfirmed: confirmed, removed, inputDirectory: input, outputDirectory, preflight,
             reason: cancelled ? 'explicit-cancellation' : 'runtime-or-ownership-unavailable' });
         throw error;
     } finally {

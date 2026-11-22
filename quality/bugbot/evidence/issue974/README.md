@@ -14,6 +14,27 @@ unstarted; production remains disabled and pilot writes0.
 
 # EV-07 v2 detector qualification — issue #974
 
+## Late cancellation through owned cleanup
+
+The outer operation now retains explicit cancellation through its final awaited
+cleanup callbacks and waits for every issued stop. A completed namespace stop
+does not turn late-interrupted delivery into completed research. The actual
+authority normalizer retains non-preflight incomplete records after earlier
+completed stops; preflight records keep their marker. Eleven C29/C31 component
+scenarios cover four callbacks, an asynchronous abort during actual Unix HTTP
+inspection and six normalization controls. Engine/runtime/admission are modeled;
+these are neither native namespace acceptance nor model measurements.
+The [retained packet](../issue-974/controls/late-cancellation/README.md) records
+3PASS/8FAIL before and11PASS/0FAIL after with the same final test bytes, the full
+490PASS/0fail/skip/cancel command and both changed-module coverage gates.
+
+Native C35 now requires three additional real SDK scopes canceled during final
+cleanup, five removed owned scopes and an unrelated running sentinel preserved.
+Fresh committed C32–C35 proof on the changed source/driver/runtime tuple is
+pending. The 35 logical IDs, prior coverage/scientific gates, 174/42 inventories,
+corpora and thresholds remain unchanged. No profile is qualified, qualification
+calls and pilot writes remain zero, and production remains disabled.
+
 ## Corpus collector correction — component evidence
 
 The corpus host now handles collector failures with the same abort-and-await

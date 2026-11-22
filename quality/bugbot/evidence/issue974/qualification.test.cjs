@@ -812,3 +812,4 @@ require('./component-coverage-gate-components.cjs');
 require('./stop-record-components.cjs');
 
 require('./startup-stop-components.cjs');
+require('./late-cancellation-components.cjs');

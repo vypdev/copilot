@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-22",
+  "parentLocalMerge": "e13b2eec13cc51e94cb8d3bfe5d85b9026f4350c",
+  "sourceSha256": {
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "04e725005c593cfa11ffd1a5885b891b7d8e92f0d0b4b6257d75f326b4bfd073",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs": "1805467c7ab8dbb57b4c581b0e41b429c19f9f606ba368c11fff88e90965aeea",
+    "quality/bugbot/evidence/issue974/containment-native-fixture.cjs": "c8d4de050642529b03d95ce70baedd42e6a1c0cdcce68fa77414f70c079b00a6",
+    "quality/bugbot/evidence/issue974/containment-native.test.cjs": "60dabff91433b7f9587b588f4e31ebd242eb3dddfc0f8cfcfc1518b1c0484552",
+    "quality/bugbot/evidence/issue974/late-cancellation-components.cjs": "0b21d26de2e10e89603fe3a1e547ee68e2bd77e17ba19713d6b70cfa9b7599ec",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "6b26c2ef215d0e4717c1607253fa1956ef867eec0e8abba3c07bd01e51911e23"
+  },
+  "originalProductionCommit": "e13b2eec13cc51e94cb8d3bfe5d85b9026f4350c",
+  "finalTestContrast": {
+    "sameTestBytes": true,
+    "originalSourceViaTwoExplicitComponentReadSeams": true,
+    "productionFilesMutatedForContrast": false,
+    "before": {
+      "passed": 3,
+      "failed": 8
+    },
+    "after": {
+      "passed": 11,
+      "failed": 0
+    }
+  },
+  "fullShadow": {
+    "passed": 490,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "engineCoverage": {
+    "statements": 98.63,
+    "lines": 100,
+    "branches": 93.06,
+    "functions": 94,
+    "gate": true
+  },
+  "corpusCoverage": {
+    "statements": 98.96,
+    "lines": 99.13,
+    "branches": 94.11,
+    "functions": 97.36,
+    "gate": true
+  },
+  "localTypeFailure": {
+    "cause": "copied dependency root lacked extension workspace links",
+    "correction": "same frozen lock and cache, offline pnpm install with scripts/pnpmfile disabled",
+    "correctedTypesDocsSpecificationsPackage": "PASS",
+    "lockChanged": false
+  },
+  "nativeC35Changed": true,
+  "freshNativeC32C35": "UNEXECUTED_REQUIRED",
+  "runtimeOrEngineAcceptedByTheseTests": false,
+  "qualificationModelCalls": 0,
+  "pilotWrites": 0,
+  "profilesQualified": [],
+  "production": "disabled",
+  "logicalIds": 35,
+  "priorFloorsUnchanged": true
+}

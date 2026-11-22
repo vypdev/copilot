@@ -160,11 +160,15 @@ async function run(output) {
     process.once('SIGINT', abort); process.once('SIGTERM', abort);
     record({ event: 'native-start', caseId: plan.nativeControl.selectedCase, modelCalls: 0 });
     try {
-        async function execute(name, cancelAtReady) {
+        async function execute(name, cancelAtReady, cancelAtEvent) {
             const cancel = new AbortController(); controls.add(cancel);
             const directory = path.join(output, name); let ended = false;
             const running = require('./operation-containment.cjs').runContainedOperation({ root, plan, mode: 'native-control',
-                slot: { caseId: plan.nativeControl.selectedCase }, outputDirectory: directory, record, signal: cancel.signal });
+                slot: { caseId: plan.nativeControl.selectedCase }, outputDirectory: directory, signal: cancel.signal,
+                async record(event) {
+                    await record(event);
+                    if (event.event === cancelAtEvent) cancel.abort();
+                } });
             void running.then(() => { ended = true; }, () => { ended = true; });
             try {
                 if (cancelAtReady) {
@@ -182,6 +186,12 @@ async function run(output) {
                     record({ event: 'native-race-outcome', interrupted: terminal.interrupted, exitCode: terminal.exitCode });
                 }
                 else assert.equal(terminal.exitCode, 0);
+                if (cancelAtEvent) {
+                    assert.equal(terminal.interrupted, true);
+                    record({ event: 'native-late-cancellation-proof', stage: cancelAtEvent,
+                        scopeId: terminal.scopeId, interrupted: terminal.interrupted,
+                        namespaceInitStopped: terminal.namespaceInitStopped, modelCalls: 0 });
+                }
                 return terminal;
             } catch (error) {
                 cancel.abort(); await running.catch(() => undefined); throw error;
@@ -191,6 +201,9 @@ async function run(output) {
         if (id === 'ev974-C35') {
             await execute('completed', false);
             await execute('cancellation-race', true);
+            for (const stage of ['operation-stopped', 'scope-remove-start', 'scope-removed']) {
+                await execute('late-' + stage, false, stage);
+            }
         } else await execute('operation', id !== 'ev974-C34');
         record({ event: 'native-finish', caseId: id, status: 'completed', modelCalls: 0 });
         return { status: 'completed' };
