@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-22T01:20:52.649729+00:00",
+  "parent": "81efac3db8ab856c2c0722fbb334f0f292772d4f",
+  "cause": "NativeCommit137032656142 stops withvalidation.evidence-unavailable immutable-tree-v1/binary because nine new report archives used .json.gz instead of the existing reviewed .json.log.gz evidence contract.",
+  "renames": [
+    {
+      "before": "review-round8/red-attempt1-results.json.gz",
+      "after": "review-round8/red-attempt1-results.json.log.gz",
+      "gzipSha256": "2c157a035c4f33e4e4eb332a08dcb781d4ba95926304b73808a36ea0d958946e",
+      "rawSha256": "d7a3111ebfee988c2dab87641abb82fed950f1e75ffca58c8566184a94ae365d",
+      "gitBlobSha": "f5d3e9aa8455552dd5dfbc0cd4bd22a8cd021d27",
+      "historyCommit": "81efac3db8ab856c2c0722fbb334f0f292772d4f"
+    },
+    {
+      "before": "review-round8/batch-red-attempt1-results.json.gz",
+      "after": "review-round8/batch-red-attempt1-results.json.log.gz",
+      "gzipSha256": "0007682141a807b987b0b64380b5aa6bec8fc4267d2f22a6ea626d18bedd8e25",
+      "rawSha256": "ad3f7569b2aeec65b7f9215a0f610e78aa8d2c7cb4811be3ea7c2c2f51aee2db",
+      "gitBlobSha": "47abe58635e0a0a11c4562e40fbe7721ae061fbf",
+      "historyCommit": "81efac3db8ab856c2c0722fbb334f0f292772d4f"
+    },
+    {
+      "before": "review-round8/focused-green-attempt1-results.json.gz",
+      "after": "review-round8/focused-green-attempt1-results.json.log.gz",
+      "gzipSha256": "b80a11668231e925e2ecf602399f1e571563ddc729e6b5efc3220d530cfc44c8",
+      "rawSha256": "6ab23aefd5dbd051e89eee8c82a94ffaf9f18b29b1f730ef1dc7602fcff813db",
+      "gitBlobSha": "e1ccaec994bbd692e615ab837f8ce3a80b8fccf3",
+      "historyCommit": "81efac3db8ab856c2c0722fbb334f0f292772d4f"
+    },
+    {
+      "before": "review-round8/coherent-attempt1-results.json.gz",
+      "after": "review-round8/coherent-attempt1-results.json.log.gz",
+      "gzipSha256": "475c4fc5e4c51c894094e32474e105dc010017f7f859a4e3c9d604a72f08a1e8",
+      "rawSha256": "6ad5aab6e9350f70bcc13f86bd795153b14d0690497efaf7e0010cf18edc9aab",
+      "gitBlobSha": "3a6b1337d428fe96c54efe19e342191d8e81ad85",
+      "historyCommit": "81efac3db8ab856c2c0722fbb334f0f292772d4f"
+    },
+    {
+      "before": "review-round8/coherent-coverage-summary.json.gz",
+      "after": "review-round8/coherent-coverage-summary.json.log.gz",
+      "gzipSha256": "05fc34f9b05d34cee158a172443c190234b85859d6ee1320b231bfc961758347",
+      "rawSha256": "0ea4d5c8094eb6210d33dda9f915735f2402ea6c990ae7be571174d598d77538",
+      "gitBlobSha": "4be48ada76c1a7e428f436b349eef9aed216715c",
+      "historyCommit": "81efac3db8ab856c2c0722fbb334f0f292772d4f"
+    },
+    {
+      "before": "review-round8/bundles.json.gz",
+      "after": "review-round8/bundles.json.log.gz",
+      "gzipSha256": "f78f99e425b82662d86969a219d49d6506e4a72de5acb27dce23badc2c36833a",
+      "rawSha256": "0fd564832dd2b11fb2074ff57d700275f88c9c43d9d5f982f16e6f62b076bd62",
+      "gitBlobSha": "ad77800c870b16ce131092b38653d13ea397df70",
+      "historyCommit": "81efac3db8ab856c2c0722fbb334f0f292772d4f"
+    },
+    {
+      "before": "review-round8/parent-fdd-documentation-normal-receipt.json.gz",
+      "after": "review-round8/parent-fdd-documentation-normal-receipt.json.log.gz",
+      "gzipSha256": "0ee00b635fccf36b2b99ededc8f8aa4969a23d70e08e9136d4a86c77cffca120",
+      "rawSha256": "e8ac357b7ac6a93c4fa44cb059ea72ca0bbde9be5614301deb63a73a4e8a0c1c",
+      "gitBlobSha": "31e03d3c5f523df6e63fc6c6b488aaa6afe3ac3c",
+      "historyCommit": "81efac3db8ab856c2c0722fbb334f0f292772d4f"
+    },
+    {
+      "before": "review-round8/web-launch-restricted-diagnostic-child.json.gz",
+      "after": "review-round8/web-launch-restricted-diagnostic-child.json.log.gz",
+      "gzipSha256": "3cac9ae24b5ea89f2b3219005000988cd0941f21c467fc0df8cbe5c17199ba69",
+      "rawSha256": "25ccf769daa54f2173aba2c9b8d23e5b1f1c206a675d282541e934e3cf23ccfe",
+      "gitBlobSha": "fe6d45b1a898121019e033aa56626d8c125a39d6",
+      "historyCommit": "81efac3db8ab856c2c0722fbb334f0f292772d4f"
+    },
+    {
+      "before": "review-round8/package-smoke-localhost-receipt.json.gz",
+      "after": "review-round8/package-smoke-localhost-receipt.json.log.gz",
+      "gzipSha256": "005c41faebf855359ef476daff87edb967140eef15518a77bc50de303ea3c441",
+      "rawSha256": "020b32d668353083b63cad8d75d9fff06c46ecb61c5578b1a9e9affb5589ac47",
+      "gitBlobSha": "5a7be84b1560acb8891f36a321863e6ec02ccb2a",
+      "historyCommit": "81efac3db8ab856c2c0722fbb334f0f292772d4f"
+    }
+  ],
+  "classification": [
+    {
+      "before": "quality/bugbot/evidence/issue-998/review-round8/red-attempt1-results.json.gz",
+      "after": "quality/bugbot/evidence/issue-998/review-round8/red-attempt1-results.json.log.gz",
+      "beforeGenerated": false,
+      "afterGenerated": true
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-998/review-round8/batch-red-attempt1-results.json.gz",
+      "after": "quality/bugbot/evidence/issue-998/review-round8/batch-red-attempt1-results.json.log.gz",
+      "beforeGenerated": false,
+      "afterGenerated": true
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-998/review-round8/focused-green-attempt1-results.json.gz",
+      "after": "quality/bugbot/evidence/issue-998/review-round8/focused-green-attempt1-results.json.log.gz",
+      "beforeGenerated": false,
+      "afterGenerated": true
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-998/review-round8/coherent-attempt1-results.json.gz",
+      "after": "quality/bugbot/evidence/issue-998/review-round8/coherent-attempt1-results.json.log.gz",
+      "beforeGenerated": false,
+      "afterGenerated": true
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-998/review-round8/coherent-coverage-summary.json.gz",
+      "after": "quality/bugbot/evidence/issue-998/review-round8/coherent-coverage-summary.json.log.gz",
+      "beforeGenerated": false,
+      "afterGenerated": true
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-998/review-round8/bundles.json.gz",
+      "after": "quality/bugbot/evidence/issue-998/review-round8/bundles.json.log.gz",
+      "beforeGenerated": false,
+      "afterGenerated": true
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-998/review-round8/parent-fdd-documentation-normal-receipt.json.gz",
+      "after": "quality/bugbot/evidence/issue-998/review-round8/parent-fdd-documentation-normal-receipt.json.log.gz",
+      "beforeGenerated": false,
+      "afterGenerated": true
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-998/review-round8/web-launch-restricted-diagnostic-child.json.gz",
+      "after": "quality/bugbot/evidence/issue-998/review-round8/web-launch-restricted-diagnostic-child.json.log.gz",
+      "beforeGenerated": false,
+      "afterGenerated": true
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-998/review-round8/package-smoke-localhost-receipt.json.gz",
+      "after": "quality/bugbot/evidence/issue-998/review-round8/package-smoke-localhost-receipt.json.log.gz",
+      "beforeGenerated": false,
+      "afterGenerated": true
+    }
+  ],
+  "policySha256": "5ce2cd09b1d840418041aaca88d442fb86d04d3baa3f865302224ef7735c6ff7",
+  "binaryOrSizePolicyChanged": false,
+  "runtimeSdkBundlesOrTemplateChanged": false,
+  "archiveBytesUnchanged": true,
+  "existing274ArchiveRecordsPreserved": true,
+  "newFailureArchives": 2,
+  "totalVerifiedArchives": 276,
+  "oldGitObjectsReachable": true,
+  "originalPrivateBackups": "/private/tmp/copilot-goal-998-round8-evidence-originals-81e",
+  "negativeRun": 44965239362,
+  "negativeJob": 137032656142,
+  "negativeRawSha256": "45fe1aaa591309acb6c8dc3dea9b085e79b7ca9a25bf67ea00f4d81534e9e2a7",
+  "next": "Validate complete source inventory under unchanged production classifier, docs/diff, normalhooks, payloadscan andfreshnewheadchecks;do notrerununchanged81e.",
+  "installation": false,
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "production": "disabled"
+}
