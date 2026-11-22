@@ -612,6 +612,8 @@ describe('temporary permission resource probes', () => {
         expect(check).toMatchObject({ status: 'unverifiable', cleanupPending: true });
     });
 
+    // Like the successful Variable fixtures, this flushes the real journal before
+    // the mocked POST. Its storage allowance does not change HTTP deadlines.
     it('recovers an ambiguous Variable create response by reading and deleting only its generated name', async () => {
         let variable: { name: string; value: string } | undefined;
         const root = '/repos/owner/repo/actions/variables';
@@ -630,7 +632,7 @@ describe('temporary permission resource probes', () => {
         await expect(probeDisposableResource(probe.value)).rejects.toThrow('GitHub POST did not complete');
         expect(variable).toBeUndefined();
         expect(await readdir(folder)).toEqual([]);
-    });
+    }, 20_000);
 
     it('rejects forged scope and target names before journaling or remote calls', async () => {
         const journal = new SetupPermissionProbeJournal(folder);

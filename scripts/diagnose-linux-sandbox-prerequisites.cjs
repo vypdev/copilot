@@ -13,11 +13,13 @@ const hash = data => createHash('sha256').update(data).digest('hex');
 
 // Fixed diagnostic commands only. This technical bound never wraps a model or
 // research operation. Keep actual child close distinct from wrapper rejection.
-function execute(command, args, { cwd, env, signal, timeout = 20000 }) {
+function execute(command, args, { cwd, env, signal, timeout = 20000 }, spawnChild = spawn) {
   if (signal.aborted) return Promise.resolve({ cancelled: true, stdout: '', stderr: '', exitCode: null, signal: null });
   return new Promise(resolve => {
-    const child = spawn(command, args, { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawnChild(command, args, { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
     const result = { stdout: '', stderr: '', exitCode: null, signal: null, cancelled: false, timedOut: false, truncated: false };
+    const captures = Object.fromEntries(['stdout', 'stderr'].map(key => [key,
+      { chunks: [], retainedBytes: 0, observedBytes: 0, observedHash: createHash('sha256') }]));
     let escalation;
     const kill = name => {
       try { if (child.pid) process.kill(-child.pid, name); }
@@ -31,14 +33,25 @@ function execute(command, args, { cwd, env, signal, timeout = 20000 }) {
     const abort = () => terminate('cancelled');
     const timer = setTimeout(() => terminate('timedOut'), timeout);
     const consume = key => chunk => {
-      const text = chunk.toString('utf8');
-      if (Buffer.byteLength(result[key]) + chunk.length > 65536) terminate('truncated');
-      else result[key] += text;
+      const capture = captures[key], remaining = 65536 - capture.retainedBytes;
+      capture.observedBytes += chunk.length; capture.observedHash.update(chunk);
+      const prefix = chunk.subarray(0, remaining);
+      if (prefix.length) { capture.chunks.push(Buffer.from(prefix)); capture.retainedBytes += prefix.length; }
+      if (chunk.length > remaining) terminate('truncated');
     };
     child.stdout.on('data', consume('stdout')); child.stderr.on('data', consume('stderr'));
     child.once('error', error => { result.error = error.code || 'launch-unavailable'; });
     child.once('close', (exitCode, childSignal) => {
       clearTimeout(timer); clearTimeout(escalation); signal.removeEventListener('abort', abort);
+      result.outputCapture = { textEncoding: 'utf8-replacement', limitBytesPerChannel: 65536 };
+      for (const key of ['stdout', 'stderr']) {
+        const capture = captures[key], prefix = Buffer.concat(capture.chunks, capture.retainedBytes);
+        // Decode only after joining the raw prefix, so chunk boundaries cannot
+        // corrupt UTF8. Raw digests remain distinct from the decoded text view.
+        result[key] = prefix.toString('utf8');
+        result.outputCapture[key] = { observedBytes: capture.observedBytes, retainedBytes: prefix.length,
+          observedSha256: capture.observedHash.digest('hex'), retainedSha256: hash(prefix) };
+      }
       result.exitCode = exitCode; result.signal = childSignal; resolve(result);
     });
     signal.addEventListener('abort', abort, { once: true });
@@ -75,10 +88,11 @@ function probeCommands(runtime) {
 }
 
 function initialReceipt(identity) {
-  return { schemaVersion: 3, kind: 'model-free-linux-sandbox-diagnostic', ...identity,
+  return { schemaVersion: 4, kind: 'model-free-linux-sandbox-diagnostic', ...identity,
     preparation: { state: 'unavailable' }, probes: [], qualificationModelCalls: 0, evaluatedPilotWrites: 0,
     productionSettingChanged: false, qualifiedProfiles: [], payloadOutputTransport: policy.PAYLOAD_OUTPUT_TRANSPORT,
-    nodeStreamCompatibility: 'not-measured', executionTransportVerified: false, actualSdkOrModelToolAcceptance: false };
+    nodeStreamCompatibility: 'not-measured', outputTextEncoding: 'utf8-replacement',
+    executionTransportVerified: false, actualSdkOrModelToolAcceptance: false };
 }
 
 async function observeProbe(ports, [id, executable, args, expected, expectedError]) {
@@ -89,7 +103,8 @@ async function observeProbe(ports, [id, executable, args, expected, expectedErro
     stdout: typeof result.stdout === 'string' ? ports.project(result.stdout) : null,
     stderr: typeof result.stderr === 'string' ? ports.project(result.stderr) : null,
     stdoutSha256: typeof result.stdout === 'string' ? hash(result.stdout) : null,
-    stderrSha256: typeof result.stderr === 'string' ? hash(result.stderr) : null, outputTruncated: result.truncated === true };
+    stderrSha256: typeof result.stderr === 'string' ? hash(result.stderr) : null,
+    outputCapture: result.outputCapture ?? null, outputTruncated: result.truncated === true };
 }
 
 async function diagnose(ports) {

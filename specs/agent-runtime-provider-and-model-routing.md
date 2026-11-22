@@ -963,7 +963,7 @@ owned read/write probes. Completion closes every owned
 processes, retains each observation, cleans the private fixture and publishes
 one receipt plus one Job Summary. None of those steps grants qualification.
 
-The schemaVersion3 receipt has ten fixed observations: unprivileged user/network namespace creation,
+The schemaVersion4 receipt has ten fixed observations: unprivileged user/network namespace creation,
 two existing bubblewrap configurations, Codex empty-environment startup,
 Codex PATH-only startup, three execution-transport controls, an owned fixture
 read/hash, and an owned write-denial canary. Namespace probes MUST produce their
@@ -975,6 +975,24 @@ wrong expected output cannot pass. Write denial requires the expected actual
 child result and trusted post-command absence; a sandbox startup failure or a
 created canary cannot become a successful denial. Probe results are never
 collapsed into the aggregate workflow exit code.
+
+Output collection MUST retain the contiguous first65,536 raw bytes of each
+channel independently, including the available prefix of an overflowing chunk.
+Later chunks MUST NOT fill a gap after discarded bytes. The adapter MUST decode
+the joined prefix once as UTF8 with replacement, so a valid character split
+between delivered chunks is preserved. Invalid original UTF8 or a byte-limit
+split character can produce a replacement character in that explicitly declared
+text view. `outputTextEncoding=utf8-replacement` identifies this behavior.
+Each executed native result's `outputCapture` MUST separately retain per-channel
+`observedBytes`, `retainedBytes`, `observedSha256` and `retainedSha256`, computed
+from original buffers. Observed identities cover all bytes delivered through
+child close, including bytes delivered after truncation initiates termination;
+they do not claim bytes the terminated child never delivered. Retained identities
+cover only the bounded raw prefix. Existing `stdoutSha256`/`stderrSha256` continue
+to identify the unprojected decoded text, while displayed text remains privacy
+projected. Raw bytes are not published to bypass that projection. No spawned
+child means capture metadata is unavailable. Truncation MUST remain a failed
+observation and cannot admit owned read/write probes.
 
 The distribution MUST be `codex-package-<target>.tar.gz`, matching the layout
 selected by the reviewed official installer, never the individual CLI archive.
@@ -997,12 +1015,12 @@ All owned Node witness/read/denial payloads MUST emit their evidence with
 synchronous raw descriptor writes (`fs.writeSync` to1/2). They MUST NOT depend
 on `process.stdout` or `process.stderr` stream classification. This changes the
 measurement channel only: fixed payload content, expected markers, exit codes,
-sandbox permissions and admission rules remain authoritative. SchemaVersion3
+sandbox permissions and admission rules remain authoritative. SchemaVersion4
 MUST declare `payloadOutputTransport=node-fd-write-sync` and
 `nodeStreamCompatibility=not-measured`; neither the receipt nor summary may infer
 that arbitrary Node streams, SDK/model tools or qualification are supported.
 The Job Summary MUST show that measurement method and compatibility limit.
-Earlier schemaVersion1/2 receipts remain immutable under their original methods.
+Earlier schemaVersion1/2/3 receipts remain immutable under their original methods.
 No network/seccomp relaxation, proxy bypass or new transport/config selector is
 permitted to recover output.
 
@@ -1225,6 +1243,21 @@ refine existing cases without increasing the count. Preserve both native and
 component negatives. A new committed source and source gates MUST precede one
 changed native observation; do not retry45028875562 or infer high-level Node
 stream compatibility from the new raw-FD probes. All coverage floors remain.
+
+Capture-integrity maintenance adds nine distinct cases to116 (125 total):
+split UTF8 in two channels2, overflow followed by a later small chunk in both
+channels2, malformed original UTF8/raw digests1, byte-limit split character1,
+independent channel budgets/late observed bytes1, exact byte limit1 and receipt
+projection with separate byte identities1. Deterministic child-delivery ports
+control chunk boundaries; existing actual owned-process/pipe/close tests remain
+separate. Preserve matched old/new source and all control outcomes. The earlier
+CI run45032430479 retains its one unrelated real-journal fixture timeout at5005ms
+against5000ms, with18,859tests passing and35historical skips; all116diagnostic
+controls passed. Its exact pending I/O stage is unobserved. The lost-response
+Variable fixture adopts the existing20s allowance of the successful real-journal
+Variable fixtures; HTTP/runtime/research/qualification limits do not change.
+A separate one-time6s post-real-fsync delay contrasts the old and corrected test
+budget; it models slow storage and is not a trace of that native failure.
 
 Acceptance and traceability: fixed archive mismatch or version mismatch rejects
 before probes; every negative/missing/signal/cancelled probe has its own preserved

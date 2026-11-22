@@ -124,7 +124,7 @@ a failed unshare uid-map write and four such parser failures; it did not prove
 a CLI tool read or write denial. Its unavailable local Engine observation is
 independent of those results.
 
-The schemaVersion3 receipt retains ten observations. Five check namespace or
+The schemaVersion4 receipt retains ten observations. Five check namespace or
 bubblewrap execution and empty-environment versus PATH-only Codex startup.
 Namespace commands require their actual Node output witness and exit0. Three
 controls then run the same harmless Node payload directly, through bubblewrap
@@ -139,7 +139,18 @@ ordinary streams even though the command returns its expected exit. The receipt
 and summary declare `node-fd-write-sync` and mark Node stream compatibility as
 not measured. This measurement method does not relax sandbox/network policy or
 certify arbitrary Node tools, SDK/model tools or qualification. Preserve earlier
-schema1/2 receipts under their original output methods.
+schema1/2/3 receipts under their original output methods.
+
+The report retains the first65,536 raw bytes of each output channel as a
+contiguous prefix and decodes that prefix once. Valid UTF8 split across child
+chunks survives; invalid bytes or a character cut by the byte limit can appear
+as replacement characters. `outputTextEncoding=utf8-replacement` declares that
+view. `outputCapture` separately records observed/retained byte counts and raw
+SHA256s for stdout and stderr. Observed hashes include all chunks delivered
+through close, even after truncation starts termination; retained hashes cover
+the bounded prefix. The older stdout/stderr hash fields still identify decoded
+text before privacy projection. Raw bytes are not exposed to evade projection.
+Truncated output remains incomplete and cannot establish sandbox acceptance.
 
 All three independent transport commands must close before cleanup. If any
 fails or is unavailable, the owned read/hash and write-denial probes stay

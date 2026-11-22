@@ -65,6 +65,7 @@ function renderSummary(receipt) {
     `Runtime preparation: **${receipt.preparation.state}**. Codex target: **${CODEX_VERSION}**.`, '',
     `Collection: **${receipt.executionIncomplete ? 'incomplete' : 'complete'}**. Cleanup: **${receipt.cleanup ?? 'unavailable'}**.`, '',
     `Payload transport: **${PAYLOAD_OUTPUT_TRANSPORT}**. Node stream compatibility: **not measured**.`, '',
+    'Truncated output is incomplete. The receipt separates raw byte identities from projected text.', '',
     '| Probe | Observation | Expected exit | Actual exit | Signal |', '|---|---|---:|---:|---|'];
   for (const row of receipt.probes) lines.push(`| ${row.id} | ${row.state} (${row.reason}) | ${row.expectedExitCode} | ${row.exitCode ?? 'unknown'} | ${row.signal ?? 'none'} |`);
   lines.push('', 'Only the three execution-transport controls expect exit37, with exact stdout and stderr markers. Other probes require exit0.',

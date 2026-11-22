@@ -31,6 +31,84 @@ function modeledPorts(): Ports {
     release: jest.fn(async () => undefined) };
 }
 
+describe('bounded diagnostic child output capture', () => {
+  async function capture(stdout: Buffer[], stderr: Buffer[] = []) {
+    // Explicitly modeled child delivery exposes chunk boundaries deterministically;
+    // the existing native process tests separately exercise real pipes and close.
+    const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter() });
+    const operation = diagnostic.execute('/modeled/child', [], { signal: new AbortController().signal }, () => child);
+    stdout.forEach(chunk => child.stdout.emit('data', chunk));
+    stderr.forEach(chunk => child.stderr.emit('data', chunk));
+    child.emit('close', 0, null);
+    return operation;
+  }
+
+  it.each(['stdout', 'stderr'])('decodes split UTF8 once across %s chunks', async channel => {
+    const bytes = Buffer.from('prefix–€😀suffix');
+    const chunks = [...bytes].map(byte => Buffer.from([byte]));
+    const result = await capture(channel === 'stdout' ? chunks : [], channel === 'stderr' ? chunks : []);
+    expect(result[channel]).toBe(bytes.toString('utf8'));
+    expect(result.truncated).toBe(false);
+  });
+
+  it.each(['stdout', 'stderr'])('retains a contiguous bounded %s prefix after oversized and later chunks', async channel => {
+    const chunks = [Buffer.alloc(50 * 1024, 65), Buffer.alloc(20 * 1024, 66), Buffer.from('late')];
+    const bytes = Buffer.concat(chunks), prefix = bytes.subarray(0, 65536);
+    const result = await capture(channel === 'stdout' ? chunks : [], channel === 'stderr' ? chunks : []);
+    expect(Buffer.byteLength(result[channel])).toBe(prefix.length);
+    expect(digest(result[channel])).toBe(digest(prefix));
+    expect(result.truncated).toBe(true);
+    expect(result.outputCapture[channel]).toEqual({ observedBytes: bytes.length, retainedBytes: 65536,
+      observedSha256: digest(bytes), retainedSha256: digest(prefix) });
+  });
+
+  it('hashes original malformed UTF8 bytes separately from the decoded text view', async () => {
+    const bytes = Buffer.from([0xff, 0x61, 0xc3]);
+    const result = await capture([bytes]);
+    expect(result.stdout).toBe(bytes.toString('utf8'));
+    expect(result.outputCapture).toMatchObject({ textEncoding: 'utf8-replacement', limitBytesPerChannel: 65536,
+      stdout: { observedBytes: 3, retainedBytes: 3, observedSha256: digest(bytes), retainedSha256: digest(bytes) } });
+    expect(digest(result.stdout)).not.toBe(result.outputCapture.stdout.observedSha256);
+  });
+
+  it('identifies a byte-limited UTF8 tail without changing the raw prefix digest', async () => {
+    const bytes = Buffer.concat([Buffer.alloc(65535, 65), Buffer.from('€')]);
+    const result = await capture([bytes]);
+    expect(digest(result.stdout)).toBe(digest(bytes.subarray(0, 65536).toString('utf8')));
+    expect(result.outputCapture.stdout).toMatchObject({ retainedBytes: 65536,
+      observedSha256: digest(bytes), retainedSha256: digest(bytes.subarray(0, 65536)) });
+    expect(result.truncated).toBe(true);
+  });
+
+  it('keeps channel budgets independent and accounts for bytes observed before close', async () => {
+    const bytes = Buffer.alloc(65537, 65), stderr = Buffer.from('other channel');
+    const result = await capture([bytes, Buffer.from('after-overflow')], [stderr]);
+    expect(result.stdout.length).toBe(65536); expect(digest(result.stdout)).toBe(digest('A'.repeat(65536)));
+    expect(result.stderr).toBe('other channel');
+    expect(result.outputCapture.stdout.observedBytes).toBe(65537 + Buffer.byteLength('after-overflow'));
+    expect(result.outputCapture.stderr).toEqual({ observedBytes: stderr.length, retainedBytes: stderr.length,
+      observedSha256: digest(stderr), retainedSha256: digest(stderr) });
+    expect(policy.observation('codex-path-start', result).reason).toBe('output-incomplete');
+  });
+
+  it('accepts exactly the byte limit without marking output incomplete', async () => {
+    const bytes = Buffer.alloc(65536, 65), result = await capture([bytes]);
+    expect(result.stdout).toBe(bytes.toString('utf8')); expect(result.truncated).toBe(false);
+    expect(result.outputCapture.stdout).toEqual({ observedBytes: 65536, retainedBytes: 65536,
+      observedSha256: digest(bytes), retainedSha256: digest(bytes) });
+  });
+
+  it('retains raw byte identities alongside projected text in the receipt', async () => {
+    const bytes = Buffer.from('/private/owned/canary'), result = await capture([bytes]);
+    expect(result.outputCapture).toBeDefined();
+    const ports = modeledPorts(); ports.execute.mockResolvedValue(result);
+    const receipt = await diagnostic.diagnose(ports);
+    expect(receipt.probes[0]).toMatchObject({ stdout: '<diagnostic-root>/canary', stdoutSha256: digest(bytes),
+      outputCapture: result.outputCapture });
+    expect(receipt.outputTextEncoding).toBe('utf8-replacement');
+  });
+});
+
 describe('Linux sandbox diagnostic outcome policy', () => {
   it.each([
     ['verified command', success(), undefined, 'pass', 'verified'],
@@ -142,7 +220,7 @@ describe('fixed diagnostic orchestration', () => {
     const node = '/private/owned/node', direct = [node, ...calls[5][1]];
     expect(calls[6][1].slice(calls[6][1].indexOf(node))).toEqual(direct);
     expect(calls[7][1].slice(calls[7][1].indexOf('--') + 1)).toEqual(direct);
-    expect(receipt).toMatchObject({ schemaVersion: 3, executionTransportVerified: true,
+    expect(receipt).toMatchObject({ schemaVersion: 4, executionTransportVerified: true,
       payloadOutputTransport: 'node-fd-write-sync', nodeStreamCompatibility: 'not-measured',
       qualificationModelCalls: 0, evaluatedPilotWrites: 0, actualSdkOrModelToolAcceptance: false });
   });
@@ -681,7 +759,7 @@ describe('actual receipt and summary publication with modeled command ports', ()
       if (withSummary) process.env.GITHUB_STEP_SUMMARY = path.join(directory, 'summary'); else delete process.env.GITHUB_STEP_SUMMARY;
       const ports = modeledPorts(); await diagnostic.main({ nativePorts: () => ports });
       const receiptPath = path.join(directory, 'copilot-linux-sandbox-123-1.json');
-      expect(JSON.parse(readFileSync(receiptPath, 'utf8'))).toMatchObject({ schemaVersion: 3, executionTransportVerified: true,
+      expect(JSON.parse(readFileSync(receiptPath, 'utf8'))).toMatchObject({ schemaVersion: 4, executionTransportVerified: true,
       payloadOutputTransport: 'node-fd-write-sync', nodeStreamCompatibility: 'not-measured' });
       expect(JSON.parse(readFileSync(receiptPath, 'utf8')).probes).toHaveLength(10);
       expect(process.exitCode).toBe(0);
