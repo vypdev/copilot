@@ -50,6 +50,14 @@ and 8 source parts. Its 73% engineering estimate is not completion of this goal.
 The full review log validates10/10 partitions and fixes the capture finding.
 These engineering model calls are separate from qualification calls, which are 0.
 
+The manifest’s `sourceSha256` map covers the documentation and catalog published
+at `b26c892c89e5fb3ee0e45629881b01a32e85ef5b`, identified by
+`sourceSha256Revision`. It does not describe those files at executed source 94.
+The separate `immutableExecutableSourceSha256` map is bound to
+`immutableExecutedSource` 94; every listed runtime file matches that revision.
+The original ambiguous manifest is retained in the fixture-readiness follow-up
+packet. No original runtime receipt or output was changed.
+
 This publication changes evidence, observed documentation and catalog links.
 The diagnostic driver, policy, workflow, tests and dependency lockfile remain
 byte-identical to the executed source `94d76006`. Its new evidence commit was not

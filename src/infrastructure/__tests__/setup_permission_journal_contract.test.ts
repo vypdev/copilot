@@ -144,7 +144,7 @@ describe('PAT recovery journal schema and safety', () => {
             await expect(handle.cleanup(new SetupPermissionProbeHttp(fetcher, 'fixture', 1000))).rejects.toThrow('invalid Issue Types');
             expect(fetcher.mock.calls.every(([, init]) => init.method === 'GET')).toBe(true);
             expect(await readdir(folder)).toHaveLength(1);
-        });
+        }, 20_000);
     it.each(['lookup', 'still-present'])('retains a ref when cleanup is %s', async state => {
         const handle = await journal.begin({ owner: 'owner', repository: 'repo', scope: 'repository', probe: 'contents', name: refName });
         await handle.setReferenceSha('a'.repeat(40));

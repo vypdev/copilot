@@ -3,6 +3,8 @@
   "issue": 1002,
   "pr": 1003,
   "parent": "94d760065b208488432f6644b69a1991ad8b5597",
+  "sourceSha256Revision": "b26c892c89e5fb3ee0e45629881b01a32e85ef5b",
+  "sourceSha256Scope": "Evidence-publication documentation and catalog; separate from immutableExecutedSource and its executable hashes",
   "sourceSha256": {
     "docs/security-operations/security/self-hosted-runners.mdx": "52f05a92dc6f737cc22ad570ad71f363b43d615df2f65b476dbf51f1c050ad69",
     "specs/CATALOG.md": "d155686f73206dfa572f743b6442eb2e79480cfb5792b85271ce9d578ad17867",

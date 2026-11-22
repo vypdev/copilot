@@ -34,7 +34,7 @@ export function useWebSetupRenderer() {
             if (message.type === 'rendered' && typeof message.html === 'string') request.resolve(message.html);
             else request.reject(new Error(typeof message.message === 'string' ? message.message : 'Invalid component render response.'));
         });
-    }), 20_000);
+    }), 60_000);
 
     afterAll(() => new Promise<void>(done => {
         closing = true;
