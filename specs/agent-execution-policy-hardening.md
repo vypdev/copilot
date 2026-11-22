@@ -1015,3 +1015,56 @@ the execution contract and quality-observability documentation cover operation,
 unknown ownership, retention and recovery. Native evidence and the full frozen
 42-review closure are required before measurement; no source test qualifies a
 profile, installs a default or enables production.
+
+#### Single-use identity and namespace admission — issue #974
+
+Observed defect: checking only the current asynchronous context rejects nested
+entry but admits sibling calls with the same port. A copied port, a fresh namespace
+with the same complete identity, or a new identity for a consumed namespace can
+also invoke the callback before terminal ledger validation rejects the replay.
+The reproduced SDK controls prepare the ordinary planner on these duplicate paths.
+
+The live-scope infrastructure MUST atomically reserve both the canonical six-field
+operation identity and namespace ID after structural port validation and before
+invoking the callback. Each remains consumed for that SDK process lifetime after
+completion, failure or cancellation. Neither copying the port nor changing one of
+those two identities grants another operation. Independent identities and namespaces
+MUST remain admissible concurrently. Structural rejection before reservation MUST
+consume neither identity. These are fixed internal admission rules, with no user,
+environment, retry or reset setting; ordinary consumer lifecycles stay in scope as
+previously specified. The reviewed bootstrap uses a private worker for each operation.
+
+| State | Next input | Observable result |
+|---|---|---|
+| Unconsumed identity and namespace | Valid private live port | Reserve both, then enter ordinary preparation |
+| Active or terminal reservation | Same identity or same namespace | Reject before callback, workspace resolution, executable selection or version probe |
+| Independent reservations | Two distinct valid operations | Both enter their own asynchronous contexts |
+| Structurally invalid port | Later valid port for those unconsumed IDs | First entry rejects without consuming the later valid admission |
+
+The existing error remains `Qualification requires its exact live owned operation
+scope.` Retain the first operation and inspect its known/unknown outcome; an
+unregistered retry cannot reuse its authorization. A separately authorized operation
+requires a new identity and namespace, and a scientific repeat still requires the
+existing causal correction and committed preregistration. Consumption is in-memory
+authorization state, never inferred from a serialized receipt. Existing stopped-scope
+proof, cancellation and failure contracts remain mandatory and are not established
+by this guard.
+
+The additional numeric test budget is **12 Jest cases** in
+`src/infrastructure/agents/__tests__/qualification_investigation.test.ts`: four
+concurrent aliases (same port, copied port, same identity, same namespace) with zero
+ordinary planner preparation; six subsequent reuses (completion/failure by same
+port/identity/namespace); one independent parallel admission; and one structurally
+rejected port that cannot consume a valid admission. They extend the existing C04
+authority proof without adding or recounting the 35 logical qualification IDs.
+Pure identity policy retains 100% all-metric coverage and the changed runtime scope
+retains 95% statements/lines and 90% branches/functions alongside repository gates.
+The cases use real asynchronous context/planner code and semantic stopped-namespace
+ports; they do not establish an actual Linux namespace or provider execution.
+
+Acceptance and Definition of Done require all twelve cases, unchanged existing
+controls, exact changed-module coverage, regenerated/validated catalog evidence,
+and coordinated execution-contract/quality-observability documentation. New SDK and
+bundle identities require fresh final-head/native and exact-tuple qualification
+admission; no old native result accepts them. No production activation, installation,
+permission expansion, model call or campaign result follows from these source tests.

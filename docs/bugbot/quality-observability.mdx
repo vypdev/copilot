@@ -1123,6 +1123,14 @@ survival of a host power loss or qualify another filesystem/runtime. Component
 coverage captures test hashes before imports and refuses a receipt if those bytes
 change before exit.
 
+The private SDK worker reserves an operation identity and its namespace before
+entering preparation. Reusing either one rejects before the callback, including
+parallel calls and copied ports after success or failure. Retain the first attempt
+and inspect its known or uncertain outcome; a copied authorization cannot restart
+it. Distinct authorized operations remain independent. This source-level replay
+guard is separate from real namespace-stop proof, credential/read-scope admission
+and the scientific preregistration and result gates.
+
 Each application CLI call has a durable start, delivered prompt/schema hashes,
 ordinary observer facts, actual response or bounded failure, and terminal state.
 Preparation/admission is distinct from proof that a process spawned. Configured

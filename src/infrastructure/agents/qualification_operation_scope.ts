@@ -14,6 +14,10 @@ interface LiveScope {
 }
 const current = new AsyncLocalStorage<LiveScope>();
 const plans = new WeakMap<AgentExecutionPlan, LiveScope>();
+// The bootstrap gives one complete operation its own namespace. Neither a new
+// async context nor a copied port can make that operation/namespace reusable.
+const consumedIdentities = new Set<string>();
+const consumedNamespaces = new Set<string>();
 
 /** Immutable bootstrap composition only; never read a grant from configuration or a receipt. */
 export async function withQualificationOperationScope<T>(port: QualificationOperationScope, execute: () => Promise<T>): Promise<T> {
@@ -22,6 +26,12 @@ export async function withQualificationOperationScope<T>(port: QualificationOper
     || !/^[a-f0-9]{64}$/u.test(port.scopeId) || typeof port.requestStop !== 'function'
     || !(port.stopped instanceof Promise)) throw unavailable();
   const source = port, scopeId = source.scopeId, stop = source.requestStop.bind(source);
+  const identityKey = JSON.stringify(identity);
+  if (consumedIdentities.has(identityKey) || consumedNamespaces.has(scopeId)) throw unavailable();
+  // Reserve synchronously before callbacks or awaits; terminal failures never
+  // release authority for an unregistered retry. Invalid ports above consume none.
+  consumedIdentities.add(identityKey);
+  consumedNamespaces.add(scopeId);
   const bound = Object.freeze({ identity, scopeId, signal: source.signal,
     requestStop: stop,
     stopped: source.stopped.then(proof => {

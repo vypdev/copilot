@@ -17,7 +17,7 @@ export interface QualificationOperationStopped {
   readonly namespaceInitStopped: true;
 }
 
-/** Private live composition port. A serialized receipt conveys no authority. */
+/** Private single-use operation and namespace. A copied port or serialized receipt conveys no new authority. */
 export interface QualificationOperationScope {
   readonly identity: QualificationOperationIdentity;
   readonly scopeId: string;

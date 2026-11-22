@@ -118173,6 +118173,10 @@ const node_async_hooks_1 = __nccwpck_require__(92761);
 const qualification_operation_scope_policy_1 = __nccwpck_require__(79148);
 const current = new node_async_hooks_1.AsyncLocalStorage();
 const plans = new WeakMap();
+// The bootstrap gives one complete operation its own namespace. Neither a new
+// async context nor a copied port can make that operation/namespace reusable.
+const consumedIdentities = new Set();
+const consumedNamespaces = new Set();
 /** Immutable bootstrap composition only; never read a grant from configuration or a receipt. */
 async function withQualificationOperationScope(port, execute) {
     const identity = (0, qualification_operation_scope_policy_1.qualificationOperationIdentity)(port.identity);
@@ -118181,6 +118185,13 @@ async function withQualificationOperationScope(port, execute) {
         || !(port.stopped instanceof Promise))
         throw unavailable();
     const source = port, scopeId = source.scopeId, stop = source.requestStop.bind(source);
+    const identityKey = JSON.stringify(identity);
+    if (consumedIdentities.has(identityKey) || consumedNamespaces.has(scopeId))
+        throw unavailable();
+    // Reserve synchronously before callbacks or awaits; terminal failures never
+    // release authority for an unregistered retry. Invalid ports above consume none.
+    consumedIdentities.add(identityKey);
+    consumedNamespaces.add(scopeId);
     const bound = Object.freeze({ identity, scopeId, signal: source.signal,
         requestStop: stop,
         stopped: source.stopped.then(proof => {

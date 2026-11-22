@@ -1,0 +1,280 @@
+{
+  "at": "2026-11-22T01:28:39.311954+00:00",
+  "renames": [
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/complete-shadow-attempt1-receipt.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/complete-shadow-attempt1-receipt.json.log.gz",
+      "rawBytes": 299,
+      "rawSha256": "81554ffdbe1bba51024c548b23cab5c968f039e5293b1153fad4eebb86396552",
+      "gzipBytes": 231,
+      "gzipSha256": "6c0740c07fe62d6f98af444a7979ebc0a6d819843c0cbb554c2cbd02a86b553b"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/evidence-red-test-source-attempt1.cjs.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/evidence-red-test-source-attempt1.cjs.log.gz",
+      "rawBytes": 3786,
+      "rawSha256": "d275d07cf0223a7a69eb086e62a2ae66d4580f8c625f49324b785958bfba61ec",
+      "gzipBytes": 1483,
+      "gzipSha256": "061b9b97663b5e725ed298f6e084584f9b6722ac3465205f569cf816f5491d6f"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/fsync-reference.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/fsync-reference.json.log.gz",
+      "rawBytes": 412,
+      "rawSha256": "95028f676d06ab585472a591a00b1a9c8ec58134a35a3a2f315534ff3d7d3e35",
+      "gzipBytes": 293,
+      "gzipSha256": "54411b59e450ee7b741abfd0a5a4228ed2eadbb6457182695ff294912eb0b736"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/launcher-ast-coverage-final.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/launcher-ast-coverage-final.json.log.gz",
+      "rawBytes": 52288,
+      "rawSha256": "bc77af64e7a38b301f7339f11bf9e1e59ac101497ef3d1c43a4b7480d683911a",
+      "gzipBytes": 8224,
+      "gzipSha256": "81297b529d0cebbdf3dd570e4fcc918c694e515829956ad653543f2a2227c239"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/launcher-ast-receipt.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/launcher-ast-receipt.json.log.gz",
+      "rawBytes": 11082,
+      "rawSha256": "36b489bdaf95b5eb6a7cc080b23fc81aa39f6a880d1761a6e09c772e7280c40e",
+      "gzipBytes": 1688,
+      "gzipSha256": "981c55dbf8147c1451d866ae3564ff99431cd08686a2f96486c91e12b0bd7490"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/parent05c-normal-commit-receipt.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/parent05c-normal-commit-receipt.json.log.gz",
+      "rawBytes": 1019,
+      "rawSha256": "9524c2cb171b395c25acb42d47d70e75559aaebe28de1159701207c5cbe68dd1",
+      "gzipBytes": 598,
+      "gzipSha256": "ff19793045aa85a98af4c6d1fc765f297689132d46f449faf293aeab03cf69b9"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/red-test-source-attempt1.cjs.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/red-test-source-attempt1.cjs.log.gz",
+      "rawBytes": 7884,
+      "rawSha256": "860d22ef5b2ad96b6eadcc1fe4e7f6fcd20a5847ff839bef2fe8e4e8ae1e34c2",
+      "gzipBytes": 2334,
+      "gzipSha256": "31556d0d723abe59b4aa2a737bbdcfc0880b5d54aa1ae2b990a3cfe453feccd5"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/session-ast-coverage-final.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/session-ast-coverage-final.json.log.gz",
+      "rawBytes": 27736,
+      "rawSha256": "e2076872d65328e9fb8a2003696a265b93a17755ea07439c91ceb1eaa8c9895f",
+      "gzipBytes": 4188,
+      "gzipSha256": "335b24f08a72ab27f5ef883c0561ffb24f290e4ed86f6b8f70d77ea66bc71c3e"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/session-ast-invocation-negative-attempt1.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/session-ast-invocation-negative-attempt1.json.log.gz",
+      "rawBytes": 994,
+      "rawSha256": "995e1bee8725d8aa62e5d7e17599b6c57c9135470827f1023863ffe424edb283",
+      "gzipBytes": 584,
+      "gzipSha256": "9ec69d6db51e0c969f30f3135b8ac2ff09cc8829e6ec8ba97cd89cc010239c84"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/session-ast-receipt.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/session-ast-receipt.json.log.gz",
+      "rawBytes": 1276,
+      "rawSha256": "494c6878c512b11179c396db1afabfcd83e622f78c6356d6ed8e5c7c5b1a343d",
+      "gzipBytes": 641,
+      "gzipSha256": "f4aafc0ad4476d226dac658bede74e5d1cc8cb50906bd2e21480e56a8ca11284"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/validation-attempt1.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/attempt-durability-coverage/validation-attempt1.json.log.gz",
+      "rawBytes": 681,
+      "rawSha256": "6fdba6aafa9c47cd13bb2234fd2c180b2a771535237ae08032c0a481025006cc",
+      "gzipBytes": 185,
+      "gzipSha256": "5a083c6d080d171732f836dc4186713c24249b9503802f767f3fd6fdbff83e0f"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/causal-red-test-source-attempt1.ts.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/causal-red-test-source-attempt1.ts.log.gz",
+      "rawBytes": 39143,
+      "rawSha256": "3bea333069e1168ebd982e7a1708506b22a513cc41c805bb869ab0a5ce9d656a",
+      "gzipBytes": 9107,
+      "gzipSha256": "c43a6510c969aa8c259d48d3474336a168b0eb63271f3d8cdb224e1bbff178d2"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/complete-shadow-attempt1-receipt.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/complete-shadow-attempt1-receipt.json.log.gz",
+      "rawBytes": 292,
+      "rawSha256": "8925a8f96266664d3f846bce378b970ddabb1652ea39a178b88ab59e0a68674d",
+      "gzipBytes": 230,
+      "gzipSha256": "14918477f180c07b702240b555b6c2c9b3caf65f0d9e2fd1811ce5b3871bf9e8"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/curated-attempt1-results.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/curated-attempt1-results.json.log.gz",
+      "rawBytes": 32901,
+      "rawSha256": "176658a72737d40176d67c3f0ef582622c79e6aaef58f04b8be0a5668121130d",
+      "gzipBytes": 3398,
+      "gzipSha256": "25dbbdaa4e13f545666222f5d74bf3eaf5655edde4686d86a2e883b314888ac7"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/dirty-source-fence-attempt1.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/dirty-source-fence-attempt1.json.log.gz",
+      "rawBytes": 833,
+      "rawSha256": "e29b76aab9476e0d7848f6947f3081d50f215431f1e3259ee9c8838b4cb5137e",
+      "gzipBytes": 524,
+      "gzipSha256": "828dc5370e6ceeeabc9c268648fdc8319b159116995003a7eadd2f689a6a7252"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/focused-coverage-summary.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/focused-coverage-summary.json.log.gz",
+      "rawBytes": 354455,
+      "rawSha256": "36449d0b329999815e583e52169dbae19cd799c1b01d54cc6582405c5ef02959",
+      "gzipBytes": 20824,
+      "gzipSha256": "507308f7a1f0c53156e64f2abbdf7b237f2afeed13ef4014e4e88dc0a69d1f1f"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/generated-bundles-attempt1.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/generated-bundles-attempt1.json.log.gz",
+      "rawBytes": 632,
+      "rawSha256": "26db1c04ed2fa637357e1f561b8da81322a4e3cbbdac7f5f893f04c1cdd6a73f",
+      "gzipBytes": 329,
+      "gzipSha256": "fa24eabb89d15c43d646479981de38deebd86fa88c4320eeef1ff9be109e8853"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/green-attempt1-results.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/green-attempt1-results.json.log.gz",
+      "rawBytes": 9264094,
+      "rawSha256": "69bb67d725647fa1fb17d06fcb324d8ab6e478fbe3542536eb6139f682920f97",
+      "gzipBytes": 1031587,
+      "gzipSha256": "8792767df841386c0eeb4eb6e19b40350da5b5b85ec138b12ecca47eb8471ea1"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/package-validation-attempt1.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/package-validation-attempt1.json.log.gz",
+      "rawBytes": 398,
+      "rawSha256": "498b98964edf50270919becca1b66bf8ff2ff4a961968c81202f500e87b512cb",
+      "gzipBytes": 156,
+      "gzipSha256": "1766fe5a7ed0f48b357f0f1247c0e56a7910837d9cac86b536c6c179ae21e526"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/parent4a-normal-commit-receipt.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/parent4a-normal-commit-receipt.json.log.gz",
+      "rawBytes": 1020,
+      "rawSha256": "0502befa79f8a7326eb519c5b77d33e95ccad4361cbf8b00c03c7fc155ee9304",
+      "gzipBytes": 598,
+      "gzipSha256": "fb507c61b1ee354214fd4af5a72b28c44018a350f3c1200d522e61895bf8efb2"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/red-attempt1-results.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/red-attempt1-results.json.log.gz",
+      "rawBytes": 27676,
+      "rawSha256": "1d60885c252e7323f40a47b6e59a36c447f86a0c532316c9c57713be8ec49ad1",
+      "gzipBytes": 2426,
+      "gzipSha256": "4f2c2fc71468e500bcf1fe5c68a01af89307da0d20ff2f1b5c92eae078e84521"
+    },
+    {
+      "before": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/validation-attempt1.json.gz",
+      "after": "quality/bugbot/evidence/issue-974/controls/scope-reuse-coverage/validation-attempt1.json.log.gz",
+      "rawBytes": 882,
+      "rawSha256": "e7cb157209d894349c5a15cdbd29155c925f44cd725fb5a721084f497db038f6",
+      "gzipBytes": 198,
+      "gzipSha256": "283d3947736b3ed37a8ca3321b323b473ef3f6b7f0e80441c44feadf2c11a9e6"
+    }
+  ],
+  "classification": [
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    },
+    {
+      "before": false,
+      "after": true
+    }
+  ],
+  "allArchiveBytesPreserved": true,
+  "newArchives": 5,
+  "scopePacketArchives": 31,
+  "policyChanged": false,
+  "fullClean479Required": true,
+  "production": "disabled",
+  "pilotWriteAttempts": 0,
+  "qualificationModelCalls": 0,
+  "DO_NOT_REPEAT": true
+}

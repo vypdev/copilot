@@ -93,6 +93,15 @@ scope must exist before planner preparation or a CLI probe. Qualification has
 no uncontained or process-group fallback. Model execution gets no engine socket,
 client authority, host PID access or arbitrary host mounts.
 
+Each complete operation identity and namespace is admitted once per private SDK
+worker. Both are reserved before invoking its callback, so parallel calls, copied
+ports and completed or failed authorizations cannot repeat preparation or CLI
+version probes. Distinct operations keep separate asynchronous contexts and can run
+concurrently. Structural port rejection does not consume a later valid admission.
+Retain the first operation's evidence and inspect its outcome; do not retry with a
+copied authorization. Scientific repeats still need a causal correction and a new
+committed preregistration. This rule adds no user or environment setting.
+
 The immutable outer bootstrap alone owns the non-TTY stdin lifetime. Owner
 death/EOF stops the namespace. Normal completion also waits for an observed
 stopped namespace before outer cleanup and result acceptance. A provider

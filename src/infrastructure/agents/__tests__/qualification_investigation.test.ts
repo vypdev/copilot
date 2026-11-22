@@ -5,6 +5,7 @@ import type { AgentCapability } from '../../../domain/agent';
 import type { AgentExecutionPlan } from '../../../domain/agent_execution_plan';
 import { createAgentProcessLifecycle, runAgentCli } from '../../../data/repository/agent_cli_execution';
 import { AgentExecutionPlanner } from '../agent_execution_planner';
+import { getAgentRuntimeManifestEntry } from '../agent_runtime_manifest';
 import { admitQualificationInvestigationPlan, isAdmittedQualificationInvestigation } from '../qualification_investigation_admission';
 import { sourceSnapshotFixture } from './source_snapshot_fixture';
 import * as providerPolicies from '../../../application/policies/agent_execution/agent_execution_policy_dispatcher';
@@ -271,11 +272,15 @@ it('ev974-C08 retains nested/foreign-root and ambient configuration rejection; e
 describe('whole-operation scope policy and live binding components', () => {
     const identity = (): QualificationOperationIdentity => ({ ownerId: 'a'.repeat(64), operationId: 'case-001',
         planSha256: 'b'.repeat(64), implementation: 'c'.repeat(40), imageSha256: 'd'.repeat(64), purpose: 'corpus-case' });
-    function scope(auto = true) {
-        const c = new AbortController(), id = identity(), scopeId = 'e'.repeat(64);
+    let scopeSequence = 0;
+    function scope(auto = true, alias: Partial<Pick<QualificationOperationScope, 'identity' | 'scopeId'>> = {}) {
+        const number = ++scopeSequence;
+        const c = new AbortController(), id = alias.identity ?? { ...identity(), operationId: 'component-scope-' + number };
+        const scopeId = alias.scopeId ?? 'e' + number.toString(16).padStart(63, '0');
+        const admittedIdentity = qualificationOperationIdentity(id);
         let confirm!: (proof: QualificationOperationStopped) => void, fail!: (error: Error) => void;
         const stopped = new Promise<QualificationOperationStopped>((resolve, reject) => { confirm = resolve; fail = reject; });
-        const proof = (): QualificationOperationStopped => ({ identity: identity(), scopeId, namespaceInitStopped: true });
+        const proof = (): QualificationOperationStopped => ({ identity: admittedIdentity, scopeId, namespaceInitStopped: true });
         const requestStop = jest.fn(() => { if (auto) confirm(proof()); });
         const port: QualificationOperationScope = { identity: id, scopeId, signal: c.signal, stopped, requestStop };
         return { c, port, proof, confirm, fail, requestStop };
@@ -304,12 +309,81 @@ describe('whole-operation scope policy and live binding components', () => {
 
     it('requires the exact stopped namespace identity rather than a close event or sampled process', () => {
         const s = scope();
-        expect(() => requireQualificationOperationStopped(identity(), s.port.scopeId, s.proof())).not.toThrow();
+        expect(() => requireQualificationOperationStopped(s.port.identity, s.port.scopeId, s.proof())).not.toThrow();
         for (const proof of [null, {}, { ...s.proof(), extra: true }, { ...s.proof(), scopeId: 'f'.repeat(64) },
-            { ...s.proof(), namespaceInitStopped: false }, { ...s.proof(), identity: { ...identity(), ownerId: 'f'.repeat(64) } }]) {
-            expect(() => requireQualificationOperationStopped(identity(), s.port.scopeId, proof as QualificationOperationStopped)).toThrow();
+            { ...s.proof(), namespaceInitStopped: false }, { ...s.proof(), identity: { ...s.port.identity, ownerId: 'f'.repeat(64) } }]) {
+            expect(() => requireQualificationOperationStopped(s.port.identity, s.port.scopeId, proof as QualificationOperationStopped)).toThrow();
         }
-        expect(() => requireQualificationOperationStopped(identity(), 'unknown', s.proof())).toThrow();
+        expect(() => requireQualificationOperationStopped(s.port.identity, 'unknown', s.proof())).toThrow();
+    });
+
+    function duplicatePort(kind: 'same-port' | 'clone' | 'identity' | 'namespace', original: QualificationOperationScope) {
+        if (kind === 'same-port') return original;
+        if (kind === 'clone') return { ...original, identity: { ...original.identity } };
+        return scope(true, kind === 'identity' ? { identity: { ...original.identity } } : { scopeId: original.scopeId }).port;
+    }
+
+    it.each(['same-port', 'clone', 'identity', 'namespace'] as const)(
+        'rejects concurrent %s reuse before ordinary planner preparation', async kind => {
+            const first = scope(false);
+            let release!: () => void;
+            const held = new Promise<void>(resolve => { release = resolve; });
+            const initial = withQualificationOperationScope(first.port, async () => { await held; return 'first operation'; });
+            const resolveWorkspace = jest.fn(() => f.root), resolveExecutable = jest.fn(() => f.executable);
+            const readVersion = jest.fn(() => getAgentRuntimeManifestEntry('codex').reviewedVersion);
+            const planner = new AgentExecutionPlanner({ resolveWorkspace, resolveExecutable, readVersion });
+            const port = duplicatePort(kind, first.port);
+            const duplicate = jest.fn(async () => {
+                const plan = planner.prepareQualificationInvestigation(request(port.signal)); owned.push(plan.runtimeDirectory);
+                return 'duplicate preparation';
+            });
+            const outcome = withQualificationOperationScope(port, duplicate)
+                .then(value => ({ value }), (error: unknown) => ({ error }));
+            // Settle every owned fake scope even on the defective implementation.
+            await tick(); release(); await tick(); first.confirm(first.proof());
+            expect(await initial).toBe('first operation');
+            const retained = await outcome;
+            expect(duplicate).not.toHaveBeenCalled();
+            expect(resolveWorkspace).not.toHaveBeenCalled(); expect(resolveExecutable).not.toHaveBeenCalled();
+            expect(readVersion).not.toHaveBeenCalled();
+            expect(retained).toMatchObject({ error: expect.objectContaining({ message: expect.stringContaining('exact live') }) });
+            expect(first.requestStop).toHaveBeenCalledTimes(1);
+        });
+
+    it.each((['completed', 'failed'] as const).flatMap(status =>
+        (['same-port', 'identity', 'namespace'] as const).map(kind => [status, kind] as const)))(
+        'rejects subsequent %s %s reuse before invoking its callback', async (status, kind) => {
+            const first = scope(), failure = new Error('retained operation failure');
+            const initial = withQualificationOperationScope(first.port, async () => {
+                if (status === 'failed') throw failure;
+                return 'completed operation';
+            });
+            if (status === 'failed') await expect(initial).rejects.toBe(failure);
+            else expect(await initial).toBe('completed operation');
+            const duplicate = jest.fn(async () => 'must never run');
+            const outcome = await withQualificationOperationScope(duplicatePort(kind, first.port), duplicate)
+                .then(value => ({ value }), (error: unknown) => ({ error }));
+            expect(duplicate).not.toHaveBeenCalled();
+            expect(outcome).toMatchObject({ error: expect.objectContaining({ message: expect.stringContaining('exact live') }) });
+        });
+
+    it('allows distinct operation identities and namespaces in parallel', async () => {
+        const first = scope(false), second = scope(false);
+        const a = withQualificationOperationScope(first.port, async () => 11);
+        const b = withQualificationOperationScope(second.port, async () => 22);
+        await tick(); expect(first.requestStop).toHaveBeenCalledWith('completed');
+        expect(second.requestStop).toHaveBeenCalledWith('completed');
+        first.confirm(first.proof()); second.confirm(second.proof());
+        expect(await Promise.all([a, b])).toEqual([11, 22]);
+    });
+
+    it('does not consume an operation when its live port fails admission validation', async () => {
+        const valid = scope(), execute = jest.fn(async () => 'admitted once');
+        await expect(withQualificationOperationScope({ ...valid.port, requestStop: undefined } as unknown as QualificationOperationScope,
+            execute)).rejects.toThrow(/exact live/);
+        expect(execute).not.toHaveBeenCalled();
+        expect(await withQualificationOperationScope(valid.port, execute)).toBe('admitted once');
+        expect(execute).toHaveBeenCalledTimes(1);
     });
 
     it('rejects incomplete, orphaned, replayed, foreign and unconfirmed operation ledgers', () => {

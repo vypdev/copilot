@@ -52,10 +52,10 @@ describe('managed verifier operation termination', () => {
         expect(session.ask).not.toHaveBeenCalled();
     });
 
-    it.each(['unexpected-provider-tool', 'investigation-canceled', 'ledger-callback-failed'])(
-        'stops the exact complete operation before accepting a verifier result: %s', async code => {
-            const c = new AbortController(), scopeId = 'e'.repeat(64);
-            const identity = { ownerId: 'a'.repeat(64), operationId: 'managed-verifier-fixture', planSha256: 'b'.repeat(64),
+    it.each([['unexpected-provider-tool', 'e'], ['investigation-canceled', 'f'], ['ledger-callback-failed', '9']])(
+        'stops the exact complete operation before accepting a verifier result: %s', async (code, namespace) => {
+            const c = new AbortController(), scopeId = namespace.repeat(64);
+            const identity = { ownerId: 'a'.repeat(64), operationId: `managed-verifier-fixture-${code}`, planSha256: 'b'.repeat(64),
                 implementation: 'c'.repeat(40), imageSha256: 'd'.repeat(64), purpose: 'native-control' as const };
             let confirm!: (proof: QualificationOperationStopped) => void;
             const stopped = new Promise<QualificationOperationStopped>(resolve => { confirm = resolve; });
