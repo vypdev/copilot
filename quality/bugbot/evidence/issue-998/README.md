@@ -5,6 +5,20 @@ its specific authorization and a real native canary remain #977. No human Setup
 observation, model-profile qualification, production activation or evaluated-pilot
 write is inferred from these tests.
 
+## Current correction: cancellation at actual Git dispatch
+
+[Round9](./review-round9/README.md) records the current95-case acceptance floor:
+91mapped Jest cases plus the same four extracted-package cases. Its27-file cohort
+passes1,237assertions, and the six changed executable modules reach100%allmetrics;
+focused coverage still excludes global acceptance. The same eight causal tests
+reproduce extra writes after cancellation before the fix, then prevent them at
+actual tree/commit/ref/PR transport dispatch while retaining prior effects.
+Build/package controls pass; full normal hooks and fresh final-head native/review
+acceptance remain required. Remote step-action inventory is still unresolved.
+All earlier observations below retain their own historical source identities.
+
+## Historical initial source snapshot
+
 | Boundary | Executed observation |
 |---|---|
 | Mapped C01–C54/C59–C64 | 60/60 named Jest cases pass; the checked-in 64-case ledger binds exact assertions without reuse between IDs. |
@@ -249,3 +263,7 @@ Documentation completion expands the required Bugbot failure page into explicit 
 Round8 fixes cancellation after awaited file freshness/intent persistence and mandatory published-row validation; it labels the earlier acceptance floors as historical. Causal10failures become78focused passes;26-file1224PASS/90mapped/94registered; changedcoordinator100%allmetrics. See [receipt](review-round8/receipt.json) for scopes, package evidence and mandatory final-head checks.
 
 Round8 native Commit/Verification failed on nine newly named .json.gz report archives. Their identical bytes now use the existing canonical .json.log.gz generated-evidence format; all historical objects and hashes remain intact. The classifier, source/SDK/bundles, binary checks and limits are unchanged. [Transport correction](review-round8-transport/evidence-transport-correction.json) and two full failure artifacts bring the verified total to276archives. Fresh final-head checks/review remain required; no obsolete retry.
+
+## Round9: cancellation at actual file-write dispatch
+
+[Round9 source and controls](./review-round9/README.md) retain66PASS/8FAIL ->74PASS for the same causal tests; corrected27-file1,237PASS/91mapped/95registered, six changed executable modules100%allmetrics, build/package11CLI0effects/API/web and actual documentation/Graphify validation. The first broader five-failure run and wrong local doc alias remain separate diagnostics.36canonicalarchives add to276previous records. Source integration, unresolved remote-action inventory, final native acceptance, installation and scientific qualification remain separate.

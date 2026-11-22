@@ -2284,6 +2284,50 @@
           "test": "sequential reviewed batch Apply cancels during file preparation intent without dispatching objects"
         }
       ]
+    },
+    {
+      "id": "publisher977-C95",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Cancellation during the batch adapter's awaited freshness or Git-proof reads stops each tree, commit, ref or PR POST at transport dispatch while preserving completed effects and exact durable recovery facts.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during tree freshness-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during tree Git-proof-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during commit freshness-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during commit Git-proof-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during branch freshness-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during branch Git-proof-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during pull-request freshness-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during pull-request Git-proof-read stops the real provider write and retains prior facts"
+        }
+      ]
     }
   ]
 }

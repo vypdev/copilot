@@ -96,11 +96,11 @@ export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
   }
   labels(plan: SetupBatchTargetPlan, token: string) { return this.resources.labels(plan, token); }
   issueTypes(plan: SetupBatchTargetPlan, token: string) { return this.resources.issueTypes(plan, token); }
-  async prepareCommit(plan: SetupBatchTargetPlan, operationId: string, token: string, observe?: SetupInstallationObjectObserver): Promise<string> {
+  async prepareCommit(plan: SetupBatchTargetPlan, operationId: string, token: string, observe?: SetupInstallationObjectObserver, active = () => true): Promise<string> {
     let delivery: SetupInstallationGithubDeliveryAdapter;
     try {
       if (!await this.revalidate(plan, token, [])) throw new SetupBatchProviderError('unknown');
-      delivery = await this.fileDelivery(plan, operationId, token);
+      delivery = await this.fileDelivery(plan, operationId, token, active);
     } catch (error) {
       // These reads precede delegation, so neither Git-object POST can have started.
       await observe?.({ effect: 'tree', state: 'not-started' });
@@ -108,13 +108,13 @@ export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
     }
     return delivery.prepareCommit(observe);
   }
-  async branch(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly = false): Promise<void> {
-    return (await this.fileDelivery(plan, operationId, token)).branch(commit, inspectOnly);
+  async branch(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly = false, active = () => true): Promise<void> {
+    return (await this.fileDelivery(plan, operationId, token, active)).branch(commit, inspectOnly);
   }
-  async pullRequest(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly = false): Promise<number> {
-    return (await this.fileDelivery(plan, operationId, token)).pullRequest(commit, inspectOnly);
+  async pullRequest(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly = false, active = () => true): Promise<number> {
+    return (await this.fileDelivery(plan, operationId, token, active)).pullRequest(commit, inspectOnly);
   }
-  private async fileDelivery(plan: SetupBatchTargetPlan, operationId: string, token: string): Promise<SetupInstallationGithubDeliveryAdapter> {
+  private async fileDelivery(plan: SetupBatchTargetPlan, operationId: string, token: string, active: () => boolean): Promise<SetupInstallationGithubDeliveryAdapter> {
     const installation = { schemaVersion: 1, operationId, repositoryId: plan.target.id, baseSha: plan.target.baseSha, planDigest: plan.digest };
     if (!isSetupBatchInstallationReceipt(installation)) throw new SetupBatchProviderError('malformed');
     let byOperation = this.deliveryPlans.get(plan);
@@ -135,7 +135,7 @@ export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
       byOperation.set(operationId, snapshot);
     }
     return new SetupInstallationGithubDeliveryAdapter(this.read.transport, snapshot, token,
-      () => this.revalidate(plan, token, ['access', 'variables', 'labels', 'issue-types']));
+      () => this.revalidate(plan, token, ['access', 'variables', 'labels', 'issue-types']), active);
   }
   private sharedRevision(organization: string, resource: SetupBatchTargetPlan['sharedSnapshot'][number]): string {
     const own = this.ownAccessRevisions.get(`${organization}/${resource.kind}/${resource.name}`);

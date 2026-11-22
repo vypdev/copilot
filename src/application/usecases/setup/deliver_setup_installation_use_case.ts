@@ -1,6 +1,6 @@
 import type { SetupInstallationDeliveryState, SetupInstallationRefEffect } from '../../contracts/setup_installation_delivery';
 import type { SetupInstallationDeliveryCommands, SetupInstallationDeliveryControl, SetupInstallationDeliveryCoordinator } from '../../ports/setup_installation_delivery_ports';
-import { SetupInstallationSnapshotChanged } from '../../ports/setup_installation_delivery_ports';
+import { SetupInstallationDeliveryCancelled, SetupInstallationSnapshotChanged } from '../../ports/setup_installation_delivery_ports';
 
 export class SetupInstallationDeliveryError extends Error {
   constructor(readonly reason: 'cancelled' | 'drift' | 'uncertain-preparation' | 'provider',
@@ -68,6 +68,7 @@ export class DeliverSetupInstallationUseCase implements SetupInstallationDeliver
       return state;
     } catch (error) {
       if (error instanceof SetupInstallationDeliveryError) throw error;
+      if (error instanceof SetupInstallationDeliveryCancelled) throw new SetupInstallationDeliveryError('cancelled', state);
       if (error instanceof SetupInstallationSnapshotChanged) throw new SetupInstallationDeliveryError('drift', state);
       throw new SetupInstallationDeliveryError('provider', state);
     }

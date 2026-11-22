@@ -69014,12 +69014,17 @@ function bindSddEvidenceReadPorts(ports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SetupInstallationSnapshotChanged = void 0;
+exports.SetupInstallationDeliveryCancelled = exports.SetupInstallationSnapshotChanged = void 0;
 /** A verified snapshot mismatch, distinct from an unavailable provider read. */
 class SetupInstallationSnapshotChanged extends Error {
     constructor() { super('GitHub setup request is unknown because the reviewed installation snapshot changed.'); }
 }
 exports.SetupInstallationSnapshotChanged = SetupInstallationSnapshotChanged;
+/** Observed before dispatch; no provider write was started by that command. */
+class SetupInstallationDeliveryCancelled extends Error {
+    constructor() { super('Setup file delivery was cancelled before provider dispatch.'); }
+}
+exports.SetupInstallationDeliveryCancelled = SetupInstallationDeliveryCancelled;
 
 
 /***/ }),
@@ -78797,9 +78802,9 @@ class ApplySetupBatchUseCase {
                         ? 'prepared-objects' : interrupted && retainedReceipt.preparedCommit
                         ? !retainedReceipt.effects.includes('branch') ? 'branch' : !retainedReceipt.effects.includes('pull-request') ? 'pull-request' : undefined : undefined;
                     await this.ports.coordinator.execute({
-                        prepareCommit: observe => this.ports.writer.prepareCommit(targetPlan, plan.operationId, token, observe),
-                        branch: (commit, inspectOnly) => this.ports.writer.branch(targetPlan, plan.operationId, commit, token, inspectOnly),
-                        pullRequest: (commit, inspectOnly) => this.ports.writer.pullRequest(targetPlan, plan.operationId, commit, token, inspectOnly),
+                        prepareCommit: observe => this.ports.writer.prepareCommit(targetPlan, plan.operationId, token, observe, () => this.ports.presentation.active()),
+                        branch: (commit, inspectOnly) => this.ports.writer.branch(targetPlan, plan.operationId, commit, token, inspectOnly, () => this.ports.presentation.active()),
+                        pullRequest: (commit, inspectOnly) => this.ports.writer.pullRequest(targetPlan, plan.operationId, commit, token, inspectOnly, () => this.ports.presentation.active()),
                     }, {
                         active: () => this.ports.presentation.active(),
                         revalidate: () => this.ports.writer.revalidate(targetPlan, token, receipt.effects),
@@ -79222,6 +79227,8 @@ class DeliverSetupInstallationUseCase {
         catch (error) {
             if (error instanceof SetupInstallationDeliveryError)
                 throw error;
+            if (error instanceof setup_installation_delivery_ports_1.SetupInstallationDeliveryCancelled)
+                throw new SetupInstallationDeliveryError('cancelled', state);
             if (error instanceof setup_installation_delivery_ports_1.SetupInstallationSnapshotChanged)
                 throw new SetupInstallationDeliveryError('drift', state);
             throw new SetupInstallationDeliveryError('provider', state);
@@ -123180,7 +123187,7 @@ function createSetupPublisherInstallationCompositionRoot(token, presentation, lo
             title: catalog.message('prTitle'), body: [
                 catalog.message('prBody', { commit: plan.sourceCommit }),
                 (0, setup_batch_policy_1.setupBatchMarker)(plan.operationId, plan.target.id),
-            ].join('\n\n') }, value, fresh)) });
+            ].join('\n\n') }, value, fresh, () => presentation.active())) });
     return new install_setup_publisher_use_case_1.InstallSetupPublisherUseCase(review, apply, journal);
 }
 
@@ -126028,12 +126035,12 @@ class SetupBatchGithubApplyAdapter {
     }
     labels(plan, token) { return this.resources.labels(plan, token); }
     issueTypes(plan, token) { return this.resources.issueTypes(plan, token); }
-    async prepareCommit(plan, operationId, token, observe) {
+    async prepareCommit(plan, operationId, token, observe, active = () => true) {
         let delivery;
         try {
             if (!await this.revalidate(plan, token, []))
                 throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
-            delivery = await this.fileDelivery(plan, operationId, token);
+            delivery = await this.fileDelivery(plan, operationId, token, active);
         }
         catch (error) {
             // These reads precede delegation, so neither Git-object POST can have started.
@@ -126042,13 +126049,13 @@ class SetupBatchGithubApplyAdapter {
         }
         return delivery.prepareCommit(observe);
     }
-    async branch(plan, operationId, commit, token, inspectOnly = false) {
-        return (await this.fileDelivery(plan, operationId, token)).branch(commit, inspectOnly);
+    async branch(plan, operationId, commit, token, inspectOnly = false, active = () => true) {
+        return (await this.fileDelivery(plan, operationId, token, active)).branch(commit, inspectOnly);
     }
-    async pullRequest(plan, operationId, commit, token, inspectOnly = false) {
-        return (await this.fileDelivery(plan, operationId, token)).pullRequest(commit, inspectOnly);
+    async pullRequest(plan, operationId, commit, token, inspectOnly = false, active = () => true) {
+        return (await this.fileDelivery(plan, operationId, token, active)).pullRequest(commit, inspectOnly);
     }
-    async fileDelivery(plan, operationId, token) {
+    async fileDelivery(plan, operationId, token, active) {
         const installation = { schemaVersion: 1, operationId, repositoryId: plan.target.id, baseSha: plan.target.baseSha, planDigest: plan.digest };
         if (!(0, setup_batch_policy_1.isSetupBatchInstallationReceipt)(installation))
             throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
@@ -126078,7 +126085,7 @@ class SetupBatchGithubApplyAdapter {
                 body: `${(0, setup_batch_policy_1.setupBatchMarker)(operationId, plan.target.id)}\n\nConfigure Copilot using the reviewed setup plan. Shared Secret values are retained.\n\n**Status:** PR created; installation awaits human review and merge. Runtime credential and capability verification remain pending.\n\nReview the generated workflows, repository guidance and configuration before merging. Setup never merges, releases or deploys this PR.${(0, setup_runner_installation_summary_policy_1.setupRunnerInstallationSummary)(plan)}` };
             byOperation.set(operationId, snapshot);
         }
-        return new setup_installation_github_delivery_adapter_1.SetupInstallationGithubDeliveryAdapter(this.read.transport, snapshot, token, () => this.revalidate(plan, token, ['access', 'variables', 'labels', 'issue-types']));
+        return new setup_installation_github_delivery_adapter_1.SetupInstallationGithubDeliveryAdapter(this.read.transport, snapshot, token, () => this.revalidate(plan, token, ['access', 'variables', 'labels', 'issue-types']), active);
     }
     sharedRevision(organization, resource) {
         const own = this.ownAccessRevisions.get(`${organization}/${resource.kind}/${resource.name}`);
@@ -126726,9 +126733,10 @@ const setup_installation_tree_policy_1 = __nccwpck_require__(38327);
 const setup_batch_github_read_adapter_1 = __nccwpck_require__(9703);
 /** Shared Git delivery. This object has no resource writers or general Setup configuration. */
 class SetupInstallationGithubDeliveryAdapter {
-    constructor(transport, plan, token, revalidate) {
+    constructor(transport, plan, token, revalidate, active = () => true) {
         this.transport = transport;
         this.revalidate = revalidate;
+        this.active = active;
         _SetupInstallationGithubDeliveryAdapter_token.set(this, void 0);
         __classPrivateFieldSet(this, _SetupInstallationGithubDeliveryAdapter_token, token, "f");
         this.plan = Object.freeze({ ...plan, target: Object.freeze({ ...plan.target }),
@@ -126752,10 +126760,9 @@ class SetupInstallationGithubDeliveryAdapter {
             if (treeSha === undefined) {
                 await record({ effect: 'tree', state: 'starting' });
                 await this.fresh();
-                posted = true;
-                const tree = (0, setup_batch_github_read_adapter_1.batchObject)(await this.call('POST /repos/{owner}/{repo}/git/trees', { base_tree: baseTree,
+                const tree = (0, setup_batch_github_read_adapter_1.batchObject)(await this.post('POST /repos/{owner}/{repo}/git/trees', { base_tree: baseTree,
                     tree: this.plan.files.map(file => ({ path: file.path, type: 'blob', mode: '100644',
-                        ...(file.content === null ? { sha: null } : { content: file.content }) })) }));
+                        ...(file.content === null ? { sha: null } : { content: file.content }) })) }, () => { posted = true; }));
                 if (!(0, setup_batch_github_read_adapter_1.batchSha)(tree?.sha))
                     throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
                 treeSha = tree.sha;
@@ -126767,9 +126774,8 @@ class SetupInstallationGithubDeliveryAdapter {
             await this.assertTrees(baseTree, treeSha);
             await record({ effect: 'commit', state: 'starting' });
             await this.fresh();
-            posted = true;
-            const commit = (0, setup_batch_github_read_adapter_1.batchObject)(await this.call('POST /repos/{owner}/{repo}/git/commits', { tree: treeSha,
-                parents: [this.plan.target.baseSha], message: `chore: configure Copilot (setup ${this.plan.operationId})` }));
+            const commit = (0, setup_batch_github_read_adapter_1.batchObject)(await this.post('POST /repos/{owner}/{repo}/git/commits', { tree: treeSha,
+                parents: [this.plan.target.baseSha], message: `chore: configure Copilot (setup ${this.plan.operationId})` }, () => { posted = true; }));
             if (!(0, setup_batch_github_read_adapter_1.batchSha)(commit?.sha))
                 throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
             await record({ effect: 'commit', state: 'completed', sha: commit.sha });
@@ -126800,9 +126806,13 @@ class SetupInstallationGithubDeliveryAdapter {
             throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
         await this.fresh();
         try {
-            await this.call('POST /repos/{owner}/{repo}/git/refs', { ref: `refs/heads/${ref}`, sha: commit });
+            await this.post('POST /repos/{owner}/{repo}/git/refs', { ref: `refs/heads/${ref}`, sha: commit });
         }
-        catch { /* Read the exact owned ref after an uncertain response; never repeat POST. */ }
+        catch (error) {
+            if (error instanceof setup_installation_delivery_ports_1.SetupInstallationDeliveryCancelled)
+                throw error;
+            /* Read the exact owned ref after an uncertain response; never repeat POST. */
+        }
         if (await this.branchSha() !== commit)
             throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
         await this.fresh();
@@ -126817,10 +126827,14 @@ class SetupInstallationGithubDeliveryAdapter {
                 throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
             await this.fresh();
             try {
-                await this.call('POST /repos/{owner}/{repo}/pulls', { head: (0, setup_batch_policy_1.setupBatchBranch)(this.plan.operationId),
+                await this.post('POST /repos/{owner}/{repo}/pulls', { head: (0, setup_batch_policy_1.setupBatchBranch)(this.plan.operationId),
                     base: this.plan.target.defaultBranch, title: this.plan.title, body: this.plan.body });
             }
-            catch { /* Inspect the exact marker/head/base after any uncertain response. */ }
+            catch (error) {
+                if (error instanceof setup_installation_delivery_ports_1.SetupInstallationDeliveryCancelled)
+                    throw error;
+                /* Inspect the exact marker/head/base after any uncertain response. */
+            }
             number = await this.inspectPullRequest(commit);
         }
         if (!number || await this.branchSha() !== commit)
@@ -126880,6 +126894,14 @@ class SetupInstallationGithubDeliveryAdapter {
     }
     async fresh() { if (!await this.revalidate())
         throw new setup_installation_delivery_ports_1.SetupInstallationSnapshotChanged(); }
+    post(route, parameters, dispatched) {
+        // No await separates current-session admission from the actual transport call.
+        // Mark object intent as dispatched only after this final cancellation check.
+        if (!this.active())
+            throw new setup_installation_delivery_ports_1.SetupInstallationDeliveryCancelled();
+        dispatched?.();
+        return this.call(route, parameters);
+    }
     call(route, parameters) {
         return this.transport.call(__classPrivateFieldGet(this, _SetupInstallationGithubDeliveryAdapter_token, "f"), route, { owner: this.plan.target.owner, repo: this.plan.target.name, ...parameters });
     }

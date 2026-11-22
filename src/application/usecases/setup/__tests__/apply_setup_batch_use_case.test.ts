@@ -96,7 +96,10 @@ describe('sequential reviewed batch Apply', () => {
     expect(recovered.targets[0]).toMatchObject({ status: 'waiting-for-merge', pullRequestNumber: 31 });
     expect(f.writer.prepareCommit).toHaveBeenCalledTimes(1); expect(f.writer.branch).toHaveBeenCalledTimes(1);
     expect(f.writer.variables).toHaveBeenCalledTimes(1);
-    expect(f.writer.pullRequest).toHaveBeenLastCalledWith(f.plan.targets[0], f.plan.operationId, 'c'.repeat(40), 'fixture', false);
+    expect(f.writer.pullRequest).toHaveBeenLastCalledWith(f.plan.targets[0], f.plan.operationId, 'c'.repeat(40), 'fixture', false, expect.any(Function));
+    const active = (f.writer.pullRequest.mock.lastCall as unknown as readonly unknown[])[5] as () => boolean;
+    expect(active()).toBe(true);
+    f.presentation.active.mockReturnValue(false); expect(active()).toBe(false);
   });
   it('finishes a retained legacy PR receipt after an interrupted final status save without new effects', async () => {
     const f = fixture(1), first = await f.useCase.execute(f.plan, 'fixture');

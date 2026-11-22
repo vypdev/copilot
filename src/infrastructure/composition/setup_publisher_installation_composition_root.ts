@@ -33,6 +33,6 @@ export function createSetupPublisherInstallationCompositionRoot(token: unknown, 
         title: catalog.message('prTitle'), body: [
           catalog.message('prBody', { commit: plan.sourceCommit }),
           setupBatchMarker(plan.operationId, plan.target.id),
-        ].join('\n\n') }, value, fresh)) });
+        ].join('\n\n') }, value, fresh, () => presentation.active())) });
   return new InstallSetupPublisherUseCase(review, apply, journal);
 }

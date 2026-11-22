@@ -22,6 +22,16 @@ that refinement of the selected Clean Architecture contract.
 
 The current file map and executable acceptance registration follow.
 
+Current Round9 acceptance is95 logical IDs:91mapped Jest cases and the same four
+package cases. C95 binds eight real batch-use-case/private-v1-journal/Git-adapter
+scenarios to cancellation during successful adapter freshness or Git-proof reads.
+Both interactive compositions carry current session activity to a synchronous
+transport-write fence. The same causal tests change66PASS/8FAIL to74PASS; the
+27-file cohort passes1,237assertions. All94previous complete ledger objects and
+the immutable selected companion remain unchanged. Prior90/91/93/94 floors below
+are historical snapshots. See [Round9](./review-round9/README.md) for full boundaries,
+retained negatives and pending normal/native acceptance.
+
 Document the supported route/defaults/preview, relevant credentials, drift, uncertain effects, purpose-bound resume, legacy compatibility, source/default/native distinctions and rollback. Update existing CLI help, how-to-use/configuration, provisioning/troubleshooting, Bugbot failure guidance and issue977 evidence. Register actual code/test/docs only as implemented; regenerate and validate the catalog. Keep existing routes and validate links/content/locale fixtures.
 
 The original selected design and planned filenames remain in the official first-SDD commit cited above. The implementation refines that design into the actual paths below; catalog registration is source evidence, not final test, installation or native acceptance.
@@ -368,16 +378,16 @@ See review-round4/receipt.json. The duplicate terminal-recovery finding was
 posted on original470 and is already fixed by2d. No installation,174/42
 qualification or qualified profile is claimed; pilot writes0/productiondisabled.
 
-The cumulative normative90-case budget, C65–C90 assertions, traceability and extended Definition of Done live in the owning organization/batch SDD appendix. The selected companion remains immutable as the original64-case baseline. The validator reads both contracts, rejects duplicate published IDs, and requires every mapped actual assertion. Source invocation validation is stateless YAML parsing in pure policy; the GitHub adapter ignores disjoint installation PRs while fencing every own-marker claim. See review-round5/receipt.json for real test boundaries, fixture negatives and pending final-head acceptance.
+The historical Round5 snapshot has a cumulative90-case budget. C65–C90 assertions, traceability and its extended Definition of Done live in the owning organization/batch SDD appendix. The selected companion remains immutable as the original64-case baseline. The validator reads both contracts, rejects duplicate published IDs, and requires every mapped actual assertion. Source invocation validation is stateless YAML parsing in pure policy; the GitHub adapter ignores disjoint installation PRs while fencing every own-marker claim. See review-round5/receipt.json for real test boundaries, fixture negatives and pending final-head acceptance.
 
 The historical Round6 snapshot has a cumulative acceptance floor91 (87namedJest +four extracted-package cases). C91 binds complete legacy tree-path validation before blob download; C08 retains its original normative assertion and expands only its evidence to authorized-Boolean no-Apply and actual prior partial receipt/fresh-decline controls. All other prior evidence and all prior IDs/areas/requirements/assertions/gates remain unchanged. The owning SDD publishes the additional table row, traceability and current Definition of Done; the selected companion remains byte-exact.
 
 
 Round7 raises the historical floor to93 (89 mapped Jest cases plus four extracted-
 package cases), adding C92 lock initialization and C93 completed-recovery guidance.
-Round8 makes the current floor94 (90 mapped Jest cases plus the same four package
+Round8 has the historical floor94 (90 mapped Jest cases plus the same four package
 cases): C94 covers cancellation during revalidation and intent persistence at each
 file phase and through ordinary batch Apply. All prior93 ledger objects and the
 selected companion remain unchanged. Baseline publication rows are mandatory; only
-contiguous additions above C94 may use the generic future-case checks. New execution
+at that snapshot contiguous additions above C94 may use the generic future-case checks. Its execution
 results and the separate final-head native acceptance belong in review-round8.

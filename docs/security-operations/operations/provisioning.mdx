@@ -182,3 +182,11 @@ stops the next provider command. Already completed effects and retained intents 
 available for inspection and reviewed recovery; cancellation does not roll them back
 or erase an uncertain outcome. A failed state save still stops delivery as a journal
 failure.
+
+The file-delivery adapter also checks the current session immediately before each
+Git tree, commit, branch and pull-request write, after its own asynchronous
+freshness and ownership reads. Cancelling during those reads prevents that write.
+Completed objects and branch identities remain in the recovery receipt; cancellation
+does not undo a dispatched request. A known tree without a retained commit remains
+uncertain and must not be recreated automatically. Review the retained facts before
+resuming the same installation operation.

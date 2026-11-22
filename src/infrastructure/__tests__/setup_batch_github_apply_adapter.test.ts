@@ -71,19 +71,77 @@ function fixture() {
     setBranch: (sha: string | undefined) => { branch = sha; }, setPulls: (values: unknown[]) => { pulls = values; },
     setReceipt: (value: unknown) => { preparedFiles.set('.copilot/setup-manifest.json', JSON.stringify({ installation: value })); } };
 }
-async function recoveryFixture() {
+async function recoveryFixture(options: { active?: () => boolean; writer?: (writer: SetupBatchGithubApplyAdapter) => void } = {}) {
   const f = fixture(), directory = await mkdtemp(join(tmpdir(), 'batch-reviewed-recovery-'));
   const journal = new SetupBatchJournalAdapter(directory), review = jest.fn(async () => true);
   const plan = { operationId: operation, organization: 'acme', targets: [f.plan] };
   // Reconstruct the writer and use the real closed-v1 journal on each reviewed resume.
-  const execute = () => new ApplySetupBatchUseCase({ coordinator: new DeliverSetupInstallationUseCase(), journal,
-    writer: new SetupBatchGithubApplyAdapter(f.read, f.variableWriter, f.resources),
-    presentation: { review, active: () => true, progress: () => undefined } }).execute(plan, 'private-recovery-fixture');
+  const execute = () => {
+    const writer = new SetupBatchGithubApplyAdapter(f.read, f.variableWriter, f.resources);
+    options.writer?.(writer);
+    return new ApplySetupBatchUseCase({ coordinator: new DeliverSetupInstallationUseCase(), journal, writer,
+      presentation: { review, active: options.active ?? (() => true), progress: () => undefined } }).execute(plan, 'private-recovery-fixture');
+  };
   const receipt = async (): Promise<SetupBatchOperation> => JSON.parse(await readFile(join(directory, operation + '.json'), 'utf8'));
   const posts = (route: string) => f.request.mock.calls.filter(([actual]) => actual === `POST /repos/{owner}/{repo}/${route}`);
   return { ...f, execute, review, receipt, posts, cleanup: () => rm(directory, { recursive: true, force: true }) };
 }
 describe('freshly reviewed legacy batch recovery through real Git delivery', () => {
+  it.each((['tree', 'commit', 'branch', 'pull-request'] as const).flatMap(phase =>
+    (['freshness-read', 'Git-proof-read'] as const).map(boundary => ({ phase, boundary }))))(
+    'publisher977-C95: cancellation during $phase $boundary stops the real provider write and retains prior facts', async ({ phase, boundary }) => {
+      let active = true, triggered = false, dispatch: 'prepare' | 'branch' | 'pull-request' | undefined;
+      const f = await recoveryFixture({ active: () => active, writer: writer => {
+        const prepareCommit = writer.prepareCommit.bind(writer), branch = writer.branch.bind(writer), pullRequest = writer.pullRequest.bind(writer);
+        jest.spyOn(writer, 'prepareCommit').mockImplementation((...args) => { dispatch = 'prepare'; return prepareCommit(...args); });
+        jest.spyOn(writer, 'branch').mockImplementation((...args) => { dispatch = 'branch'; return branch(...args); });
+        jest.spyOn(writer, 'pullRequest').mockImplementation((...args) => { dispatch = 'pull-request'; return pullRequest(...args); });
+      } });
+      try {
+        const posts = ['git/trees', 'git/commits', 'git/refs', 'pulls'].map(route => `POST /repos/{owner}/{repo}/${route}`);
+        const before = ['tree', 'commit', 'branch', 'pull-request'].indexOf(phase);
+        const inPhase = () => dispatch === (phase === 'tree' || phase === 'commit' ? 'prepare' : phase)
+          && f.request.mock.calls.filter(([route]) => route.startsWith('POST ')).length === before;
+        const cancel = () => { active = false; triggered = true; };
+        if (boundary === 'freshness-read') {
+          const effective = f.read.effective.bind(f.read);
+          jest.spyOn(f.read, 'effective').mockImplementation(async (...args) => {
+            const result = await effective(...args);
+            const hasBaseRead = f.request.mock.calls.some(([route, parameters]) =>
+              route === 'GET /repos/{owner}/{repo}/git/commits/{commit_sha}' && parameters.commit_sha === base);
+            if (inPhase() && (phase !== 'tree' || hasBaseRead)) cancel();
+            return result;
+          });
+        } else {
+          const original = f.request.getMockImplementation()!;
+          const selected = (route: string, parameters: Record<string, unknown>) => inPhase() && (
+            phase === 'tree' ? route === 'GET /repos/{owner}/{repo}/git/commits/{commit_sha}' && parameters.commit_sha === base
+              : phase === 'commit' ? route === 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}'
+                : phase === 'branch' ? route === 'GET /repos/{owner}/{repo}/git/ref/{ref}'
+                  : route === 'GET /repos/{owner}/{repo}/pulls');
+          f.request.mockImplementation(async (route, parameters) => {
+            try {
+              const result = await original(route, parameters);
+              if (selected(route, parameters)) cancel();
+              return result;
+            } catch (error) {
+              if (selected(route, parameters)) cancel();
+              throw error;
+            }
+          });
+        }
+        const result = await f.execute();
+        expect(triggered).toBe(true); expect(active).toBe(false);
+        expect(f.request.mock.calls.filter(([route]) => route.startsWith('POST ')).map(([route]) => route)).toEqual(posts.slice(0, before));
+        expect(result.targets[0]).toMatchObject({ status: 'cancelled', reason: phase === 'tree' ? 'preflight' : 'cancelled',
+          effects: ['access', 'variables', 'labels', 'issue-types', ...(phase === 'pull-request' ? ['branch'] : [])],
+          preparedCommit: phase === 'branch' || phase === 'pull-request' ? prepared : undefined });
+        expect(await f.receipt()).toEqual(JSON.parse(JSON.stringify(result)));
+        expect(f.resources.labels).toHaveBeenCalledTimes(1); expect(f.resources.issueTypes).toHaveBeenCalledTimes(1);
+        expect(f.review).toHaveBeenCalledTimes(1);
+      } finally { await f.cleanup(); }
+    },
+  );
   it.each(['manifest-read', 'base-commit-read'] as const)('retries a confirmed pre-POST %s failure without repeating resources', async failure => {
     const f = await recoveryFixture();
     try {

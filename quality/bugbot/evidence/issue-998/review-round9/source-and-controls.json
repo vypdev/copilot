@@ -1,0 +1,256 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-22T02:06:00.693451+00:00",
+  "parent": "a5684ec1c3bb6a8d9659906f19013a8045438559",
+  "finding": "PRRT_kwDONSeBW866eWrL",
+  "sourceHashes": {
+    "build/cli/index.js": "b4734ac06ba9ad6fe24be1cd510f6fd5f466d4588458e4dd8514ec74be7f5920",
+    "docs/security-operations/operations/provisioning.mdx": "a2461e313b07f306aa04fea86ebab2d5e7f806cbdc1c6c47bccf3fc5f92bfc3d",
+    "scripts/validate-setup-publisher-acceptance.cjs": "de7e228f931c286bc7368a2de1e064873846156bda53a1533a4f4bdf3d2f8c4f",
+    "specs/CATALOG.md": "5b2212ee4b5c8cb4d870db6ed28bd1254f3266436c1eafb2b6b1043e09c40ed0",
+    "specs/catalog.json": "d00e99c40a04f90c023212809dca92470fcd6d5045b02acec3c08a0cbabd6abc",
+    "specs/organization-configuration-reuse-and-batch-setup.md": "4b47ff85b527c912d0f97dde8f16a962b50055ce2abd1e429cc1fe6cac66c2f1",
+    "specs/setup-publisher-installation-acceptance.json": "2eb85ca6c2f22b510a42f2b4535b92945fbad902fd6e78e45f1f5178aff060ff",
+    "src/application/ports/setup_batch_ports.ts": "463b2f8306004bb2bbf4c93f4361998dc5580b7e15471aebe7094d08958ffd6d",
+    "src/application/ports/setup_installation_delivery_ports.ts": "73b194e337972b0055b507d2942ea0ba0d0e6b8d2b447cfd0e7bacf7f84dcb6b",
+    "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts": "44814d67b801e683736f05227752d6305d7714fed00bb2ea93cb7762bd3c0c80",
+    "src/application/usecases/setup/apply_setup_batch_use_case.ts": "1be6c07f4e0f7fcbf462dc68c5719e4c631df217b96ca2d5bcc3d1b38242d963",
+    "src/application/usecases/setup/deliver_setup_installation_use_case.ts": "d960bd32122cbc137e4efe74ac00c8ae6be7b7acb0f9bd8e63390207f7effeaa",
+    "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts": "d3ef2f959a1ad94094e82d8179d89748e8473081b74ec5e45a9500c5876ba392",
+    "src/infrastructure/composition/setup_publisher_installation_composition_root.ts": "1a417c9a2429904dcce0096499110b0a0268c4e1871cec996774b52842f0b00a",
+    "src/infrastructure/setup_batch_github_apply_adapter.ts": "4f36423d003f3fccff8d3dbcb66380f9649484ec354c4f6dd8b3a09b52caaacb",
+    "src/infrastructure/setup_installation_github_delivery_adapter.ts": "ee6b44b1f10306627b4695aa15300fbc34793a94b02ef9904533907273ebe649",
+    "src/tooling/__tests__/setup_publisher_acceptance_validator.test.ts": "cd17b1e5a4876487277218b5fc8d9e531725467008397c6b0a6f253398cee980",
+    "quality/bugbot/evidence/issue-998/README.md": "f6719535cb5a0a7b694498364c26b3f85505e8e9df26e13e608921f9662de60e",
+    "quality/bugbot/evidence/issue-998/implementation-notes.md": "187efd8c50d6a92cf0bd0700491430e5d7ce1fb70ede1a80c065b23acbfa99cc"
+  },
+  "causalRed": {
+    "passed": 66,
+    "failed": 8,
+    "skipped": 0
+  },
+  "causalGreen": {
+    "passed": 74,
+    "failed": 0,
+    "skipped": 0,
+    "testBytesIdentical": true,
+    "testSha256": "d3ef2f959a1ad94094e82d8179d89748e8473081b74ec5e45a9500c5876ba392"
+  },
+  "coherentFirstNegative": {
+    "files": 26,
+    "passed": 1191,
+    "failed": 5,
+    "skipped": 0,
+    "cause": "Four unchanged loopback guard cases cannot listen in restricted environment (EPERM); one old mock assertion expects no live session callback. Corrected assertion additionally proves live true-to-false activity, and local-server admission preserves the guard cases."
+  },
+  "coherentCorrected": {
+    "files": 27,
+    "passed": 1237,
+    "failed": 0,
+    "skipped": 0,
+    "commandExit": 1,
+    "mappedCases": 91,
+    "registeredCases": 95,
+    "separatePackageCases": 4,
+    "boundary": "All prior26-file cohort plus four loopback controls; first run substituted the guard file for the retained local-adapter suite. Corrected run retains both. Focused coverage exit1 for unexecuted global owners is not global acceptance."
+  },
+  "coverage": {
+    "src/application/ports/setup_installation_delivery_ports.ts": {
+      "lines": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 2,
+        "covered": 2,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "src/application/usecases/setup/apply_setup_batch_use_case.ts": {
+      "lines": {
+        "total": 68,
+        "covered": 68,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 22,
+        "covered": 22,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 89,
+        "covered": 89,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 76,
+        "covered": 76,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "src/application/usecases/setup/deliver_setup_installation_use_case.ts": {
+      "lines": {
+        "total": 51,
+        "covered": 51,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 9,
+        "covered": 9,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 63,
+        "covered": 63,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 39,
+        "covered": 39,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "src/infrastructure/setup_batch_github_apply_adapter.ts": {
+      "lines": {
+        "total": 101,
+        "covered": 101,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 34,
+        "covered": 34,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 140,
+        "covered": 140,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 125,
+        "covered": 125,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "src/infrastructure/setup_installation_github_delivery_adapter.ts": {
+      "lines": {
+        "total": 141,
+        "covered": 141,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 27,
+        "covered": 27,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 187,
+        "covered": 187,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 141,
+        "covered": 141,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "src/infrastructure/composition/setup_publisher_installation_composition_root.ts": {
+      "lines": {
+        "total": 27,
+        "covered": 27,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 11,
+        "covered": 11,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 34,
+        "covered": 34,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 3,
+        "covered": 3,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "measuredChangedExecutableModules": 6,
+  "changedModuleGatesSatisfied": true,
+  "globalNativeAcceptance": false,
+  "fix": "Application explicitly passes current activity through batch file ports; both interactive compositions bind the shared adapter. Its synchronous post guard precedes transport with no await. Object dispatch flags are set only after admission. Typed pre-POST cancellation is preserved through ref/PR catch paths and coordinator mapping.",
+  "retainedFacts": "No additional tree/commit/ref/PR POST after cancellation; completed resource/object/branch facts and closed-v1 durable recovery remain. Unknown tree without commit is not replayable. Already dispatched writes retain normal readback and uncertainty.",
+  "contract": "One new C95 logical ID, proved by eight distinct parameter scenarios: four writes times successful freshness/Git-proof reads. First94case objects and selected companion unchanged; current95/91Jest+4package floor and required publications enforced. No user setting or scope/runner/template/retry change.",
+  "validation": "Catalog generation, specifications, types, full lint, actual three documentation validators, changed-test lint, Graphify and diff pass. Initial nonexistent local validate:docs alias remains a separate retained diagnostic; successful checks are not repeated.",
+  "package": "104files,11actualCLIinvocations/zeroeffectattempts,typedAPI/localweb smoke PASS with localhost admission.",
+  "bundles": {
+    "cli": {
+      "bytes": 8472597,
+      "sha256": "b4734ac06ba9ad6fe24be1cd510f6fd5f466d4588458e4dd8514ec74be7f5920",
+      "changedFromParent": true
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9",
+      "changedFromParent": false
+    },
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "changedFromParent": false
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a",
+      "changedFromParent": false
+    }
+  },
+  "archives": 36,
+  "priorArchiveRecordsPreserved": 276,
+  "normalHooksAndFinalNative": "Still required for the new final head; parent proof is not acceptance.",
+  "remaining": "Unresolved remote step-action inventory finding PRRT_kwDONSeBW866eWrN needs causal review/correction. No merge/installation or qualification is inferred.",
+  "actualDefaultInventory": "UNKNOWN14/20;notinstalled",
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "qualifiedProfile": null,
+  "production": "disabled"
+}

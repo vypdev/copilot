@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { SetupInstallationApprovedBlob, SetupInstallationDeliveryPlan, SetupInstallationSubtree,
   SetupInstallationTree, SetupInstallationTreeEntry } from '../application/contracts/setup_installation_delivery';
 import type { SetupInstallationObjectObserver } from '../application/ports/setup_installation_delivery_ports';
-import { SetupInstallationSnapshotChanged } from '../application/ports/setup_installation_delivery_ports';
+import { SetupInstallationDeliveryCancelled, SetupInstallationSnapshotChanged } from '../application/ports/setup_installation_delivery_ports';
 import { isSetupBatchInstallationReceipt, setupBatchBranch, setupBatchMarker,
   validSetupBatchAssetPath, validateSetupBatchTargets } from '../application/policies/setup_batch_policy';
 import { SETUP_INSTALLATION_MANIFEST_PATH } from '../application/policies/setup_installation_receipt_policy';
@@ -15,7 +15,7 @@ export class SetupInstallationGithubDeliveryAdapter {
   private readonly plan: SetupInstallationDeliveryPlan;
   private readonly approved: readonly SetupInstallationApprovedBlob[];
   constructor(private readonly transport: Pick<SetupBatchGithubTransport, 'call'>, plan: SetupInstallationDeliveryPlan,
-    token: string, private readonly revalidate: () => Promise<boolean>) {
+    token: string, private readonly revalidate: () => Promise<boolean>, private readonly active = () => true) {
     this.#token = token;
     this.plan = Object.freeze({ ...plan, target: Object.freeze({ ...plan.target }),
       files: Object.freeze(plan.files.map(file => Object.freeze({ ...file }))) });
@@ -37,10 +37,9 @@ export class SetupInstallationGithubDeliveryAdapter {
       if (treeSha === undefined) {
         await record({ effect: 'tree', state: 'starting' });
         await this.fresh();
-        posted = true;
-        const tree = batchObject(await this.call('POST /repos/{owner}/{repo}/git/trees', { base_tree: baseTree,
+        const tree = batchObject(await this.post('POST /repos/{owner}/{repo}/git/trees', { base_tree: baseTree,
           tree: this.plan.files.map(file => ({ path: file.path, type: 'blob', mode: '100644',
-            ...(file.content === null ? { sha: null } : { content: file.content }) })) }));
+            ...(file.content === null ? { sha: null } : { content: file.content }) })) }, () => { posted = true; }));
         if (!batchSha(tree?.sha)) throw new SetupBatchProviderError('malformed');
         treeSha = tree.sha;
         await record({ effect: 'tree', state: 'completed', sha: treeSha });
@@ -50,9 +49,8 @@ export class SetupInstallationGithubDeliveryAdapter {
       await this.assertTrees(baseTree, treeSha);
       await record({ effect: 'commit', state: 'starting' });
       await this.fresh();
-      posted = true;
-      const commit = batchObject(await this.call('POST /repos/{owner}/{repo}/git/commits', { tree: treeSha,
-        parents: [this.plan.target.baseSha], message: `chore: configure Copilot (setup ${this.plan.operationId})` }));
+      const commit = batchObject(await this.post('POST /repos/{owner}/{repo}/git/commits', { tree: treeSha,
+        parents: [this.plan.target.baseSha], message: `chore: configure Copilot (setup ${this.plan.operationId})` }, () => { posted = true; }));
       if (!batchSha(commit?.sha)) throw new SetupBatchProviderError('malformed');
       await record({ effect: 'commit', state: 'completed', sha: commit.sha });
       pending = undefined; posted = false;
@@ -75,8 +73,11 @@ export class SetupInstallationGithubDeliveryAdapter {
     }
     if (inspectOnly) throw new SetupBatchProviderError('unknown');
     await this.fresh();
-    try { await this.call('POST /repos/{owner}/{repo}/git/refs', { ref: `refs/heads/${ref}`, sha: commit }); }
-    catch { /* Read the exact owned ref after an uncertain response; never repeat POST. */ }
+    try { await this.post('POST /repos/{owner}/{repo}/git/refs', { ref: `refs/heads/${ref}`, sha: commit }); }
+    catch (error) {
+      if (error instanceof SetupInstallationDeliveryCancelled) throw error;
+      /* Read the exact owned ref after an uncertain response; never repeat POST. */
+    }
     if (await this.branchSha() !== commit) throw new SetupBatchProviderError('unknown');
     await this.fresh();
   }
@@ -88,9 +89,12 @@ export class SetupInstallationGithubDeliveryAdapter {
       if (inspectOnly) throw new SetupBatchProviderError('unknown');
       await this.fresh();
       try {
-        await this.call('POST /repos/{owner}/{repo}/pulls', { head: setupBatchBranch(this.plan.operationId),
+        await this.post('POST /repos/{owner}/{repo}/pulls', { head: setupBatchBranch(this.plan.operationId),
           base: this.plan.target.defaultBranch, title: this.plan.title, body: this.plan.body });
-      } catch { /* Inspect the exact marker/head/base after any uncertain response. */ }
+      } catch (error) {
+        if (error instanceof SetupInstallationDeliveryCancelled) throw error;
+        /* Inspect the exact marker/head/base after any uncertain response. */
+      }
       number = await this.inspectPullRequest(commit);
     }
     if (!number || await this.branchSha() !== commit) throw new SetupBatchProviderError('unknown');
@@ -133,6 +137,13 @@ export class SetupInstallationGithubDeliveryAdapter {
       || value.planDigest !== this.plan.digest) throw new SetupBatchProviderError('unknown');
   }
   private async fresh(): Promise<void> { if (!await this.revalidate()) throw new SetupInstallationSnapshotChanged(); }
+  private post(route: string, parameters: Record<string, unknown>, dispatched?: () => void): Promise<unknown> {
+    // No await separates current-session admission from the actual transport call.
+    // Mark object intent as dispatched only after this final cancellation check.
+    if (!this.active()) throw new SetupInstallationDeliveryCancelled();
+    dispatched?.();
+    return this.call(route, parameters);
+  }
   private call(route: string, parameters: Record<string, unknown>): Promise<unknown> {
     return this.transport.call(this.#token, route, { owner: this.plan.target.owner, repo: this.plan.target.name, ...parameters });
   }

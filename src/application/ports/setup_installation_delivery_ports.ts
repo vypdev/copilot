@@ -30,3 +30,8 @@ export type SetupInstallationObjectObserver = (effect: SetupInstallationObjectEf
 export class SetupInstallationSnapshotChanged extends Error {
   constructor() { super('GitHub setup request is unknown because the reviewed installation snapshot changed.'); }
 }
+
+/** Observed before dispatch; no provider write was started by that command. */
+export class SetupInstallationDeliveryCancelled extends Error {
+  constructor() { super('Setup file delivery was cancelled before provider dispatch.'); }
+}

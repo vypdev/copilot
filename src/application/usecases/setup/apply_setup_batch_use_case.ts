@@ -67,9 +67,9 @@ export class ApplySetupBatchUseCase {
             ? 'prepared-objects' as const : interrupted && retainedReceipt.preparedCommit
               ? !retainedReceipt.effects.includes('branch') ? 'branch' as const : !retainedReceipt.effects.includes('pull-request') ? 'pull-request' as const : undefined : undefined;
           await this.ports.coordinator.execute({
-            prepareCommit: observe => this.ports.writer.prepareCommit(targetPlan, plan.operationId, token, observe),
-            branch: (commit, inspectOnly) => this.ports.writer.branch(targetPlan, plan.operationId, commit, token, inspectOnly),
-            pullRequest: (commit, inspectOnly) => this.ports.writer.pullRequest(targetPlan, plan.operationId, commit, token, inspectOnly),
+            prepareCommit: observe => this.ports.writer.prepareCommit(targetPlan, plan.operationId, token, observe, () => this.ports.presentation.active()),
+            branch: (commit, inspectOnly) => this.ports.writer.branch(targetPlan, plan.operationId, commit, token, inspectOnly, () => this.ports.presentation.active()),
+            pullRequest: (commit, inspectOnly) => this.ports.writer.pullRequest(targetPlan, plan.operationId, commit, token, inspectOnly, () => this.ports.presentation.active()),
           }, {
             active: () => this.ports.presentation.active(),
             revalidate: () => this.ports.writer.revalidate(targetPlan, token, receipt.effects),

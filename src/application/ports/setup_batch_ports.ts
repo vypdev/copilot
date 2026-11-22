@@ -32,11 +32,12 @@ export interface SetupBatchApplyPort {
   variables(plan: SetupBatchTargetPlan, token: string): Promise<void>;
   labels(plan: SetupBatchTargetPlan, token: string): Promise<void>;
   issueTypes(plan: SetupBatchTargetPlan, token: string): Promise<void>;
-  prepareCommit(plan: SetupBatchTargetPlan, operationId: string, token: string, observe?: SetupInstallationObjectObserver): Promise<string>;
+  /** Bind current session activity through the adapter's final asynchronous preflight to provider dispatch. */
+  prepareCommit(plan: SetupBatchTargetPlan, operationId: string, token: string, observe: SetupInstallationObjectObserver | undefined, active: () => boolean): Promise<string>;
   /** Create once or inspect and adopt only the exact prepared commit and receipt. */
-  branch(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly?: boolean): Promise<void>;
+  branch(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly: boolean | undefined, active: () => boolean): Promise<void>;
   /** Inspect the exact marker before creation and after an uncertain response. */
-  pullRequest(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly?: boolean): Promise<number>;
+  pullRequest(plan: SetupBatchTargetPlan, operationId: string, commit: string, token: string, inspectOnly: boolean | undefined, active: () => boolean): Promise<number>;
 }
 export interface SetupBatchPresentationPort {
   review(plan: SetupBatchPlan, operation: SetupBatchOperation): Promise<boolean>;
