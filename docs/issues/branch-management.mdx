@@ -424,3 +424,19 @@ Closed issue events skip open-work branch and SDD preparation. Adding or removin
 Classification assignments and final assessment batches can run up to four at a time. Each request keeps its assigned source and head. Classification finishes before comparison analysis; complete comparison facts finish before dependent assessments. The reducer restores source order and publishes one complete assessment only after every receipt and freshness check passes.
 
 The existing comparison-part profile, 120-call and 30-minute progress allowance stay unchanged. A terminal error stops queued work and lets admitted requests settle. Their validated receipts inform the failure count and remain provisional; the previous percentage, labels and assessment stay in place. Retry a fresh complete assessment through the existing workflow. This adds no configuration or durable resume handle. Bugbot finding investigation keeps its separate time/token telemetry contract.
+
+
+### Scope groups and repeated comparison work
+
+Commit packs consecutive complete assessment batches while their combined
+acceptance scope fits the existing64,000UTF-8-byte request limit. Each group keeps
+all exclusions and source references and collects every comparison part under
+its own acceptance context. A larger scope can therefore use several batches
+per group without sharing facts across different contexts or dropping evidence.
+
+Before extraction, the run reports classification calls, group and part counts,
+assessment batches, exact scope bytes and minimum calls. These diagnostics help
+explain a retained call-budget result; the120-call/30-minute allowance and complete
+same-head publication gate are unchanged. A genuine refusal leaves the previous
+assessment visible. Correct the cause and prepare a complete fresh assessment;
+do not raise a limit or rerun unchanged input to seek a different outcome.

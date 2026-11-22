@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { createSocket } from 'node:dgram';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -58,4 +59,60 @@ describe('publisher package guard before Undici socket dispatch', () => {
         await rm(directory, { recursive: true, force: true });
       }
     });
+});
+
+describe('publisher977-C105: UDP package transport fences', () => {
+  it.each((['send', 'sendto'] as const).flatMap(operation => [false, true].map(guarded => ({ operation, guarded }))))(
+    '$operation guarded=$guarded has a real loopback positive control and cannot send through the guard', async ({ operation, guarded }) => {
+      const directory = await mkdtemp(join(tmpdir(), 'publisher-guard-udp-'));
+      const receiver = createSocket('udp4');
+      let packets = 0;
+      let delivered!: () => void;
+      const packet = new Promise<void>(resolve => { delivered = resolve; });
+      receiver.on('message', bytes => { expect(bytes.toString()).toBe('controlled-fixture'); packets++; delivered(); });
+      try {
+        await new Promise<void>((resolve, reject) => { receiver.once('error', reject); receiver.bind(0, '127.0.0.1', resolve); });
+        const address = receiver.address();
+        const report = join(directory, 'guard.json');
+        const args = operation === 'send' ? "Buffer.from('controlled-fixture'), port, '127.0.0.1'"
+          : "Buffer.from('controlled-fixture'), 0, 18, port, '127.0.0.1'";
+        const script = `${guarded ? 'require(' + JSON.stringify(guard) + ');' : ''}
+          const socket = require('node:dgram').createSocket('udp4'), port = ${address.port};
+          try { socket.${operation}(${args}, error => { if(error) throw error; process.stdout.write('delivered'); socket.close(); }); }
+          catch (error) { if(error.message !== 'Packaged publisher negative control attempted an effect.') throw error; process.stdout.write('blocked'); }`;
+        const child = spawn(process.execPath, ['-e', script], { cwd: root,
+          env: { ...Object.fromEntries(Object.entries(process.env).filter(([key]) => ['PATH', 'SystemRoot', 'WINDIR', 'TMPDIR', 'TEMP', 'TMP'].includes(key))), COPILOT_PUBLISHER_GUARD_REPORT: report }, stdio: ['ignore', 'pipe', 'pipe'] });
+        let stdout = '', stderr = '';
+        child.stdout.on('data', chunk => { stdout += String(chunk); }); child.stderr.on('data', chunk => { stderr += String(chunk); });
+        const terminal = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve, reject) => {
+          child.once('error', reject); child.once('close', (code, signal) => resolve({ code, signal }));
+        });
+        if (stdout === 'delivered') await packet;
+        expect(terminal).toEqual({ code: 0, signal: null }); expect(stderr).toBe('');
+        expect(stdout).toBe(guarded ? 'blocked' : 'delivered'); expect(packets).toBe(guarded ? 0 : 1);
+        if (guarded) expect(JSON.parse(await readFile(report, 'utf8'))).toEqual({
+          networkAttempts: ['datagram.' + operation], filesystemWrites: [], childProcesses: [], listeners: [], undiciRequests: 0, exitCode: 0,
+        });
+      } finally { receiver.close(); await rm(directory, { recursive: true, force: true }); }
+    },
+  );
+  it.each(['bind', 'connect'] as const)('blocks UDP %s before creating a listener or connected socket', async operation => {
+    const directory = await mkdtemp(join(tmpdir(), 'publisher-guard-udp-state-'));
+    const report = join(directory, 'guard.json');
+    try {
+      const script = `require(${JSON.stringify(guard)}); const socket = require('node:dgram').createSocket('udp4');
+        try { socket.${operation}(${operation === 'bind' ? 0 : 9}, '127.0.0.1'); throw new Error('not fenced'); }
+        catch (error) { if(error.message !== 'Packaged publisher negative control attempted an effect.') throw error; }`;
+      const child = spawn(process.execPath, ['-e', script], { cwd: root,
+        env: { ...Object.fromEntries(Object.entries(process.env).filter(([key]) => ['PATH', 'SystemRoot', 'WINDIR', 'TMPDIR', 'TEMP', 'TMP'].includes(key))), COPILOT_PUBLISHER_GUARD_REPORT: report }, stdio: ['ignore', 'pipe', 'pipe'] });
+      let stderr = ''; child.stderr.on('data', chunk => { stderr += String(chunk); });
+      const terminal = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve, reject) => {
+        child.once('error', reject); child.once('close', (code, signal) => resolve({ code, signal }));
+      });
+      expect(terminal).toEqual({ code: 0, signal: null }); expect(stderr).toBe('');
+      const observations = JSON.parse(await readFile(report, 'utf8'));
+      expect(observations.networkAttempts).toEqual(operation === 'connect' ? ['datagram.connect'] : []);
+      expect(observations.listeners).toEqual(operation === 'bind' ? ['datagram.bind'] : []);
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  });
 });

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-22",
+  "parent": "68657a12e6f7f7a8717fcb4728b25679dced5a9f",
+  "sourceSha256": {
+    "src/application/policies/repository_agent_guidance_policy.ts": "a43d83feb4d1e820cc84fb68e184c77f575e33ab0f521e2f6319011fc2bc9476",
+    "test-support/setup-publisher-package-guard.cjs": "ade50ccf88bd4f425c84f0fd349fd53ecd67921a742a58dd4300897ea61bab95",
+    "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts": "e851a496cc979c0b72de9e962ec0ca2464f63621f0f21b219c19f9b5bb36fc3c",
+    "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts": "432c67c6961044eacbbef3b0fb57b1d7ebdda7a3d2d4041424292ebbdde3fdc8",
+    "src/tooling/__tests__/setup_publisher_package_guard.test.ts": "e04be25d8e50387e9c480f76ee7c3ef24ca13db929f866aae6b93f24431df84a",
+    "scripts/validate-setup-publisher-acceptance.cjs": "916c45020648227b84850cdd3ea43b26d86b08448b787122ac0c1c15b672aec8",
+    "specs/setup-publisher-installation-acceptance.json": "2146e1129131ac427b98749f96dacf0c99eab1cb38ed2998f5a2bb6d000bc4a3"
+  },
+  "causalContrast": {
+    "sameFinalPrivateHarness": true,
+    "actualPlannerWithSelfConsistentHashes": true,
+    "actualUdpLoopbackSendSendto": true,
+    "original": {
+      "pass": 4,
+      "fail": 10
+    },
+    "candidate": {
+      "pass": 14,
+      "fail": 0
+    }
+  },
+  "integratedFocused": {
+    "suites": 4,
+    "pass": 176,
+    "fail": 0,
+    "skip": 0
+  },
+  "coherentCohort": {
+    "suites": 30,
+    "pass": 1344,
+    "fail": 0,
+    "skip": 0,
+    "jestExit": 1,
+    "whyExit": "unexecuted unrelated global/web/source-catalog coverage owners",
+    "nativeOrGlobalAcceptance": false
+  },
+  "acceptance": {
+    "logicalIds": 105,
+    "jestMapped": 101,
+    "extractedPackageIds": 4,
+    "all20ExpandedNewAssertionsBound": true,
+    "old103ObjectsUnchanged": true,
+    "old103ObjectsSha256": "52d59a879082cf9b7a494aab0103ffbe2741a8db2bfcb47465a376ba87f95e82",
+    "selectedCompanionUnchangedSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+    "initialShortNameMappingFailureRetained": true,
+    "correctedMappingPassesSameExecutedReport": true
+  },
+  "changedGuidanceModuleCoverage": {
+    "statements": 95.04,
+    "lines": 96.11,
+    "branches": 95.3,
+    "functions": 100
+  },
+  "validation": "build/types/lint/docs/specifications/package104/CLI-API-local-web-smoke PASS",
+  "nativeFinalHead": "PENDING",
+  "guardIsNotOsNetworkIsolation": true,
+  "actualModels": 0,
+  "installationWrites": 0,
+  "pilotWrites": 0,
+  "production": "disabled"
+}

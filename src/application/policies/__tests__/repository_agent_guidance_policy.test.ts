@@ -12,6 +12,14 @@ import {
 } from '../repository_agent_guidance_policy';
 
 describe('repository agent guidance policy', () => {
+  it.each(['feature', 'bugfix', 'help', 'chore', 'documentation', 'hotfix', 'release'] as const)(
+    'publisher977-C104: rejects a noncanonical %s template even when it is nonempty', kind => {
+      const profile = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
+      const input = structuredClone(profile);
+      (input.issueWorkflows.forms[kind] as { template: string }).template = 'foreign-form.yml';
+      expect(validRepositoryAgentProfile(JSON.stringify(input))).toBe(false);
+    },
+  );
   it.each([
     ['missing inventory', undefined], ['null inventory', null], ['array inventory', []], ['text inventory', 'unknown'],
     ['unmanaged path', { '../outside.json': { role: 'profile', sha256: 'a'.repeat(64) } }],

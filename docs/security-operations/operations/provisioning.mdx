@@ -131,6 +131,11 @@ copilot setup --publisher-manifest /absolute/path/publisher-proposal.json --dry-
 
 Review the complete `.github/workflows/copilot_bugbot_status_card.yml` and
 `.copilot/setup-manifest.json` contents, source/default/base and retained effects.
+With issue forms enabled, an installed profile must name the canonical template
+for each enabled workflow kind. A different nonempty template remains unsupported
+even when its manifest hashes match. Reconcile the installed guidance through the
+reviewed setup route before trying publisher preparation again; changing hashes
+does not establish compatibility.
 Displayed untrusted content is escaped and prefixed to keep it inert. Dry-run,
 decline and inspection create no journal, lock, object, ref or PR. Run again
 without `--dry-run` in an interactive terminal and enter the displayed approval

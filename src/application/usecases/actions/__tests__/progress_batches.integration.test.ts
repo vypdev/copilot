@@ -20,6 +20,8 @@ import { assessmentWireFixture } from './fixtures/progress_assessment_wire_fixtu
 import { inventoryFixture, addedFiles } from '../../../../data/repository/__tests__/support/immutable_progress_inventory_fixture';
 import { PROGRESS_BATCH_PROFILE } from '../../../policies/progress_batch_policy';
 import { buildActionSummary } from '../../../policies/action_summary_policy';
+import { frameProgressEvidence } from '../../../policies/progress_evidence_protocol_policy';
+import * as logging from '../../../ports/logging_ports';
 
 const base = 'a'.repeat(40), head = 'b'.repeat(40);
 const fixtureText = readFileSync(join(__dirname, 'fixtures/domus-29-immutable-replay.json.gz.hex'), 'utf8');
@@ -420,16 +422,57 @@ it('partitions a coherent scope exceeding one acceptance byte envelope without d
     expect(results.at(-1)).toMatchObject({ success: true, payload: { progress: 50 } });
     expect(f.finalOutputs).toHaveLength(4);
     expect(f.finalOutputs.flatMap(output => output.requirements)).toHaveLength(128);
-    expect(f.query.mock.calls.filter(([request]) => (request.options!.schema as any).properties.files)).toHaveLength(8);
+    expect(f.query.mock.calls.filter(([request]) => (request.options!.schema as any).properties.files)).toHaveLength(4);
     expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
 });
+it('progress-groups-1000 completes twelve classifications, seventeen complete parts and seven assessments within the unchanged call ledger', async () => {
+    const body = Array.from({ length: 384 }, (_, index) => index < 224
+        ? `Obligation ${index + 1}: ${'q'.repeat(370)}` : `Background ${index + 1}.`).join('\n');
+    const changes = Array.from({ length: 17 }, (_, index) => ({ path: `src/part-${index}.ts`, unitId: `unit-${index}`,
+        status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(150_000) }));
+    const parts = partitionProgressDiff(base, head, changes, 'framed-v1');
+    if (parts.kind !== 'partitioned') throw new Error('Expected complete fixture parts.');
+    const diff = frameProgressEvidence(parts, head, changes, changes.map(change => change.path), undefined, '12345678-1234-4234-8234-123456789abc');
+    expect(diff.partitions).toHaveLength(17);
+    const f = scenario(body, diff), answer = f.query.getMockImplementation()!;
+    f.query.mockImplementation(async request => {
+        const response = await answer(request) as any;
+        if (response.lines) response.lines.forEach((line: any) => { if (Number(line.id.slice(1)) > 224) line.kind = 'context'; });
+        return response;
+    });
+    const results = await f.invoke();
+    if (!results.at(-1)?.success) throw new Error(JSON.stringify(results.at(-1)?.errors.map(error => ({ code: error.code, recovery: error.recovery }))));
+    expect(results.at(-1)).toMatchObject({ success: true, payload: { progress: 50 } });
+    const sources = f.query.mock.calls.filter(([request]) => (request.options!.schema as any).properties.files);
+    expect(f.query.mock.calls.filter(([request]) => (request.options!.schema as any).properties.lines)).toHaveLength(12);
+    expect(f.finalOutputs).toHaveLength(7);
+    expect(f.finalOutputs.flatMap(output => output.requirements).map(requirement => requirement.id))
+        .toEqual(Array.from({ length: 224 }, (_, index) => `R${index + 1}`));
+    expect(sources).toHaveLength(34);
+    expect(new Set(sources.map(([request]) => (request.options!.schema as any).properties.partitionId.enum[0])).size).toBe(34);
+    for (const change of changes) expect(sources.filter(([request]) => (request.options!.schema as any).properties.files.items.properties.unitId.enum.includes(change.unitId))).toHaveLength(2);
+    expect(f.query).toHaveBeenCalledTimes(53); expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+});
 it('preflights the complete repeated evidence plan against the call budget before any source or assessment query', async () => {
-    const body = Array.from({ length: 256 }, (_, index) => `Implement distinct obligation ${index + 1}. ${'q'.repeat(300)}`).join('\n');
+    const body = [...Array.from({ length: 256 }, (_, index) => `Implement distinct obligation ${index + 1}. ${'q'.repeat(300)}`),
+        ...Array.from({ length: 17 }, (_, index) => `Excluded ${index + 1}: ${'x'.repeat(1120)}`)].join('\n');
     const diff = partitionProgressDiff(base, head, Array.from({ length: 16 }, (_, index) => ({ path: `src/file-${index}.ts`, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(150_000) })));
-    const f = scenario(body, diff), results = await f.invoke();
-    expect(results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'call-budget' }) }) })] });
-    expect(f.query).toHaveBeenCalledTimes(8);
-    expect(f.finalOutputs).toHaveLength(0); retained(f);
+    const logged = jest.spyOn(logging, 'logInfo').mockImplementation(() => undefined);
+    try {
+        const f = scenario(body, diff), answer = f.query.getMockImplementation()!;
+        f.query.mockImplementation(async request => {
+            const response = await answer(request) as any;
+            if (response.lines) response.lines.forEach((line: any) => { if (Number(line.id.slice(1)) > 256) line.kind = 'excluded'; });
+            return response;
+        });
+        const results = await f.invoke();
+        expect(results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'call-budget' }) }) })] });
+        expect(f.query).toHaveBeenCalledTimes(9);
+        expect(f.finalOutputs).toHaveLength(0); retained(f);
+        const plan = logged.mock.calls.map(([line]) => line).find(line => line.startsWith('Progress evidence plan:'));
+        expect(plan).toMatch(/^Progress evidence plan: 9 classification calls, 8 scope groups, 16 comparison parts per group, 8 assessment batches; scope UTF-8 bytes \[[0-9, ]+\]; minimum 145 of 120 calls\./u);
+        expect(plan).not.toContain('Implement distinct obligation');
+    } finally { logged.mockRestore(); }
 });
 it('requires explicit repository identity before dispatching a direct batch analysis', async () => {
     const query = jest.fn(), body = 'Required source.', diff = partitionProgressDiff(base, head, [{ path: 'src/a.ts', status: 'modified', additions: 1, deletions: 0, patch: '+source' }]);

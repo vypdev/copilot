@@ -2520,6 +2520,110 @@
           "test": "publisher977-C103: delivery port error constructors have an independent runtime coverage gate"
         }
       ]
+    },
+    {
+      "id": "publisher977-C104",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Noncanonical form templates cannot establish installed-profile authority or obtain a two-file plan, including with self-consistent artifact hashes.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical feature template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical bugfix template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical help template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical chore template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical documentation template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical hotfix template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical release template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong feature form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong bugfix form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong help form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong chore form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong documentation form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong hotfix form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong release form template"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C105",
+      "area": "Packaged integration/security",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G07"
+      ],
+      "assertion": "Actual UDP loopback controls prove send/sendto denial before dispatch and bind/connect fences record no hidden transport or listener effect.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences send guarded=false has a real loopback positive control and cannot send through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences send guarded=true has a real loopback positive control and cannot send through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences sendto guarded=false has a real loopback positive control and cannot send through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences sendto guarded=true has a real loopback positive control and cannot send through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences blocks UDP bind before creating a listener or connected socket"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences blocks UDP connect before creating a listener or connected socket"
+        }
+      ]
     }
   ]
 }

@@ -357,7 +357,7 @@ function validRepositoryAgentWorkflowFact(
     'branchPrefix', 'requiredFields', 'workflow',
   ])) return false;
   const definition = ISSUE_WORKFLOW_CATALOG[kind];
-  return (formsEnabled ? isNonEmptyString(value.template) : value.template === null)
+  return (formsEnabled ? value.template === definition.formFile : value.template === null)
     && isStringArray(value.labels) && value.labels.every(isNonEmptyString)
     && isStringArray(value.formLabels) && value.formLabels.every(isNonEmptyString)
     && value.nativeIssueType === definition.nativeIssueType

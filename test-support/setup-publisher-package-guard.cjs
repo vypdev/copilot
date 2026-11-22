@@ -22,6 +22,10 @@ for (const name of ['node:http', 'node:https']) {
   const transport = require(name);
   for (const operation of ['request', 'get']) transport[operation] = () => deny('networkAttempts', operation);
 }
+for (const operation of ['send', 'sendto', 'connect']) {
+  require('node:dgram').Socket.prototype[operation] = () => deny('networkAttempts', 'datagram.' + operation);
+}
+require('node:dgram').Socket.prototype.bind = () => deny('listeners', 'datagram.bind');
 require('node:net').Socket.prototype.connect = () => deny('networkAttempts', 'socket.connect');
 require('node:tls').connect = () => deny('networkAttempts', 'tls.connect');
 require('node:net').Server.prototype.listen = () => deny('listeners', 'listen');

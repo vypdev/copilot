@@ -1275,3 +1275,36 @@ remain required. These model-free controls prove no installation, native canary,
 platform observation or qualification. Provisioning guidance explains the unknown
 inventory and invalid-resume next actions; source and catalogue evidence stay
 coordinated. No new configuration, permission, schema or retry is introduced.
+
+### Reviewed publisher route: canonical form authority and UDP controls
+
+An installed repository profile with issue forms enabled MUST bind every enabled
+workflow's template to that kind's canonical catalog form file. A nonempty wrong
+template is unsupported even when all manifest/profile hashes are self-consistent;
+planning MUST reject it before preview, approval or provider writes. Forms-disabled
+profiles retain null templates. Canonical generated profiles and their two-file
+review plans remain supported. No template override or inferred trust is added.
+
+The packaged negative-control guard MUST intercept UDP sends (`send` and `sendto`),
+connected sockets and binds before transport/listener effects. Attempt counters
+retain content-free operation names. Actual loopback send/sendto positive controls
+MUST deliver a datagram without the guard; the same guarded controls MUST observe
+zero received datagrams and the corresponding denied operation. Bind/connect
+controls separately prove the early fences. This process test guard is not OS-level
+isolation and does not establish installation, canary or model confinement.
+
+| Case | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C104 | Read-only planning/freshness | PU977-G01, PU977-G07 | Noncanonical form templates cannot establish installed-profile authority or obtain a two-file plan, including with self-consistent artifact hashes. |
+| publisher977-C105 | Packaged integration/security | PU977-G06, PU977-G07 | Actual UDP loopback controls prove send/sendto denial before dispatch and bind/connect fences record no hidden transport or listener effect. |
+
+These two obligations extend the cumulative minimum to **105 logical IDs /
+101 mapped Jest cases plus four extracted-package cases**. C104 has seven direct
+profile and seven actual-planner scenarios; C105 has four loopback send/sendto
+scenarios and two early bind/connect controls. All C01–C103 ledger objects and
+the Action-selected companion MUST remain unchanged. All C01–C105 retain published
+rows and executable mappings; the validator's independent minimum is105. Existing
+pure/runtime, global/changed-line, package, documentation and final-head native
+gates remain required. User documentation explains unsupported template state and
+the limits of package transport evidence. No new configuration, privilege,
+permission, schema, timeout, retry or activation is introduced.

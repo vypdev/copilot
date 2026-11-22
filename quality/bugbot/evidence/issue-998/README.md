@@ -1,11 +1,27 @@
 # Reviewed publisher source evidence (#998)
 
+## Review round12: canonical forms and UDP controls
+
+The source rejects noncanonical enabled form templates, including an otherwise
+self-consistent installed profile/manifest. The packaged effect guard now denies
+UDP send/sendto/connect and bind before transport/listener effects. The same
+private control with the actual planner and actual loopback UDP observations was
+4PASS/10FAIL before and14PASS/0FAIL after the candidate changes. The integrated
+C104/C105 mappings extend the cumulative floor to105 logical IDs,101 mapped Jest
+cases and four extracted-package cases; prior103 ledger objects and the selected
+companion bytes are preserved. The [round12 packet](./review-round12/README.md)
+retains176focused and1344cohort passes,101/101 exact mapped Jest cases, the mapping
+failure and correction, and passing build/types/lint/docs/specifications/package
+and CLI/API/local web smoke. Final normal hooks/native gates remain pending.
+The guard is a process test boundary, not OS-level network isolation.
+No installation, canary or model confinement is established by this evidence.
+
 This packet covers the explicit publisher proposal route. Default installation,
 its specific authorization and a real native canary remain #977. No human Setup
 observation, model-profile qualification, production activation or evaluated-pilot
 write is inferred from these tests.
 
-## Current correction: cancellation at actual Git dispatch
+## Retained round9 correction: cancellation at actual Git dispatch
 
 [Round9](./review-round9/README.md) records the current95-case acceptance floor:
 91mapped Jest cases plus the same four extracted-package cases. Its27-file cohort
