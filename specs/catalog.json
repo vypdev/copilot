@@ -3063,7 +3063,8 @@
         "docs/security-operations/operations/smoke-tests.mdx",
         "docs/development/testing.mdx",
         "quality/bugbot/evidence/issue-1002/controls/native-raw-fd-observation/README.md",
-        "quality/bugbot/evidence/issue-1002/controls/startup-observation/README.md"
+        "quality/bugbot/evidence/issue-1002/controls/startup-observation/README.md",
+        "quality/bugbot/evidence/issue-1002/controls/engine-connection-cause/README.md"
       ]
     },
     {

@@ -757,6 +757,37 @@ describe('independent local Engine observation with controlled HTTP events', () 
     } finally { f.close(); f.mock.mockRestore(); }
   });
 
+  it.each([['ENOENT', 'missing-socket'], ['EACCES', 'access-denied'], ['EPERM', 'access-denied'],
+    ['ECONNREFUSED', 'connection-refused']])('retains the closed connection cause for %s without error text', async (code, connectionFailure) => {
+    const f = fixture((response, request) => request.emit('error', Object.assign(new Error('CONTROL_SENTINEL private failure'), { code })));
+    try {
+      const value = await diagnostic.engineObservation(new AbortController().signal);
+      expect(value).toEqual({ state: 'unavailable', cause: 'local-engine-unavailable', connectionFailure });
+      expect(JSON.stringify(value)).not.toContain('CONTROL_SENTINEL');
+      expect(value).not.toHaveProperty('code');
+    } finally { f.close(); f.mock.mockRestore(); }
+  });
+
+  it.each(['EIO', undefined, '__proto__'])('leaves unknown or absent native connection code %s unaccredited', async code => {
+    const f = fixture((response, request) => request.emit('error', Object.assign(new Error('CONTROL_SENTINEL unknown failure'), { code })));
+    try {
+      const value = await diagnostic.engineObservation(new AbortController().signal);
+      expect(value).toEqual({ state: 'unavailable', cause: 'local-engine-unavailable' });
+      expect(JSON.stringify(value)).not.toContain('CONTROL_SENTINEL');
+    } finally { f.close(); f.mock.mockRestore(); }
+  });
+
+  it('shows an actionable closed Engine cause and refuses forged summary text', async () => {
+    const receipt = await diagnostic.diagnose(modeledPorts());
+    receipt.engine = { state: 'unavailable', cause: 'local-engine-unavailable', connectionFailure: 'missing-socket' };
+    expect(policy.renderSummary(receipt)).toContain('Engine: **unavailable (socket missing)**.');
+    receipt.engine.connectionFailure = 'CONTROL_SENTINEL';
+    expect(policy.renderSummary(receipt)).toContain('Engine: **unavailable (cause unknown)**.');
+    expect(policy.renderSummary(receipt)).not.toContain('CONTROL_SENTINEL');
+    receipt.engine = { state: 'observed', version: '29.8.2', apiVersion: '1.56', workloadExecuted: false };
+    expect(policy.renderSummary(receipt)).toContain('Engine: **version metadata observed; workload not verified**.');
+  });
+
   it.each(['invalid', 'oversized', 'aborted', 'error', 'request-error', 'timeout', 'http-error'])('retains %s as unavailable rather than Engine acceptance', async fault => {
     const f = fixture((response, request) => {
       if (fault === 'invalid') { response.emit('data', Buffer.from('invalid')); response.emit('end'); }

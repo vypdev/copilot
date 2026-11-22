@@ -172,6 +172,19 @@ file's hash, format, ownership and mode; metadata alone never proves execution.
 An optional local Engine version observation is separate and creates no
 image/container/workload.
 
+The Engine row distinguishes a missing socket, denied socket access and a
+refused connection when the job's actual request provides one of those known
+causes. The receipt adds only the closed `connectionFailure` tag; raw error
+codes, messages and paths are excluded. Unknown errors and older receipts stay
+cause-unknown. A forged value cannot appear as summary text.
+
+`Engine: unavailable (socket missing)` describes the fixed job socket query;
+it does not establish that Docker is uninstalled on the host. Inspect the
+existing runner's local Unix-socket configuration and the job's access before
+preparing qualification. Nothing changes permissions automatically. A version
+response appears as `version metadata observed; workload not verified` and
+still does not prove the contained SDK runtime or model-tool isolation.
+
 The changed run45020212032 on ubuntu-runner-2 retained its original seven-row
 receipt: unshare failed, both bare bubblewrap checks returned0, Codex without
 PATH could not find bwrap, PATH startup returned0, and read/write both returned0

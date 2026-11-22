@@ -185,6 +185,10 @@ async function downloadArchive(archive, target, signal) {
 
 function engineObservation(signal) {
   if (signal.aborted) return Promise.resolve({ state: 'unavailable', cause: 'cancelled' });
+  const unavailable = error => {
+    const connectionFailure = policy.engineConnectionFailure(error?.code);
+    return { state: 'unavailable', cause: 'local-engine-unavailable', ...(connectionFailure ? { connectionFailure } : {}) };
+  };
   let request, response, responseClosed, resolveClosed, complete = false;
   const closed = new Promise(resolve => { resolveClosed = resolve; });
   const pending = new Promise(resolve => {
@@ -211,13 +215,13 @@ function engineObservation(signal) {
     });
     request.once('close', resolveClosed);
     request.once('close', () => signal.removeEventListener('abort', abort));
-    request.once('error', () => finish({ state: 'unavailable', cause: 'local-engine-unavailable' }));
+    request.once('error', error => finish(unavailable(error)));
     request.once('timeout', () => finish({ state: 'unavailable', cause: 'transport-timeout' }));
     signal.addEventListener('abort', abort, { once: true });
     if (signal.aborted) abort(); else request.end();
-    } catch {
+    } catch (error) {
       if (!request) resolveClosed();
-      finish({ state: 'unavailable', cause: 'local-engine-unavailable' });
+      finish(unavailable(error));
     }
   });
   return pending.finally(async () => { request?.destroy(); response?.destroy(); await closed; if (responseClosed) await responseClosed; });

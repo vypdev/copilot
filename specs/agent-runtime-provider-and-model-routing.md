@@ -1124,6 +1124,53 @@ new issue/PR comment stream. Report output projects account/private paths and
 does not inherit or enumerate credentials. Production settings are not mutated;
 the receipt does not infer their live values from a constant.
 
+For a failed local Engine connection, the observer MUST preserve only a closed
+optional `connectionFailure` tag: `ENOENT` means `missing-socket`, `EACCES` or
+`EPERM` means `access-denied`, and `ECONNREFUSED` means `connection-refused`.
+Unknown, absent, non-string or prototype-key code values MUST leave that field
+absent. Keep `state:unavailable` and `cause:local-engine-unavailable`; never
+serialize the raw error code, message, stack, path or arbitrary provider text.
+The same classification applies to synchronous request construction failure.
+Existing schema4 receipts without the optional field remain cause-unknown;
+earlier native observations MUST NOT acquire a retroactively inferred cause.
+
+The Job Summary MUST display only fixed Engine status text. For example:
+
+| Visible status | Meaning and next action |
+|---|---|
+| Engine: unavailable (socket missing) | The request reported no socket at the fixed job path; inspect the existing runner's local Engine configuration. This does not prove Docker is absent from the host. |
+| Engine: unavailable (socket access denied) | The request reported denied access; inspect the job identity and reviewed socket access. No permission change is automatic. |
+| Engine: unavailable (connection refused) | The local endpoint refused the connection; inspect service/socket availability from that job. |
+| Engine: unavailable (cause unknown) | No accredited cause is available; retain the receipt without inventing one. |
+| Engine: version metadata observed; workload not verified | A version response is retained; an actual conforming runtime remains unproven. |
+
+Unrecognized or forged failure text MUST project to cause-unknown and cannot
+reach the summary. The pure diagnostic policy owns classification/presentation;
+the HTTP adapter owns the request and its original close-before-cleanup rule.
+The fixed Unix socket, GET `/version`, timeouts, permissions, package/runtime
+pins and no-workload contract remain unchanged. There is no new selector,
+backend, global installation, privilege change or research limit.
+
+This adds **eight distinct controls** to130 (138 total): four known native
+connection codes; three unknown/absent/prototype-key and privacy cases; one
+closed summary/forged-text/metadata-only case. Controlled HTTP events establish
+classification, not an actual runner connection failure. Preserve the matched
+133PASS/5FAIL→138PASS contrast with identical test-file bytes, all module/global
+floors and every earlier native outcome. After a new committed source passes
+its exact-head source gates and review, one changed model-free observation MAY
+collect the previously missing Engine cause on an existing self-hosted runner.
+It cannot retry Native4 unchanged, infer a cause for it, authorize a workload,
+or substitute for #974's SDK/model-tool/credential/oracle and native prerequisites.
+The evidence packet and operator page MUST retain that distinction.
+
+| Path | Change |
+|---|---|
+| `quality/bugbot/evidence/issue-1002/controls/engine-connection-cause/README.md` | create |
+| `quality/bugbot/evidence/issue-1002/controls/engine-connection-cause/source-and-controls.json` | create |
+| `docs/security-operations/security/self-hosted-runners.mdx` | update |
+| `specs/catalog.json` | update |
+| `specs/CATALOG.md` | update |
+
 Risk-derived minimum12new deterministic cases: four outcome/exit/signal/missing
 metadata; three exact-version/provenance/fixed-command/credential boundaries;
 two owned cleanup/cancellation; three workflow/summary/routing. Parameterized

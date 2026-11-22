@@ -4,6 +4,8 @@ const assert = require('node:assert/strict');
 const CODEX_VERSION = '0.171.0';
 const PAYLOAD_OUTPUT_TRANSPORT = 'node-fd-write-sync';
 const TECHNICAL_TIMEOUTS = Object.freeze({ commandMs: 20000, downloadMs: 60000, terminationGraceMs: 1000, engineMs: 3000 });
+const ENGINE_CONNECTION_FAILURES = Object.freeze({ ENOENT: 'missing-socket', EACCES: 'access-denied',
+  EPERM: 'access-denied', ECONNREFUSED: 'connection-refused' });
 const ARCHIVES = Object.freeze({
   x64: Object.freeze({ target: 'x86_64-unknown-linux-musl', bytes: 197763180,
     sha256: '8391d67757496bfd14893eca6cbf0c96994bf2627566ff1f018f70600c9ef6b3' }),
@@ -61,10 +63,20 @@ function notRun(id, reason) {
     kind: transport ? 'execution-transport' : 'prerequisite', exitCode: null, signal: null, reason });
 }
 
+function engineConnectionFailure(code) {
+  return typeof code === 'string' && Object.hasOwn(ENGINE_CONNECTION_FAILURES, code) ? ENGINE_CONNECTION_FAILURES[code] : undefined;
+}
+
 function renderSummary(receipt) {
+  const engine = receipt.engine ?? {}, labels = { 'missing-socket': 'socket missing',
+    'access-denied': 'socket access denied', 'connection-refused': 'connection refused' };
+  const failure = typeof engine.connectionFailure === 'string' && Object.hasOwn(labels, engine.connectionFailure)
+    ? labels[engine.connectionFailure] : 'cause unknown';
+  const engineStatus = engine.state === 'observed' ? 'version metadata observed; workload not verified' : 'unavailable (' + failure + ')';
   const lines = ['# Linux sandbox diagnostic', '',
     `Runtime preparation: **${receipt.preparation.state}**. Codex target: **${CODEX_VERSION}**.`, '',
     `Collection: **${receipt.executionIncomplete ? 'incomplete' : 'complete'}**. Cleanup: **${receipt.cleanup ?? 'unavailable'}**.`, '',
+    `Engine: **${engineStatus}**.`, '',
     `Payload transport: **${PAYLOAD_OUTPUT_TRANSPORT}**. Node stream compatibility: **not measured**.`, '',
     'Truncated output is incomplete. The receipt separates raw byte identities from projected text.', '',
     '| Probe | Observation | Expected exit | Actual exit | Signal |', '|---|---|---:|---:|---|'];
@@ -77,4 +89,4 @@ function renderSummary(receipt) {
   return lines.join('\n') + '\n';
 }
 
-module.exports = { CODEX_VERSION, PAYLOAD_OUTPUT_TRANSPORT, TECHNICAL_TIMEOUTS, PROBE_IDS, TRANSPORT_IDS, archiveFor, outputProjection, observation, notRun, renderSummary };
+module.exports = { CODEX_VERSION, PAYLOAD_OUTPUT_TRANSPORT, TECHNICAL_TIMEOUTS, PROBE_IDS, TRANSPORT_IDS, archiveFor, outputProjection, observation, notRun, engineConnectionFailure, renderSummary };
