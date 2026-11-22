@@ -1,16 +1,11 @@
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const root = resolve(__dirname, '../../..');
 const guard = join(root, 'test-support/setup-publisher-package-guard.cjs');
-const github = createRequire(require.resolve('@actions/github'));
-const core = createRequire(github.resolve('@octokit/core'));
-const request = createRequire(core.resolve('@octokit/request'));
-const undici = request.resolve('undici');
 
 describe('publisher package guard before Undici socket dispatch', () => {
   it.each((['native-fetch', 'dependency-undici'] as const).flatMap(transport =>
@@ -27,9 +22,16 @@ describe('publisher package guard before Undici socket dispatch', () => {
         const report = join(directory, 'guard.json');
         // Capture native fetch before preload to bypass the guard's global-fetch
         // replacement deliberately. Both transports must still hit its socket fence.
+        // Resolve inside the native child. Jest also replaces createRequire
+        // resolution and maps @actions/github to its provider fake in this host.
         const script = `const nativeFetch = globalThis.fetch;
+          const { createRequire } = require('node:module');
+          const github = createRequire(require.resolve('@actions/github'));
+          const core = createRequire(github.resolve('@octokit/core'));
+          const request = createRequire(core.resolve('@octokit/request'));
+          const undici = request.resolve('undici');
           ${guarded ? `require(${JSON.stringify(guard)});` : ''}
-          const fetch = ${transport === 'native-fetch' ? 'nativeFetch' : `require(${JSON.stringify(undici)}).fetch`};
+          const fetch = ${transport === 'native-fetch' ? 'nativeFetch' : 'require(undici).fetch'};
           fetch(${JSON.stringify(`http://127.0.0.1:${address.port}/controlled`)}).then(async response => {
             if (await response.text() !== 'controlled-fixture') process.exitCode = 2;
             else process.stdout.write('delivered');

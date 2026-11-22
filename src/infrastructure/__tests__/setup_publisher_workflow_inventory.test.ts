@@ -27,13 +27,13 @@ it('finds a semantically equivalent renamed publisher rather than matching a dis
   expect(result).toEqual({ kind: 'foreign', paths: ['.github/workflows/renamed.yaml'] });
 });
 it.each([
-  'name: CI\n# COPILOT_BUGBOT_STATUS_CARD_WORKFLOW: write-v1\non: push\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@v5\n',
-  'name: Copilot - Bugbot Status Card\non: push\njobs:\n  test:\n    steps:\n      - run: echo harmless\n',
-  'on: push\njobs:\n  test:\n    steps:\n      - uses: vypdev/copilot@sha\n        with:\n          single-action: another_action\n',
-  'on: push\njobs:\n  test:\n    steps:\n      - uses: vypdev/copilot@sha\n        with:\n          token: ${{ secrets.PAT }}\n',
-  'on: push\njobs:\n  test:\n    steps: &ordinary\n      - run: echo harmless\n  other:\n    steps: *ordinary\n',
-])('does not treat comments, titles, ordinary Copilot steps or acyclic aliases as publisher authority', content => {
-  expect(inspectSetupPublisherWorkflows([workflow(content)], expected).kind).toBe('absent');
+  ['unknown', 'name: CI\n# COPILOT_BUGBOT_STATUS_CARD_WORKFLOW: write-v1\non: push\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@v5\n'],
+  ['absent', 'name: Copilot - Bugbot Status Card\non: push\njobs:\n  test:\n    steps:\n      - run: echo harmless\n'],
+  ['unknown', 'on: push\njobs:\n  test:\n    steps:\n      - uses: vypdev/copilot@sha\n        with:\n          single-action: another_action\n'],
+  ['unknown', 'on: push\njobs:\n  test:\n    steps:\n      - uses: vypdev/copilot@sha\n        with:\n          token: ${{ secrets.PAT }}\n'],
+  ['absent', 'on: push\njobs:\n  test:\n    steps: &ordinary\n      - run: echo harmless\n  other:\n    steps: *ordinary\n'],
+])('does not treat comments, titles, ordinary Copilot steps or acyclic aliases as publisher authority', (kind, content) => {
+  expect(inspectSetupPublisherWorkflows([workflow(content)], expected).kind).toBe(kind);
 });
 it.each([
   'defaults:\n  run:\n    shell: bash\n' + ci,
@@ -85,3 +85,18 @@ it('retains exact and conflicting paths, deterministic ordering and uncertainty 
   expect(result).toEqual({ kind: 'foreign', paths: [SETUP_PUBLISHER_WORKFLOW_PATH, '.github/workflows/renamed.yml'].sort() });
   expect(Object.isFrozen(result.paths)).toBe(true);
 });
+
+it.each(['other/action@v1', 'other/action@' + 'a'.repeat(40), 'docker://example/publisher:1'])(
+  'publisher977-C97: uninspected remote step %s cannot prove publisher absence', uses => {
+    const content = `on: push\njobs:\n  ci:\n    steps:\n      - uses: ${uses}\n`;
+    expect(inspectSetupPublisherWorkflows([workflow(content)], expected)).toEqual({ kind: 'unknown', paths: ['.github/workflows/ci.yml'] });
+    expect(inspectSetupPublisherWorkflows([workflow(expected, SETUP_PUBLISHER_WORKFLOW_PATH), workflow(content)], expected).kind).toBe('unknown');
+  });
+it.each(['workflow', 'job', 'step', 'run'])(
+  'publisher977-C98: Windows case-insensitive marker at %s blocks a renamed publisher', scope => {
+    const marker = 'copilot_bugbot_status_card_workflow';
+    const content = scope === 'workflow' ? `on: push\nenv:\n  ${marker}: write-v1\njobs:\n  ci:\n    runs-on: windows-latest\n    steps: []\n`
+      : scope === 'job' ? `on: push\njobs:\n  ci:\n    runs-on: windows-latest\n    env:\n      ${marker}: write-v1\n    steps: []\n`
+        : `on: push\njobs:\n  ci:\n    runs-on: windows-latest\n    steps:\n      - ${scope === 'step' ? `uses: vypdev/copilot@${'a'.repeat(40)}\n        env:\n          ${marker}: write-v1` : `run: $env:${marker}='write-v1'; node action.js`}\n`;
+    expect(inspectSetupPublisherWorkflows([workflow(content)], expected)).toEqual({ kind: 'foreign', paths: ['.github/workflows/ci.yml'] });
+  });

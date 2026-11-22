@@ -36,7 +36,7 @@ export class SetupPublisherGitReader {
     const names = new Set<string>();
     const entries = data.tree.map((raw): SetupPublisherGitEntry => {
       const item = batchObject(raw);
-      if (!item || typeof item.path !== 'string' || !item.path || /[/\\\p{Cc}\p{Cf}]/u.test(item.path)
+      if (!item || typeof item.path !== 'string' || !item.path || /[/\p{Cc}\p{Cf}]/u.test(item.path)
         || item.path === '.' || item.path === '..' || names.has(item.path) || !batchSha(item.sha)
         || !(item.type === 'tree' && item.mode === '040000' || item.type === 'blob'
           && ['100644', '100755', '120000'].includes(String(item.mode)) && Number.isSafeInteger(item.size) && Number(item.size) >= 0

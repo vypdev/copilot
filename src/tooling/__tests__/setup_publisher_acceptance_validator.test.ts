@@ -124,6 +124,7 @@ describe('publisher acceptance report execution boundary', () => {
         ['publisher977-C27', 'specs/setup-bugbot-publisher-manifest-route.md'],
         ['publisher977-C92', 'specs/organization-configuration-reuse-and-batch-setup.md'],
         ['publisher977-C95', 'specs/organization-configuration-reuse-and-batch-setup.md'],
+        ['publisher977-C100', 'specs/organization-configuration-reuse-and-batch-setup.md'],
     ])('rejects a missing required publication row %s while retaining its ledger evidence', (id, file) => {
         const f = extendedFixture(), path = join(f.runtimeRoot, file);
         writeFileSync(path, readFileSync(path, 'utf8').split('\n')

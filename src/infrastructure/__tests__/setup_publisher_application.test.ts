@@ -82,6 +82,26 @@ function fixture() {
     setPulls: (value: unknown[]) => { pulls = value; } };
 }
 
+it('publisher977-C96: cancelled preparation intent resumes through the real v2 journal after fresh approval', async () => {
+  const f = fixture(), save = f.journal.save.bind(f.journal); let cancelled = false;
+  jest.spyOn(f.journal, 'save').mockImplementation(async state => {
+    await save(state);
+    if (!cancelled && state.uncertain === 'tree' && state.effects.length === 0) {
+      cancelled = true; f.active.mockReturnValue(false);
+    }
+  });
+  const error = await f.executeInstalled(false).catch((failure: unknown) => failure) as { reason: string; retained: SetupPublisherOperation };
+  expect(error).toMatchObject({ reason: 'cancelled', retained: { status: 'cancelled' } });
+  expect(error.retained.uncertain).toBeUndefined();
+  expect(cancelled).toBe(true); expect(f.posts()).toEqual([]);
+  const retained = await f.journal.load(id);
+  expect(retained).toMatchObject({ status: 'cancelled', effects: [] }); expect(retained?.uncertain).toBeUndefined();
+  f.active.mockReturnValue(true);
+  expect(await f.executeInstalled(true)).toMatchObject({ stage: 'apply', result: { status: 'waiting-for-merge', pullRequestNumber: 73 } });
+  expect(f.confirm).toHaveBeenCalledTimes(2);
+  expect(f.posts().filter(route => route.endsWith('/git/trees'))).toHaveLength(1);
+});
+
 it('publisher977-C08: an old partial approval receipt cannot authorize unfinished writes after fresh decline', async () => {
   const f = fixture(), route = 'POST /repos/{owner}/{repo}/git/refs';
   const original = f.transport.call.getMockImplementation()!; let interrupted = false;

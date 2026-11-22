@@ -1008,24 +1008,24 @@ completion gate. This owning appendix extends its budget, case table,
 traceability and Definition of Done. Both tables MUST be read by the executable
 acceptance validator. Removing a required appendix case from the ledger MUST fail.
 
-The cumulative floor is **95 distinct cases**, with no evidence key counted by
+The cumulative floor is **100 distinct cases**, with no evidence key counted by
 two IDs: original64 + terminal reconciliation2 + required recovery19 + unresolved
-local inventory3 + operation isolation1 + structural source invocation1 + malformed legacy inventory1 + lock initialization1 + completed-recovery guidance1 + asynchronous cancellation1 + adapter-dispatch cancellation1. The
+local inventory3 + operation isolation1 + structural source invocation1 + malformed legacy inventory1 + lock initialization1 + completed-recovery guidance1 + asynchronous cancellation1 + adapter-dispatch cancellation1 + proven no-command cancellation1 + remote-action inventory1 + Windows markers1 + literal Git names1 + valid receipt byte-boundary1. The
 19 recovery cases below are C67–C85 (nine provider/private-v1, six coordinator,
 one cancelled uncertainty, one renewed review/audit, two proof-retention cases).
 C86–C88 are the three additional inventory requirements. C89–C91 close the reviewed
 delivery, source-scope and complete-inventory gaps. Parameter rows in a mapped case provide
-its complete behavioral proof; they are not counted again toward the 95 IDs.
+its complete behavioral proof; they are not counted again toward the 100 IDs.
 
 | Area | Original minimum | Additional | Cumulative minimum |
 |---|---:|---:|---:|
 | Pure proposal/scope/plan policy | 16 | 1 | 17 |
-| Read-only planning/freshness | 8 | 3 | 11 |
-| Application/recovery | 12 | 15 | 27 |
-| Provider/delivery contracts | 10 | 12 | 22 |
+| Read-only planning/freshness | 8 | 5 | 13 |
+| Application/recovery | 12 | 16 | 28 |
+| Provider/delivery contracts | 10 | 14 | 24 |
 | CLI/content | 12 | 0 | 12 |
 | Packaged integration/security | 6 | 0 | 6 |
-| **Total** | **64** | **31** | **95** |
+| **Total** | **64** | **36** | **100** |
 
 | Case ID | Area | Requirements | Observable assertion |
 |---|---|---|---|
@@ -1061,6 +1061,12 @@ its complete behavioral proof; they are not counted again toward the 95 IDs.
 | publisher977-C94 | Application/recovery | PU977-G04 | Cancellation during file-phase revalidation or intent persistence stops the next provider command and preserves completed facts and retained uncertainty. |
 | publisher977-C95 | Provider/delivery contracts | PU977-G03, PU977-G04 | Cancellation during the batch adapter's awaited freshness or Git-proof reads stops each tree, commit, ref or PR POST at transport dispatch while preserving completed effects and exact durable recovery facts. |
 
+| publisher977-C96 | Application/recovery | PU977-G04, PU977-G07 | Cancellation before the object command durably records no-write proof for freshly reviewed v1/v2 recovery; a failed proof save retains uncertainty. |
+| publisher977-C97 | Read-only planning/freshness | PU977-G01, PU977-G07 | Uninspected remote step actions, including pinned refs and container actions, remain unknown and cannot prove publisher absence. |
+| publisher977-C98 | Read-only planning/freshness | PU977-G01, PU977-G07 | Case-insensitive Windows environment markers at workflow, job, step or command scope block a renamed publisher. |
+| publisher977-C99 | Provider/delivery contracts | PU977-G03, PU977-G07 | Unrelated backslash-named Git entries preserve fixed-path reads while malformed names and unsafe requested paths still reject. |
+| publisher977-C100 | Provider/delivery contracts | PU977-G03, PU977-G07 | A valid oversized JSON manifest with the exact matching receipt rejects before transport and detects removal of the receipt byte guard. |
+
 Additional traceability (the companion's original mapping remains in force):
 
 | Requirement | Additional cases | Owning boundary | Documentation |
@@ -1081,11 +1087,11 @@ unsupported merge keys, additional/ambiguous local invocations and dynamic uses.
 It then proves that the single byte-preserving replacement changed the executed
 canonical scalar. These checks expose no new configuration or authority.
 
-Definition of Done for the extended companion: all C01–C95 MUST be registered;
-91 mapped Jest cases MUST pass by exact file/full assertion name in the actual
+Definition of Done for the extended companion: all C01–C100 MUST be registered;
+96 mapped Jest cases MUST pass by exact file/full assertion name in the actual
 current run, and C55–C58 MUST pass the separately extracted npm package gate.
 Every required table row must match its ledger assertion/area/requirements.
-Further meaningful contiguous cases MAY be appended; 95 is a floor. Existing
+Further meaningful contiguous cases MAY be appended; 100 is a floor. Existing
 coverage/changed-path, architecture, docs, global and final native checks remain
 mandatory. A parser fixture with synthetic statuses proves only validator
 behavior. This gate does not establish default installation, a native canary,
@@ -1101,7 +1107,7 @@ C08 additionally binds the existing authorized-Boolean rejection and a real part
 approval receipt that cannot override a later fresh decline; the unchanged receipt
 can resume only after another explicit approval. No old case assertion is narrowed.
 
-The cumulative minimum of95 cases MUST be enforced independently of table length;
+The cumulative minimum of100 cases MUST be enforced independently of table length;
 removing appendix rows together with their ledger cases MUST fail validation.
 Contiguous additions remain allowed. A failed lock acquisition MUST close its
 handle and reclaim only its identified created inode; replacement, unverified or
@@ -1113,9 +1119,9 @@ without rewriting its durable receipt or starting new provider writes.
 The delivery coordinator MUST recheck session activity after successful asynchronous
 revalidation and after retaining every prepare/ref/PR intent, immediately before
 provider dispatch. Cancellation keeps completed identities/effects and the retained
-intent; it MUST NOT clear uncertainty or claim rollback. C94 covers all three file
+intent; it MUST NOT clear an uncertain dispatched outcome or claim rollback. The proven pre-command exception in C96 below is required. C94 covers all three file
 phases at both await boundaries and the ordinary batch composition. Journal-write
-failures retain their original error precedence. Every baseline C01–C95 MUST have
+failures retain their original error precedence. Every baseline C01–C100 MUST have
 a published contract row as well as ledger evidence; generic validation is reserved
 for contiguous additions above that baseline. A missing required row MUST fail even
 when its ledger entry and an otherwise complete execution report remain present.
@@ -1167,6 +1173,65 @@ shared delivery and private closed-v1 journal with a semantic provider fake. Eve
 case verifies zero additional POSTs, cancellation, retained completed identities
 and matching durable state. These eight parameter rows prove one new logical
 acceptance ID and are not counted as eight additional IDs. C01–C94 remain exact;
-the current floor is95 IDs,91 mapped Jest cases and the same four package cases.
+that extension established95 IDs,91 mapped Jest cases and the same four package cases.
 Pure-policy100%, changed-module95/90, complete changed-line and final native gates
 remain. Operator recovery documentation describes this final dispatch boundary.
+
+
+#### Complete inventory and known pre-command cancellation (2026-11-22)
+
+The coordinator can observe cancellation after retaining preparation intent but
+before invoking any object command. It MUST persist confirmed no-command proof
+before returning cancellation. Only a successful proof save clears preparation
+uncertainty. A failed proof save retains the prior uncertain durable state and
+blocks automatic preparation. The existing legacy-v1 preflight reason and v2
+metadata support freshly reviewed recovery without a schema change. Once an
+object command has been invoked, its observer and exact-object readback remain
+the only authority for known versus unknown effects. Ref/PR intent and already
+dispatched outcomes retain their existing recovery rules.
+
+```text
+Retain intent -> cancellation before object command -> save no-command proof
+  -> saved: cancelled; fresh review may resume
+  -> save failed: uncertain; inspect before any preparation
+```
+
+Text equivalent: only confirmed durable no-command evidence permits a new
+reviewed preparation. No cancellation rolls back an existing effect. Existing
+cancelled/partial/journal UI, locale fallback and operator recovery links apply;
+no new flag, permission, retry, effect or installation claim is introduced.
+
+The workflow reader does not inspect remote step-action implementations. A
+literal or pinned ref, including a container action, MUST therefore remain
+unknown just like unresolved local actions and reusable workflows. There is no
+implicit trusted-action allowlist. An exact canonical workflow cannot override
+uncertainty in another workflow. Windows environment lookup is case-insensitive;
+workflow/job/step environment keys and command markers MUST recognize those case
+variants conservatively, including when a runner expression cannot exclude
+Windows. Marker detection takes precedence over unknown dependencies. This is a
+source parsing contract, not evidence of an actual Windows desktop/service run.
+See the [Node 24 process.env contract](https://nodejs.org/docs/latest-v24.x/api/process.html#processenv).
+
+Complete nonrecursive Git trees MUST accept unrelated literal backslashes as
+filename characters. Only forward slash separates Git tree components. Existing
+malformed-entry, duplicate/case-alias, relevant symlink and fixed requested-path
+checks stay in force; this does not allow a backslash in an approved target path.
+The manifest byte-boundary regression MUST use valid JSON with a matching
+installation receipt so a removed size guard cannot hide behind JSON rejection.
+
+C96–C100 extend the cumulative floor to **100 logical IDs / 96 mapped Jest cases
+plus four extracted-package cases**. At least **14 parameter scenarios** prove
+these five IDs: four coordinator/actual-v1/actual-v2 cancellation and proof-save
+outcomes, three remote-action forms, four Windows marker scopes, two unrelated
+Git tree levels and one valid oversized receipt. The same private-module size-
+guard mutation MUST be detected without changing production source or limits.
+All C01–C95 ledger objects and the selected companion remain exact. The amended
+C94 preparation-intent scenario now also requires durable no-command proof;
+its dispatched/uncertain-effect assertions remain unchanged. Existing pure100%,
+module95/90, global/changed-line, package and final-head native gates apply.
+
+Traceability: C96 -> PU977-G04/G07 -> common coordinator and both journals;
+C97/C98 -> PU977-G01/G07 -> workflow inventory; C99/C100 -> PU977-G03/G07 ->
+Git reader and delivery byte admission. Operator provisioning documents each
+recovery/inventory boundary. Default inventory must be re-evaluated after this
+correction; a prepared PR or these model-free controls cannot prove installation.

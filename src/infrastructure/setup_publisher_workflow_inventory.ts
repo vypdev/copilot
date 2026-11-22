@@ -47,16 +47,18 @@ function meaning(content: string): Meaning {
     const environment = (scope: Record<string, unknown>): void => {
       if (!own(scope, 'env')) return;
       if (!object(scope.env)) unknown = true;
-      else if (own(scope.env, 'COPILOT_BUGBOT_STATUS_CARD_WORKFLOW')) publisher = true;
+      // Windows environment lookups are case-insensitive. Runner expressions
+      // may select Windows, so every case variant remains a publisher marker.
+      else if (Object.keys(scope.env).some(key => key.toUpperCase() === 'COPILOT_BUGBOT_STATUS_CARD_WORKFLOW')) publisher = true;
     };
     const execution = (scope: Record<string, unknown>, step: boolean): void => {
       environment(scope);
       if (own(scope, 'uses')) {
         if (typeof scope.uses !== 'string' || scope.uses.includes('${{')) unknown = true;
         else if (/(?:^|\/)copilot_bugbot_status_card\.ya?ml(?:@|$)/iu.test(scope.uses)) publisher = true;
-        // This inventory does not resolve local action metadata or reusable
-        // workflow contents. Neither can prove publisher absence uninspected.
-        else if (!step || scope.uses.startsWith('./')) unknown = true;
+        // No local/remote action or reusable implementation is resolved here.
+        // A ref pin establishes identity, never absence of publisher behavior.
+        else unknown = true;
       }
       if (own(scope, 'with')) {
         if (!object(scope.with)) unknown = true;
@@ -68,7 +70,7 @@ function meaning(content: string): Meaning {
       }
       if (step && own(scope, 'run')) {
         if (typeof scope.run !== 'string') unknown = true;
-        else if (/COPILOT_BUGBOT_STATUS_CARD_WORKFLOW|publish_bugbot_status_card_action/u.test(scope.run)) publisher = true;
+        else if (/COPILOT_BUGBOT_STATUS_CARD_WORKFLOW|publish_bugbot_status_card_action/iu.test(scope.run)) publisher = true;
       }
     };
     environment(document);

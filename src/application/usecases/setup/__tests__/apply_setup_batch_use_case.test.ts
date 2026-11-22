@@ -53,7 +53,7 @@ describe('sequential reviewed batch Apply', () => {
     });
     const result = await f.useCase.execute(f.plan, 'fixture');
     expect(result.targets[0]).toMatchObject({ status: 'cancelled',
-      reason: boundary === 'revalidation' ? 'preflight' : 'cancelled', effects: resources });
+      reason: 'preflight', effects: resources });
     expect(f.writer.prepareCommit).not.toHaveBeenCalled(); expect(f.writer.branch).not.toHaveBeenCalled();
     expect(f.writer.pullRequest).not.toHaveBeenCalled(); expect(f.unlock).toHaveBeenCalledTimes(1);
   });

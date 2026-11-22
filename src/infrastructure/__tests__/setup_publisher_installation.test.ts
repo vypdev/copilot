@@ -303,7 +303,8 @@ describe('actual shared Git delivery composition with controlled provider', () =
       : kind === 'non-string content' ? [{ path: 'AGENTS.md', content: 42 as unknown as string }]
         : kind === 'too many files' ? Array.from({ length: 301 }, (_, index) => ({ path: `.github/workflows/job${index}.yml`, content: '' }))
           : kind === 'aggregate bytes' ? Array.from({ length: 21 }, (_, index) => ({ path: `.github/workflows/job${index}.yml`, content: 'x'.repeat(100_000) }))
-            : [{ path: kind === 'oversized file' ? 'AGENTS.md' : '.copilot/setup-manifest.json', content: kind === 'invalid manifest' ? '{broken' : 'x'.repeat(kind === 'oversized receipt' ? 105_001 : 100_001) }];
+            : [{ path: kind === 'oversized file' ? 'AGENTS.md' : '.copilot/setup-manifest.json', content: kind === 'invalid manifest' ? '{broken' : kind === 'oversized receipt'
+              ? JSON.stringify({ ...JSON.parse(f.plan.files.find(file => file.path.endsWith('setup-manifest.json'))!.content!), padding: 'x'.repeat(105_001) }) : 'x'.repeat(100_001) }];
     const files = kind === 'oversized receipt' || kind === 'invalid manifest' ? [...f.plan.files.filter(file => !file.path.endsWith('setup-manifest.json')), ...extra] : [...f.plan.files, ...extra];
     expect(() => new SetupInstallationGithubDeliveryAdapter(f.transport, { ...f.plan, files }, 'private-fixture-token', f.fresh)).toThrow();
     expect(f.transport.call).not.toHaveBeenCalled();

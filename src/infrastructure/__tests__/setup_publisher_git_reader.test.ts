@@ -58,7 +58,7 @@ it('rejects a non-object tree response', async () => {
   const f = fixture(); f.request.mockResolvedValue({ data: [] }); await expect(f.reader.tree(root)).rejects.toMatchObject({ code: 'malformed' });
 });
 it.each([null, {}, { ...treeEntry, path: '' }, { ...treeEntry, path: '.' }, { ...treeEntry, path: '..' },
-  { ...treeEntry, path: 'a/b' }, { ...treeEntry, path: 'a\\b' }, { ...treeEntry, path: 'a\n' }, { ...treeEntry, path: 'a\u202e' },
+  { ...treeEntry, path: 'a/b' }, { ...treeEntry, path: 'a\0b' }, { ...treeEntry, path: 'a\n' }, { ...treeEntry, path: 'a\u202e' },
   { ...treeEntry, sha: 'bad' }, { ...treeEntry, type: 'blob' }, { ...treeEntry, mode: '100644' },
   { ...treeEntry, type: 'unknown' }, { path: 'f', type: 'blob', mode: '100644', sha: nested, size: -1 },
   { path: 'f', type: 'blob', mode: '100644', sha: nested, size: 1.5 }, { path: 'f', type: 'commit', mode: '100644', sha: nested }])(
@@ -89,6 +89,13 @@ it('preserves unrelated symlinks, gitlinks and executable file identities withou
   const f = fixture(); f.trees[root].tree = [treeEntry, { ...f.entry, path: 'link', mode: '120000' },
     { path: 'submodule', type: 'commit', mode: '160000', sha: commit }, { ...f.entry, path: 'executable', mode: '100755' }];
   expect(await f.reader.tree(root)).toHaveLength(4); expect(f.request).toHaveBeenCalledTimes(1);
+});
+it.each([root, nested])('publisher977-C99: unrelated backslash names in tree %s do not block a fixed-path read', async tree => {
+  const f = fixture();
+  (f.trees[tree].tree as unknown[]).push({ ...f.entry, path: 'literal\\name.txt' });
+  expect(await f.reader.find(root, 'directory/file.yml')).toEqual(f.entry);
+  expect(await f.reader.text(f.entry, 100_000)).toBe(f.bytes.toString('utf8'));
+  expect(f.request.mock.calls.filter(([route]) => route.includes('/git/blobs/'))).toHaveLength(1);
 });
 it.each([{ type: 'tree' }, { mode: '120000' }, { sha: 'main' }, { size: undefined }, { size: -1 }, { size: 100_001 }])(
   'rejects a nonregular, invalid or oversized asset before reading its blob', async change => {

@@ -84,9 +84,32 @@ async function recoveryFixture(options: { active?: () => boolean; writer?: (writ
   };
   const receipt = async (): Promise<SetupBatchOperation> => JSON.parse(await readFile(join(directory, operation + '.json'), 'utf8'));
   const posts = (route: string) => f.request.mock.calls.filter(([actual]) => actual === `POST /repos/{owner}/{repo}/${route}`);
-  return { ...f, execute, review, receipt, posts, cleanup: () => rm(directory, { recursive: true, force: true }) };
+  return { ...f, journal, execute, review, receipt, posts, cleanup: () => rm(directory, { recursive: true, force: true }) };
 }
 describe('freshly reviewed legacy batch recovery through real Git delivery', () => {
+  it('publisher977-C96: cancelled preparation intent resumes through the real v1 journal without repeating resources', async () => {
+    let active = true, cancelled = false, preparedResourceSaves = 0;
+    const f = await recoveryFixture({ active: () => active });
+    try {
+      const save = f.journal.save.bind(f.journal);
+      jest.spyOn(f.journal, 'save').mockImplementation(async state => {
+        await save(state);
+        const target = state.targets[0];
+        // The first matching save completes issue-types; the second retains
+        // the common coordinator's preparation intent before any command.
+        if (!cancelled && target.status === 'applying' && target.effects.length === 4 && target.reason === undefined && ++preparedResourceSaves === 2) {
+          cancelled = true; active = false;
+        }
+      });
+      expect((await f.execute()).targets[0]).toMatchObject({ status: 'cancelled', reason: 'preflight' });
+      expect(cancelled).toBe(true); expect(f.request.mock.calls.some(([route]) => route.startsWith('POST '))).toBe(false);
+      const retained = await f.receipt(); expect(retained.targets[0]).toMatchObject({ status: 'cancelled', reason: 'preflight' });
+      active = true;
+      expect((await f.execute()).targets[0]).toMatchObject({ status: 'waiting-for-merge', preparedCommit: prepared, pullRequestNumber: 31 });
+      expect(f.review).toHaveBeenCalledTimes(2); expect(f.resources.labels).toHaveBeenCalledTimes(1);
+      expect(f.resources.issueTypes).toHaveBeenCalledTimes(1); expect(f.posts('git/trees')).toHaveLength(1);
+    } finally { await f.cleanup(); }
+  });
   it.each((['tree', 'commit', 'branch', 'pull-request'] as const).flatMap(phase =>
     (['freshness-read', 'Git-proof-read'] as const).map(boundary => ({ phase, boundary }))))(
     'publisher977-C95: cancellation during $phase $boundary stops the real provider write and retains prior facts', async ({ phase, boundary }) => {

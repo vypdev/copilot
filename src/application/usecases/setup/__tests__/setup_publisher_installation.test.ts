@@ -20,6 +20,32 @@ function fixture() {
 }
 
 describe('shared approved-file delivery and retained effects', () => {
+  it('publisher977-C96: cancellation while retaining preparation intent permits a fresh reviewed no-write resume', async () => {
+    const f = fixture(), retain = f.control.retain.getMockImplementation()!;
+    f.control.retain.mockImplementation(async state => {
+      await retain(state);
+      if (state.uncertain === 'prepared-objects') f.control.active.mockReturnValue(false);
+    });
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'cancelled', retained: { effects: [], uncertain: undefined } });
+    expect(f.commands.prepareCommit).not.toHaveBeenCalled();
+    expect(f.states).toEqual([{ effects: [], uncertain: 'prepared-objects' }, { effects: [], uncertain: undefined }]);
+    f.control.retain.mockImplementation(retain); f.control.active.mockReturnValue(true);
+    expect(await f.execute(f.states.at(-1)!)).toMatchObject({ preparedCommit: commit, effects: ['branch', 'pull-request'] });
+    expect(f.commands.prepareCommit).toHaveBeenCalledTimes(1);
+  });
+  it('publisher977-C96: a failed durable no-write proof preserves preparation uncertainty', async () => {
+    const f = fixture(), retain = f.control.retain.getMockImplementation()!;
+    f.control.retain.mockImplementation(async state => {
+      if (state.uncertain === undefined) throw new Error('proof save failed');
+      await retain(state); f.control.active.mockReturnValue(false);
+    });
+    await expect(f.execute()).rejects.toMatchObject({ reason: 'provider', retained: { effects: [], uncertain: 'prepared-objects' } });
+    expect(f.states).toEqual([{ effects: [], uncertain: 'prepared-objects' }]);
+    expect(f.commands.prepareCommit).not.toHaveBeenCalled();
+    f.control.active.mockReturnValue(true);
+    await expect(f.execute(f.states[0])).rejects.toMatchObject({ reason: 'uncertain-preparation' });
+    expect(f.commands.prepareCommit).not.toHaveBeenCalled();
+  });
   it('clears preparation uncertainty only after an observed stop before the tree POST', async () => {
     const f = fixture();
     f.commands.prepareCommit.mockImplementation(async observe => {
@@ -115,11 +141,12 @@ describe('shared approved-file delivery and retained effects', () => {
     f.control.active.mockReturnValue(false); release();
     const error = await execution;
     expect(error).toBeInstanceOf(SetupInstallationDeliveryError);
-    expect(error).toMatchObject({ reason: 'cancelled', retained: boundary === 'intent' ? { ...state, uncertain: phase } : state });
+    const knownNoObjectCommand = phase === 'prepared-objects' && boundary === 'intent';
+    expect(error).toMatchObject({ reason: 'cancelled', retained: boundary === 'intent' && !knownNoObjectCommand ? { ...state, uncertain: phase } : state });
     expect(f.order).toEqual([]);
     expect(f.commands.prepareCommit).not.toHaveBeenCalled(); expect(f.commands.branch).not.toHaveBeenCalled();
     expect(f.commands.pullRequest).not.toHaveBeenCalled();
-    expect(f.states).toEqual(boundary === 'intent' ? [{ ...state, uncertain: phase }] : []);
+    expect(f.states).toEqual(boundary === 'intent' ? [{ ...state, uncertain: phase }, ...(knownNoObjectCommand ? [state] : [])] : []);
   });
   it('drift after the branch stops PR creation without deleting or rolling back the branch', async () => {
     const f = fixture(); f.control.revalidate.mockResolvedValueOnce(true).mockResolvedValueOnce(true).mockResolvedValue(false);

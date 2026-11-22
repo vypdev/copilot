@@ -2328,6 +2328,122 @@
           "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during pull-request Git-proof-read stops the real provider write and retains prior facts"
         }
       ]
+    },
+    {
+      "id": "publisher977-C96",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "Cancellation before the object command durably records no-write proof for freshly reviewed v1/v2 recovery; a failed proof save retains uncertainty.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher977-C96: cancelled preparation intent resumes through the real v2 journal after fresh approval"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C96: cancelled preparation intent resumes through the real v1 journal without repeating resources"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects publisher977-C96: cancellation while retaining preparation intent permits a fresh reviewed no-write resume"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects publisher977-C96: a failed durable no-write proof preserves preparation uncertainty"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C97",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Uninspected remote step actions, including pinned refs and container actions, remain unknown and cannot prove publisher absence.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C97: uninspected remote step other/action@v1 cannot prove publisher absence"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C97: uninspected remote step other/action@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa cannot prove publisher absence"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C97: uninspected remote step docker://example/publisher:1 cannot prove publisher absence"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C98",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Case-insensitive Windows environment markers at workflow, job, step or command scope block a renamed publisher.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C98: Windows case-insensitive marker at workflow blocks a renamed publisher"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C98: Windows case-insensitive marker at job blocks a renamed publisher"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C98: Windows case-insensitive marker at step blocks a renamed publisher"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C98: Windows case-insensitive marker at run blocks a renamed publisher"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C99",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G07"
+      ],
+      "assertion": "Unrelated backslash-named Git entries preserve fixed-path reads while malformed names and unsafe requested paths still reject.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "publisher977-C99: unrelated backslash names in tree 1111111111111111111111111111111111111111 do not block a fixed-path read"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "publisher977-C99: unrelated backslash names in tree 2222222222222222222222222222222222222222 do not block a fixed-path read"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C100",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G07"
+      ],
+      "assertion": "A valid oversized JSON manifest with the exact matching receipt rejects before transport and detects removal of the receipt byte guard.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects invalid approved files before transport: oversized receipt"
+        }
+      ]
     }
   ]
 }

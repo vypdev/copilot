@@ -32,7 +32,14 @@ export class DeliverSetupInstallationUseCase implements SetupInstallationDeliver
       if (!state.preparedCommit) {
         await fresh();
         await retain({ ...state, uncertain: 'prepared-objects' });
-        active();
+        if (!control.active()) {
+          // This owner has not invoked an object command. Persist that proof
+          // before allowing reviewed recovery; a failed save keeps uncertainty.
+          const notStarted = { ...state, uncertain: undefined };
+          await control.retain(notStarted);
+          state = notStarted;
+          throw new SetupInstallationDeliveryError('cancelled', state);
+        }
         let treeCreated = false;
         const commit = await commands.prepareCommit(async event => {
           if (event.effect === 'tree' && event.state === 'completed') treeCreated = true;

@@ -79184,7 +79184,14 @@ class DeliverSetupInstallationUseCase {
             if (!state.preparedCommit) {
                 await fresh();
                 await retain({ ...state, uncertain: 'prepared-objects' });
-                active();
+                if (!control.active()) {
+                    // This owner has not invoked an object command. Persist that proof
+                    // before allowing reviewed recovery; a failed save keeps uncertainty.
+                    const notStarted = { ...state, uncertain: undefined };
+                    await control.retain(notStarted);
+                    state = notStarted;
+                    throw new SetupInstallationDeliveryError('cancelled', state);
+                }
                 let treeCreated = false;
                 const commit = await commands.prepareCommit(async (event) => {
                     if (event.effect === 'tree' && event.state === 'completed')
@@ -129307,7 +129314,7 @@ class SetupPublisherGitReader {
         const names = new Set();
         const entries = data.tree.map((raw) => {
             const item = (0, setup_batch_github_read_adapter_1.batchObject)(raw);
-            if (!item || typeof item.path !== 'string' || !item.path || /[/\\\p{Cc}\p{Cf}]/u.test(item.path)
+            if (!item || typeof item.path !== 'string' || !item.path || /[/\p{Cc}\p{Cf}]/u.test(item.path)
                 || item.path === '.' || item.path === '..' || names.has(item.path) || !(0, setup_batch_github_read_adapter_1.batchSha)(item.sha)
                 || !(item.type === 'tree' && item.mode === '040000' || item.type === 'blob'
                     && ['100644', '100755', '120000'].includes(String(item.mode)) && Number.isSafeInteger(item.size) && Number(item.size) >= 0
@@ -129649,7 +129656,9 @@ function meaning(content) {
                 return;
             if (!object(scope.env))
                 unknown = true;
-            else if (own(scope.env, 'COPILOT_BUGBOT_STATUS_CARD_WORKFLOW'))
+            // Windows environment lookups are case-insensitive. Runner expressions
+            // may select Windows, so every case variant remains a publisher marker.
+            else if (Object.keys(scope.env).some(key => key.toUpperCase() === 'COPILOT_BUGBOT_STATUS_CARD_WORKFLOW'))
                 publisher = true;
         };
         const execution = (scope, step) => {
@@ -129659,9 +129668,9 @@ function meaning(content) {
                     unknown = true;
                 else if (/(?:^|\/)copilot_bugbot_status_card\.ya?ml(?:@|$)/iu.test(scope.uses))
                     publisher = true;
-                // This inventory does not resolve local action metadata or reusable
-                // workflow contents. Neither can prove publisher absence uninspected.
-                else if (!step || scope.uses.startsWith('./'))
+                // No local/remote action or reusable implementation is resolved here.
+                // A ref pin establishes identity, never absence of publisher behavior.
+                else
                     unknown = true;
             }
             if (own(scope, 'with')) {
@@ -129678,7 +129687,7 @@ function meaning(content) {
             if (step && own(scope, 'run')) {
                 if (typeof scope.run !== 'string')
                     unknown = true;
-                else if (/COPILOT_BUGBOT_STATUS_CARD_WORKFLOW|publish_bugbot_status_card_action/u.test(scope.run))
+                else if (/COPILOT_BUGBOT_STATUS_CARD_WORKFLOW|publish_bugbot_status_card_action/iu.test(scope.run))
                     publisher = true;
             }
         };

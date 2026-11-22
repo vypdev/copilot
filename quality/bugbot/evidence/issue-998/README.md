@@ -267,3 +267,7 @@ Round8 native Commit/Verification failed on nine newly named .json.gz report arc
 ## Round9: cancellation at actual file-write dispatch
 
 [Round9 source and controls](./review-round9/README.md) retain66PASS/8FAIL ->74PASS for the same causal tests; corrected27-file1,237PASS/91mapped/95registered, six changed executable modules100%allmetrics, build/package11CLI0effects/API/web and actual documentation/Graphify validation. The first broader five-failure run and wrong local doc alias remain separate diagnostics.36canonicalarchives add to276previous records. Source integration, unresolved remote-action inventory, final native acceptance, installation and scientific qualification remain separate.
+
+## Round10: inventory and no-command recovery
+
+[Round10 evidence](./review-round10/README.md) retains causal failures,1,251passing assertions/96mapped/100registered cases, three changed modules100%allmetrics and a real private-module mutation detecting the valid receipt byte boundary. All95prior ledger objects and the selected companion remain exact. Uninspected remote/local implementations still require reconciliation before preview. Normal hooks and final-head native acceptance remain separate.
