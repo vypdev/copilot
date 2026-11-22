@@ -1088,9 +1088,14 @@ state. Existing source boundaries and routing validators remain authoritative.
 CLI arguments, executable URLs, package version, probes and host paths are not
 user configuration. The x64/arm64 selection follows the observed host architecture;
 unsupported architectures fail preparation. Existing `[self-hosted,codex,Linux]`,
-contents-read permission, resource counters, five-minute diagnostic job bound
-and Windows Codex retirement remain. Command20s, download60s and post-termination
-1s escalation are bounded technical diagnostic operations, not investigation,
+contents-read permission, resource counters and Windows Codex retirement remain.
+The diagnostic job has a15-minute orchestration allowance. Its download60s,
+three preparation commands and eight sequential probe phases at command20s plus
+post-termination1s, and Engine3s have a nominal294s total allowance. The former
+five-minute job left only6s for checkout, Node setup, hashing, receipt writing
+and artifact retention. The additional job margin is operational headroom,
+not a guarantee against stalled filesystem/kernel I/O. The four fixed technical
+timeouts remain unchanged and share one internal immutable table; they are not investigation,
 turn/read/token/heartbeat limits. No sudo, privilege, seccomp, sysctl, AppArmor,
 sandbox-bypass, runner registration or global configuration change is permitted.
 
@@ -1281,6 +1286,42 @@ An evidence-only publication MUST NOT repeat this observation or claim its new
 Git commit was executed. SDK/model-tool acceptance, credential/oracle exclusion
 and common native C32–C35 remain independently unobserved. No 174/42 campaign or
 production activation follows from these model-free results.
+
+Startup-observation maintenance adds **five distinct controls** to125 (130 total):
+already-cancelled/no-spawn, real missing executable, no-spawn receipt projection,
+real successfully spawned empty output, and a modeled error after successful
+spawn. The existing modeled chunk fixture emits `spawn` before data on both old
+and new source. Preserve the matched126PASS/4FAIL→130PASS contrast with identical
+test-file bytes; the original successful native observations remain unchanged.
+The strengthened existing parsed-workflow case verifies placement/permissions,
+the unchanged four technical timers and at least600s of job margin over the
+nominal294s allowance. No actual workflow timeout was observed or reproduced;
+the insufficient margin is a source/contract defect.
+
+The native adapter MUST leave both output channels and `outputCapture` null
+unless the child actually emits `spawn`. Already-signaled cancellation and a
+launch failure cannot fabricate an observed empty stream. Receipt channel
+digests remain null for these unavailable channels. A successfully spawned
+command with no bytes MUST retain empty strings and empty-byte capture hashes;
+an error after spawn does not erase captured bytes. Exit, cancellation, failure,
+close-before-cleanup, privacy and schema4 semantics remain unchanged. The15-minute
+job allowance changes no research, model, call, corpus, scientific or consumer
+runtime limits. These controls establish process/receipt behavior, not a new
+same-job Codex observation or qualification. Required coverage and source gates
+remain; native evidence is retained by its original executed source identity.
+
+The catalogued startup-observation packet retains both complete raw logs with
+matched test identities, focused coverage including its unrelated-owner exit1,
+and the previous canonical comment verbatim. Its changed-module gates pass;
+repository-global/native gates remain separate. Documentation inventory:
+
+| Path | Change |
+|---|---|
+| `quality/bugbot/evidence/issue-1002/controls/startup-observation/README.md` | create |
+| `quality/bugbot/evidence/issue-1002/controls/startup-observation/source-and-controls.json` | create |
+| `docs/security-operations/security/self-hosted-runners.mdx` | update |
+| `specs/catalog.json` | update |
+| `specs/CATALOG.md` | update |
 
 Acceptance and traceability: fixed archive mismatch or version mismatch rejects
 before probes; every negative/missing/signal/cancelled probe has its own preserved

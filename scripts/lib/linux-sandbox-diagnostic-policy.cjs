@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const CODEX_VERSION = '0.171.0';
 const PAYLOAD_OUTPUT_TRANSPORT = 'node-fd-write-sync';
+const TECHNICAL_TIMEOUTS = Object.freeze({ commandMs: 20000, downloadMs: 60000, terminationGraceMs: 1000, engineMs: 3000 });
 const ARCHIVES = Object.freeze({
   x64: Object.freeze({ target: 'x86_64-unknown-linux-musl', bytes: 197763180,
     sha256: '8391d67757496bfd14893eca6cbf0c96994bf2627566ff1f018f70600c9ef6b3' }),
@@ -76,4 +77,4 @@ function renderSummary(receipt) {
   return lines.join('\n') + '\n';
 }
 
-module.exports = { CODEX_VERSION, PAYLOAD_OUTPUT_TRANSPORT, PROBE_IDS, TRANSPORT_IDS, archiveFor, outputProjection, observation, notRun, renderSummary };
+module.exports = { CODEX_VERSION, PAYLOAD_OUTPUT_TRANSPORT, TECHNICAL_TIMEOUTS, PROBE_IDS, TRANSPORT_IDS, archiveFor, outputProjection, observation, notRun, renderSummary };

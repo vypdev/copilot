@@ -9,7 +9,7 @@ permissions:
 jobs:
   linux:
     runs-on: [self-hosted, codex, Linux]
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Report bounded Linux resource counters
         shell: bash

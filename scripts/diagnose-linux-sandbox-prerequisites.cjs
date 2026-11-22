@@ -13,14 +13,15 @@ const hash = data => createHash('sha256').update(data).digest('hex');
 
 // Fixed diagnostic commands only. This technical bound never wraps a model or
 // research operation. Keep actual child close distinct from wrapper rejection.
-function execute(command, args, { cwd, env, signal, timeout = 20000 }, spawnChild = spawn) {
-  if (signal.aborted) return Promise.resolve({ cancelled: true, stdout: '', stderr: '', exitCode: null, signal: null });
+function execute(command, args, { cwd, env, signal, timeout = policy.TECHNICAL_TIMEOUTS.commandMs }, spawnChild = spawn) {
+  if (signal.aborted) return Promise.resolve({ cancelled: true, stdout: null, stderr: null, outputCapture: null, exitCode: null, signal: null });
   return new Promise(resolve => {
     const child = spawnChild(command, args, { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
-    const result = { stdout: '', stderr: '', exitCode: null, signal: null, cancelled: false, timedOut: false, truncated: false };
+    const result = { stdout: null, stderr: null, outputCapture: null, exitCode: null, signal: null, cancelled: false, timedOut: false, truncated: false };
     const captures = Object.fromEntries(['stdout', 'stderr'].map(key => [key,
       { chunks: [], retainedBytes: 0, observedBytes: 0, observedHash: createHash('sha256') }]));
-    let escalation;
+    let escalation, started = false;
+    child.once('spawn', () => { started = true; });
     const kill = name => {
       try { if (child.pid) process.kill(-child.pid, name); }
       catch (error) { if (error.code !== 'ESRCH') result.error ??= 'termination-unavailable'; }
@@ -28,7 +29,7 @@ function execute(command, args, { cwd, env, signal, timeout = 20000 }, spawnChil
     const terminate = kind => {
       if (result[kind]) return;
       result[kind] = true; kill('SIGTERM');
-      escalation ??= setTimeout(() => kill('SIGKILL'), 1000);
+      escalation ??= setTimeout(() => kill('SIGKILL'), policy.TECHNICAL_TIMEOUTS.terminationGraceMs);
     };
     const abort = () => terminate('cancelled');
     const timer = setTimeout(() => terminate('timedOut'), timeout);
@@ -43,8 +44,8 @@ function execute(command, args, { cwd, env, signal, timeout = 20000 }, spawnChil
     child.once('error', error => { result.error = error.code || 'launch-unavailable'; });
     child.once('close', (exitCode, childSignal) => {
       clearTimeout(timer); clearTimeout(escalation); signal.removeEventListener('abort', abort);
-      result.outputCapture = { textEncoding: 'utf8-replacement', limitBytesPerChannel: 65536 };
-      for (const key of ['stdout', 'stderr']) {
+      if (started) result.outputCapture = { textEncoding: 'utf8-replacement', limitBytesPerChannel: 65536 };
+      for (const key of started ? ['stdout', 'stderr'] : []) {
         const capture = captures[key], prefix = Buffer.concat(capture.chunks, capture.retainedBytes);
         // Decode only after joining the raw prefix, so chunk boundaries cannot
         // corrupt UTF8. Raw digests remain distinct from the decoded text view.
@@ -165,7 +166,7 @@ async function diagnose(ports) {
 }
 
 async function downloadArchive(archive, target, signal) {
-  signal = AbortSignal.any([signal, AbortSignal.timeout(60000)]);
+  signal = AbortSignal.any([signal, AbortSignal.timeout(policy.TECHNICAL_TIMEOUTS.downloadMs)]);
   const response = await fetch(archive.url, { signal });
   if (!response.ok || !response.body) {
     await response.body?.cancel();
@@ -191,7 +192,7 @@ function engineObservation(signal) {
     const finish = value => { if (!complete) { complete = true; request?.destroy(); response?.destroy(); resolve(value); } };
     const abort = () => finish({ state: 'unavailable', cause: 'cancelled' });
     try {
-    request = http.request({ socketPath: socket, path: '/version', method: 'GET', agent: false, timeout: 3000 }, incoming => {
+    request = http.request({ socketPath: socket, path: '/version', method: 'GET', agent: false, timeout: policy.TECHNICAL_TIMEOUTS.engineMs }, incoming => {
       response = incoming; responseClosed = new Promise(done => incoming.once('close', done));
       if (complete) { incoming.destroy(); return; }
       let data = ''; incoming.on('data', chunk => { data += chunk; if (Buffer.byteLength(data) > 8192) finish({ state: 'unavailable', cause: 'invalid-metadata' }); });

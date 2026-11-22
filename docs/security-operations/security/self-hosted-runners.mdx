@@ -157,7 +157,17 @@ fails or is unavailable, the owned read/hash and write-denial probes stay
 `not-run (execution-unverified)` and collection is incomplete. A verified read
 must match its trusted digest; a successful denial must produce the expected
 result and leave the canary absent. Missing output is null; actual empty output
-has an empty-byte hash. The report also observes the bounded fixed system bwrap
+has an empty-byte hash. Cancellation before spawn and executable launch failure
+leave both channels, their hashes and capture metadata null. A later error after
+a successful spawn preserves actual captured bytes.
+
+The diagnostic job allows15minutes for preparation, collection and artifact
+retention. The fixed download/command/termination/Engine timeouts remain
+60s/20s/1s/3s. Their nominal sequential allowance is294s, leaving more than ten
+minutes for checkout, Node setup, hashing and retention; this margin is not a
+guarantee against stalled host I/O. No model or research limit changes.
+
+The report also observes the bounded fixed system bwrap
 file's hash, format, ownership and mode; metadata alone never proves execution.
 An optional local Engine version observation is separate and creates no
 image/container/workload.

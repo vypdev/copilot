@@ -37,6 +37,7 @@ describe('bounded diagnostic child output capture', () => {
     // the existing native process tests separately exercise real pipes and close.
     const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter() });
     const operation = diagnostic.execute('/modeled/child', [], { signal: new AbortController().signal }, () => child);
+    child.emit('spawn');
     stdout.forEach(chunk => child.stdout.emit('data', chunk));
     stderr.forEach(chunk => child.stderr.emit('data', chunk));
     child.emit('close', 0, null);
@@ -106,6 +107,56 @@ describe('bounded diagnostic child output capture', () => {
     expect(receipt.probes[0]).toMatchObject({ stdout: '<diagnostic-root>/canary', stdoutSha256: digest(bytes),
       outputCapture: result.outputCapture });
     expect(receipt.outputTextEncoding).toBe('utf8-replacement');
+  });
+});
+
+posixDescribe('diagnostic command startup evidence', () => {
+  const unavailable = { stdout: null, stderr: null, outputCapture: null };
+  it('retains unavailable output when cancellation prevents a spawn', async () => {
+    const controller = new AbortController(); controller.abort(); const spawn = jest.fn();
+    const result = await diagnostic.execute('/missing/never-run', [], { signal: controller.signal }, spawn);
+    expect(spawn).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ...unavailable, cancelled: true, exitCode: null, signal: null });
+  });
+
+  it('retains unavailable output for an actual missing executable', async () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'diagnostic-no-spawn-'));
+    try {
+      const result = await diagnostic.execute(path.join(directory, 'absent'), [],
+        { cwd: directory, env: {}, signal: new AbortController().signal });
+      expect(result).toMatchObject({ ...unavailable, error: 'ENOENT', exitCode: -2, signal: null });
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it('projects a never-started command as null channels, digests and capture metadata', async () => {
+    const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter() });
+    const pending = diagnostic.execute('/modeled/missing', [], { signal: new AbortController().signal }, () => child);
+    child.emit('error', Object.assign(new Error('controlled launch failure'), { code: 'ENOENT' }));
+    child.emit('close', -2, null);
+    const result = await pending, ports = modeledPorts(); ports.execute.mockResolvedValueOnce(result);
+    const receipt = await diagnostic.diagnose(ports);
+    expect(receipt.probes[0]).toMatchObject({ ...unavailable, stdoutSha256: null, stderrSha256: null,
+      state: 'unavailable', reason: 'missing-tool' });
+    expect(ports.release).toHaveBeenCalledTimes(1);
+  });
+
+  it('distinguishes real empty output after a successful spawn from unavailable output', async () => {
+    const result = await diagnostic.execute(process.execPath, ['-e', ''],
+      { cwd: process.cwd(), env: {}, signal: new AbortController().signal });
+    const empty = { observedBytes: 0, retainedBytes: 0, observedSha256: digest(''), retainedSha256: digest('') };
+    expect(result).toMatchObject({ stdout: '', stderr: '', exitCode: 0, signal: null,
+      outputCapture: { stdout: empty, stderr: empty } });
+  });
+
+  it('retains captured output when an error occurs after the child actually spawned', async () => {
+    const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter() });
+    const pending = diagnostic.execute('/modeled/started', [], { signal: new AbortController().signal }, () => child);
+    child.emit('spawn'); child.stdout.emit('data', Buffer.from('started'));
+    child.emit('error', Object.assign(new Error('controlled later error'), { code: 'EIO' }));
+    child.emit('close', 1, null);
+    const result = await pending;
+    expect(result).toMatchObject({ stdout: 'started', stderr: '', error: 'EIO', exitCode: 1,
+      outputCapture: { stdout: { observedBytes: 7, observedSha256: digest('started') } } });
   });
 });
 
@@ -828,10 +879,18 @@ describe('actual receipt and summary publication with modeled command ports', ()
 
 describe('manual Linux diagnostic workflow', () => {
   const workflow = yaml.load(readFileSync('.github/workflows/copilot_runner_diagnostics.yml', 'utf8')) as Ports;
-  it('retains only manual Linux placement, contents read and unchanged technical bound', () => {
+  it('retains manual Linux placement and contents read with preparation and retention margin', () => {
     expect(Object.keys(workflow.on)).toEqual(['workflow_dispatch']); expect(Object.keys(workflow.jobs)).toEqual(['linux']);
     expect(workflow.jobs.linux['runs-on']).toEqual(['self-hosted', 'codex', 'Linux']);
-    expect(workflow.permissions).toEqual({ contents: 'read' }); expect(workflow.jobs.linux['timeout-minutes']).toBe(5);
+    expect(workflow.permissions).toEqual({ contents: 'read' }); expect(workflow.jobs.linux['timeout-minutes']).toBe(15);
+    const limits = policy.TECHNICAL_TIMEOUTS;
+    expect(limits).toEqual({ commandMs: 20000, downloadMs: 60000, terminationGraceMs: 1000, engineMs: 3000 });
+    // Three preparation commands and eight sequential probe phases: the three
+    // independent transport controls share one phase and all must close.
+    const commandPhases = 3 + policy.PROBE_IDS.length - policy.TRANSPORT_IDS.length + 1;
+    const diagnosticMs = limits.downloadMs + commandPhases * (limits.commandMs + limits.terminationGraceMs) + limits.engineMs;
+    expect(diagnosticMs).toBe(294000);
+    expect(workflow.jobs.linux['timeout-minutes'] * 60000 - diagnosticMs).toBeGreaterThanOrEqual(600000);
   });
   it('prepares Node in the actual diagnostic job and launches only the fixed argument-free driver', () => {
     const steps = workflow.jobs.linux.steps;
