@@ -1,0 +1,48 @@
+{
+  "at": "2026-11-22T03:42:35.828613+00:00",
+  "parent": "aedb4ce60effe17f380e1184fb309002896763d7",
+  "sourceChanges": false,
+  "cause": "Every root node_modules entry was a symlink into the sibling worktree. NCC incorporated outside-worktree dependency realpaths into numeric module identities; native clean dependency installation regenerated all four bundles.",
+  "repair": "Replace only the29verified owned root symlinks with a clone of the same unchanged locked dependency tree rooted within this worktree; rebuild normally. No library, source, lockfile, Node or CI profile change.",
+  "node": "24.20.0",
+  "localFlags": [
+    "--no-sparkplug"
+  ],
+  "lockfileSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8335650,
+      "sha256": "daad46975b5ff1ca0eb1f33946f219c8ba405b963c05355f1f098ceba04dc4fa"
+    },
+    "github_action": {
+      "bytes": 11094766,
+      "sha256": "3290886d99cf6bdb6a88cee0ff468cc014e137d9e037ff7a47752476a33e616f"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "nativeFailure": {
+    "run": 44981048179,
+    "job": 137081394000,
+    "conclusion": "failure",
+    "reason": "validate:build; all4checked-inbundles differ",
+    "rawBytes": 406142,
+    "rawSha256": "5cbae45416ad19f3b29baccc77e6ca26b5c4a21061c830feae219e043453d03c"
+  },
+  "newDiffAgainstOriginalDevelop": [
+    "33\t10\tbuild/cli/index.js",
+    "33\t10\tbuild/github_action/index.js"
+  ],
+  "nativeAcceptance": "pending",
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationCalls": 0,
+  "pilotWrites": 0,
+  "production": "disabled"
+}

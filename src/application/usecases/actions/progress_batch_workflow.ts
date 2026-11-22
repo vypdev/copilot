@@ -7,9 +7,9 @@ import type { ProgressDiffEvidence } from '../../ports/progress_diff_query_ports
 import type { ProgressComparisonSource } from '../../ports/progress_comparison_source_ports';
 import type { ProgressContext } from '../push_single_action_contexts';
 import type { ProgressScopeSource } from '../../policies/progress_scope_source_policy';
-import { parseProgressScopeWithAnchors, type ProgressScope } from '../../policies/progress_scope_policy';
+import { parseProgressScopeWithAnchors } from '../../policies/progress_scope_policy';
 import { PROGRESS_BATCH_PROFILE, aggregateProgressAssessmentReceipts, createProgressScopeManifest, parseProgressAssessmentReceipt,
-    planProgressAssessmentBatches, progressBatchDisplayScope, progressBatchRejected, progressBatchResponseSchema, progressGroups,
+    planProgressAssessmentBatches, planProgressScopeGroups, progressScopeData as scopeData, progressBatchDisplayScope, progressBatchRejected, progressBatchResponseSchema, progressGroups,
     readProgressAssessmentEvidence, progressClassificationBinding, progressClassificationResponseSchema, parseProgressClassificationReceipt, progressScopeSnapshotDigest, type ProgressAssessmentReceipt } from '../../policies/progress_batch_policy';
 import { getProgressScopePrompt, renderProgressPromptData } from '../../../prompts/progress_scope';
 import { getCheckProgressPrompt } from '../../../prompts';
@@ -22,12 +22,6 @@ import { queryProgressResult } from './query_progress_result_workflow';
 import { queryProgressAssessment } from './query_progress_assessment_workflow';
 import { logInfo } from '../../ports/logging_ports';
 import { runWithConcurrencyLimit } from '../../policies/bounded_concurrency_policy';
-
-/** Quotes and original provenance remain in the host manifest; request projections retain their references. */
-function scopeData(scope: ProgressScope): string {
-    return JSON.stringify({ ...scope, requirements: scope.requirements.map(requirement => ({ ...requirement,
-        sources: requirement.sources?.map(({ id, origin }) => ({ id, origin })) })) });
-}
 
 /** Invocation-local receipts have no mutation capability. Only the validated complete aggregate leaves this owner. */
 export async function analyzeProgressBatches(context: ProgressContext, issueDescription: string, captured: ProgressScopeSource,
@@ -77,7 +71,6 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
     const manifest = createProgressScopeManifest({ ...identity, capturedSource: captured, classifications, scope }, diff);
     const batches = planProgressAssessmentBatches(manifest);
     const compact = batches.length > 1;
-    const acceptanceScope = scopeData(scope);
     const promptFor = (batch: typeof batches[number], diffEvidence: string, schema: ReturnType<typeof progressBatchResponseSchema>) => getCheckProgressPrompt({ ...parameters,
         acceptanceScope: scopeData(batch.scope), diffEvidence }) + '\n\nSame-head assessment receipt contract\n' + renderProgressPromptData(JSON.stringify({ manifestDigest: manifest.digest,
         batchId: batch.id, headSha: manifest.headSha, evidenceDictionary: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) }), 'progress.comparison', 262_144, 'assessment')
@@ -87,9 +80,7 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
         + 'Do not infer contents of unprovided unchanged files or external verification. Preserve uncertainty and all qualifiers. Return no partial inventory. '
         + `Use one short factual phrase per summary and remaining string. Each string has a hard limit of ${schema.properties.requirements.items.properties.summary.maxLength} Unicode code points, counting spaces and punctuation. ${schema.properties.requirements.items.properties.summary.description} `
         + 'The citations array carries the exact source IDs. Keep paths, IDs, source quotes and background out of summary and remaining. State the observed behavior or verification needed concisely. Keep the complete requirement inventory and source citations.';
-    const groups = Buffer.byteLength(acceptanceScope, 'utf8') <= MAX_PROGRESS_SCOPE_BYTES
-        ? [{ acceptanceScope, batches }]
-        : batches.map(batch => ({ acceptanceScope: scopeData(batch.scope), batches: [batch] }));
+    const groups = capacity(() => planProgressScopeGroups(scope, batches));
     const plans = capacity(() => groups.map(group => {
         const planned = group.batches.map(batch => {
             const schema = progressBatchResponseSchema(manifest, batch, anchors, compact);
@@ -101,6 +92,7 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
         return { ...group, planned, budget, boundDiff };
     }));
     const minimumCalls = bounded.calls() + plans.reduce((sum, plan) => sum + (plan.boundDiff.kind === 'partitioned' ? plan.boundDiff.partitions.length : 0) + plan.planned.length, 0);
+    logInfo(`Progress evidence plan: ${bounded.calls()} classification calls, ${plans.length} scope groups, ${diff.kind === 'partitioned' ? diff.partitions.length : 0} comparison parts per group, ${batches.length} assessment batches; scope UTF-8 bytes [${plans.map(plan => Buffer.byteLength(plan.acceptanceScope, 'utf8')).join(', ')}]; minimum ${minimumCalls} of ${PROGRESS_BATCH_PROFILE.calls} calls. Previous progress is retained.`);
     if (minimumCalls > PROGRESS_BATCH_PROFILE.calls) throw progressBatchRejected('call-budget', { expected: batches.length });
     logInfo(`Acceptance inventory admitted: ${scope.requirements.length} requirements in ${batches.length} batches; each summary and remaining has a hard ${plans[0].planned[0].schema.properties.requirements.items.properties.summary.maxLength}-Unicode-point limit. Previous progress is retained.`);
     logInfo(`Admitted acceptance identities for manifest ${manifest.digest} (question mark means uncertain): ${scope.requirements.map(requirement => requirement.id + (requirement.uncertain ? '?' : '')).join(', ')}.`);

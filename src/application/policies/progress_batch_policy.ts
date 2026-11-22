@@ -6,7 +6,7 @@ import type { ProgressBatchReason } from '../../domain/progress_batch_diagnostic
 import type { ProgressDiffEvidence } from '../ports/progress_diff_query_ports';
 import type { ProgressComparisonSource } from '../ports/progress_comparison_source_ports';
 import type { ProgressScope, ProgressScopeAnchors } from './progress_scope_policy';
-import { scopedProgressResponseSchema, parseScopedProgressResponse, validateScopedProgressResponse, progressScopeResponseSchema, parseProgressScopeClassifications } from './progress_scope_policy';
+import { scopedProgressResponseSchema, parseScopedProgressResponse, validateScopedProgressResponse, progressScopeResponseSchema, parseProgressScopeClassifications, MAX_PROGRESS_SCOPE_BYTES } from './progress_scope_policy';
 import { progressResponsePayload } from './progress_response_rejection_policy';
 import { validateFramedProgressEvidence } from './progress_evidence_protocol_policy';
 import { isProgressEvidencePath } from '../../domain/progress_evidence_path';
@@ -119,6 +119,32 @@ export function createProgressScopeManifest(input: Omit<ProgressScopeManifest, '
     return freezeSnapshot(structuredClone({ ...body, digest: digest(body) }));
 }
 export interface ProgressAssessmentBatch { readonly id: string; readonly ordinal: number; readonly scope: ProgressScope }
+/** Source quotes stay in the host manifest; requests retain their exact references. */
+export function progressScopeData(scope: ProgressScope): string {
+    return JSON.stringify({ ...scope, requirements: scope.requirements.map(requirement => ({ ...requirement,
+        sources: requirement.sources?.map(({ id, origin }) => ({ id, origin })) })) });
+}
+
+/** Pack whole consecutive assessments, preserving every exclusion and publication. */
+export function planProgressScopeGroups(scope: ProgressScope, batches: readonly ProgressAssessmentBatch[]) {
+    const groups: { acceptanceScope: string; batches: readonly ProgressAssessmentBatch[] }[] = [];
+    let current: ProgressAssessmentBatch[] = [], acceptanceScope = '';
+    const data = (items: readonly ProgressAssessmentBatch[]) => progressScopeData({ ...scope, requirements: items.flatMap(batch => batch.scope.requirements) });
+    for (const batch of batches) {
+        let candidate = data([...current, batch]);
+        if (current.length && Buffer.byteLength(candidate, 'utf8') > MAX_PROGRESS_SCOPE_BYTES) {
+            groups.push({ acceptanceScope, batches: Object.freeze(current) });
+            current = [];
+            candidate = data([batch]);
+        }
+        const bytes = Buffer.byteLength(candidate, 'utf8');
+        if (bytes > MAX_PROGRESS_SCOPE_BYTES) throw new ProgressCapacityFailure({ phase: 'scope', dimension: 'input-text-bytes',
+            observedCount: bytes, supportedLimit: MAX_PROGRESS_SCOPE_BYTES });
+        current.push(batch); acceptanceScope = candidate;
+    }
+    if (current.length) groups.push({ acceptanceScope, batches: Object.freeze(current) });
+    return Object.freeze(groups.map(group => Object.freeze(group)));
+}
 export function planProgressAssessmentBatches(manifest: ProgressScopeManifest, size: number = PROGRESS_BATCH_PROFILE.assessmentClauses): readonly ProgressAssessmentBatch[] {
     const { digest: manifestDigest, ...body } = manifest;
     if (digest(body) !== manifestDigest) throw progressBatchRejected('manifest-identity');
