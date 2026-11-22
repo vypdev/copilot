@@ -111,6 +111,13 @@ including adjacent bwrap/rg and execution helpers, and checks its fixed layout
 and resource identities before the CLI version check. A matching standalone
 executable/version alone is insufficient when resources are missing. The
 runner's global installation stays untouched. Start `Copilot - Runner diagnostics` on the reviewed source revision.
+Manual dispatch uses the existing trusted-operator contract: repository writers
+can already run selected branch code through source CI. Choose the exact reviewed
+revision after its source checks and review; arbitrary selected branch code is
+not isolated by a read-only GitHub token or disabled checkout credentials. The
+workflow adds no fork-event admission or runner privilege. Persistent runner
+isolation remains an operator requirement.
+
 Its Job Summary shows each actual exit/signal and links through the run to the
 `linux-sandbox-prerequisites` artifact. Download the receipt within its one-day
 retention period when retaining investigation evidence.
@@ -126,7 +133,12 @@ independent of those results.
 
 The schemaVersion4 receipt retains ten observations. Five check namespace or
 bubblewrap execution and empty-environment versus PATH-only Codex startup.
-Namespace commands require their actual Node output witness and exit0. Three
+Namespace commands require their actual Node output witness and exit0.
+Specified witnesses must match the captured channel exactly: added spaces, tabs,
+newlines or Unicode whitespace produce `assertion-mismatch`. The diagnostic
+does not trim those markers. A package metadata failure retains the closed
+`package-metadata` phase in the artifact; preparation stays failed, all ten
+probes stay not-run and owned cleanup remains visible. Three
 controls then run the same harmless Node payload directly, through bubblewrap
 and through Codex. Each requires both output markers and exit37. Only those
 three named execution-transport rows expect37; ordinary rows still require0.

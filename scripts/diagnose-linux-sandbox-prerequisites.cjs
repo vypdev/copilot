@@ -151,7 +151,7 @@ async function diagnose(ports) {
     receipt.executionIncomplete = true;
     if (!runtime) receipt.preparation = { state: ports.signal.aborted ? 'cancelled' : 'failed',
       cause: error.code === 'ENOENT' ? 'missing-prerequisite' : 'preparation-or-provenance-failed',
-      boundary: ['official-download', 'archive-inventory', 'extraction', 'executable-identity', 'version', 'fixture'].includes(error.diagnosticBoundary)
+      boundary: ['official-download', 'archive-inventory', 'extraction', 'executable-identity', 'package-metadata', 'version', 'fixture'].includes(error.diagnosticBoundary)
         ? error.diagnosticBoundary : 'unknown' };
     for (const id of policy.PROBE_IDS.slice(receipt.probes.length)) receipt.probes.push(policy.notRun(id,
       ports.signal.aborted ? 'cancelled' : runtime ? 'observation-unavailable' : 'preparation-failed'));

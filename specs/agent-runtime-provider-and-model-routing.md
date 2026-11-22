@@ -1171,6 +1171,67 @@ The evidence packet and operator page MUST retain that distinction.
 | `specs/catalog.json` | update |
 | `specs/CATALOG.md` | update |
 
+### Exact marker bytes and preparation boundaries — PR #1003 review follow-up
+
+Observed source `a01610d0` accepted surrounding whitespace through `.trim()`
+and dropped the adapter's known `package-metadata` failure tag to `unknown`.
+The first defect can mark unexpected bytes as verified; the second hides the
+actual failed preparation phase. The matched authored tests retain
+138 PASS / 7 FAIL before correction and 145 PASS after correction with identical
+test-file bytes. These are component observations; no new actual runner or
+qualification outcome is inferred.
+
+The pure policy MUST compare each specified marker with the unmodified captured
+channel. Leading/trailing spaces, tabs, CR/LF and Unicode whitespace MUST produce
+`fail (assertion-mismatch)` when they add bytes to an expected marker. Exact
+positive markers, including the actual empty channels of marker-free startup
+probes, retain their existing semantics. Output capture, raw/projected digests,
+truncation, explicit cancellation and exit-code requirements remain unchanged.
+The adapter still validates package metadata before CLI version/fixture work.
+The outer use case MUST retain the closed `package-metadata` boundary when that
+validation fails, emit ten preparation-failed not-run rows, mark collection
+incomplete and perform owned cleanup. Raw metadata or error text is not exposed.
+
+Operator flow: inspect the reviewed source -> run the unchanged manual Linux
+workflow -> inspect Summary state -> inspect the retained artifact's exact
+failure/bytes -> correct the cause before a changed attempt. For example:
+
+| Situation | Existing Summary surface | Retained artifact / action |
+|---|---|---|
+| Extra newline around a transport marker | `fail (assertion-mismatch)`; owned probes not admitted | Inspect the original bounded channel and producer; no whitespace normalization or inferred success |
+| Malformed package metadata | Runtime preparation failed; collection incomplete; cleanup completed if observed | `preparation.boundary: package-metadata`; inspect the fixed package/layout before another changed run |
+| Exact expected markers and status | Existing pass rows | Retain exact evidence; SDK/model-tool and qualification acceptance remain separate |
+
+The manual workflow retains the repository's existing trusted-operator model:
+GitHub requires repository write access for manual dispatch, and existing source
+CI already executes the selected same-repository branch on this self-hosted pool.
+The operator MUST choose the exact reviewed revision after its source gates.
+This is an operator trust prerequisite, not an isolation boundary enforced by
+read-only token permissions or disabled checkout credentials. Fork admission,
+runner privileges, hosted-job exceptions and workflow routing remain unchanged.
+No claim of protection against a malicious repository writer is introduced.
+See the retained review adjudication and the existing self-hosted runner contract.
+
+Seven additional risk-derived logical cases extend the 138-case baseline to
+**145**: six distinct extra-byte patterns exercise stdout/stderr and transport
+versus owned-read classification; one composition case routes actual private
+file preparation through the native adapter and outer receipt with modeled
+release/process ports and a controlled Engine port. It verifies the metadata
+boundary, ten not-run rows, no CLI invocation beyond archive preparation and
+owned cleanup. The earlier positive fixture now supplies its exact expected
+marker rather than a normalized newline. All previous cases and coverage floors
+remain; pure policy retains 100% for all metrics. Deterministic controls use no
+new wait, live service or model call. Keep actual runner acceptance distinct.
+
+Schema 4 and existing selectors remain unchanged. Older receipts retain their
+original values and executed source identity. Rollback selects the previous
+source; no output, decision or receipt is rewritten. The operator page, catalog
+and generated catalog MUST record the corrected semantics and
+`quality/bugbot/evidence/issue-1002/controls/review-output-integrity` evidence.
+Fresh final-head CI, Commit, Verification, Review and all valid finding decisions
+remain required before the next changed model-free observation. Production
+verification stays disabled, actual 174/42 unstarted and evaluated-pilot writes 0.
+
 Risk-derived minimum12new deterministic cases: four outcome/exit/signal/missing
 metadata; three exact-version/provenance/fixed-command/credential boundaries;
 two owned cleanup/cancellation; three workflow/summary/routing. Parameterized

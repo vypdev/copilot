@@ -2926,7 +2926,7 @@
       "id": "agent-runtime",
       "title": "Agent runtime, provider, model, and role routing",
       "status": "implemented",
-      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance. Standalone Linux diagnostics pin their complete private CLI distribution, retain every model-free result and cleanup with contiguous bounded output prefixes and separate raw byte identities, and require raw descriptor output with exact stdout/stderr/exit witnesses before owned read/write observations; Node stream compatibility and SDK/model acceptance remain separate.",
+      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance. Standalone Linux diagnostics pin their complete private CLI distribution, retain every model-free result and cleanup with contiguous bounded output prefixes and separate raw byte identities, and require raw descriptor output with exact stdout/stderr/exit witnesses before owned read/write observations; Node stream compatibility and SDK/model acceptance remain separate. Exact marker checks retain every captured byte without whitespace normalization, and known package-metadata failures remain distinct through outer receipt cleanup.",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-22",
       "specs": [
@@ -3064,7 +3064,8 @@
         "docs/development/testing.mdx",
         "quality/bugbot/evidence/issue-1002/controls/native-raw-fd-observation/README.md",
         "quality/bugbot/evidence/issue-1002/controls/startup-observation/README.md",
-        "quality/bugbot/evidence/issue-1002/controls/engine-connection-cause/README.md"
+        "quality/bugbot/evidence/issue-1002/controls/engine-connection-cause/README.md",
+        "quality/bugbot/evidence/issue-1002/controls/review-output-integrity/README.md"
       ]
     },
     {

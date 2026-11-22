@@ -43,8 +43,8 @@ function observation(id, result, expectedOutput, expectedError) {
   const proofSpecified = !transport || typeof expectedOutput === 'string' && expectedOutput.length > 0
     && typeof expectedError === 'string' && expectedError.length > 0;
   const outputMatches = completeOutput && proofSpecified
-    && (expectedOutput === undefined || result.stdout.trim() === expectedOutput)
-    && (expectedError === undefined || result.stderr.trim() === expectedError);
+    && (expectedOutput === undefined || result.stdout === expectedOutput)
+    && (expectedError === undefined || result.stderr === expectedError);
   const reason = result.cancelled ? 'cancelled' : result.timedOut ? 'technical-timeout'
     : result.error === 'ENOENT' ? 'missing-tool' : result.error ? 'launch-unavailable'
       : result.truncated ? 'output-incomplete' : exitCode === expectedExitCode && !signal && result.signal === null

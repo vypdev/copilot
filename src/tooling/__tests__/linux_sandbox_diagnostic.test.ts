@@ -163,7 +163,7 @@ posixDescribe('diagnostic command startup evidence', () => {
 describe('Linux sandbox diagnostic outcome policy', () => {
   it.each([
     ['verified command', success(), undefined, 'pass', 'verified'],
-    ['verified assertion', success('expected\n'), 'expected', 'pass', 'verified'],
+    ['verified assertion', success('expected'), 'expected', 'pass', 'verified'],
     ['wrong assertion', success('other'), 'expected', 'fail', 'assertion-mismatch'],
     ['actual nonzero', { ...success(), exitCode: 37 }, undefined, 'fail', 'command-failed'],
     ['signal', { ...success(), exitCode: null, signal: 'SIGHUP' }, undefined, 'fail', 'command-failed'],
@@ -209,6 +209,22 @@ describe('Linux sandbox diagnostic outcome policy', () => {
     for (const id of policy.TRANSPORT_IDS) expect(policy.observation(id, result, out, err)).toMatchObject({ state, expectedExitCode: 37, kind: 'execution-transport' });
     expect(policy.observation('codex-fixture-read', { ...success('out'), stderr: 'err', exitCode: 37 }, 'out', 'err'))
       .toMatchObject({ state: 'fail', expectedExitCode: 0 });
+  });
+
+  it.each([
+    ['leading stdout space', ' out', 'err'],
+    ['trailing stdout newline', 'out\n', 'err'],
+    ['leading stdout tab', '\tout', 'err'],
+    ['leading stderr nonbreaking space', 'out', '\u00a0err'],
+    ['trailing stderr CRLF', 'out', 'err\r\n'],
+    ['extra bytes on both channels', ' out\n', '\terr '],
+  ])('rejects non-exact marker bytes: %s', (_name, stdout, stderr) => {
+    for (const id of policy.TRANSPORT_IDS) {
+      expect(policy.observation(id, { ...success(stdout), stderr, exitCode: 37 }, 'out', 'err'))
+        .toMatchObject({ state: 'fail', reason: 'assertion-mismatch' });
+    }
+    expect(policy.observation('codex-fixture-read', { ...success(stdout), stderr }, 'out', 'err'))
+      .toMatchObject({ state: 'fail', reason: 'assertion-mismatch' });
   });
 
   it('projects account/private paths and keeps diagnostic facts distinct from qualification', () => {
@@ -588,6 +604,22 @@ posixDescribe('native adapter with modeled release/process ports and real privat
     const ports = diagnostic.nativePorts(new AbortController().signal, { platform: 'linux', architecture: 'x64', downloadArchive, execute });
     return { ports, events, downloadArchive, execute };
   }
+
+  it('retains the native package metadata failure boundary through the outer receipt and cleanup', async () => {
+    const f = fixture({ manifest: '{' });
+    const ports = { ...f.ports, engine: jest.fn(async () => ({ state: 'unavailable', cause: 'controlled-local-engine' })),
+      release: jest.fn(f.ports.release) };
+    try {
+      const receipt = await diagnostic.diagnose(ports);
+      expect(receipt.preparation).toMatchObject({ state: 'failed', boundary: 'package-metadata' });
+      expect(receipt.probes).toHaveLength(10);
+      expect(receipt.probes.every((row: any) => row.state === 'not-run' && row.reason === 'preparation-failed')).toBe(true);
+      expect(receipt.executionIncomplete).toBe(true); expect(receipt.cleanup).toBe('completed');
+      expect(f.execute.mock.calls.map(([, args]: any[]) => args[0])).toEqual(['-tzf', '-xzf']);
+      expect(ports.engine).toHaveBeenCalledTimes(1); expect(ports.release).toHaveBeenCalledTimes(1);
+      expect(existsSync(f.events.root)).toBe(false);
+    } finally { await f.ports.release(); }
+  });
 
   it('uses the official full package with adjacent resources even when CLI bytes match', async () => {
     const f = fixture();

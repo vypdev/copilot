@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "issue": 1002,
+  "pr": 1003,
+  "parentLocalR12": "6b991abd5752304c16590dbeb06c7029ddb6f10f",
+  "nativeReviewedSource": "a01610d0a8044f52fc5847b7398a51f4b2d28ae4",
+  "scope": "Exact unnormalized markers and retained known package-metadata preparation phase; unchanged trusted-operator manual dispatch/routing/privileges",
+  "matchedComponentResults": {
+    "red": {
+      "tests": 145,
+      "passed": 138,
+      "failed": 7,
+      "pending": 0,
+      "testFileSha256": "e000f1ded6ac4959b77cda78e37c9366baf5cf327450add17d2e396331008aae",
+      "failedCases": [
+        "Linux sandbox diagnostic outcome policy rejects non-exact marker bytes: leading stdout space",
+        "Linux sandbox diagnostic outcome policy rejects non-exact marker bytes: trailing stdout newline",
+        "Linux sandbox diagnostic outcome policy rejects non-exact marker bytes: leading stdout tab",
+        "Linux sandbox diagnostic outcome policy rejects non-exact marker bytes: leading stderr nonbreaking space",
+        "Linux sandbox diagnostic outcome policy rejects non-exact marker bytes: trailing stderr CRLF",
+        "Linux sandbox diagnostic outcome policy rejects non-exact marker bytes: extra bytes on both channels",
+        "native adapter with modeled release/process ports and real private files retains the native package metadata failure boundary through the outer receipt and cleanup"
+      ]
+    },
+    "green": {
+      "tests": 145,
+      "passed": 145,
+      "failed": 0,
+      "pending": 0,
+      "testFileSha256": "e000f1ded6ac4959b77cda78e37c9366baf5cf327450add17d2e396331008aae",
+      "identicalAuthoredTestBytesToRed": true
+    }
+  },
+  "sourceIdentities": {
+    "oldCommittedCode": {
+      "scripts/diagnose-linux-sandbox-prerequisites.cjs": "dab4bc39219714c9057d317e88f4e045f286c23073da1eca6776547d590d81c9",
+      "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "24891ac35467375c213b26690215b868b6819056395737141760b58ffd52040c"
+    },
+    "uncommittedWorkingTreeCode": {
+      "scripts/diagnose-linux-sandbox-prerequisites.cjs": "b630b3fd4f64d70de209e2f79ae6f8aa05db142d97e46ef8719530246e39538c",
+      "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "140f9acef8f25c993377075a3c4b957f215f56ec35ca670cb847ba4d49ed1d51"
+    },
+    "authoredTestSha256": "e000f1ded6ac4959b77cda78e37c9366baf5cf327450add17d2e396331008aae"
+  },
+  "newLogicalCases": {
+    "count": 7,
+    "extraBytePatterns": 6,
+    "outerNativeAdapterMetadataReceiptAndCleanup": 1,
+    "previousPositiveFixture": "same existing logical case now supplies its exact expected marker rather than a newline-normalized marker"
+  },
+  "outerCompositionLimit": "Actual private filesystem plus actual native adapter and outer use case; release/process/download and Engine ports controlled; no actual Codex executable, Docker workload or model-tool acceptance",
+  "coverage": {
+    "at": "2026-11-22T19:35:48.459806+00:00",
+    "exit": 1,
+    "tests": 145,
+    "passed": 145,
+    "failed": 0,
+    "sourceSha256": {
+      "scripts/diagnose-linux-sandbox-prerequisites.cjs": "b630b3fd4f64d70de209e2f79ae6f8aa05db142d97e46ef8719530246e39538c",
+      "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "140f9acef8f25c993377075a3c4b957f215f56ec35ca670cb847ba4d49ed1d51",
+      "src/tooling/__tests__/linux_sandbox_diagnostic.test.ts": "e000f1ded6ac4959b77cda78e37c9366baf5cf327450add17d2e396331008aae"
+    },
+    "sourceUnchangedAcrossRun": true,
+    "metrics": {
+      "scripts/diagnose-linux-sandbox-prerequisites.cjs": {
+        "lines": 99.55,
+        "statements": 96.77,
+        "branches": 91.47,
+        "functions": 94.64
+      },
+      "scripts/lib/linux-sandbox-diagnostic-policy.cjs": {
+        "lines": 100,
+        "statements": 100,
+        "branches": 100,
+        "functions": 100
+      }
+    },
+    "unchangedModuleFloors": {
+      "scripts/diagnose-linux-sandbox-prerequisites.cjs": {
+        "lines": 90,
+        "statements": 90,
+        "branches": 82,
+        "functions": 88
+      },
+      "scripts/lib/linux-sandbox-diagnostic-policy.cjs": {
+        "lines": 95,
+        "statements": 95,
+        "branches": 90,
+        "functions": 90
+      }
+    },
+    "allChangedModuleFloorsPass": true,
+    "unrelatedConfiguredOwnersMissing": [
+      "Jest: Coverage data for ./web/src/ was not found.",
+      "Jest: Coverage data for ./src/infrastructure/specification_catalog_publication.cjs was not found."
+    ],
+    "partialGlobalExitPreserved": true,
+    "noThresholdSuppression": true,
+    "raw": "/private/tmp/copilot-goal-1002-review-assertions-round13-coverage-attempt1.log",
+    "bytes": 1689,
+    "sha256": "aa1344ca2e0086eb6a27708c2a7c5291e1c99e6c0a2a9b161ed30d1020fad706",
+    "actualNativeDiagnosticRun": false,
+    "qualificationCalls": 0,
+    "pilotWrites": 0,
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "reviewDispositions": [
+    {
+      "thread": "PRRT_kwDONSeBW866nNOP",
+      "decision": "unsupported new authorization-bypass claim under existing trusted repository-writer/manual reviewed-ref contract",
+      "reply": "https://github.com/vypdev/copilot/pull/1003#discussion_r4659665228",
+      "resolvedBy": "efraespada",
+      "hostIsolationClaim": false,
+      "runnerOrActorSettingsChanged": false
+    },
+    {
+      "thread": "PRRT_kwDONSeBW866nNOQ",
+      "decision": "valid defect corrected in working source; future published-source review required"
+    },
+    {
+      "thread": "PRRT_kwDONSeBW866nNOV",
+      "decision": "valid defect corrected in working source; future published-source review required"
+    }
+  ],
+  "previousLocalIncrements": [
+    "e2b4922ca3ddad68e9bb85cb4b4d33db1d99ed9f",
+    "6b991abd5752304c16590dbeb06c7029ddb6f10f"
+  ],
+  "publicationPlan": "One normal three-commit push from remotea016 only after R13 hooks/audits; all old two-commit push/PR/canonical135 helpers remain unexecuted and superseded",
+  "canonicalHistory": "Previous134 remains verbatim in adjacent archive-naming packet; all earlier history links preserved",
+  "archiveMap": [
+    {
+      "file": "red.log.log.gz",
+      "rawBytes": 6782,
+      "rawSha256": "517a2cf176d32c3491a6ea396973fee0c6e63e4712c8d3582054e58ca3479b56",
+      "gzipBytes": 1038,
+      "gzipSha256": "e3274d606455a70a81ed9bed1b50da14133352be3a7480f5af2e6cb393a2cf57"
+    },
+    {
+      "file": "red.jest.json.log.gz",
+      "rawBytes": 96753,
+      "rawSha256": "90daf0f5b8021335bf67b9756fbaf5cb567930d11690479ced669d0cdb24d4ce",
+      "gzipBytes": 6775,
+      "gzipSha256": "5be7668190e573cb2450c1cf8f49d45e9392a7ac8b3c997453a42ccacb611acb"
+    },
+    {
+      "file": "red.json.log.gz",
+      "rawBytes": 1733,
+      "rawSha256": "070d5a8da7e779e77454b4c3d8752f9de103c4f600c4880641e0c5f9af5cf186",
+      "gzipBytes": 790,
+      "gzipSha256": "b7e4ba988749dfbeb2798ab391bd556487b870a3b31540763fac899142cf7f2f"
+    },
+    {
+      "file": "green.log.log.gz",
+      "rawBytes": 311,
+      "rawSha256": "746241ad07b520b76767d20b27cf5c55c19b99631e3e7e0920719bab50e0b0d6",
+      "gzipBytes": 229,
+      "gzipSha256": "80a085a7028c5ed18a0f53278eade70eda117187bcee7d5e9ba35fba812c27fb"
+    },
+    {
+      "file": "green.jest.json.log.gz",
+      "rawBytes": 71927,
+      "rawSha256": "df29d6a73880375e43650f37fce1f9fe8d8a8f76e426dbc6cd7b9b7d65628193",
+      "gzipBytes": 5227,
+      "gzipSha256": "9373c60c5d47639fab8a4a4564b019bbcb27f1c85d4b2c5da87789188da7f902"
+    },
+    {
+      "file": "green.json.log.gz",
+      "rawBytes": 863,
+      "rawSha256": "aa1aee1f56131bb04fbb813317b7cd9fae779af39e57350632b41170ca03560b",
+      "gzipBytes": 562,
+      "gzipSha256": "d85d9efdf4240c907aa0719cb680fc58744888d3ee0e8981ce084a82da0e752c"
+    },
+    {
+      "file": "authored-test-source.ts.log.gz",
+      "rawBytes": 70964,
+      "rawSha256": "e000f1ded6ac4959b77cda78e37c9366baf5cf327450add17d2e396331008aae",
+      "gzipBytes": 15499,
+      "gzipSha256": "f6feedcfafb0fb3c3296f8fe6c46f04906fc2516f132c04815870a2ffcc05257"
+    },
+    {
+      "file": "coverage.log.log.gz",
+      "rawBytes": 1689,
+      "rawSha256": "aa1344ca2e0086eb6a27708c2a7c5291e1c99e6c0a2a9b161ed30d1020fad706",
+      "gzipBytes": 566,
+      "gzipSha256": "90a4c2d73adf627822dc0709df03e2d852ab85cb5a18d70a4460d7f3cfb31b3b"
+    },
+    {
+      "file": "coverage.jest.json.log.gz",
+      "rawBytes": 145711,
+      "rawSha256": "3c99dbdc85982661b780237b8d2a7c367cfa586a0d6f32ac0d7e393f7c259b34",
+      "gzipBytes": 16541,
+      "gzipSha256": "a15dcb44e3aae404088e78a6bb00ccf334a851cab7f2cb6bfa21d656486788ea"
+    },
+    {
+      "file": "coverage.json.log.gz",
+      "rawBytes": 1838,
+      "rawSha256": "5acd70f527ee39f1f23d1753f2fad178acb8f133a677714d1a0b88020406da9d",
+      "gzipBytes": 833,
+      "gzipSha256": "409deda5c9b7f8c72b6bc6f5338ce10416fed615be11ce71395bbe4e9623822b"
+    },
+    {
+      "file": "coverage-summary.json.log.gz",
+      "rawBytes": 980,
+      "rawSha256": "d9d0d9301874a232f3ef5d03c2f63e048fff2fa84c7cf3321bbe73abbcaf16bf",
+      "gzipBytes": 319,
+      "gzipSha256": "e0f4a2316eef43a2988e9586193e6e3c648989986b4f095dd02d6af0cf9d628e"
+    },
+    {
+      "file": "coverage-final.json.log.gz",
+      "rawBytes": 73772,
+      "rawSha256": "3fc4c5b8e2f7a90d71c2c36a4a0a99532d8070101e0d6ba40071908752dcd604",
+      "gzipBytes": 10944,
+      "gzipSha256": "fca86d74cb0ff7728d05511be173b2304117342240ae4d2c44c5bac1531a29c4"
+    },
+    {
+      "file": "a016-native-review.log.gz",
+      "rawBytes": 33424,
+      "rawSha256": "aba8348565d23d081c1be06a72ac2f85300dd4c49911a53056f1b8b2cfa2648b",
+      "gzipBytes": 8189,
+      "gzipSha256": "99c33696fef36b58b39cee52cd9e12baefdb4b4aea04d01c82d812f291bfd58e"
+    },
+    {
+      "file": "manual-dispatch-reply-receipt.json.log.gz",
+      "rawBytes": 497,
+      "rawSha256": "4936f2749565893e36b2e68015a699aa582bbfc65cb721de517ed5fb9f938353",
+      "gzipBytes": 363,
+      "gzipSha256": "4966917feb47610409c2ca973c2c36f4f68d9503f70ce396be440193afaa60f2"
+    },
+    {
+      "file": "manual-dispatch-reply-response.json.log.gz",
+      "rawBytes": 5420,
+      "rawSha256": "3a15ebea97d1d4e7368398f8cbaa010bce9b91dda7863ec21289b3fc9cfb218c",
+      "gzipBytes": 2102,
+      "gzipSha256": "ee40bb6c004bc76196e16ef3c91cc5fbdf398c9eccc82ef3fbe7e15c98048edf"
+    },
+    {
+      "file": "manual-dispatch-resolve-receipt.json.log.gz",
+      "rawBytes": 529,
+      "rawSha256": "7a651563f7e8eb595c4d3cde2d39becbbf6078b85a5f6537819549de61e22c3d",
+      "gzipBytes": 379,
+      "gzipSha256": "3660027f6bef458a3a8fffa541ec4dbbbc04fdca5c0710e1c16f75639f4f824d"
+    },
+    {
+      "file": "manual-dispatch-resolve-response.json.log.gz",
+      "rawBytes": 128,
+      "rawSha256": "6c095d45873f3b3d6a0919a569d7562034081b6222c08d5b21aea9ab8244277b",
+      "gzipBytes": 120,
+      "gzipSha256": "4cb7231dce75489a4d60f5625c79f32536bf32dc283c38f236f958c1c5e5f471"
+    },
+    {
+      "file": "local-r11-normal-commit.json.log.gz",
+      "rawBytes": 1134,
+      "rawSha256": "c21f19a94724ae32f860f7921035b80d1316dd6308cd4a6e01c7993c004b58ac",
+      "gzipBytes": 701,
+      "gzipSha256": "6a783df9a4a0eef22ab23ad51cffa4759bbd6a8f93d38f6e89f49ccb998f4306"
+    },
+    {
+      "file": "local-r12-normal-commit.json.log.gz",
+      "rawBytes": 1131,
+      "rawSha256": "dbeb0bc1ba7b9480c6cf73a4faa0167c55e5efc45a62a2df1f7c3f144d8d1862",
+      "gzipBytes": 699,
+      "gzipSha256": "42ec21bb7ec2af49384c85dcf7c450b2b18ef176c3ba087b08faeae1efcc63cc"
+    },
+    {
+      "file": "local-r11-r12-composed-audit.json.log.gz",
+      "rawBytes": 862,
+      "rawSha256": "f5a7f916af7c3381545da1c9e17f903a905ccb5e0ae375797be3b9e4ad300888",
+      "gzipBytes": 520,
+      "gzipSha256": "cc6a99b3d7c7643d254a5a34dfcd9ffb82e42dd079f2050129c5ed03c847fd66"
+    }
+  ],
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "newNativeDiagnosticDispatched": false,
+  "qualifiedProfiles": [],
+  "productionVerification": "disabled"
+}
