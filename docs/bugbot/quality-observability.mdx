@@ -1011,9 +1011,12 @@ plan; historical campaigns retain their original identities.
 The private `managed-requirements.json` receipt records file admission with
 `enforcementObserved:false`. It establishes that the image file matched, while
 actual CLI/model-tool denial, credential/oracle exclusion and the common native
-controls remain separate prerequisites. The14 Git/filesystem component controls
-model protected Linux metadata and make no model calls. Neither their PASS nor
-the installed file qualifies a profile. See the
+controls remain separate prerequisites. The 14 Git/filesystem component controls
+model protected Linux metadata and make no model calls. Three additional
+fixture controls discard ambient Git bindings and require exactly one executed
+child PASS with zero skips before confirming that separate owned repositories
+stay unchanged (17 component cases total). Neither their PASS nor the installed
+file qualifies a profile. See the
 [qualification packet](https://github.com/vypdev/copilot/tree/develop/quality/bugbot/evidence/issue974)
 for the fixed artifact, controls and retained evidence. Production remains
 disabled and evaluated-pilot write attempts remain zero.

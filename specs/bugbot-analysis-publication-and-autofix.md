@@ -5200,6 +5200,21 @@ receipts. Deterministic PASS does not close runtime or scientific acceptance.
 The evidence README and quality operations page document the fixed policy,
 recovery and this distinction; the catalog records both new artifacts.
 
+The component fixture additionally MUST discard every inherited `GIT_*`
+binding before creating or reading its private repository, then explicitly
+disable global/system configuration and replacement objects. A real controlled
+`GIT_DIR` probe reproduced a passing test that nevertheless changed a separate
+owned repository's HEAD and index. Three additional C26 cases cover directory,
+worktree and index redirection, bringing this component file to 17 cases. Each
+uses disposable owned targets and an isolated child that must actually execute
+exactly one selected case with one PASS and zero skips. Clear inherited
+`NODE_TEST_CONTEXT`; exit0 alone cannot prove that the child control ran.
+Preserve the initial ineffective nested-child harness and the corrected
+14 PASS / 3 FAIL contrast separately. The qualification bootstrap already owns
+its independent Git-environment sanitation; this correction changes only test
+fixtures, their source/test identity and documentation, not runtime policy,
+admission rules, credentials, native acceptance or scientific gates.
+
 | Path | Change |
 |---|---|
 | `specs/bugbot-analysis-publication-and-autofix.md` | update |

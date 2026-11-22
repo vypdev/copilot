@@ -522,6 +522,18 @@ artifact contract. They cover missing/linked/unsupported files, owner/mode and
 byte/size mismatches, replacement/mutation, and descriptor failure cleanup.
 They run no image, CLI or model tool. Native Windows evidence is not inferred.
 
+Three additional fixture-safety controls reject ambient `GIT_DIR`,
+`GIT_WORK_TREE` and `GIT_INDEX_FILE` redirection (17 component cases total). The
+fixture strips all inherited Git variables before Git runs, disables external
+configuration and replacement objects, and keeps every target in an owned
+temporary repository. The original direct probe retained a test PASS alongside
+an unintended HEAD/index change in a separate controlled repository; no user
+repository was touched. An initial nested-child harness could exit0 without
+running its selected case. The corrected harness clears `NODE_TEST_CONTEXT`
+and asserts exactly one executed PASS with zero skips before checking unchanged
+repository state. Preserve those attempts separately from the corrected
+14 PASS / 3 FAIL contrast. This is fixture isolation, not new runtime denial proof.
+
 The private `managed-requirements.json` receipt deliberately records
 `enforcementObserved:false`. A file mismatch blocks startup and preserves the
 private diagnostic; prepare matching reviewed source/image bytes rather than

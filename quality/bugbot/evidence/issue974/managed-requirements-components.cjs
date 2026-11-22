@@ -3,7 +3,7 @@
 // metadata. These controls do not execute a CLI/image/model or prove denial.
 const assert = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os');
 const path = require('node:path'), vm = require('node:vm'), Module = require('node:module');
-const { execFileSync } = require('node:child_process'), { createHash } = require('node:crypto');
+const { execFileSync, spawnSync } = require('node:child_process'), { createHash } = require('node:crypto');
 const { test } = require('node:test');
 const root = path.resolve(__dirname, '../../../..');
 const file = path.join(root, 'quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs');
@@ -11,6 +11,9 @@ const requireSource = Module.createRequire(file), source = fs.readFileSync(file,
 const relative = 'quality/bugbot/evidence/issue974/qualification-requirements.toml';
 const fixed = '/etc/codex/requirements.toml', digest = b => createHash('sha256').update(b).digest('hex');
 const posixTest = process.platform === 'win32' ? test.skip : test;
+const fixtureEnvironment = () => ({ ...Object.fromEntries(Object.entries(process.env)
+    .filter(([key]) => !key.toUpperCase().startsWith('GIT_'))),
+    GIT_CONFIG_GLOBAL: os.devNull, GIT_CONFIG_NOSYSTEM: '1', GIT_NO_REPLACE_OBJECTS: '1' });
 
 function fixture(t, options = {}) {
     const directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ev974-managed-policy-')));
@@ -18,7 +21,7 @@ function fixture(t, options = {}) {
     const expected = fs.readFileSync(path.join(root, relative));
     const committedFile = path.join(directory, relative);
     fs.mkdirSync(path.dirname(committedFile), { recursive: true }); fs.writeFileSync(committedFile, expected);
-    const env = { ...process.env, GIT_CONFIG_GLOBAL: os.devNull, GIT_CONFIG_NOSYSTEM: '1' };
+    const env = fixtureEnvironment();
     const git = (...args) => execFileSync('git', ['-C', directory, '-c', 'core.hooksPath=' + os.devNull, ...args], { env });
     git('init', '--initial-branch=control'); git('add', '.');
     git('-c', 'user.name=Controlled Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'Reviewed policy');
@@ -136,3 +139,31 @@ test('ev974-C26 the qualification-only system artifact covers every fixed privat
         '/qualification-input/invocation.json', '/qualification-input/plan.bundle',
         '/qualification-input/campaign/corpus-v3', '/qualification-output']);
 });
+
+for (const key of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE']) {
+    posixTest('ev974-C26 ambient ' + key + ' cannot redirect the controlled Git fixture', t => {
+        const directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ev974-git-env-control-')));
+        t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+        const git = (...args) => execFileSync('git', ['-C', directory, '-c', 'core.hooksPath=' + os.devNull, ...args],
+            { env: fixtureEnvironment(), stdio: ['pipe', 'pipe', 'pipe'] });
+        git('init', '--initial-branch=control'); fs.writeFileSync(path.join(directory, 'owned-marker.txt'), 'Owned control\n');
+        git('add', '.'); git('-c', 'user.name=Controlled Fixture', '-c', 'user.email=fixture@example.invalid',
+            'commit', '-m', 'Protected controlled baseline');
+        const snapshot = () => ({ head: git('rev-parse', 'HEAD').toString().trim(),
+            status: git('status', '--porcelain').toString(), index: digest(fs.readFileSync(path.join(directory, '.git/index'))) });
+        const before = snapshot(), target = key === 'GIT_DIR' ? path.join(directory, '.git')
+            : key === 'GIT_INDEX_FILE' ? path.join(directory, '.git/index') : directory;
+        // Select only the pre-existing successful case. The three outer cases
+        // cannot recursively run themselves; every redirect target is owned here.
+        const environment = { ...fixtureEnvironment(), [key]: target };
+        delete environment.NODE_TEST_CONTEXT;
+        const child = spawnSync(process.execPath, ['--no-sparkplug', '--test', '--test-reporter=tap',
+            '--test-name-pattern=^ev974-C26 admits exact committed policy bytes with modeled protected root metadata$', __filename],
+        { cwd: root, env: environment, encoding: 'utf8', maxBuffer: 1024 * 1024 });
+        assert.equal(child.status, 0, child.stdout + child.stderr);
+        assert.match(child.stdout, /^# tests 1$/mu, 'the selected child control must actually execute');
+        assert.match(child.stdout, /^# pass 1$/mu, 'the selected child control must pass');
+        assert.match(child.stdout, /^# skipped 0$/mu, 'the child cannot substitute a skip');
+        assert.deepEqual(snapshot(), before, 'ambient Git binding changed the separate controlled repository');
+    });
+}
