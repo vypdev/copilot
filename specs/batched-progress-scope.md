@@ -362,3 +362,72 @@ documentation, architecture, workflow, full test, coverage, bundle and
 Graphify checks. Record manual rendering and the pinned #951 replay in the
 PR before declaring the change complete. Production verification remains
 subject to the separate #950 qualification and activation decision.
+
+
+## Complete scope-group packing — #1000
+
+Observed prerequisite failure: PR997 at397de9a retained17comparison parts,
+12classification calls and0of7assessment batches with call-budget. The old
+planner chose only one full scope or seven single-batch scopes. The full-scope
+alternative would need36calls and cannot explain that preflight refusal; the
+seven-group branch needs138calls. Individual native classification responses
+and group byte counts were not logged. This source/count derivation is distinct
+from the deterministic reproduction and from actual174/42qualification.
+
+The existing internal planner MUST pack maximal consecutive **whole** assessment
+batches whose exact serialized UTF-8 acceptance union fits64,000bytes. It MUST
+repeat every exclusion, publication identity, qualifier and source reference;
+the host manifest retains all original source quotes. A group owns all of its
+assigned requirements and all comparison parts. Extraction requests and receipts
+MUST bind to that group's complete acceptance context. A different group cannot
+reuse its facts, even when both read the same source. Every original requirement
+is assessed exactly once, in the same frozen source order. One oversized whole
+batch fails before comparison extraction; no splitting, clipping or omission.
+
+```text
+Complete classifications -> pack whole batches within64000bytes
+ -> preflight every bound group and total calls -> extract every part per group
+ -> assess every assigned batch -> validate complete aggregate and freshness
+```
+
+Text equivalent: packing changes scheduling and repeated extraction count, while
+complete context, evidence, receipt and publication authority remain unchanged.
+This is a pure policy called by the existing application workflow; existing
+ports, dependency constraints and entrypoints remain in force. There is no new
+configuration, schema, permission, durable state or retry route. The fixed
+120call/30minute ledger,512KiB native prompt envelope,384000byte effective
+comparison aggregate and all repairs/source limits remain unchanged. The actual
+prompt/schema/repair reserves still constrain each group before any extraction.
+
+The run MUST report safe scalar classification-call, group, per-group part,
+assessment, scope-byte and minimum-call counts before a call-budget refusal.
+It MUST expose no source prose, paths, credentials or model output. Example:
+`Progress evidence plan: 9 classification calls, 8 scope groups, 16 comparison
+parts per group, 8 assessment batches; scope UTF-8 bytes [...]; minimum 145 of
+120 calls. Previous progress is retained.` The existing retained-state check,
+summary, navigation and localized fallback remain the primary UI; no extra
+comment or partial percentage is published. A fresh complete attempt requires
+a causal source/input correction, never a larger limit or unchanged blind retry.
+
+Additional numeric budget: **at least10distinct cases**: eight pure grouping
+cases for unchanged single group, maximal packing/order, exact byte boundary,
+multibyte counting, repeated exclusions/publication, qualifiers/aliases, an
+oversized batch and empty internal assignments; one application regression with
+12classifications,17framed comparison parts and7assessments; one genuine
+call-budget refusal with safe diagnostics and zero publication. The positive
+fixture needs53calls after packing rather than138; it is a controlled protocol
+fixture with17source paths, not the native463path inventory or model acceptance.
+A large former rejection fixture that now fits MUST complete; strengthen the
+separate genuine-refusal fixture without changing production limits or dropping
+its assertions. Pure grouping branches require100%; existing module/global and
+uploaded changed-line gates remain required. All old source/protocol/recovery,
+Domus, citation, stale-head, repair and publication controls stay effective.
+
+Traceability: SDD-I916-R2/R3 -> source/receipt invariants and pure grouping tests;
+SDD-I916-R4 -> byte-boundary and complete-plan positive/refusal tests;
+SDD-I916-R5/R6/R7 -> existing complete receipt and zero-partial-publication gates;
+SDD-I916-R9/R10 -> scalar diagnostics and branch-management operator guidance.
+Definition of Done: all additional cases, unchanged relevant regressions,
+architecture/type/lint, specification/catalog/docs, builds, package, Graphify
+and fresh final-head native checks pass. A local protocol pass does not close
+#974, admit42, install the publisher or enable production verification.

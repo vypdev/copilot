@@ -1,0 +1,94 @@
+{
+  "at": "2026-11-22T03:12:47.330786+00:00",
+  "parent": "09d5c2d2423057cde469e5a8790c61481859516d",
+  "issue": 1000,
+  "nativeFailure": {
+    "head": "397de9a6271eb819f513c499a792a804684b9b69",
+    "run": 44972786203,
+    "job": 137055986966,
+    "requiredPaths": 463,
+    "parts": 17,
+    "classifications": 12,
+    "assessments": 7,
+    "verified": 0,
+    "sourceDerivation": "Only full1group or oneperbatch7groups existed. 36-call fullscope cannot triggerpreflight; seven needs138. Exact nativeclassifications/groupbytes unavailable."
+  },
+  "controlledReplay": {
+    "before": "call-budget0of7",
+    "after": "53calls,12classifications,2groupsx17framedparts,7assessments,224IDs",
+    "fixtureSourcePaths": 17,
+    "notNative463PathReplay": true,
+    "sourceContextReceiptIds": 34
+  },
+  "compatibilityDiagnostics": [
+    "Initial generic red retained; second sameoldsource gives closedcall-budget reason.",
+    "Initial pure expectedpartition count adjustedto exactmaximal[3,2,2]; oldsmallfixture nowneeds4sourcecalls instead8 withoutscope/evidence omission.",
+    "Former budgetfixture nowfits; stronger firstattempt exceeded unchanged262KiBscope first. Corrected17excludedqualifiers producegenuine145call refusal beforeevidence, not a policyincrease."
+  ],
+  "cohort": {
+    "suites": 58,
+    "passed": 1128,
+    "failed": 0,
+    "skipped": 0,
+    "focusedCommandExit": 1,
+    "exitReason": "unrun global coverage owners; not finalglobal/native acceptance"
+  },
+  "modules": {
+    "src/application/policies/progress_batch_policy.ts": {
+      "lines": 100,
+      "functions": 100,
+      "statements": 100,
+      "branches": 99.43
+    },
+    "src/application/usecases/actions/progress_batch_workflow.ts": {
+      "lines": 100,
+      "functions": 100,
+      "statements": 100,
+      "branches": 100
+    }
+  },
+  "groupingBranches": "All new grouping branches covered. Existing unexercised fallback at progress_batch_policy line297 keeps fullpolicy99.43%branches; no threshold/ignore reduced.",
+  "sourceHashes": {
+    "docs/issues/branch-management.mdx": "ef7c2adadaa96ae610a8846ebc264064b57f61ec052c8d82fcad5a92c7604301",
+    "specs/CATALOG.md": "4c658db2e35d83c9344e3154cc1a02acef324124991b4597999800954fd565ed",
+    "specs/batched-progress-scope.md": "e6b56b4a8944c07468e38882a441a7e9cce770cac026ee35e8536db8f8105b8a",
+    "specs/catalog.json": "0e5c73d474b5103060d1b52630eb5908c68fa3b0240cb90e2a188d286cd7c87d",
+    "src/application/policies/progress_batch_policy.ts": "841095b938c293f3e8d919eff1461ed71185ab963b7506edf54d9f78035b49b9",
+    "src/application/usecases/actions/__tests__/progress_batches.integration.test.ts": "0079d921d397f3c0634c7228fffff92246ba8c9d4969280b531fc3085d427415",
+    "src/application/usecases/actions/progress_batch_workflow.ts": "f6e321d8f13c2830773899d2b540eea209e17653166ff9322837678452de6c5f",
+    "src/application/policies/__tests__/progress_scope_groups.test.ts": "5dcc2b6c64204aab1223214a30f7520b08d1d7e891a540f5a7f0de382e6ee34f"
+  },
+  "archiveCount": 25,
+  "scientific": {
+    "actual174": "UNSTARTED",
+    "actual42": "UNSTARTED",
+    "models": 0,
+    "pilotWriteAttempts": 0,
+    "profileQualified": false,
+    "production": "disabled"
+  },
+  "next": "Normalbuild/test/lint hooks, packagevalidation, finalheadnativechecks; mergeprerequisite thenofficialparentsyncof974beforemeasuring.",
+  "package": "104 files, actual extractedCLI/API/localwebsmokePASS; no publisher CLIcases on thisbranch",
+  "bundles": {
+    "cli": {
+      "bytes": 8336407,
+      "sha256": "cc44187093a09e32f0b0a68182120d439383983fdc25a65c8ad5a11e9a718826",
+      "changedFromParent": true
+    },
+    "github_action": {
+      "bytes": 11095511,
+      "sha256": "55749bd2e6d50a445dbbf9bbb80ca24a70ab92ec3571e135119654d0fac55242",
+      "changedFromParent": true
+    },
+    "api": {
+      "bytes": 1127450,
+      "sha256": "137d732e422e1790bf16a68b0b92f4879b3fc272422dcdb65ac6a20c70b9597f",
+      "changedFromParent": true
+    },
+    "deployment_recovery": {
+      "bytes": 2035457,
+      "sha256": "8c6ee299c7ca669f54568636c462f6e8fdcb587db42b7b7e4042b6d5f8668165",
+      "changedFromParent": true
+    }
+  }
+}
