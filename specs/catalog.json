@@ -2926,9 +2926,9 @@
       "id": "agent-runtime",
       "title": "Agent runtime, provider, model, and role routing",
       "status": "implemented",
-      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance",
+      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance Standalone Linux diagnostics pin their private CLI distribution and preserve each model-free probe exit independently from qualification.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-07",
+      "lastVerified": "2026-11-22",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -2947,7 +2947,8 @@
       ],
       "entrypoints": [
         "src/actions/agent_configuration_builder.ts",
-        "src/actions/github_action_runtime.ts"
+        "src/actions/github_action_runtime.ts",
+        "scripts/diagnose-linux-sandbox-prerequisites.cjs"
       ],
       "code": [
         "src/domain/agent.ts",
@@ -2995,7 +2996,9 @@
         "src/application/policies/agent_source_snapshot_policy.ts",
         "src/infrastructure/agents/agent_source_snapshot_git.ts",
         "src/infrastructure/agents/agent_source_snapshot_workspace.ts",
-        "src/infrastructure/agents/agent_source_snapshot_integrity.ts"
+        "src/infrastructure/agents/agent_source_snapshot_integrity.ts",
+        "scripts/diagnose-linux-sandbox-prerequisites.cjs",
+        "scripts/lib/linux-sandbox-diagnostic-policy.cjs"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -3036,7 +3039,8 @@
         "src/infrastructure/agents/__tests__/agent_source_snapshot_integrity.test.ts",
         "src/infrastructure/agents/__tests__/agent_source_snapshot_gate.integration.test.ts",
         "src/application/policies/__tests__/sdd_source_context_presentation.test.ts",
-        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts"
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts",
+        "src/tooling/__tests__/linux_sandbox_diagnostic.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",

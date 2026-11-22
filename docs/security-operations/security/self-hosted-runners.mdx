@@ -104,6 +104,34 @@ model success is distinct from a verified tool read, edit, or command. A model
 reply and a setup marker cannot certify sandbox tools. No new Windows-service
 Codex acceptance run is required or scheduled.
 
+The Linux diagnostic now prepares official standalone Codex0.171.0 privately
+in the same job as Node24.21.0. It checks the fixed distribution checksum and
+actual executable bytes before probes; the runner's global installation stays
+untouched. Start `Copilot - Runner diagnostics` on the reviewed source revision.
+Its Job Summary shows each actual exit/signal and links through the run to the
+`linux-sandbox-prerequisites` artifact. Download the receipt within its one-day
+retention period when retaining investigation evidence.
+
+The seven observations distinguish unprivileged namespace/bubblewrap checks,
+empty-environment versus PATH-only Codex startup, an owned fixture read/hash,
+and an owned write-denial canary. A startup failure cannot certify denied
+writing. Positive read output must match the trusted digest; successful denial
+must leave the canary absent. An optional local Engine version observation is
+separate and creates no image/container/workload.
+
+Preparation failure leaves probes `not-run`. Missing tools are `unavailable`;
+nonzero/signal/mismatched/truncated observations are failures. Cancellation
+settles the owned command and marks remaining probes `not-run`; cleanup failure
+stays visible. Preserve the receipt and fix the demonstrated cause before a
+changed attempt. A completed diagnostic job means observations were collected,
+including negatives; its green status alone does not certify a sandbox.
+
+The report projects private/account paths and uses a private credential-free
+HOME/config. It introduces no privilege, runner registration or global setting
+change. These model-free command probes do not prove SDK/model tools, managed
+credential/oracle exclusion, native qualification controls or the174/42campaigns.
+Those require their own exact source/runtime evidence and committed admission.
+
 ## Credential-health source selection
 
 The source policy selected for integration in [#979](https://github.com/vypdev/copilot/issues/979)

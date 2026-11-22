@@ -929,6 +929,128 @@ older/equal/newer/unparseable versions, metadata outage, explicit executable,
 private PATH overlay and cleanup. This is update detection, not exact version
 pinning.
 
+### Exact Linux sandbox prerequisite observations — issue #1002 (2026-11-22)
+
+Observed limitation: diagnostic44978657686 inspected PATH Codex0.160.0 while
+ordinary Actions44985430951/44986247868 used0.171.0. The existing Bash step
+discards individual statuses with `|| true`. Its unchanged bytes on default
+ace49, executed with five modeled probe commands returning37, exit0 overall.
+That is actual Bash/component evidence, not a Linux or Codex observation.
+
+Intentional contract: the existing manual Linux diagnostic MUST provision the
+official standalone Codex0.171.0 distribution privately in the same job as
+Node24.21.0. The closed x64/arm64 release table pins complete archive sizes and
+SHA256digests from the official release. The adapter MUST verify the full
+download and exact one-file archive inventory before extraction/execution,
+record actual native executable and Node byte hashes, and require the exact
+reported version before probing. No global CLI installation, npm lifecycle,
+model request, public input, repository Variable or runtime fallback is added.
+
+```mermaid
+flowchart LR
+    D[Manual Linux diagnostic] --> P[Verify fixed private distribution]
+    P --> O[Observe seven fixed commands separately]
+    O --> C[Close commands and remove owned fixture]
+    C --> R[Retain receipt and job summary]
+```
+
+Text equivalent: trusted workflow selection precedes private preparation. Only
+verified preparation admits the seven fixed probes. Completion closes owned
+processes, retains each observation, cleans the private fixture and publishes
+one receipt plus one Job Summary. None of those steps grants qualification.
+
+The seven fixed observations are unprivileged user/network namespace creation,
+two existing bubblewrap configurations, Codex empty-environment startup,
+Codex PATH-only startup, an owned fixture read/hash, and an owned write-denial
+canary. Every executed probe MUST retain its actual exit or signal, explicit
+pass/fail/unavailable/cancelled state and bounded privacy-projected output.
+Absent or malformed status, signal termination, launch errors, truncation and
+wrong expected output cannot pass. Write denial requires the expected actual
+child result and trusted post-command absence; a sandbox startup failure or a
+created canary cannot become a successful denial. Probe results are never
+collapsed into the aggregate workflow exit code.
+
+| State | Visible result | Next action |
+|---|---|---|
+| Preparing | Runtime preparation pending; no probe execution claim | Await the owned download/version checks |
+| Preparation failed/missing | Failed boundary; all remaining probes not-run | Inspect the retained receipt before a changed attempt |
+| Mixed observations | Separate failed/unavailable and positive rows | Investigate the actual failed prerequisite |
+| Cancelled | Actual child cancellation and remaining not-run rows | Preserve incomplete observations; no blind replay |
+| Observation complete | All seven rows and exact byte identities retained | Independently verify actual SDK/read-denial composition |
+
+Representative Job Summary (illustrative):
+
+```text
+Linux sandbox diagnostic
+Runtime preparation: observed. Codex target: 0.171.0.
+codex-fixture-read: pass (verified), exit0
+codex-write-denial: fail (command-failed), exit1
+Next: inspect failed or unavailable prerequisites before qualification.
+SDK/model tools, credential/oracle denial and qualification remain unverified.
+```
+
+The pure policy module owns the closed release table, outcome interpretation,
+privacy projection and summary. The diagnostic use case owns preparation/probe
+ordering and partial outcomes through semantic ports. Its native adapter owns
+fixed process/download/filesystem/local-Engine operations, scoped credentials-free
+HOME/config, actual close callbacks and private cleanup. The workflow owns Linux
+placement, Node provisioning and receipt retention. These standalone diagnostic
+modules MUST NOT import or mutate ordinary agent role/provisioning/application
+state. Existing source boundaries and routing validators remain authoritative.
+
+CLI arguments, executable URLs, package version, probes and host paths are not
+user configuration. The x64/arm64 selection follows the observed host architecture;
+unsupported architectures fail preparation. Existing `[self-hosted,codex,Linux]`,
+contents-read permission, resource counters, five-minute diagnostic job bound
+and Windows Codex retirement remain. Command20s, download60s and post-termination
+1s escalation are bounded technical diagnostic operations, not investigation,
+turn/read/token/heartbeat limits. No sudo, privilege, seccomp, sysctl, AppArmor,
+sandbox-bypass, runner registration or global configuration change is permitted.
+
+Cancellation MUST reach the actual owned command and settle its close before
+cleanup. Private temporary files MUST be removed after successful or failed
+preparation/probes; cleanup failure stays visible. A read-only local Engine
+version observation is independent: unavailable or present does not establish
+a conforming container, and no image/container/workload is created. The workflow
+retains its report unconditionally, including negative preparation, with no
+new issue/PR comment stream. Report output projects account/private paths and
+does not inherit or enumerate credentials. Production settings are not mutated;
+the receipt does not infer their live values from a constant.
+
+Risk-derived minimum12new deterministic cases: four outcome/exit/signal/missing
+metadata; three exact-version/provenance/fixed-command/credential boundaries;
+two owned cleanup/cancellation; three workflow/summary/routing. Parameterized
+distinct behaviors count once each and executed counts MUST be recorded. Preserve
+all previous budgets and global coverage floors. Add both runtime CJS modules
+to coverage collection on supported POSIX test hosts; the pure outcome policy SHOULD reach100%branches, with
+module gates of95%lines/statements and90%branches/functions for it. The native
+adapter retains90%lines/statements,82%branches and88%functions. Its actual POSIX
+process/filesystem fixtures and module coverage are not applicable on Windows,
+where this Linux-only adapter cannot run; retain portable policy/use-case/HTTP/
+workflow cases and every existing Windows SDK/global gate. No new Windows Codex
+job or platform-success claim is introduced. Modeled ports
+cannot substitute for the actual same-job self-hosted observation.
+
+Acceptance and traceability: fixed archive mismatch or version mismatch rejects
+before probes; every negative/missing/signal/cancelled probe has its own preserved
+status; fixture read matches its trusted digest; successful denial leaves no
+canary; cancellation/cleanup settles owned resources; workflow structure retains
+the above scheduling/permissions and unconditional receipt; job content separates
+observations from qualification. The focused diagnostic and workflow tests,
+normal hooks/global coverage, workflow/docs/specification validators, generated
+catalog and Graphify MUST pass. User/runner operations docs MUST explain the
+artifact, partial/failure/cancelled states, privacy and changed-attempt recovery.
+One changed exact-head/version diagnostic on an existing self-hosted Linux runner
+is required after source gates; retain every outcome without an unchanged retry.
+
+This prerequisite is separate from #974's source recovery and does not replace
+its branch. Fresh common native C32–C35, actual CLI credential/oracle exclusion,
+committed174preregistration and scientific gates remain required. The existing
+#974/#998 recovery snapshots cannot silently change, and this task must not
+move their reviewed develop base while their specific recovery approval is
+pending. Rollback is an ordinary reviewed source change; old status-swallowing
+diagnostics cannot be reclassified as a qualification pass.
+
 ## 14. Testing strategy and numeric budget
 
 | Area | Minimum cases | Risks |
