@@ -47,10 +47,11 @@ function execute(command, args, { cwd, env, signal, timeout = 20000 }) {
 }
 
 function probeCommands(runtime) {
-  const shellPolicy = mode => ['--ignore-user-config', '--ignore-rules', 'sandbox',
-    '--config', 'sandbox_mode="read-only"', '--config', `shell_environment_policy.inherit="${mode}"`,
+  // The pinned CLI accepts root configuration overrides before its host sandbox
+  // command. Exec-only ignore flags are not part of this command's grammar.
+  const shellPolicy = mode => ['--config', 'sandbox_mode="read-only"', '--config', `shell_environment_policy.inherit="${mode}"`,
     ...(mode === 'core' ? ['--config', 'shell_environment_policy.ignore_default_excludes=false',
-      '--config', 'shell_environment_policy.include_only=["PATH"]'] : []), '--'];
+      '--config', 'shell_environment_policy.include_only=["PATH"]'] : []), 'sandbox', '--'];
   const read = 'process.stdout.write(require("node:crypto").createHash("sha256").update(require("node:fs").readFileSync(process.argv[1])).digest("hex"))';
   const write = 'try{require("node:fs").writeFileSync(process.argv[1],"owned-write-canary");process.stdout.write("WROTE");process.exitCode=9}catch(e){if(["EACCES","EPERM","EROFS"].includes(e.code))process.stdout.write("DENIED");else process.exitCode=44}';
   return [
@@ -171,8 +172,9 @@ function nativePorts(signal, dependencies = {}) {
   const archive = policy.archiveFor(dependencies.architecture ?? process.arch);
   privateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-linux-sandbox-')); fs.chmodSync(privateRoot, 0o700);
   const home = path.join(privateRoot, 'home'), temporary = path.join(privateRoot, 'tmp');
-  fs.mkdirSync(home, { mode: 0o700 }); fs.mkdirSync(temporary, { mode: 0o700 });
-  const env = { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, HOME: home, CODEX_HOME: path.join(home, '.codex'),
+  const codexHome = path.join(home, '.codex');
+  fs.mkdirSync(home, { mode: 0o700 }); fs.mkdirSync(codexHome, { mode: 0o700 }); fs.mkdirSync(temporary, { mode: 0o700 });
+  const env = { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, HOME: home, CODEX_HOME: codexHome,
     XDG_CONFIG_HOME: path.join(home, '.config'), TMPDIR: temporary, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' };
   const run = (executable, args) => (dependencies.execute ?? execute)(executable, args, { cwd: privateRoot, env, signal });
   const fixture = path.join(privateRoot, 'fixture.txt'), writeTarget = path.join(privateRoot, 'write-canary.txt');

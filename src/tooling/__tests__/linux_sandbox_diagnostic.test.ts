@@ -73,6 +73,25 @@ describe('Linux sandbox diagnostic outcome policy', () => {
 });
 
 describe('fixed diagnostic orchestration', () => {
+  it('uses the pinned CLI root configuration grammar before the host sandbox command', async () => {
+    const ports = modeledPorts(), runtime = await ports.prepare();
+    const rows = diagnostic.probeCommands(runtime).filter((row: any[]) => row[1] === runtime.codex);
+    expect(rows).toHaveLength(4);
+    for (const [, , args] of rows) {
+      const boundary = args.indexOf('sandbox'); expect(boundary).toBeGreaterThan(0);
+      expect(args.slice(boundary, boundary + 2)).toEqual(['sandbox', '--']);
+      const configuration = args.slice(0, boundary);
+      expect(configuration.length % 2).toBe(0);
+      for (let index = 0; index < configuration.length; index += 2) {
+        expect(configuration[index]).toBe('--config');
+        expect(configuration[index + 1]).toMatch(/^(?:sandbox_mode="read-only"|shell_environment_policy\.(?:inherit="(?:none|core)"|ignore_default_excludes=false|include_only=\["PATH"\]))$/u);
+      }
+      expect(configuration).toContain('sandbox_mode="read-only"');
+      expect(args).not.toEqual(expect.arrayContaining(['--ignore-user-config']));
+      expect(args).not.toEqual(expect.arrayContaining(['--ignore-rules']));
+    }
+  });
+
   it('retains all seven commands and actual read/denial checks without inheriting command inputs', async () => {
     const ports = modeledPorts(); const receipt = await diagnostic.diagnose(ports);
     expect(receipt.probes.map((row: any) => row.id)).toEqual(policy.PROBE_IDS);
@@ -237,6 +256,8 @@ posixDescribe('native adapter with modeled release/process ports and real privat
       expect(f.events.environment.CONTROL_DIAGNOSTIC_SECRET).toBeUndefined();
       expect(f.events.environment.HOME).toBe(path.join(f.events.root, 'home'));
       expect(f.events.environment.CODEX_HOME).toBe(path.join(f.events.root, 'home', '.codex'));
+      expect(lstatSync(f.events.environment.CODEX_HOME).isDirectory()).toBe(true);
+      expect(lstatSync(f.events.environment.CODEX_HOME).mode & 0o777).toBe(0o700);
       expect(await f.ports.writeAbsent()).toBe(true); writeFileSync(runtime.writeTarget, 'owned');
       expect(await f.ports.writeAbsent()).toBe(false);
       expect(f.ports.project(f.events.root)).toBe('<diagnostic-root>');

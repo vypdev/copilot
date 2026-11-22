@@ -970,6 +970,16 @@ child result and trusted post-command absence; a sandbox startup failure or a
 created canary cannot become a successful denial. Probe results are never
 collapsed into the aggregate workflow exit code.
 
+The fixed Codex arguments MUST follow the pinned CLI's actual host-sandbox
+grammar: root `--config` pairs precede `sandbox -- <owned command>`. The
+`exec` options `--ignore-user-config` and `--ignore-rules` are not sandbox
+arguments and MUST NOT be prepended. Configuration isolation uses the fresh
+owned HOME, CODEX_HOME, XDG directory and cwd; it does not bypass managed
+system requirements. Create CODEX_HOME as an owned0700directory before any
+CLI version or sandbox command. This diagnostic contract does not change the
+ordinary SDK's `exec` policy. See the pinned [CLI root command dispatch](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/cli/src/main.rs)
+and [host sandbox arguments](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/cli/src/lib.rs).
+
 | State | Visible result | Next action |
 |---|---|---|
 | Preparing | Runtime preparation pending; no probe execution claim | Await the owned download/version checks |
@@ -1059,6 +1069,22 @@ actual planner, execution admission and owned-directory cleanup. Its unchanged
 plan must expire before child launch; an intentional deadline-reset mutant
 must fail the same control. All other real Git/source integration controls and
 all production deadlines remain. Neither component proof replaces native CI.
+
+First exact-source native diagnostic45016512460/job137189879318 ran on
+ubuntu-runner-1 with verified official Codex0.171.0 and Node24.21.0. Both
+bubblewrap commands passed. Unshare failed to write uid_map; all four CLI
+commands exited2 at argument parsing, before any CLI sandbox/read/denial
+execution, and reported missing CODEX_HOME. The local Engine observation was
+unavailable and cleanup completed. Preserve all seven outcomes and the original
+artifact: job success means collection completed, never sandbox acceptance.
+Native CI on2f057efb passed946suites/18,812tests with35historical skips and all
+four review threads resolved. Two additional boundary assertions reproduce
+the diagnostic grammar and missing-directory defects as67PASS/2FAIL across
+69controls; the same control bytes must pass after correction. One new grammar
+case and the refined existing real-filesystem case extend the risk budget.
+Only a new committed source identity and passing source gates permit a changed
+native diagnostic. Do not repeat45016512460 or infer CLI/tool acceptance from
+the positive bubblewrap rows.
 
 Acceptance and traceability: fixed archive mismatch or version mismatch rejects
 before probes; every negative/missing/signal/cancelled probe has its own preserved
