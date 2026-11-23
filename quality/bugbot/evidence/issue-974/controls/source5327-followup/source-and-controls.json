@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "parent": "5327d533045ab10dff1ca6969317c12e93b88cf8",
+  "kind": "technical runtime evidence on parent5327 plus local C15 fixture correction; not scientific rerun",
+  "technicalIdentity": {
+    "implementation": "5327d533045ab10dff1ca6969317c12e93b88cf8",
+    "privatePreregistration": "4c23a52264dd36fe975464ef5773ac5c5ff3ceb8",
+    "image": "sha256:6d196f4007103963549144b15aff1e1e6735450e2c85d04fb201b04980ab7106",
+    "cli": "0.171.0",
+    "profileSha256": "fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b",
+    "githubActionsJob": false,
+    "modelCalls": 0,
+    "genuineModelToolAdmission": false,
+    "cliPassed": 14,
+    "sdkPassed": 4,
+    "ownedIdsFreshly404": 12
+  },
+  "fixture": {
+    "sourceSha256": "896d5a66aae644bda7a432bb2f75168d5a440d9600bba4dfd27171aef606d82f",
+    "originalSha256": "b95757b300f1e56d324d4189602effa02c15ac208dbb0fb95122556079192267",
+    "existingLogicalCase": "ev974-C15",
+    "newLogicalCases": 0,
+    "redPassed": 2,
+    "redFailed": 1,
+    "redCause": "Controlled executable does not consume actual SDK stdin; expected prompt capture absent",
+    "greenFullSuitePassed": 30,
+    "greenFailed": 0,
+    "greenSkipped": 0,
+    "assertionBodyUnchanged": true,
+    "timersIncreased": false,
+    "windowsSourceUpdated": true,
+    "nativeWindowsObservation": false,
+    "nativeCiPromptWriteErrorCauseProven": false,
+    "otherNativeCiFailuresCause": "UNKNOWN"
+  },
+  "unchangedProductionSha256": {
+    "src/data/repository/agent_cli_client.ts": "e726cf7990b16938dd04ed15bcd80dbf9bcd371a8c55c24c32879f6ab311656b",
+    "src/data/repository/agent_cli_execution.ts": "fe89645d361e2dab3d3118f79fbb3fb45bc8bd61dcdea711b1209695453d5987",
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "18266b7dd053872e7edf4e8f068a81c3f630482141a3b632dec22cce24a7f41e",
+    "quality/bugbot/evidence/issue974/qualification-supervisor.cjs": "48d08c1adf64829638f5fbe1c6e6692d31ba5fb621a3136eb8c637d4e01f8318",
+    "quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs": "8277cd975d0dcd0d4b444f767637a22d7f776b0683b2badf0386977ca4804ec2"
+  },
+  "originalArtifacts": [
+    {
+      "file": "native-controls-attempt1.log",
+      "bytes": 1053,
+      "sha256": "1a638082658ddd2a43dab66d07709746e6685187d27ecb36d34f6d04a138527a",
+      "exactPrivateOriginal": true
+    },
+    {
+      "file": "native-controls-attempt1-receipt.json",
+      "bytes": 1996,
+      "sha256": "bc8feef757241ee6771cb63e432a3d676fc9ff0611321508c21e084701bacdec",
+      "exactPrivateOriginal": true
+    },
+    {
+      "file": "actual-cli-canaries-attempt1.stdout",
+      "bytes": 12601,
+      "sha256": "b7e934ad0f264426630d25d92f5b7a4fb8b0052dc2ee844a9b7e81ceab7dfa95",
+      "exactPrivateOriginal": true
+    },
+    {
+      "file": "actual-cli-canaries-attempt1.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exactPrivateOriginal": true
+    },
+    {
+      "file": "actual-cli-canaries-attempt1-receipt.json",
+      "bytes": 16541,
+      "sha256": "7249299f5eb20757028fa37586d79551ccb38a9b92bf3988f30699ab8e6bb69b",
+      "exactPrivateOriginal": true
+    },
+    {
+      "file": "fresh-owned-container-absence-attempt1.json",
+      "bytes": 3216,
+      "sha256": "74b92f114904bf02aaaa77c59551d01026a2b380f33f506bce35816515bb208d",
+      "exactPrivateOriginal": true
+    },
+    {
+      "file": "native-admission-manifest.json",
+      "bytes": 1414,
+      "sha256": "6d7e802ea1d0fa063d7a617b0c62d318b4e4816258a4696f0c895ac7d7f8e111",
+      "exactPrivateOriginal": true
+    },
+    {
+      "file": "fixture-red-receipt.json",
+      "bytes": 676,
+      "sha256": "9f6f0f276a3983680adfb13230b52fc6243a4fe72a274b77e0b84d6045ce09c1",
+      "exactPrivateOriginal": true
+    },
+    {
+      "file": "fixture-green-receipt.json",
+      "bytes": 751,
+      "sha256": "1a1b79b151119c53be4b1fc44f03c4c9eac77b434d0a2f3b20e22d7b6bb69d94",
+      "exactPrivateOriginal": true
+    },
+    {
+      "file": "fixture-red.log",
+      "bytes": 1170,
+      "sha256": "b6f565101aa59631454550bd6fe3e3e28472b1e4421ef53137aa5ba34302d273",
+      "exactPrivateOriginal": true
+    },
+    {
+      "file": "fixture-green.log",
+      "bytes": 307,
+      "sha256": "33972a344ecbeade02cf0be0513ee7711178df0e80e901a3ded8566bc4ea4de7",
+      "exactPrivateOriginal": true
+    }
+  ],
+  "source5327NativeCi": "FAIL: benchmark timeouts, C15 prompt write, PAT journal and Octokit child failures; circular error during JSON output. Causes not all established. No identical job replay.",
+  "selectedSddGate": "PENDING_MAINTAINER_DECISION",
+  "hostedPurge": "PENDING_GITHUB_SUPPORT_5044568",
+  "actual174": "COMPLETE_NEGATIVE_UNCHANGED",
+  "actual42": "UNSTARTED_NOT_ADMITTED",
+  "qualifiedProfiles": [],
+  "newModelCalls": 0,
+  "pilotWrites": 0,
+  "production": "disabled",
+  "installation": "NOT_EXECUTED",
+  "deliveryValidation": {
+    "at": "2026-11-23T14:13:24.604488+00:00",
+    "steps": [
+      {
+        "name": "types",
+        "command": [
+          "pnpm",
+          "exec",
+          "tsc",
+          "--noEmit"
+        ],
+        "exit": 0,
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "lint",
+        "command": [
+          "pnpm",
+          "exec",
+          "eslint",
+          "src/infrastructure/agents/__tests__/qualification_investigation.test.ts"
+        ],
+        "exit": 0,
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "generate-specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "generate:specifications"
+        ],
+        "exit": 0,
+        "bytes": 2494,
+        "sha256": "8394a0975d6ffc4a399bdeb064fc8ee75ebdc820df608771cbd619c088626ff2"
+      },
+      {
+        "name": "specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:specifications"
+        ],
+        "exit": 0,
+        "bytes": 2495,
+        "sha256": "c2bb9b801bf3aa5a4e9ebe4665fdc7593e99d10b29c53553b24fe4c177bbdcd7"
+      },
+      {
+        "name": "documentation",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:documentation"
+        ],
+        "exit": 0,
+        "bytes": 323,
+        "sha256": "ba86a3bc3e17d55ab4ac0f5896a05f637d0773a9fcc164da9573c0ca813a34c5"
+      },
+      {
+        "name": "agent-docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:agent-docs"
+        ],
+        "exit": 0,
+        "bytes": 222,
+        "sha256": "81934e9d1ed714a62a12d252845e2b9a26040888af5387b86d8ec7afdc423608"
+      },
+      {
+        "name": "docs-page",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:docs-page"
+        ],
+        "exit": 0,
+        "bytes": 212,
+        "sha256": "e2c8d557fef6846b41bc998c59ae00e596fab587da20b0979cb6d219ab7d8482"
+      },
+      {
+        "name": "workflows",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:workflows"
+        ],
+        "exit": 0,
+        "bytes": 219,
+        "sha256": "f7fe3bf2347d3490e24d9f574522c62e0aa40fa9751c68dc4179378e96982612"
+      },
+      {
+        "name": "graphify",
+        "command": [
+          "graphify",
+          "update",
+          "."
+        ],
+        "exit": 0,
+        "bytes": 3743,
+        "sha256": "258a79bd05c24340939921a2194f3ae828a962395d0138c7edd0d49fd607a4d1"
+      },
+      {
+        "name": "build",
+        "command": [
+          "pnpm",
+          "run",
+          "build"
+        ],
+        "exit": 0,
+        "bytes": 434552,
+        "sha256": "88a6aff6614f8fe2283d5ff494ac629f7e8b3bc4b52fc8af42d8d56643955800"
+      },
+      {
+        "name": "package",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:npm-package"
+        ],
+        "exit": 0,
+        "bytes": 799,
+        "sha256": "6de5c9e01f249e5a9bf116718695603a4680e738c8bc419e8763be8f58ef6042"
+      }
+    ],
+    "bundles": {
+      "build/cli/index.js": "7153eb4f728a9944f2f7ec75a7e1b0fa2a654d6e1ca070207e2eea932c3ccf5c",
+      "build/github_action/index.js": "64a2f5ebf580299183b9f56fe9dc3d6aad12677625a3856dfd2eb639af370f18",
+      "build/api/index.js": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "build/deployment_recovery/index.js": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    },
+    "scientificCallsAdded": 0,
+    "installation": "NOT_EXECUTED",
+    "pilotWrites": 0,
+    "production": "disabled",
+    "DONE_DO_NOT_REPEAT": true
+  }
+}

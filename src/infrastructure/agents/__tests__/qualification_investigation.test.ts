@@ -567,6 +567,7 @@ describe('ev974-C15 critical attempt persistence before SDK dispatch', () => {
   it.each(['none', 'started', 'admitted'] as const)('persistence failure=%s', async failedState => {
     const f = sourceSnapshotFixture(), cancel = new AbortController();
     const marker = join(f.directory, 'controlled-child-dispatched');
+    const promptCapture = join(f.directory, 'controlled-child-prompt');
     const environment: NodeJS.ProcessEnv = { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, WINDIR: process.env.WINDIR };
     let executable = f.executable;
     if (process.platform === 'win32') {
@@ -574,13 +575,17 @@ describe('ev974-C15 critical attempt persistence before SDK dispatch', () => {
       mkdirSync(join(packageRoot, 'bin'), { recursive: true });
       writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({ name: '@openai/codex', bin: { codex: 'bin/codex.js' } }));
       const script = join(packageRoot, 'bin', 'codex.js');
-      writeFileSync(script, `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'launched');process.stdout.write('{}');`);
+      writeFileSync(script, `const fs = require('node:fs');fs.writeFileSync(${JSON.stringify(marker)}, 'launched');
+const chunks = [];process.stdin.on('data', chunk => chunks.push(chunk));process.stdin.on('end', () => {
+fs.writeFileSync(${JSON.stringify(promptCapture)}, Buffer.concat(chunks));process.stdout.write('{}');});`);
       executable = join(f.directory, 'codex.cmd'); writeFileSync(executable, '@echo off\r\n');
       makeWindowsRuntimePathPrivate(executable, false); makeWindowsRuntimePathPrivate(script, false);
       environment.PATH = f.directory; environment.PATHEXT = '.EXE;.CMD';
     } else {
       const quote = (value: string) => "'" + value.replace(/'/gu, "'\"'\"'") + "'";
-      writeFileSync(executable, `#!/bin/sh\nprintf launched > ${quote(marker)}\nprintf '{}'\n`);
+      // The real SDK writes the prompt to stdin. Keep the controlled child alive
+      // until EOF so a premature fixture exit cannot race that write.
+      writeFileSync(executable, `#!/bin/sh\nprintf launched > ${quote(marker)}\ncat > ${quote(promptCapture)} || exit 1\nprintf '{}'\n`);
     }
     const planner = new AgentExecutionPlanner({ resolveWorkspace: () => f.root, resolveExecutable: () => executable,
       readVersion: () => getAgentRuntimeManifestEntry('codex').reviewedVersion });
@@ -618,10 +623,12 @@ describe('ev974-C15 critical attempt persistence before SDK dispatch', () => {
         if (failedState === 'none') {
           await expect(cli.execute(request)).resolves.toBe('{}');
           expect(existsSync(marker)).toBe(true);
+          expect(readFileSync(promptCapture, 'utf8')).toContain(request.prompt);
           expect(cancel.signal.aborted).toBe(false);
         } else {
           await expect(cli.execute(request)).rejects.toBe(failure);
           expect(existsSync(marker)).toBe(false);
+          expect(existsSync(promptCapture)).toBe(false);
           expect(cancel.signal.aborted).toBe(true);
         }
       })());

@@ -1,0 +1,85 @@
+{
+  "at": "2026-11-23T13:05:38.674414+00:00",
+  "implementation": "5327d533045ab10dff1ca6969317c12e93b88cf8",
+  "privatePreregistration": "4c23a52264dd36fe975464ef5773ac5c5ff3ceb8",
+  "image": "sha256:6d196f4007103963549144b15aff1e1e6735450e2c85d04fb201b04980ab7106",
+  "readOnly": true,
+  "rows": [
+    {
+      "scopeId": "d1f640562e492cb9608a8af1b8c28e3fba1259040cfe10004dbf82aae7b61237",
+      "source": "native-controls-tmp/ev974-native-completion-race-pGqX5X/output/native.jsonl",
+      "status": 404,
+      "freshAbsence": true
+    },
+    {
+      "scopeId": "0bb919e130ea6ba0cff42db73a265e945ef1ed9bed7a3660c87f1596548d2c28",
+      "source": "native-controls-tmp/ev974-native-completion-race-pGqX5X/output/native.jsonl",
+      "status": 404,
+      "freshAbsence": true
+    },
+    {
+      "scopeId": "2584f2b9ef392bea09e91f4ddaef2bae8e9865778d738ba766a84a0b3325ad2c",
+      "source": "native-controls-tmp/ev974-native-completion-race-pGqX5X/output/native.jsonl",
+      "status": 404,
+      "freshAbsence": true
+    },
+    {
+      "scopeId": "ba5462bb39824309670e36be0e2c04f372508aab290d95dce65339b4ce191f5c",
+      "source": "native-controls-tmp/ev974-native-completion-race-pGqX5X/output/native.jsonl",
+      "status": 404,
+      "freshAbsence": true
+    },
+    {
+      "scopeId": "fb91cb608e14b6ac1f82b714f6d5d215eedd62603443808b8d4e47262b217900",
+      "source": "native-controls-tmp/ev974-native-completion-race-pGqX5X/output/native.jsonl",
+      "status": 404,
+      "freshAbsence": true
+    },
+    {
+      "scopeId": "5f03905636e96a9fb3bc78a23e6aca2303b79bb27e32d7f497d5bbdb06b74b89",
+      "source": "native-controls-tmp/ev974-native-ev974-C32-kvIGOp/output/native.jsonl",
+      "status": 404,
+      "freshAbsence": true
+    },
+    {
+      "scopeId": "a915b2a8417d1d7a0625fc48d42e3935b70557c2ddd12e436798cb43c9af184c",
+      "source": "native-controls-tmp/ev974-native-ev974-C33-OqgFTC/output/native.jsonl",
+      "status": 404,
+      "freshAbsence": true
+    },
+    {
+      "scopeId": "01b668af28124e48c07b0bbba6a538f92b009181e5c0ca53f7ecc821c9abc79e",
+      "source": "native-controls-tmp/ev974-native-owner-loss-9ABQ6S/output/native.jsonl",
+      "status": 404,
+      "freshAbsence": true
+    },
+    {
+      "scopeId": "78f9928e9fb0be629d21c7cd81c56e1d768c98390a72cf53f5a7954a9a397fb6",
+      "source": "native-controls-tmp/ev974-native-unrelated-sentinel-yaKVLo/output/native.jsonl",
+      "status": 404,
+      "freshAbsence": true
+    },
+    {
+      "scopeId": "c3010dba9a4bd1465bd4f4d7b68f3cd58d5a715f062b385dba8b30106cd493fa",
+      "source": "copilot-qualification-reaper-sdk-runtime-pins-v1.created.json",
+      "status": 404,
+      "freshAbsence": true
+    },
+    {
+      "scopeId": "baa1ef25a1b9deeadb2703ffb1ebd586b342661cadfd0fe9f19ef018102d5798",
+      "source": "copilot-qualification-reaper-sdk-file-pins-v1.created.json",
+      "status": 404,
+      "freshAbsence": true
+    },
+    {
+      "scopeId": "34539c8638b0373588d57cf1d752b71dc9f4b64f9fb5c38e0cb0a9df66bddd42",
+      "source": "actual-cli-canaries-attempt1-receipt.json",
+      "status": 404,
+      "freshAbsence": true
+    }
+  ],
+  "count": 12,
+  "allFresh404": true,
+  "noUnrelatedContainerAccess": true,
+  "newModelCalls": 0
+}

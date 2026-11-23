@@ -1,0 +1,33 @@
+{
+  "at": "2026-11-23T12:57:21.782645+00:00",
+  "kind": "Exactly four fresh model-free SDK controls after image-reaper causal correction",
+  "approvedParentReviewSha256": "55471224cb95a77b0d53033077dfd2d048cb2db6795f11236c2306082a72b050",
+  "profileSha256": "fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b",
+  "boundary": {
+    "runnerOrDaemonSettingsChanged": false,
+    "hostPid": false,
+    "privileged": false,
+    "additionalHostCapabilities": [],
+    "workerUid": 502,
+    "workerGid": 20,
+    "cliCapabilities": [],
+    "sdkTrustedPid1ExistingCapabilities": [
+      "SETUID",
+      "SETGID"
+    ],
+    "readOnlyRootfs": true,
+    "noNewPrivileges": true,
+    "hostDockerSocketMounted": false,
+    "sdkMounts": "Only the existing private input read-only and output read-write binds; no arbitrary host paths",
+    "cliMounts": "Only three owned tmpfs mounts; no host bind or credential mounts"
+  },
+  "implementation": "5327d533045ab10dff1ca6969317c12e93b88cf8",
+  "privatePreregistration": "4c23a52264dd36fe975464ef5773ac5c5ff3ceb8",
+  "image": "sha256:6d196f4007103963549144b15aff1e1e6735450e2c85d04fb201b04980ab7106",
+  "operatorScriptSha256": "d5924c41a91633178c6a2e5b5e3e783fecd76924990e2568fe94c9fd75872350",
+  "newModelCalls": 0,
+  "newScientificCampaignAllowed": false,
+  "genuineModelRuntimeControlAllowed": false,
+  "privatePlansOnly": true,
+  "requiresSameTupleCli14Pass": true
+}

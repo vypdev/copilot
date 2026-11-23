@@ -43,3 +43,11 @@ reaping experiment from actual SDK/bootstrap UID-drop acceptance. Three exact
 diagnostic containers are freshly absent. Normal hooks, package and final-head
 native acceptance remain separate; the changed image requires new technical
 admission before any future measurement. No new model campaign is started.
+
+
+## Later parent5327 technical observation
+
+The exact5327/image6d196 model-free CLI14 and SDK4 technical controls now pass.
+[Full receipts and native/fixture limits](../source5327-followup/README.md)
+preserve this later tuple separately from the original scientific campaign.
+Native CI on5327 is negative and selected-SDD/hosted-purge gates remain pending.

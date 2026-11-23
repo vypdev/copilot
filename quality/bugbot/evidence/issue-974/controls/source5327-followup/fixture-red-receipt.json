@@ -1,0 +1,23 @@
+{
+  "at": "2026-11-23T14:00:03.499088+00:00",
+  "command": [
+    "pnpm",
+    "exec",
+    "jest",
+    "--runInBand",
+    "--runTestsByPath",
+    "src/infrastructure/agents/__tests__/qualification_investigation.test.ts",
+    "--testNamePattern=ev974-C15",
+    "--json",
+    "--outputFile=/private/tmp/copilot-goal-974-ci5327-fixture-protocol-attempt1/red-jest.json"
+  ],
+  "exit": 1,
+  "testFileSha256": "2b80a67a60eb517af943d1a26294984702fdb6c664fee703cff271fc71aaf559",
+  "sourceUnchanged": true,
+  "passed": 2,
+  "failed": 1,
+  "pending": 27,
+  "logSha256": "b6f565101aa59631454550bd6fe3e3e28472b1e4421ef53137aa5ba34302d273",
+  "newModels": 0,
+  "DONE_DO_NOT_REPEAT": true
+}
