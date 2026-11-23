@@ -90,7 +90,7 @@ async function run(destination, preflight = false) {
             throw error;
         }
     }
-    let next = 0;
+    let next = 0, collectorFailed = false;
     try {
         execFileSync(trustedGitExecutable(), ['init', '--quiet', '--template='], { cwd, env: gitEnvironment() });
         process.chdir(cwd);
@@ -139,6 +139,7 @@ async function run(destination, preflight = false) {
             }
         }
         await Promise.allSettled(Array.from({ length: plan.corpus.concurrency }, () => worker().catch(error => {
+            collectorFailed = true;
             cancel.abort();
             record({ event: 'collector-failure', reason: error?.code ?? error?.name ?? 'unknown' });
         })));
@@ -163,7 +164,7 @@ async function run(destination, preflight = false) {
                 attemptsComplete = true;
             } catch { record({ event: 'attempt-admission', status: 'incomplete', fullReview: 'unstarted' }); }
         }
-        const decision = { complete, completed: Object.keys(predictions).length, passed: complete && attemptsComplete && score.violations.length === 0,
+        const decision = { complete, completed: Object.keys(predictions).length, passed: !collectorFailed && complete && attemptsComplete && score.violations.length === 0,
             ...(v2 ? { attemptsComplete } : {}),
             githubWriteAttempts: 0, workspaceUnchanged: fs.readdirSync(cwd).every(entry => entry === '.git'), score };
         fs.writeFileSync(path.join(destination, 'predictions.json'), JSON.stringify(bundle, null, 2) + '\n');

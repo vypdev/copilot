@@ -15,6 +15,7 @@ const actualHead = proof.pinnedGit(root)('rev-parse', 'HEAD').toString().trim();
 const base = JSON.parse(fs.readFileSync(path.join(ev07, 'plan.json')));
 
 function fixture(t, options = {}) {
+    const contained = options.contained !== false;
     const directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ev974-implementation-component-')));
     t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
     const git = (...args) => cp.execFileSync(proof.trustedGitExecutable(), ['--literal-pathspecs',
@@ -28,9 +29,10 @@ function fixture(t, options = {}) {
     const runtime = { codex: 'component-cli', executable: process.execPath, executableSha256: hash(fs.readFileSync(process.execPath)),
         launcher, launcherSha256: hash(fs.readFileSync(launcher)), nativeExecutable: native,
         nativeExecutableSha256: hash(fs.readFileSync(native)) };
-    const selected = { ...clone(base), schemaVersion: 2, lifecycle: 'qualification-investigation-v1', implementation: actualHead,
-        corpus: { ...clone(base.corpus), path: 'quality/bugbot/corpus.v2.json', version: 2,
-            sha256: hash(fs.readFileSync(path.join(root, 'quality/bugbot/corpus.v2.json'))) },
+    const selected = { ...clone(base), schemaVersion: contained ? 2 : 1,
+        ...(contained ? { lifecycle: 'qualification-investigation-v1' } : {}), implementation: actualHead,
+        corpus: contained ? { ...clone(base.corpus), path: 'quality/bugbot/corpus.v2.json', version: 2,
+            sha256: hash(fs.readFileSync(path.join(root, 'quality/bugbot/corpus.v2.json'))) } : clone(base.corpus),
         detector: { provider: 'codex', modelProvider: 'openai', model: 'gpt-6-luna', effort: 'xhigh' },
         verifier: { provider: 'codex', modelProvider: 'openai', model: 'gpt-6.1-sol', effort: 'xhigh' }, runtime };
     const relative = options.literalName ? ':(glob)* plan.json' : 'inputs/plan.json';
@@ -70,7 +72,7 @@ function fixture(t, options = {}) {
         (controlledRequire, module, file, ev07, processPort);
     if (!options.direct) load();
     const api = module.exports;
-    if (options.contained) {
+    if (contained) {
         selected.containment = { image: 'sha256:' + 'd'.repeat(64) };
         selected.hostRuntime = { ...opaqueRuntime, typescriptSha256: 'c'.repeat(64), dependencyTreeSha256: 'd'.repeat(64) };
         Object.assign(selected.runtime, { nodeSha256: 'e'.repeat(64), gitSha256: 'f'.repeat(64),
@@ -229,10 +231,13 @@ test('implementation component: an invalid pre-probe pin starts neither planner 
     assert.deepEqual(f.planned, []); assert(!fs.existsSync(f.marker));
 });
 
-for (const kind of ['missing-host', 'bad-runtime-hash', 'missing-runtime-hash', 'missing-native', 'missing-native-hash',
+for (const kind of ['missing-containment', 'null-containment', 'false-containment', 'missing-host', 'bad-runtime-hash', 'missing-runtime-hash', 'missing-native', 'missing-native-hash',
     'bad-image', 'missing-image', 'schema-v1-contained', 'missing-cohort', 'missing-order']) {
     test('implementation component: contained policy rejects ' + kind + ' without process admission', t => {
         const f = fixture(t, { contained: true }); f.api.requireQualificationPolicy(f.selected);
+        if (kind === 'missing-containment') delete f.selected.containment;
+        if (kind === 'null-containment') f.selected.containment = null;
+        if (kind === 'false-containment') f.selected.containment = false;
         if (kind === 'missing-host') delete f.selected.hostRuntime;
         if (kind === 'bad-runtime-hash') f.selected.runtime.nodeSha256 = 'wrong';
         if (kind === 'missing-runtime-hash') delete f.selected.runtime.nodeSha256;

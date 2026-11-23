@@ -165,6 +165,7 @@ function requireQualificationPolicy(selected) {
     const actual = selected.repositoryCohort, required = baseline.repositoryCohort;
     assert([1, 2].includes(selected.schemaVersion) && selected.mode === 'shadow' && selected.publication === 'dry-run'
         && selected.production === 'disabled', 'qualification policy must remain shadow, dry-run and disabled');
+    assert(selected.schemaVersion !== 2 || selected.containment, 'schema v2 requires contained dispatch');
     if (selected.containment) {
         assert.equal(selected.schemaVersion, 2);
         assert.equal(selected.lifecycle, 'qualification-investigation-v1');

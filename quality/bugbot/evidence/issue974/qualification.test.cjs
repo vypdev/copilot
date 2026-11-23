@@ -32,11 +32,33 @@ const plan = () => ({ ...clone(require('../issue-950/ev07-shadow/plan.json')), s
         sha256: '001223aa255e5af7e10bddab2c8deacd7cacf0b5b3690a5a2034d241274cb9d6',
     }, runtime: { codex: 'codex-cli fixture', executableSha256: 'a'.repeat(64) } });
 
+function policyPlan() {
+    const p = plan(), closure = Object.fromEntries(['nodeSha256', 'gitSha256', 'typescriptSha256', 'dependencyTreeSha256']
+        .map(key => [key, 'a'.repeat(64)]));
+    p.containment = { image: 'sha256:' + 'a'.repeat(64) };
+    p.hostRuntime = { ...closure }; Object.assign(p.runtime, closure);
+    return p;
+}
+
 function temporary(t) {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ev974-control-'));
     t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
     return directory;
 }
+
+test('ev974-C31 historical archive retrieval selects each entry revision and verifies exact bytes', () => {
+    const index = require('../issue-974/controls/historical-gzip-archive.json');
+    assert(index.retrievalExample.includes('<entry.archiveRevision>:<entry.path>'));
+    const entries = [index.entries[0], index.entries.at(-1)];
+    assert.notEqual(entries[0].archiveRevision, entries[1].archiveRevision);
+    for (const entry of entries) {
+        assert.match(entry.archiveRevision, /^[a-f0-9]{40}$/u);
+        const bytes = execFileSync(sourceProof.trustedGitExecutable(), ['-C', root, 'show',
+            entry.archiveRevision + ':' + entry.path], { env: sourceProof.gitEnvironment() });
+        assert.equal(hash(bytes), entry.gzipSha256);
+        assert.equal(hash(require('node:zlib').gunzipSync(bytes)), entry.decodedUtf8Sha256);
+    }
+});
 function gitAt(directory) {
     return (...args) => execFileSync(sourceProof.trustedGitExecutable(),
         ['-c', 'maintenance.auto=false', '-c', 'gc.auto=0', '-C', directory, ...args], { encoding: 'utf8',
@@ -84,7 +106,7 @@ function ledgerFixture(t, selected = plan()) {
 }
 
 test('ev974-C09 explicit v2 selection is coherent and retains all corpus identities and labels', () => {
-    const p = plan(), actual = selectedCorpus(p, root), previous = JSON.parse(fs.readFileSync(path.join(root, 'quality/bugbot/corpus.v1.json')));
+    const p = policyPlan(), actual = selectedCorpus(p, root), previous = JSON.parse(fs.readFileSync(path.join(root, 'quality/bugbot/corpus.v1.json')));
     assert.equal(actual.selection.version, 2); assert.equal(actual.file, path.join(root, p.corpus.path));
     assert.deepEqual(actual.inventory.cases.map(row => [row.id, row.expected]), previous.cases.map(row => [row.id, row.expected]));
     assert(implementation.selectedQualificationDrivers(p).includes('../../issue974/corpus-selection.cjs'));
@@ -125,7 +147,7 @@ test('ev974-C12 v2 cannot weaken gates, cohort, repetition, positives, latency o
         mutations.push(p => { p.repositoryCohort[field] = 0; });
     }
     for (const field of Object.keys(plan().corpus.gates)) mutations.push(p => { p.corpus.gates[field] = field === 'maxBrier' ? 0.17 : 0; });
-    for (const mutate of mutations) { const p = plan(); mutate(p); assert.throws(() => implementation.requireQualificationPolicy(p)); }
+    for (const mutate of mutations) { const p = policyPlan(); implementation.requireQualificationPolicy(p); mutate(p); assert.throws(() => implementation.requireQualificationPolicy(p)); }
 });
 
 function publicBootstrapFixture(t, moduleFence = false, containment) {
@@ -506,17 +528,21 @@ test('ev974-C20 ordinary v2 prompt generation excludes expected oracles and bind
 function passingCorpus(t) {
     require('../issue-950/ev07-shadow/load.cjs');
     const { evaluateBugbotBenchmark } = require(path.join(root, 'src/tooling/bugbot_benchmark'));
-    const selected = plan(); selected.implementation = gitAt(root)('rev-parse', 'HEAD');
+    const selected = policyPlan(); selected.implementation = gitAt(root)('rev-parse', 'HEAD');
     selected.runtime = { ...sourceProof.runtimeIdentity(root), codex: 'codex-cli fixture', executableSha256: 'a'.repeat(64) };
+    selected.hostRuntime = sourceProof.runtimeIdentity(root);
     selected.inspectedArtifacts = Object.fromEntries(implementation.selectedQualificationDrivers(selected).map(file => [file, hash(fs.readFileSync(path.join(ev07, file)))]));
     const f = ledgerFixture(t, selected), corpus = selectedCorpus(selected, root).inventory;
     const planFile = path.join(f.directory, 'plan.json'); fs.writeFileSync(planFile, JSON.stringify(selected)); const preregistration = commitPlan(planFile);
     const provenance = { ...sourceProof.attestSource(root, selected.implementation), drivers: selected.inspectedArtifacts,
-        runtime: sourceProof.runtimeIdentity(root) };
+        runtime: sourceProof.runtimeIdentity(root), executionContext: 'host', workerRuntime: selected.runtime,
+        containment: selected.containment };
     const rows = f.rows;
     rows.push({ event: 'start', cli: selected.runtime.codex, configuration: selected.detector, plan: preregistration.sha256,
         preregistration, provenance, runner: selected.inspectedArtifacts['corpus.cjs'], implementation: selected.implementation,
-        corpus: selected.corpus.sha256, gitHubMutationPorts: 0 },
+        corpus: selected.corpus.sha256, gitHubMutationPorts: 0,
+        preflightScope: { scopeId: hash('synthetic preflight'), namespaceInitStopped: true,
+            exitCode: 0, interrupted: false, preflight: true } },
     ...corpus.cases.map((item, index) => ({ event: 'case-slot', index, id: item.id, status: 'not-started' })));
     const predictions = { schemaVersion: 1, predictions: Object.fromEntries(corpus.cases.map(item => [item.id,
         item.expected.map(finding => ({ ...finding, confidence: 1 }))])) };
@@ -526,16 +552,27 @@ function passingCorpus(t) {
 }
 async function completeSyntheticCorpus(f) {
     for (const [index, item] of f.corpus.cases.entries()) {
+        // Authored model-free namespace receipts only. They exercise the real
+        // validator and never become actual containment/qualification evidence.
+        const scopeId = hash('synthetic scope:' + item.id), identity = {
+            ownerId: hash('synthetic owner:' + item.id), operationId: 'corpus:' + item.id,
+            planSha256: f.rows[0].plan, implementation: f.selected.implementation,
+            imageSha256: f.selected.containment.image.slice(7), purpose: 'corpus-case',
+        };
+        f.rows.push({ event: 'case-dispatch', index, id: item.id }, { event: 'operation-start', identity, scopeId });
         const cli = f.make(item.id); const before = f.rows.length; await cli.execute(f.request);
         // f.rows includes the start/slots prepared above; make() appends the
         // concrete model-free attempt chains and retained private artifacts.
         const flags = { model: f.selected.detector.model, modelProvider: f.selected.detector.modelProvider,
             reasoningEffort: f.selected.detector.effort, sandbox: 'read-only' };
         assert(f.rows.length > before);
+        f.rows.push({ event: 'operation-stopped', identity, scopeId, namespaceInitStopped: true, interrupted: false, exitCode: 0 });
         f.rows.push({ event: 'case', index, id: item.id, status: 'completed', predictions: f.predictions.predictions[item.id],
+            scopeId, namespaceInitStopped: true, workspaceUnchanged: true,
+            workerProvenance: implementation.expectedQualificationContext(f.rows[0].provenance, f.selected, 'worker'),
             attemptIds: cli.attemptIds, calls: [flags], runtimeProofs: [{ executableSha256: f.selected.runtime.executableSha256 }] });
     }
-    const score = { complete: true, completed: 174, passed: true, attemptsComplete: true, githubWriteAttempts: 0,
+    const score = { complete: true, completed: 174, passed: true, attemptsComplete: true, containmentComplete: true, githubWriteAttempts: 0,
         workspaceUnchanged: true, score: f.evaluateBugbotBenchmark(f.corpus, f.predictions) };
     f.rows.push({ event: 'finish', complete: true, passed: true, githubWriteAttempts: 0, workspaceUnchanged: true });
     const destination = path.join(f.directory, 'corpus-v3'); fs.mkdirSync(destination);
@@ -656,7 +693,7 @@ test('ev974-C30 fixed174/fixed42 retain actual verifier follow-ups and zero cand
     assert.throws(() => validate([...f.rows, zero]), /without an actual candidate/u);
     for (const mutate of [p => { p.corpus.cases--; }, p => { p.corpus.outerAttemptsPerCase++; },
         p => { p.repositoryCohort.repetitions--; }, p => { p.repositoryCohort.order.pop(); }]) {
-        const p = plan(); mutate(p); assert.throws(() => implementation.requireQualificationPolicy(p));
+        const p = policyPlan(); implementation.requireQualificationPolicy(p); mutate(p); assert.throws(() => implementation.requireQualificationPolicy(p));
     }
     // A real collector failure keeps the durable attempted prefix; it cannot
     // be replaced by a later completed-looking response.

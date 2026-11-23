@@ -1,3 +1,25 @@
+# Current qualification result
+
+The independent 174-case campaign is complete and negative: precision74/84 =
+88.0952%, below the unchanged90% minimum. Measured source093fd141 and preregistration
+07f21a4 retain all original inputs,200scientific SDK application invocations and
+one separate technical SDK control. Luna→Sol is not qualified;42 remain unstarted
+and inadmissible. Production stays disabled and pilot write attempts remain0.
+See the [complete frozen result](../issue-974/campaigns/093fd141/results.md).
+
+Historical source-control notes below retain their original snapshot statuses.
+The current result above and the linked campaign report identify completed work.
+
+Current operational corrections require containment for v2 plans, prevent a
+legacy worker's ledger failure from producing PASS, reject reversed s390 clone
+ABIs before the unchanged approved filter is used, and clarify the enclosing
+build context with its sanitized `sdk-source/` child. These corrections do not
+change or repeat the campaign. Retrieve compressed evidence with each entry's
+own archiveRevision/path, then verify both recorded hashes. The original personal
+host endpoint remains in historical Git commits; redacted tip descriptors do not
+erase that history. History treatment still requires a maintainer decision under
+the managed-branch rules.
+
 ## Corpus component coverage correction
 
 The unchanged corpus driver now has56 additional model-free C31 component

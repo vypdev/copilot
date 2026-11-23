@@ -1,6 +1,7 @@
-# Build context must be an owned, credential-free, sanitized Git checkout of
-# implementation X, including its own .git objects. Never use the user's home
-# directory, a live checkout, an auth store, or the later plan as build context.
+# Build context must be an owned staging directory whose sdk-source/ child is
+# the credential-free sanitized Git checkout of implementation X, including its
+# own .git objects. Supply this Dockerfile separately or at the context root.
+# Never use the user's home, a live checkout, an auth store or the later plan.
 # The reviewed build supplies an immutable Node image digest and exact Codex
 # package version. The final image/config/runtime/CLI bytes are pinned again by
 # the later preregistration Y; a successful build grants no execution authority.

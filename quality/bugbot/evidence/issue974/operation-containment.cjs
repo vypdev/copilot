@@ -39,6 +39,9 @@ function requireProfile(value) {
         Object.hasOwn(value.engine, key) && typeof value.engine[key] === 'string' && value.engine[key].length > 0), 'complete observed engine tuple required');
     assert.match(value.engine.apiVersion, /^1\.\d{2,3}$/u);
     assert.equal(value.engine.os, 'linux', 'worker requires Linux PID namespaces');
+    // s390 clone takes its flags in arg1; the immutable approved additions
+    // constrain arg0. Reject that ABI rather than changing the fixed filter.
+    assert(!['s390', 's390x'].includes(value.engine.arch.toLowerCase()), 'reversed s390 clone ABI is unsupported');
     return Object.freeze({ ...value, engine: Object.freeze({ ...value.engine }) });
 }
 

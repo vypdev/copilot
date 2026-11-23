@@ -5664,3 +5664,74 @@ regressions; C27 -> host Engine adapter -> held-response and existing protocol
 controls. Operator guidance documents unknown creation effects and first-error
 retention. SDK production modules remain unchanged; changed driver identities
 must be frozen afresh before any future model measurement.
+
+
+## Post-campaign policy coherence and durable collector decisions
+
+The valid negative093fd141/07f21a4 result and its exact measured tuple remain
+unchanged. No operational correction admits42 or repeats174. The35logical
+qualification-control identities and all numerical scientific gates remain fixed.
+
+Schema-v2 policy MUST require containment before validating its image and both
+runtime closures. A missing, null or false containment cannot become an admitted
+v2 plan or reach a CLI probe through an uncontained fallback. Legacy v1 retains
+its own corpus/lifecycle contract; model-free provenance fixtures use a coherent
+v1 tuple when exercising that historical uncontained route. Every negative
+mutation control MUST begin with an otherwise valid v2 closure, so an unrelated
+missing containment cannot accidentally satisfy its assertion.
+
+A rejected corpus worker MUST prevent a passing corpus-score and finish record,
+even if every in-memory prediction exists and the score passes. This includes
+failure to append the final terminal case row and failure to record the collector
+error itself. Retain the durable prefix and complete prediction facts separately
+from the passing decision. The ordinary downstream full-review ledger checks
+remain required and cannot be replaced by the in-memory result.
+
+The approved fixed13-rule filter stays byte-identical, SHA256
+fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b. Its
+clone additions constrain arg0; [Linux clone ABI documentation](https://man7.org/linux/man-pages/man2/clone.2.html)
+places the flags in arg1 on s390. The containment profile MUST reject s390/s390x
+before the filter is used. Existing observed-engine/image tuple checks still
+reject a contradictory declaration before create. No added rule, capability,
+runner change or new filter execution is introduced. Architecture controls are
+model-free profile admission; they do not claim an actual s390 kernel run.
+
+```text
+v2 plan -> mandatory containment/runtime closure -> supported engine tuple -> fixed filter
+legacy predictions -> durable terminal rows -> no worker rejection -> scientific score decision
+```
+
+Text equivalent: policy first admits a coherent contained tuple; predictions
+can produce PASS only when collection succeeds and the existing score gates pass.
+User-visible incomplete/failed output MUST preserve that distinction, including
+when the diagnostic write also fails. There is no new setting or schema, default
+runner change, model path or permission.
+
+The qualification Docker build context MUST be an owned enclosing staging
+directory containing the sanitized implementation checkout at `sdk-source/`,
+including its own credential-free Git objects. The Dockerfile is supplied
+separately or at that staging root. Existing successful build receipts use this
+layout. The COPY instruction remains unchanged; correcting the documented context
+does not establish a new image/runtime or authorize another build/campaign.
+
+Historical compressed-evidence retrieval MUST use each entry's archiveRevision
+and path. A global example revision cannot cover later entries. Verification
+checks compressed and decoded hashes against the actual pinned Git object.
+Exact originals and historical negative runs remain retained. Redacting a current
+host-endpoint descriptor does not erase its reachable Git history; no force-push
+or claim of historical erasure is authorized by these source corrections.
+
+The unchanged C27/C31 obligations gain **eight distinct regression cases**:
+three absent-containment values, two final-row/diagnostic-write failures, two
+reversed-ABI rejections and one two-revision retrieval control. The same final
+test bytes MUST expose eight failures on the original source and eight passes
+after correction. The original-source read overlay is restricted to the local
+model-free test process and cannot enter a qualification bootstrap, CLI or model
+execution. Existing complete shadow, AST95/90, pure-policy, normal hooks, SDK,
+package/docs and final-head native gates remain in force.
+
+Traceability: C27 -> EV974-S02/S03/S05 -> policy/host admission and architecture
+controls; C31 -> EV974-S03/S04/S08 -> actual corpus source with modeled CLI ports,
+real private ledgers and two-revision retrieval. Operator documentation records
+context layout, durable failure, unsupported ABI and the unchanged negative
+scientific result. No new case identity or scientific observation is inferred.

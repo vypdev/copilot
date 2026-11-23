@@ -1,0 +1,214 @@
+{
+  "at": "2026-11-23T08:16:21.724059+00:00",
+  "parent": "8a99f3bce101ed1f555aa512b21247c8b9564331",
+  "sourceSha256": {
+    "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs": "8c7f98f59d2aa8cbe8ef2324ee361bc913da61b290ba5b31f0576dc4236d75b5",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs": "bc9f33559e141e5aee5e2af8e31d95097ce1fa5c8238c75099d83571093b6272",
+    "quality/bugbot/evidence/issue-974/controls/historical-gzip-archive.json": "46298851cd98928452b93ff78c4b6a42f91348e34159a785b7da10f9d142e813",
+    "quality/bugbot/evidence/issue974/corpus-worker-components.cjs": "d42b375efb859b28a2ed3eb37ad712601a6cf137ad11a504843f2f349ad751e1",
+    "quality/bugbot/evidence/issue974/implementation-components.cjs": "05a73783b865b99b47d3c736ce5671d937fdd1d126ecedc8089ac5bb25eca2ab",
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "97017cbf8a44ba11fc9c5757e33a1177a1e578e0e56b7f1220a377f781d21fed",
+    "quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile": "87ef358775fe85fb0733f8936d24e7c18203241dbcb4e728db6a41d156c32b7b",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "1de799df6b8a2e138d85be12c857cb547714b74e3bf9a7acc320e085ba00039b",
+    "quality/bugbot/evidence/issue974/seccomp-components.cjs": "3cad491f954fed2c4c0d6ec7f54b5c79ef1a36e97886d0ba146b589bf6b49026"
+  },
+  "logicalQualificationCaseIds": 35,
+  "newScientificCaseIds": 0,
+  "causalUniqueControls": 8,
+  "originalFailures": 8,
+  "correctedPasses": 8,
+  "sameFinalTestBytes": true,
+  "focused": {
+    "passed": 85,
+    "failed": 0,
+    "skipped": 0
+  },
+  "completeSource": {
+    "passed": 605,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "workingSourceBeforeCommit": true,
+    "executedCodeBytesUnchanged": true
+  },
+  "ast": {
+    "kind": "Final exact-source changed-driver AST coverage",
+    "engine": [
+      {
+        "file": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+        "sourceSha256": "97017cbf8a44ba11fc9c5757e33a1177a1e578e0e56b7f1220a377f781d21fed",
+        "summary": {
+          "lines": {
+            "total": 408,
+            "covered": 406,
+            "skipped": 0,
+            "pct": 99.5
+          },
+          "functions": {
+            "total": 82,
+            "covered": 78,
+            "skipped": 0,
+            "pct": 95.12
+          },
+          "statements": {
+            "total": 595,
+            "covered": 570,
+            "skipped": 0,
+            "pct": 95.79
+          },
+          "branches": {
+            "total": 266,
+            "covered": 241,
+            "skipped": 0,
+            "pct": 90.6
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue974/qualification-seccomp.cjs",
+        "sourceSha256": "7c77f4881d061f754725791460faebfec35da5edccb2181d75fb8a31b7970688",
+        "summary": {
+          "lines": {
+            "total": 1,
+            "covered": 1,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 0,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 1,
+            "covered": 1,
+            "skipped": 0,
+            "pct": 100
+          },
+          "branches": {
+            "total": 0,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 100
+          }
+        },
+        "gate": true
+      }
+    ],
+    "corpus": [
+      {
+        "file": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+        "sha256": "8c7f98f59d2aa8cbe8ef2324ee361bc913da61b290ba5b31f0576dc4236d75b5",
+        "gate": true,
+        "summary": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 99.65,
+          "branches": 91.97
+        }
+      }
+    ],
+    "implementation": [
+      {
+        "file": "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs",
+        "sha256": "bc9f33559e141e5aee5e2af8e31d95097ce1fa5c8238c75099d83571093b6272",
+        "gate": true,
+        "summary": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 94.05
+        }
+      }
+    ],
+    "allPassed": true,
+    "initialEngineBelowFloorRetained": true,
+    "expandedSelection": "Original nine existing blocked-inspection, pending-attach and late-cancellation controls, no source/assertion/threshold change",
+    "globalAcceptance": false,
+    "nativeAcceptance": false,
+    "scientificCallsAdded": 0,
+    "production": "disabled"
+  },
+  "originalPrivateOutputs": {
+    "copilot-goal-974-review8a99-original-red-attempt1.log": {
+      "bytes": 15217,
+      "sha256": "99653614bba18e3cc7ef55f9b99976faaa2a7936646885a45c0e590a8c54dba5"
+    },
+    "copilot-goal-974-review8a99-corrected-green-attempt1.log": {
+      "bytes": 257,
+      "sha256": "edaf8b83f8f21f9677c6b04b92b4106bc1aa69c1db452834ed2d133b81efdbd8"
+    },
+    "copilot-goal-974-review8a99-corrected-green-attempt2.log": {
+      "bytes": 1746,
+      "sha256": "a7b9760c69a7d801512c0bc56555d41a4914336c7d7a4674682eba4ab7174b77"
+    },
+    "copilot-goal-974-review8a99-focused-regression-attempt2.log": {
+      "bytes": 17275,
+      "sha256": "e3740a247be221d963949e2bee81479ef2210d8ef5a6f8dfc6f416bab8d8baad"
+    },
+    "copilot-goal-974-review8a99-focused-regression-attempt3.log": {
+      "bytes": 11686,
+      "sha256": "26a9e7f0770913444cac70fd360835be108f2fbb07d6af0b1a1413003aab6604"
+    },
+    "copilot-goal-974-review8a99-focused-regression-attempt4.log": {
+      "bytes": 8816,
+      "sha256": "4fb78689cf8ca334e0fd15831de9ae84f6b990d905de9523cf2a4c4cb1247ba4"
+    },
+    "copilot-goal-974-review8a99-focused-regression-attempt5.log": {
+      "bytes": 8827,
+      "sha256": "b1cee5e44ea0a3aa192f650b9acd1592570b84abc7eae43916ae6944c1508552"
+    },
+    "copilot-goal-974-review8a99-working-shadow-attempt1.log": {
+      "bytes": 70815,
+      "sha256": "ac365fc03355e75aec48f30936e10915e4deecbc613b8936b65c2f5faafd7703"
+    },
+    "copilot-goal-974-review8a99-working-shadow-attempt2.log": {
+      "bytes": 69002,
+      "sha256": "c9d193dcaca67d62cfe94916ccaad0957036d830ec8945b23c23ca66ecb1137b"
+    },
+    "copilot-goal-974-review8a99-final-causal-attempt2-receipt.json": {
+      "bytes": 2224,
+      "sha256": "21e716f5d6dc1e252bca69a323024643e719067ec18e0bf1c0dce26ba4c665db"
+    },
+    "copilot-goal-974-review8a99-contained-positive-fixture-attempt1.log": {
+      "bytes": 341,
+      "sha256": "f9a7f99dd4e636bb4efc915389692f49634be0738b73f3ced1a4bab2495f2db0"
+    }
+  },
+  "fixedFilterExportedSha256": "fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b",
+  "fixedFilterAndProvenanceByteIdenticalToParent": true,
+  "abandonedFilterVariant": {
+    "exportedSha256": "77797cb7987b01556fe246fb1ca0272daa38e6a45f84df31bed94101d8402dab",
+    "actuallyApplied": false,
+    "retainedPrivately": true
+  },
+  "localSocketEpipePhysicalCause": "UNKNOWN; successful controlled staging/Node profile changes do not establish a unique cause",
+  "dockerContext": {
+    "actualPublishedBuilder": "build-proc-open-runtime-once.py retained privately",
+    "shape": "owned parent/Dockerfile plus parent/sdk-source/ sanitized committed checkout",
+    "copyInstructionChanged": false,
+    "newBuildExecuted": false
+  },
+  "primaryAbiSource": "https://man7.org/linux/man-pages/man2/clone.2.html",
+  "historyExposure": {
+    "validFinding": true,
+    "commitsAudited": 52,
+    "newBlobsAudited": 1053,
+    "gzipObjectsDecoded": 365,
+    "matchingNewBlobs": 21,
+    "accountPrefixIdentities": 1,
+    "tipRedactionErasesHistory": false,
+    "historyRewritten": false,
+    "maintainerDecisionPending": true
+  },
+  "normalHooksPending": true,
+  "globalAcceptance": false,
+  "nativeAcceptance": false,
+  "actual174": "COMPLETE_NEGATIVE_UNCHANGED",
+  "actual42": "UNSTARTED_NOT_ADMITTED",
+  "scientificCallsAdded": 0,
+  "pilotWrites": 0,
+  "production": "disabled"
+}

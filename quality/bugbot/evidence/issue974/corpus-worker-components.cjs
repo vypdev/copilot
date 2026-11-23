@@ -56,6 +56,14 @@ function fixture(t, options = {}) {
         }
     }
     const deps = {
+        'node:fs': { ...fs, appendFileSync(file, content, settings) {
+            const row = options.caseLedgerFailure || options.collectorRecordFailure ? JSON.parse(content) : undefined;
+            if (options.caseLedgerFailure && row?.event === 'case' && row.id === cases.at(-1).id
+                || options.collectorRecordFailure && row?.event === 'collector-failure') {
+                throw Object.assign(new Error('controlled terminal ledger failure'), { code: 'EIO' });
+            }
+            return fs.appendFileSync(file, content, settings);
+        } },
         '../execution-provenance.cjs': {
             requireBootstrapAdmission() { if (options.noAdmission) throw new Error('controlled bootstrap rejection'); },
             bootstrapOperation: () => operation, admitQualificationModules() {}, trustedGitExecutable: () => '/controlled/not-executed-git',
@@ -130,6 +138,19 @@ test('ev974-C31 historical worker route scores each synthetic case once and rest
     assert(f.rows().filter(row => row.event === 'case').every(row => row.calls.length === 1));
     assert.equal(f.events.listenerCount('SIGINT'), 0); assert.equal(f.events.listenerCount('SIGTERM'), 0);
 });
+
+for (const collectorRecordFailure of [false, true]) test(
+    'ev974-C31 final legacy case-ledger failure cannot pass even when collector recording fails=' + collectorRecordFailure, async t => {
+        const f = fixture(t, { caseLedgerFailure: true, collectorRecordFailure }); await f.run();
+        assert.equal(f.queries.length, 3);
+        assert.equal(f.decision().complete, true, 'all in-memory predictions exist in this counterexample');
+        assert.equal(f.decision().completed, 3);
+        assert.equal(f.decision().passed, false, 'a missing durable terminal case cannot be a passing decision');
+        assert.equal(f.rows().filter(row => row.event === 'case').length, 2);
+        assert.equal(f.rows().at(-1).event, 'finish'); assert.equal(f.rows().at(-1).passed, false);
+        assert.equal(f.counters().cwdRestored, true);
+        assert.equal(f.events.listenerCount('SIGINT'), 0); assert.equal(f.events.listenerCount('SIGTERM'), 0);
+    });
 
 test('ev974-C31 contained worker selects only its assigned synthetic slot and records prepared invocation metadata', async t => {
     const f = fixture(t, { v2: true, index: 1 }); await f.run();

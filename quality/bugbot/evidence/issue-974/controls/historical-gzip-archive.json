@@ -1262,7 +1262,7 @@
       "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage.log.gz"
     }
   ],
-  "retrievalExample": "git show b8782afbcc7d79aa25f303c4ead8a647d7fbbc99:<entry.path> > /private/tmp/recovered-evidence.log.gz",
+  "retrievalExample": "git show <entry.archiveRevision>:<entry.path> > /private/tmp/recovered-evidence.log.gz",
   "verification": "verify gzipSha256 against the exact retrieved bytes, then decode gzip as UTF-8 and verify decodedUtf8Sha256",
   "pilotWrites": 0,
   "production": "disabled"

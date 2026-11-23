@@ -14,6 +14,20 @@ const hash = value => createHash('sha256').update(value).digest('hex');
 const profile = JSON.parse(bytes), additions = profile.syscalls.slice(-13);
 const added = name => additions.filter(rule => rule.names.includes(name));
 
+for (const architecture of ['s390', 's390x']) test(
+    'ev974-C27 reversed-ABI engine is rejected before the fixed clone filter can be used: ' + architecture, () => {
+        // The reviewed filter stays byte-identical. On these ABIs arg0 is the
+        // stack, so admission must reject them before any Engine operation.
+        const digest = 'a'.repeat(64);
+        const value = { schemaVersion: 1, image: 'sha256:' + digest, imageConfigSha256: digest,
+            hostNodeSha256: digest, socketPath: '/owned/engine.sock', supervisorSha256: digest,
+            workerUid: 502, workerGid: 20,
+            engine: { version: 'fixture', apiVersion: '1.56', os: 'linux', arch: architecture, kernelVersion: 'fixture' } };
+        assert.throws(() => requireProfile(value), /reversed.*s390.*ABI/u);
+        assert.doesNotThrow(() => requireProfile({ ...value, engine: { ...value.engine, arch: 'arm64' } }));
+        assert.doesNotThrow(() => requireProfile({ ...value, engine: { ...value.engine, arch: 'amd64' } }));
+    });
+
 test('ev974-C27 fixed seccomp preserves every Moby baseline field and rule', () => {
     assert.equal(typeof bytes, 'string');
     assert.equal(hash(bytes), 'fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b');
