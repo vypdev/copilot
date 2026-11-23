@@ -1,0 +1,34 @@
+{
+  "sameSourceAndLock": true,
+  "onlyDependencyPlacementChanged": true,
+  "offlineInstall": "707packages;0downloads;lockunchanged;noinstalllifecycles;existingGithooksunchanged",
+  "badContext": "node_modules symlink to sibling976; ts-loader/module identifiers outside ncccontext",
+  "oldApiSha256": "44d2a537d6cd16e73c6d059422035acff77d50260325d9353de0f1e71d81f168",
+  "canonicalApiSha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+  "canonicalApiEqualsPreviouslyNativeValidatedBase": true,
+  "allFourNativeBuildParity": "pending correctedsourcehead",
+  "sourceRuntimeChanged": false,
+  "manualRerunRequested": false,
+  "canonicalFourArtifacts": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "matchesOldBase": true
+    },
+    "cli": {
+      "bytes": 8463905,
+      "sha256": "a3d8fb8384983c89b6b0b1d2056ae54c0ea21930067199261c6784a49028eaec",
+      "matchesOldBase": false
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a",
+      "matchesOldBase": true
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9",
+      "matchesOldBase": false
+    }
+  }
+}

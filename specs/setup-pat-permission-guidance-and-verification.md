@@ -1001,3 +1001,14 @@ user-workflow preservation and replay. `validate:workflows`, documentation and
 specification validation, full tests, lint and synchronized bundles are required.
 Live no-run evidence requires a later authorized probe after deployment of the
 updated workflows; fixture evidence does not claim that deployment occurred.
+
+
+### Publisher-route coordination (#998, 2026-11-21)
+
+Publisher review uses actual relevant actor/repository/workflow grant evidence without disposable write probes or organization/Secret inventories. Unknown grants block; endpoint-required permissions do not certify granted authority. Credential replacement revokes the private session generation, and neither tokens nor token hashes enter preview, digest or journal. Existing generic PAT audits remain unchanged.
+
+The officially published [publisher companion](./setup-bugbot-publisher-manifest-route.md)
+and [batch delivery owner](./organization-configuration-reuse-and-batch-setup.md#reviewed-publisher-purpose-delivery-998-2026-11-21)
+own the additional 64-case contract and shared delivery changes. This coordination
+note does not complete this SDD's existing external or prospective gates. Actual
+#977 installation/native evidence and #981/#982 observations remain separate.

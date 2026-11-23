@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "parent": "b24d16670792e487a4867ee74c321ddcefef911d",
+  "kind": "Source-bound final-resource recovery and evidence corrections; not installation",
+  "focus": {
+    "numPassedTests": 128,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numPassedTestSuites": 3,
+    "numFailedTestSuites": 0
+  },
+  "resourceCausal": {
+    "resource-red1": {
+      "at": "2026-11-23T18:23:24.148584+00:00",
+      "stage": "red1",
+      "exit": 1,
+      "testSha256": "8a425fc282bb76eda29aa098acefdfd96eb5161791ba6084d0ba79cc50ac93a2",
+      "testUnchanged": true,
+      "sourceSha256": "1be6c07f4e0f7fcbf462dc68c5719e4c631df217b96ca2d5bcc3d1b38242d963",
+      "results": {
+        "numPassedTests": 1,
+        "numFailedTests": 2,
+        "numPendingTests": 75
+      },
+      "rawBytes": 4786,
+      "rawSha256": "a6613317021e50ea30019a1a98813b2781c2acc56ee4a6d52a89b0e8e9b68e0d",
+      "newModelCalls": 0,
+      "realGitHubEffects": 0,
+      "DONE_DO_NOT_REPEAT": true
+    },
+    "resource-red2": {
+      "at": "2026-11-23T18:24:32.025158+00:00",
+      "stage": "red2",
+      "exit": 1,
+      "testSha256": "43c2629555d7ac7cd7e7ef4505de058e529d02b670d46ade1ebb1ded05bff2c1",
+      "testUnchanged": true,
+      "sourceSha256": "1be6c07f4e0f7fcbf462dc68c5719e4c631df217b96ca2d5bcc3d1b38242d963",
+      "results": {
+        "numPassedTests": 3,
+        "numFailedTests": 2,
+        "numPendingTests": 104
+      },
+      "rawBytes": 4864,
+      "rawSha256": "097cfe24dfaf02450715c7ba80b03190daa521a94a16ba013336976c8ae058f5",
+      "newModelCalls": 0,
+      "realGitHubEffects": 0,
+      "DONE_DO_NOT_REPEAT": true
+    },
+    "resource-green1": {
+      "at": "2026-11-23T18:25:47.095680+00:00",
+      "stage": "green1",
+      "exit": 0,
+      "testSha256": "43c2629555d7ac7cd7e7ef4505de058e529d02b670d46ade1ebb1ded05bff2c1",
+      "testUnchanged": true,
+      "sourceSha256": "e61cdfed29c1ce5cb22ce8fefb23abfc4c63c700281873841356db545e7f154e",
+      "results": {
+        "numPassedTests": 5,
+        "numFailedTests": 0,
+        "numPendingTests": 104
+      },
+      "rawBytes": 2538,
+      "rawSha256": "e69e6872d2b19218526f619b337a63afd5bdba93a8fbdfa09c4e711cc17371a6",
+      "newModelCalls": 0,
+      "realGitHubEffects": 0,
+      "DONE_DO_NOT_REPEAT": true
+    }
+  },
+  "receiptMatcherCounterfactual": {
+    "original": {
+      "at": "2026-11-23T18:28:36.763147+00:00",
+      "stage": "original-fixture",
+      "exit": 0,
+      "testSha256": "43c2629555d7ac7cd7e7ef4505de058e529d02b670d46ade1ebb1ded05bff2c1",
+      "testUnchanged": true,
+      "originalProductionSha256": "c032fc1291ebfbb54e01d2d18e711c9d49dcbaf065c02f2bde847d3183c8dc6d",
+      "mutantProductionSha256": "47f78a8194a1e1928ad7264bc873a9f90f11b24fa2d0293c4bfccf3d41ef913b",
+      "productionRestoredExact": true,
+      "results": {
+        "numPassedTests": 2,
+        "numFailedTests": 0,
+        "numPendingTests": 76
+      },
+      "rawBytes": 407,
+      "rawSha256": "1fb85ba11880bf0b982cd278b0e7088ecdc3079a308faa73124dc4a52c9e4533",
+      "realGithubEffects": 0,
+      "models": 0,
+      "DONE_DO_NOT_REPEAT": true
+    },
+    "repaired": {
+      "at": "2026-11-23T18:30:23.660749+00:00",
+      "stage": "repaired-fixture",
+      "exit": 1,
+      "testSha256": "fe37f32cfaa8b33361377c8d270fb548ed6ffe2bd9c145940557b442d102cf01",
+      "testUnchanged": true,
+      "originalProductionSha256": "c032fc1291ebfbb54e01d2d18e711c9d49dcbaf065c02f2bde847d3183c8dc6d",
+      "mutantProductionSha256": "47f78a8194a1e1928ad7264bc873a9f90f11b24fa2d0293c4bfccf3d41ef913b",
+      "productionRestoredExact": true,
+      "results": {
+        "numPassedTests": 0,
+        "numFailedTests": 2,
+        "numPendingTests": 76
+      },
+      "rawBytes": 2971,
+      "rawSha256": "991f50419630a26d6ecaf32525d12f7e09747d2bc87f6417631bc0c5b6262494",
+      "realGithubEffects": 0,
+      "models": 0,
+      "DONE_DO_NOT_REPEAT": true
+    }
+  },
+  "baseline": {
+    "cases": 124,
+    "mapped": 120,
+    "separatePackage": 4,
+    "first123OnlyEvidenceAppendExceptions": [
+      "publisher977-C40",
+      "publisher977-C52"
+    ],
+    "selected64CompanionSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18"
+  },
+  "cohort": {
+    "at": "2026-11-23T18:40:54.827312+00:00",
+    "commandExit": 1,
+    "validatorExit": 0,
+    "testResults": {
+      "numPassedTests": 1581,
+      "numFailedTests": 0,
+      "numPendingTests": 0,
+      "numPassedTestSuites": 36,
+      "numFailedTestSuites": 0
+    },
+    "testsUnchanged": true,
+    "changedRuntimeCoverage": {
+      "lines": {
+        "total": 72,
+        "covered": 72,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 23,
+        "covered": 23,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 93,
+        "covered": 93,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 79,
+        "covered": 79,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "globalAcceptance": false,
+    "scientificCallsAdded": 0,
+    "installationWrites": 0,
+    "production": "disabled",
+    "rawExitScope": "Scoped Jest exit1 is only unexecuted global/web/publication floors; no global PASS inferred."
+  },
+  "native": "PENDING",
+  "newModels": 0,
+  "realGitHubEffects": 0,
+  "installation": "NOT_EXECUTED",
+  "production": "disabled",
+  "pilotWrites": 0,
+  "sourceSha256": {
+    "src/application/usecases/setup/apply_setup_batch_use_case.ts": "e61cdfed29c1ce5cb22ce8fefb23abfc4c63c700281873841356db545e7f154e",
+    "src/application/usecases/setup/__tests__/install_setup_publisher_use_case.test.ts": "e7354e9d700d3c687635a6c40832a9d5c51570cf329a7c59de07142630fba91d",
+    "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts": "fe37f32cfaa8b33361377c8d270fb548ed6ffe2bd9c145940557b442d102cf01",
+    "scripts/validate-setup-publisher-acceptance.cjs": "d272bad33832922527b4b4d94950e868af1ee8469fdf0f627623adf4a95afe75",
+    "specs/setup-publisher-installation-acceptance.json": "34900ac49cd35c7e9e16af3e0524855267463a81168d7b6ba4195bfda8f18feb",
+    "specs/organization-configuration-reuse-and-batch-setup.md": "c42d6752b0f9fec1ad0ea006d4c6ff8963365826e89ead9f4ed6960b384c221e"
+  },
+  "sourceValidation": [
+    {
+      "name": "types",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "budgets",
+      "exit": 0,
+      "bytes": 151,
+      "sha256": "e8deb0de10c1b79c81cf399d66ea348c09287aafd23c5b22b6e1f21853046ff1"
+    }
+  ],
+  "deliveryValidation": [
+    {
+      "name": "generate-specifications",
+      "exit": 0,
+      "bytes": 2494,
+      "sha256": "2d138093b2bcfaffe89f96eab7dd8366f7be78c960feec2ee00f5b3bcbee1be9"
+    },
+    {
+      "name": "specifications",
+      "exit": 0,
+      "bytes": 2479,
+      "sha256": "b70941a99a69130a8d28a8722e2b85e47366fb9376a354a448fd62f1ce15cd94"
+    },
+    {
+      "name": "documentation",
+      "exit": 0,
+      "bytes": 319,
+      "sha256": "23dfee16bdd4387324aea08fac9577dc68e5bd41ee017c1a300a72cdf94ce0ab"
+    },
+    {
+      "name": "agent-docs",
+      "exit": 0,
+      "bytes": 218,
+      "sha256": "c7cac2a12d0ff4ef07c5bc0b1404acc8f4569fa3b2c9b53e436622f418bff0d2"
+    },
+    {
+      "name": "docs-page",
+      "exit": 0,
+      "bytes": 208,
+      "sha256": "d0dd6e25d3529bfa8d4edc9f864d1262a292d16d3bdfff90960ce03caa24e76b"
+    },
+    {
+      "name": "workflows",
+      "exit": 0,
+      "bytes": 215,
+      "sha256": "411d5670d7d68ba620c0d0a722f10d4df0015fb27ecb0451385be001ebb833b2"
+    },
+    {
+      "name": "graphify",
+      "exit": 0,
+      "bytes": 3681,
+      "sha256": "2592773848bb1fea339ba7a71a0b66f87d3c14e7d4fece34b368fd64c2501402"
+    },
+    {
+      "name": "build",
+      "exit": 0,
+      "bytes": 442189,
+      "sha256": "e3457094d710a00bac44beae58332c023eb13ed49d6b431aeb50f9217a8c1bd6"
+    },
+    {
+      "name": "package",
+      "exit": 0,
+      "bytes": 1004,
+      "sha256": "cd2082e63bd416d8c3faa8dc0a8b4d949d1759d4fa41b833a850bc19507a8d2f"
+    },
+    {
+      "name": "package-smoke",
+      "exit": 0,
+      "bytes": 1156,
+      "sha256": "1e8eed1f4ec4d84e288c3539f62d23d1ef925ef7a082f75bbbb507a9525f97b2"
+    }
+  ],
+  "builtBundles": {
+    "build/cli/index.js": "8e0161d85d3c30c1b2df790e1da6fb4d22c1bc36d97c085448028f76c562de7d",
+    "build/github_action/index.js": "b2ffd1b815abd16b120608b4543aadca8ba60e31717e6922a8180587f8c54425",
+    "build/api/index.js": "22cf88aa71e14a216e9ac0aac487317bfa8af0d7ca90bc898401a6f0279579a3",
+    "build/deployment_recovery/index.js": "66654ce0fab52f9084a86555cb893be7f5cee6832058ef9a66751297f9c71d18"
+  },
+  "normal": "PENDING",
+  "retainedNegatives": "Original resource pair red1/red2, original/repaired receipt matcher-removal experiments and all raw originals are privately retained; no original result is overwritten."
+}

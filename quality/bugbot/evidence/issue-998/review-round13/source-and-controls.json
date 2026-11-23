@@ -1,0 +1,116 @@
+{
+  "at": "2026-11-23T04:19:30.610922+00:00",
+  "base": "16ab6d9a5d360858d963a90f6dba9d14142884f3",
+  "sourceSha256": {
+    "src/application/policies/repository_agent_guidance_policy.ts": "1408698329f3c7ccaf7d7e23bcdec42cbe1df6c1121beb3fe930947d8f6e788c",
+    "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts": "9e7b192af9f057ca2d0c47359b5543d935a13b005f221906ab2dc8ffc157b9af",
+    "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts": "3d735d7ceee860ca54bbeeac99b375854f1a9e43fb32bd79bb5c5190c04e7cfe",
+    "scripts/validate-setup-publisher-acceptance.cjs": "f2dd6075b7cbc311df126680b2e4b64e561f9822b90a2971657f02a72dd4d5d1"
+  },
+  "defect": "Required field count accepted empty/short/excess arrays despite matching catalog obligations; matching hashes admitted actual malformed empty-field plans",
+  "causalOriginal": "2 tests fail before source fix; exact two cases pass afterward",
+  "positiveCompatibility": "Custom labels at canonical count; original forms-disabled fixture also asserts profile validity",
+  "prior105LedgerObjectsPreserved": true,
+  "selectedCompanionSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "logicalIds": 106,
+  "mappedJestCasesPassed": 102,
+  "separateExtractedPackageCases": 4,
+  "coverage": {
+    "at": "2026-11-23T04:19:30.288Z",
+    "method": "Merge Istanbul maps from same production source bytes; actual suites reported independently, no repository-global coverage claim",
+    "reports": [
+      {
+        "passed": 1346,
+        "suites": 30,
+        "resultSha256": "aa7fbd2d4e8d4bf3b4a3358b12ac93aeee7c55633db6ca5c7a7dae03899006ce",
+        "privateOriginal": "copilot-goal-998-required-fields-coherent-attempt2"
+      },
+      {
+        "passed": 47,
+        "suites": 1,
+        "resultSha256": "3e12876bc29ea3b9afe2b6059fcf8c31f8f7aea4c965e53f83a01ecae8d0d4a2",
+        "privateOriginal": "copilot-goal-998-required-fields-guidance-coverage-attempt1"
+      },
+      {
+        "passed": 34,
+        "suites": 1,
+        "resultSha256": "9c61a3ba82d796ff835e8c89d93a0b1071531e5e89c3e5a25c79c059b97b5b8d",
+        "privateOriginal": "copilot-goal-998-required-fields-disabled-compatibility-attempt1"
+      },
+      {
+        "passed": 11,
+        "suites": 1,
+        "resultSha256": "bcb9f2f3e7d5979560c205828ba431d1ae735a2cb42076d026c680d364954f17",
+        "privateOriginal": "copilot-goal-998-required-fields-legacy-compatibility-attempt1"
+      },
+      {
+        "passed": 16,
+        "suites": 1,
+        "resultSha256": "f006979e831b610f6b9a37f81dbc9403c4cacab75804057cf8eb4462cb394158",
+        "privateOriginal": "copilot-goal-998-required-fields-credentials-coverage-attempt1"
+      }
+    ],
+    "changedPurePolicyCoverage": {
+      "lines": {
+        "total": 103,
+        "covered": 103,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 27,
+        "covered": 27,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 121,
+        "covered": 121,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 150,
+        "covered": 150,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "reviewedPublisherBudget": "PASS existing six pure100/20runtime95-90",
+    "globalAcceptance": false,
+    "thresholdsChanged": false,
+    "modelCalls": 0,
+    "installationWrites": 0
+  },
+  "negativeEnvironmentAttempt": "Restricted sandbox:1338PASS/8EPERMloopback/30suites; unchanged production source with loopback enabled1346PASS/30suites; all raw private reports retained",
+  "udpFinding": "REFUTED: original10transportcontrols PASS; Node24.20.0 dgram.Socket.prototype.sendto legacy wrapper exists and forwards send",
+  "primarySource": "https://github.com/nodejs/node/blob/v24.20.0/lib/dgram.js#L581-L597",
+  "publicOriginalControls": {
+    "required-fields-original-red.txt": {
+      "bytes": 2316,
+      "sha256": "25a2863b9e808b89c19a1edb36aa6048f645e031f705920d74b334f96711de1e"
+    },
+    "sendto-original-real-transport.txt": {
+      "bytes": 196,
+      "sha256": "5623df5543a801d0bc0c94399414e22475d80993bd5ec2b72a96790f2d1b024c"
+    },
+    "required-fields-corrected-green.txt": {
+      "bytes": 417,
+      "sha256": "cc3ffdbf23c981f78f0538bf2249c0a5793f9c77aaa5bc2473bbc0124044d907"
+    }
+  },
+  "nativeAcceptance": false,
+  "globalAcceptance": false,
+  "installation": "NOT_EXECUTED",
+  "actualModelCallsAdded": 0,
+  "pilotWrites": 0,
+  "production": "disabled",
+  "normalSourceCommit": {
+    "sha": "22ab36ab33537e58c34db7e700ac077c298de32e",
+    "suites": 968,
+    "passed": 19836,
+    "historicalSkips": 35,
+    "buildTestLint": "PASS",
+    "bundledDelivery": "separate normal commit required; first hook regenerated CLI/Action after staging; no remote publication of incomplete delivery"
+  }
+}

@@ -1,0 +1,3443 @@
+{
+  "schemaVersion": 1,
+  "specification": "specs/setup-bugbot-publisher-manifest-route.md",
+  "sourceIssue": 998,
+  "acceptanceBoundary": "Source route only; no installation, native canary, human/platform observation or model qualification is inferred. Run the full Jest gate and the extracted npm-package smoke separately.",
+  "cases": [
+    {
+      "id": "publisher977-C01",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01"
+      ],
+      "assertion": "A structurally valid closed proposal admits exactly one target, source pin, workflow hash and supported artifact kind.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy copies a valid proposal without converting its observations into authority"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C02",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01"
+      ],
+      "assertion": "Repository ID/name/default declarations must agree internally; an arbitrary URL or contradictory identity is rejected.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C02 rejects an arbitrary destination URL before deriving a plan"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C02 rejects contradictory destination repositoryId declarations"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C02 rejects contradictory destination repository declarations"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C02 rejects contradictory destination defaultBranch declarations"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C03",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01"
+      ],
+      "assertion": "Malformed or missing commit, bundle, workflow and manifest digests are rejected without coercion.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an invalid source commit"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an invalid source workflowSha256"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an invalid source actionManifestSha256"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an invalid source actionBundleSha256"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C04",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G03"
+      ],
+      "assertion": "Extra file, deletion, path traversal, absolute path or wrong file mode cannot enter the two-file delivery plan.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "complete approved Setup file scope rejects unsafe approved path "
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "complete approved Setup file scope rejects unsafe approved path ../escape"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "complete approved Setup file scope rejects unsafe approved path /absolute"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "complete approved Setup file scope rejects unsafe approved path a b"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "complete approved Setup file scope rejects unsafe approved path a/../b"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "complete approved Setup file scope rejects unsafe approved path a/./b"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "complete approved Setup file scope rejects unsafe approved path a//b"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "complete approved Setup file scope rejects unsafe approved path xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C07 refuses post-preview changes to extra file"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C07 refuses post-preview changes to deletion"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C05",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Only the canonical publisher workflow path is selectable; no proposal field supplies a destination override or arbitrary template.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported proposal field path"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C06",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G02",
+        "PU977-G04"
+      ],
+      "assertion": "The plan digest changes for purpose, operation, repository/default/base, source identity, workflow bytes or original manifest identity.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed audited actor"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed default branch"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed default revision"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed original manifest bytes"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed owner identity"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed repository identity"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed reviewed source revision"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed source action manifest"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed source bundle"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed source pull request"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed source repository identity"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 changes plan and final-byte approval for a newly reviewed source workflow bytes"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C06 separates operation identity and purpose from a previous receipt"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C07",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G02"
+      ],
+      "assertion": "Approval binds the complete rendered workflow and receipt bytes, so any post-preview byte change invalidates it.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C07 keeps the complete reviewed bytes and metadata immutable after inputs change"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C07 refuses post-preview changes to workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C07 refuses post-preview changes to receipt"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C07 refuses post-preview changes to order"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C08",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G05"
+      ],
+      "assertion": "A manifest approved/authorized Boolean or an old review receipt cannot grant a fresh Apply.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C08 ignores proposal approval/merge descriptions and excludes extra credential fields from digests and preview"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/review_setup_publisher_use_case.test.ts",
+          "test": "a proposal authorized flag cannot become approval or reach transport"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher977-C08: an old partial approval receipt cannot authorize unfinished writes after fresh decline"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C09",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G03"
+      ],
+      "assertion": "Receipt derivation is deterministic and noncircular: purpose-separated plan digest first, complete approval-byte digest afterward.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C09 derives the plan before its receipt and then binds both final files"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C10",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G07"
+      ],
+      "assertion": "Supported existing manifest fields/artifacts remain semantically intact outside the disclosed installation-receipt change.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared installation receipt formatting preserves existing metadata and replaces only the nested receipt in final approved files"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C11",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G07"
+      ],
+      "assertion": "Future/unsupported manifest or installation-receipt shape is blocked rather than normalized into a supported version.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C11/C12/C13 blocks future schema without inventing a baseline"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C11/C12/C13 blocks future generator without inventing a baseline"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C11/C12/C13 blocks future receipt without inventing a baseline"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C12",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Partial, mismatched or tampered source-guidance identities block the narrow maintenance plan.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C11/C12/C13 blocks missing managed record without inventing a baseline"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C11/C12/C13 blocks missing managed bytes without inventing a baseline"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C11/C12/C13 blocks tampered managed bytes without inventing a baseline"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C11/C12/C13 blocks profile digest mismatch without inventing a baseline"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C12 refuses ambiguous managed pointer bytes: duplicate end"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C12 refuses ambiguous managed pointer bytes: duplicate start"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C12 refuses ambiguous managed pointer bytes: missing end"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C12 refuses ambiguous managed pointer bytes: missing start"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C13",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G05",
+        "PU977-G07"
+      ],
+      "assertion": "An absent Setup manifest cannot become an invented empty artifacts/profile baseline.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C11/C12/C13 blocks absent without inventing a baseline"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C14",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "The closed publisher journal accepts only its v2 purpose and file-delivery effects; resource effects are rejected.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "purpose-bound publisher recovery metadata rejects incompatible journal field effects"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "purpose-bound publisher recovery metadata rejects incompatible journal field purpose"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "purpose-bound publisher recovery metadata rejects incompatible journal field schemaVersion"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C15",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G08"
+      ],
+      "assertion": "An operation marker or matching receipt alone never produces a verified-native or independent producer-attestation claim.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "purpose-bound publisher recovery metadata retains private metadata and exact known effects without claiming installation or native verification"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C16",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Symlink/nonregular proposal or unsupported path ancestry is rejected without following it as source authority.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_proposal_file.test.ts",
+          "test": "refuses directory input before reading any proposal bytes"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_proposal_file.test.ts",
+          "test": "refuses symlink input before reading any proposal bytes"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_proposal_file.test.ts",
+          "test": "detects a link swap at open with the native no-follow flag"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C17",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G02",
+        "PU977-G05"
+      ],
+      "assertion": "Readable absent publisher plus compatible existing Setup state produces a full preview using only relevant reads.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "composes actual private credentials, source proof, destination Git objects and immutable planning with GETs only"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C18",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G05"
+      ],
+      "assertion": "A denied relevant read remains unknown and cannot be classified as absent or safe to overwrite.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C18: unavailable workflow inventory with HTTP 403 cannot become readable absence"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C18: unavailable workflow inventory with HTTP 404 cannot become readable absence"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C19",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G05"
+      ],
+      "assertion": "Incomplete/truncated workflow or manifest inventory blocks an absence claim.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "cannot treat an incomplete or malformed tree as absence"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C20",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "An equivalent renamed or foreign/customized publisher is detected or remains explicitly unknown; no second publisher is added.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "finds a semantically equivalent renamed publisher rather than matching a display name"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "distinguishes exact canonical bytes from modified, executable and case-aliased publishers"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C20: an uninspected remote reusable workflow at main cannot establish absence"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C20: an uninspected remote reusable workflow at aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa cannot establish absence"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C21",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G02"
+      ],
+      "assertion": "A changed authenticated default branch or base before review requires a new plan and preview.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "reports actual default drift rather than copying the proposal head into inspected facts"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C22",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G02"
+      ],
+      "assertion": "A changed or mismatched source commit/bundle/workflow digest prevents reuse of the old proposal approval.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed NUL workflow before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed action manifest before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed bundle bytes before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed foreign source before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed nontext workflow before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed oversized workflow before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed proposed workflow hash before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed pull request before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed revision before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed unknown id before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed unmerged revision before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed unreviewed revision before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed unsupported root layout before preview"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C22 refuses independently observed workflow bytes before preview"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_source_adapter.test.ts",
+          "test": "cached immutable files cannot mask revoked merger authority or changed merge identity"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C23",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G05",
+        "PU977-G07"
+      ],
+      "assertion": "Supported reads do not invent empty organization resources, permission evidence or source-guidance facts when access is unavailable.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "uses actual granted scopes together with relevant repository access without probing writes"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C24",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G06",
+        "PU977-G08"
+      ],
+      "assertion": "An exact existing publisher yields unchanged/no empty PR while real-canary status remains separately pending.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C24 reports exact existing bytes as unchanged with native verification pending and no empty delivery"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C25",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G05"
+      ],
+      "assertion": "Declining the preview leaves GitHub and the durable operation store unchanged.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "uses the actual narrow source/destination composition for decline with no write or journal effects"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C26",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G03",
+        "PU977-G05"
+      ],
+      "assertion": "A fresh approved snapshot invokes the shared file-delivery sequence and no generic resource stage.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "connects real approval and exact common delivery to one controlled PR with en-US metadata"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C27",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G04"
+      ],
+      "assertion": "Explicit cancellation before effects stops Apply without creating objects, refs or PRs.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "starts no effects or journal writes when cancelled before admission"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/review_setup_publisher_use_case.test.ts",
+          "test": "cancellation at the final approval admission boundary cannot open confirmation or Apply"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C28",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "Cancellation after a completed object effect retains partial metadata and starts no later effect or destructive cleanup.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "retains a known tree after cancellation before the commit POST and resumes without another tree POST"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C29",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "A concurrent Apply cannot acquire the exclusive UUID lock or perform a duplicate write.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas both purposes use one exclusive UUID lock and never reclaim its current owner"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C30",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Restart after a known exact prepared commit revalidates/adopts it without preparing another commit.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "reuses a known exact prepared commit through the shared coordinator"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C31",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Restart after the exact owned ref reuses that ref and preserves its matching complete receipt.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "a completed journal revalidates the exact ref and PR with no new writes or journal rewrite"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C32",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "Unknown tree/commit creation without an identifiable object blocks automatic retry and retains uncertainty.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "an actually unknown commit POST outcome remains uncertain and is never replayed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "an actually unknown tree POST outcome remains uncertain and is never replayed"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C33",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "An uncertain PR response is recovered only after exact marker/head/base/repository inspection.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher recovery: reviewed resume adopts an existing uncertain pull-request after a lost response without repeating its POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign marker without another POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign head ref without another POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign head sha without another POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign head repository without another POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign base ref without another POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C33 refuses an uncertain PR with foreign base repository without another POST"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C34",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "Legacy v1/different-purpose/future journals cannot resume publisher work or cause legacy resource effects.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/install_setup_publisher_use_case.test.ts",
+          "test": "rejects legacy, cross-purpose and malformed retained records before preview"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C35",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G04"
+      ],
+      "assertion": "Changed reviewed digest/base or a human-advanced owned head blocks resume until the appropriate fresh review; no overwrite occurs.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "binds resume to the reviewed baseSha before locking"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "binds resume to the reviewed approvalDigest before locking"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "requires the same reviewed journal snapshot after obtaining its lock"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C36",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G06"
+      ],
+      "assertion": "A journal save failure after an effect stops later writes and reports partial/unknown recovery instead of claiming durable success.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "does not overstate durability after a branch-confirmed journal failure"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "does not overstate durability after a final journal failure"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "does not overstate durability after a initial journal failure"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "does not overstate durability after a intent journal failure"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "does not overstate durability after a tree-confirmed journal failure"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C37",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03"
+      ],
+      "assertion": "Tree creation retains the reviewed base tree and the resulting full scope equals only the approved files.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider creates only approved file objects on the exact base and retains actual object identities"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C38",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "An unexpected prepared parent cannot be adopted even when its marker/receipt otherwise matches.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects a prepared commit with wrong parent before adopting its ref"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects a prepared commit with multiple parents before adopting its ref"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C39",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03"
+      ],
+      "assertion": "An extra sibling file or changed subtree is rejected even when both expected blobs are correct.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects an extra prepared sibling even when workflow and receipt blobs match"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects an unrelated changed subtree without descending outside approved ancestors"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C40",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G03"
+      ],
+      "assertion": "Wrong workflow bytes, file mode, receipt identity or digest is rejected before ref/PR adoption.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects wrong leaf mode in complete-tree evidence"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects a foreign installation receipt baseSha before transport"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects a foreign installation receipt operationId before transport"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects a foreign installation receipt planDigest before transport"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects a foreign installation receipt repositoryId before transport"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "complete approved Setup file scope rejects a wrong bytes approved leaf"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "complete approved Setup file scope rejects a executable approved leaf"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "installer-owned GitHub write boundaries rejects a forged or future installation receipt {\"schemaVersion\":2}"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "installer-owned GitHub write boundaries rejects a forged or future installation receipt {\"schemaVersion\":1,\"operationId\":\"a67c8e40-93be-43ed-a7ed-e07378c7e773\",\"repositoryId\":8,\"baseSha\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"planDigest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C41",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G05"
+      ],
+      "assertion": "GitHub denial at an approved workflow/content write produces the correct blocked/partial outcome without permission escalation or a probe fallback.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher977-C41: a denied branch write retains partial facts without escalation, probes or blind POST replay"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher977-C41: a denied commit write retains partial facts without escalation, probes or blind POST replay"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher977-C41: a denied pull-request write retains partial facts without escalation, probes or blind POST replay"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher977-C41: a denied tree write retains partial facts without escalation, probes or blind POST replay"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C42",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Unknown ref creation followed by the exact expected ref adopts once without blindly repeating POST.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider ref response loss adopts only the exact prepared commit through a readback"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C43",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "An existing UUID ref at a different human commit blocks with no force, deletion or replacement.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider a human-advanced ref is neither overwritten nor used for PR creation"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C44",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "PR inspection handles full pagination and rejects missing, duplicate or foreign matches rather than creating another PR.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C44: complete PR pagination handles duplicate evidence without creating a duplicate"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C44: complete PR pagination handles exact evidence without creating a duplicate"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C44: complete PR pagination handles foreign evidence without creating a duplicate"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C44: complete PR pagination handles missing evidence without creating a duplicate"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C44: complete PR pagination handles unterminated evidence without creating a duplicate"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C45",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G04"
+      ],
+      "assertion": "Default/base movement between provider effects stops remaining work; movement detected after an effect is honestly partial, not claimed atomic CAS.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider verified drift before a tree write is distinct from an unavailable read and starts no POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider verified drift after tree creation stops the commit and retains the known tree"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C46",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "A head changed during PR creation/readback is retained as a partial ownership conflict with no cleanup or silent adoption.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider a head changed during PR creation remains a partial conflict without cleanup"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C47",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G06"
+      ],
+      "assertion": "The explicit publisher option selects the narrow application before generic setup configuration or probing.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+          "test": "registers the supported route and dispatches before generic terminal, configuration and web orchestration"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C48",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G05",
+        "PU977-G06"
+      ],
+      "assertion": "Explicitly supplied forbidden generic options are rejected even when Commander parses an empty or default-looking value.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+          "test": "a missing callback value cannot fall through to generic setup when Commander retains explicit publisher intent"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+          "test": "retains explicit agentGuidance provenance even for false, empty or default-looking values"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+          "test": "retains explicit batch provenance even for false, empty or default-looking values"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+          "test": "retains explicit config provenance even for false, empty or default-looking values"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+          "test": "retains explicit features provenance even for false, empty or default-looking values"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+          "test": "retains explicit nonInteractive provenance even for false, empty or default-looking values"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+          "test": "retains explicit skipSecrets provenance even for false, empty or default-looking values"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+          "test": "retains explicit web provenance even for false, empty or default-looking values"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+          "test": "retains explicit yes provenance even for false, empty or default-looking values"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C49",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G06"
+      ],
+      "assertion": "--yes and --non-interactive cannot turn proposal fields or a previous preview into Apply approval.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "rejects explicit generic yes provenance before file, terminal or transport work"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "rejects explicit generic nonInteractive provenance before file, terminal or transport work"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "requires a terminal for Apply and cannot use implicit yes or pipe input as approval"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C50",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G05",
+        "PU977-G06"
+      ],
+      "assertion": "--web/--batch conflicts start neither a web server nor organization selection/model/permission setup.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "rejects explicit generic web provenance before file, terminal or transport work"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "rejects explicit generic batch provenance before file, terminal or transport work"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C51",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G05",
+        "PU977-G06"
+      ],
+      "assertion": "Valid dry-run shows both final files using controlled relevant reads and creates no journal, object, ref, PR or resource probe.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "a noninteractive dry-run shows the complete preview and no token or approval prompt"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "uses the actual narrow source/destination composition for dry-run with no write or journal effects"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C52",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G06",
+        "PU977-G07"
+      ],
+      "assertion": "Publisher resume requires its explicit proposal route and fresh review; bare resume retains the ordinary legacy batch route.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+          "test": "an ordinary bare resume keeps the existing batch dispatch"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/install_setup_publisher_use_case.test.ts",
+          "test": "requires explicit resume for an existing operation and never treats it as approval"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "validates explicit resume identity before transport and passes a valid selection through"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/install_setup_publisher_use_case.test.ts",
+          "test": "only invokes Apply after fresh explicit confirmation and passes the independently frozen journal snapshot"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/install_setup_publisher_use_case.test.ts",
+          "test": "publisher977-C52 a valid retained resume with fresh decline never reaches Apply"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/install_setup_publisher_use_case.test.ts",
+          "test": "publisher977-C52 a valid retained resume with fresh cancel never reaches Apply"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C53",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G08"
+      ],
+      "assertion": "Pending, partial, waiting-for-merge and verification-pending copy links to the actual known operation/run and never invents successful installation or canary evidence.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "renders review, retained uncertainty and delivery truthfully in en-US"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "reports retained effects and an unconfirmed journal save truthfully"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C54",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G07"
+      ],
+      "assertion": "English primary content, textual status, descriptive links and sanitized failures expose no credential or arbitrary provider payload.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_message_catalog.test.ts",
+          "test": "provides a complete immutable static en-US journey with matching placeholders"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "shows a bounded localized failure without arbitrary provider or credential text"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "renders every approved byte as inert prefixed data, retains CR/LF distinctions and leaves the frozen plan unchanged"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C55",
+      "area": "Packaged integration/security",
+      "requirements": [
+        "PU977-G06"
+      ],
+      "assertion": "The actual packed CLI help advertises the selected option and supported review/preview journey.",
+      "gate": "npm-package-smoke",
+      "evidence": [
+        {
+          "file": "scripts/smoke-packaged-setup-publisher.cjs",
+          "test": "publisher977-C55"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C56",
+      "area": "Packaged integration/security",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G05",
+        "PU977-G07"
+      ],
+      "assertion": "The actual packed CLI rejects an oversized, malformed or nonregular proposal before transport or generic setup effects.",
+      "gate": "npm-package-smoke",
+      "evidence": [
+        {
+          "file": "scripts/smoke-packaged-setup-publisher.cjs",
+          "test": "publisher977-C56"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C57",
+      "area": "Packaged integration/security",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G05",
+        "PU977-G06"
+      ],
+      "assertion": "The actual packed CLI rejects conflicting automation flags before authentication or generic orchestration.",
+      "gate": "npm-package-smoke",
+      "evidence": [
+        {
+          "file": "scripts/smoke-packaged-setup-publisher.cjs",
+          "test": "publisher977-C57"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C58",
+      "area": "Packaged integration/security",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G06"
+      ],
+      "assertion": "Outside a local Git checkout, a well-formed proposal with missing credentials reports the narrow credential prerequisite, without initializing or configuring a checkout.",
+      "gate": "npm-package-smoke",
+      "evidence": [
+        {
+          "file": "scripts/smoke-packaged-setup-publisher.cjs",
+          "test": "publisher977-C58"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C59",
+      "area": "Packaged integration/security",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G05",
+        "PU977-G07"
+      ],
+      "assertion": "Architecture/composition enforcement gives the publisher no resource writers/probes or raw application process/HTTP imports and proves both routes share one delivery implementation.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/architecture/__tests__/setup_doctor_boundaries.test.ts",
+          "test": "setup and doctor architecture boundaries publisher977-C59: gives the publisher only narrow capabilities and shares actual file delivery with batch"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C60",
+      "area": "Packaged integration/security",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04",
+        "PU977-G07",
+        "PU977-G08"
+      ],
+      "assertion": "A controlled cross-route integration preserves ordinary batch resource stages/Secret retention while publisher delivery remains file-only and cannot adopt a legacy operation; no production/model/native acceptance is inferred.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "installer-owned GitHub write boundaries publisher977-C60: preserves ordinary resource delivery and Secrets while the publisher cannot adopt its real v1 operation"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "connects real approval and exact common delivery to one controlled PR with es-ES metadata"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C61",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G07"
+      ],
+      "assertion": "Spanish primary states/actions/recovery render from a complete static catalog with inert untrusted values and no language-agent or model request.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_message_catalog.test.ts",
+          "test": "provides a complete immutable static es-ES journey with matching placeholders"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "renders review, retained uncertainty and delivery truthfully in es-ES"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "approves exact files only with the full localized word in es-ES"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C62",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G07"
+      ],
+      "assertion": "French primary states/actions/recovery render from a complete static catalog with inert untrusted values and no language-agent or model request.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_message_catalog.test.ts",
+          "test": "provides a complete immutable static fr-FR journey with matching placeholders"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "renders review, retained uncertainty and delivery truthfully in fr-FR"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "approves exact files only with the full localized word in fr-FR"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C63",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G07"
+      ],
+      "assertion": "Portuguese primary states/actions/recovery render from a complete static catalog with inert untrusted values and no language-agent or model request.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_message_catalog.test.ts",
+          "test": "provides a complete immutable static pt-BR journey with matching placeholders"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "renders review, retained uncertainty and delivery truthfully in pt-BR"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "approves exact files only with the full localized word in pt-BR"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C64",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G07"
+      ],
+      "assertion": "Unknown/invalid terminal locale or an incomplete catalog falls back atomically to English without changing approved bytes/digest or granting authority.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_message_catalog.test.ts",
+          "test": "falls back atomically to English for unavailable or invalid locale"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_message_catalog.test.ts",
+          "test": "normalizes bounded POSIX locale precedence for display only"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_message_catalog.test.ts",
+          "test": "an incomplete selected catalog falls back as a whole without mixing approval and recovery words"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C65",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "A PR-complete applying operation reaches waiting-for-merge only after exact read-only branch and PR verification.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "finalizes a retained PR-complete applying operation after exact read-only verification"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C66",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "A failed terminal reconciliation reports the attempted state and exact last durable PR-complete state without another provider write.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "reports failed terminal reconciliation without overstating the last durable PR-complete state"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C67",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "A confirmed pre-POST manifest-read failure retains the strict v1 receipt and resumes without repeating completed resources.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery retries a confirmed pre-POST manifest-read failure without repeating resources"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C68",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "A confirmed pre-POST base-commit-read failure retains the strict v1 receipt and resumes without repeating completed resources.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery retries a confirmed pre-POST base-commit-read failure without repeating resources"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C69",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "A known commit is durable before its later proof read fails and is reused without another object POST.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery retains a known commit when its later proof read fails and never repeats object creation"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C70",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Fresh reviewed recovery after ref-read failure inspects absence before creating the exact unfinished target.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery reinspects and creates a confirmed absent target after ref-read failure and fresh review"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C71",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Fresh reviewed recovery after ref-create failure inspects absence before creating the exact unfinished target.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery reinspects and creates a confirmed absent target after ref-create failure and fresh review"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C72",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Fresh reviewed recovery after PR-read failure inspects absence before creating the exact unfinished target.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery reinspects and creates a confirmed absent target after PR-read failure and fresh review"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C73",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Fresh reviewed recovery after PR-create failure inspects absence before creating the exact unfinished target.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery reinspects and creates a confirmed absent target after PR-create failure and fresh review"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C74",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "An unknown git/trees POST with no object identity cannot be replayed by a reconstructed adapter and real v1 journal.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery never repeats an unknown git/trees POST without its object identity"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C75",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "An unknown git/commits POST with no object identity cannot be replayed by a reconstructed adapter and real v1 journal.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery never repeats an unknown git/commits POST without its object identity"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C76",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Only an observed stop before the tree POST clears preparation uncertainty.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects clears preparation uncertainty only after an observed stop before the tree POST"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C77",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "A known tree without a commit keeps preparation uncertain when commit creation never starts.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects does not clear unknown preparation when a tree exists but commit creation never started"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C78",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "The exact observed commit survives a subsequent failed proof read.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects retains the observed commit identity even if its subsequent proof read fails"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C79",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "An invalid observed commit cannot clear preparation uncertainty.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects rejects an invalid observed commit identity without clearing preparation uncertainty"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C80",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Create-if-absent branch recovery requires the explicit freshly reviewed policy.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects allows reviewed create-if-absent recovery only through an explicit branch policy"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C81",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Create-if-absent PR recovery requires the explicit freshly reviewed policy.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects allows reviewed create-if-absent recovery only through an explicit pull-request policy"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C82",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "Marking an interrupted legacy operation cancelled cannot erase its unknown preparation outcome.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts",
+          "test": "sequential reviewed batch Apply does not erase unknown preparation when an interrupted operation is marked cancelled"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C83",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G04"
+      ],
+      "assertion": "Confirmed pre-POST resume requires renewed review and the mandatory permission audit before preparation.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_batch_flow.test.ts",
+          "test": "shared CLI/web batch session preserves confirmed pre-POST recovery across renewed review and the mandatory permission audit"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C84",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "A second early read failure preserves confirmed no-POST proof for the next reviewed retry.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts",
+          "test": "confirmed preflight proof survives another read failure before preparation retains its no-POST proof for the next reviewed retry"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C85",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "Cancellation before target revalidation preserves confirmed no-POST proof for the next reviewed retry.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts",
+          "test": "confirmed preflight proof survives cancellation before target revalidation retains its no-POST proof for the next reviewed retry"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C86",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "An unresolved local composite keeps workflow inventory unknown and blocks absence-based preview and Apply.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "keeps unresolved local composite inventory unknown"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C87",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "An unresolved local root action keeps workflow inventory unknown and blocks absence-based preview and Apply.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "keeps unresolved local root action inventory unknown"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C88",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "An unresolved local reusable workflow keeps workflow inventory unknown and blocks absence-based preview and Apply.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "keeps unresolved local reusable workflow inventory unknown"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C89",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Unrelated setup PRs do not block exact-operation delivery; foreign or malformed heads claiming this operation marker remain rejected.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider ignores an unrelated open setup PR when creating this operation PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider ignores an unrelated closed setup PR when creating this operation PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider inspects only this operation with an unrelated open setup PR before it"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider inspects only this operation with an unrelated open setup PR after it"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects this operation marker on a different setup ref without creating a PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects this operation marker on a human ref without creating a PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects this operation marker on a missing head without creating a PR"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C90",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G03",
+        "PU977-G07"
+      ],
+      "assertion": "Structural source validation admits exactly one canonical local invocation and proves its replacement pins that executed scalar without another local reference.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional commented local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional single quoted local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional double quoted local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional flow local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional nested local path local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional parent path local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects an additional alias local invocation in the source workflow"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects a lexical root invocation inside run text while the executed local action is quoted"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: missing jobs"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: array root"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: null jobs"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: empty jobs"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: malformed YAML"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: duplicate jobs"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: custom tag"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: null job"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: array job"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: no execution"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: two execution kinds"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: non-array steps"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: null step"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: non-string uses"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: empty uses"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: whitespace uses"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: dynamic uses"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: reusable local root"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: reusable local path"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: absolute path"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: backslash path"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: run and action"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: cyclic alias"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: unresolved merge"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: deep structure"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: excess traversal"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: excess bytes"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects unsupported source workflow structure: NUL"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy preserves remote reusable jobs, ordinary steps and non-execution uses metadata"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "closed publisher input and option policy rejects a quoted sole local action even with unrelated lexical text elsewhere"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C91",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G07"
+      ],
+      "assertion": "A malformed legacy tree path rejects the complete asset inventory before any blob fetch; legitimate unrelated Git names remain readable.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path null before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":42} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":null} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"/absolute\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"a//b\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"./file\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"a/../file\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"a/./file\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"a/\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection rejects an incomplete legacy tree path {\"path\":\"a\\u0000b\"} before fetching any known blob"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+          "test": "bounded GitHub setup discovery and namespace inspection retains exact known bytes while accepting ordinary unrelated Git path names"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C92",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "Failed exclusive-lock initialization removes only its own identified file, preserves foreign or unverified replacements and the original error, and permits a later fresh acquisition.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization removes only its own uninitialized lock after writeFile failure and preserves the first error"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization removes only its own uninitialized lock after sync failure and preserves the first error"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization removes only its own uninitialized lock after close failure and preserves the first error"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization removes only its own uninitialized lock after writeFile-and-close failure and preserves the first error"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization removes only its own uninitialized lock after sync-and-close failure and preserves the first error"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization never removes a file replacement after failed initialization"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization never removes a directory replacement after failed initialization"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization never removes a symlink replacement after failed initialization"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization never removes a absent replacement after failed initialization"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization retains an unverified lock if its created descriptor identity cannot be read"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization preserves the initialization error when lstat cleanup fails"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization preserves the initialization error when unlink cleanup fails"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C93",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G06"
+      ],
+      "assertion": "Completed read-only recovery reports snapshot drift as stale, preserves cancellation and its exact durable receipt, and starts no delivery or journal writes.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "completed recovery reports branch snapshot drift as stale without changing its durable receipt"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "completed recovery reports pullRequest snapshot drift as stale without changing its durable receipt"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "completed recovery preserves cancellation during branch snapshot drift"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+          "test": "completed recovery preserves cancellation during pullRequest snapshot drift"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C94",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04"
+      ],
+      "assertion": "Cancellation during file-phase revalidation or intent persistence stops the next provider command and preserves completed facts and retained uncertainty.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during prepared-objects revalidation prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during prepared-objects intent prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during branch revalidation prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during branch intent prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during pull-request revalidation prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects cancellation during pull-request intent prevents dispatch and retains prior facts"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts",
+          "test": "sequential reviewed batch Apply cancels during file preparation revalidation without dispatching objects"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts",
+          "test": "sequential reviewed batch Apply cancels during file preparation intent without dispatching objects"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C95",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "Cancellation during the batch adapter's awaited freshness or Git-proof reads stops each tree, commit, ref or PR POST at transport dispatch while preserving completed effects and exact durable recovery facts.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during tree freshness-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during tree Git-proof-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during commit freshness-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during commit Git-proof-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during branch freshness-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during branch Git-proof-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during pull-request freshness-read stops the real provider write and retains prior facts"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C95: cancellation during pull-request Git-proof-read stops the real provider write and retains prior facts"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C96",
+      "area": "Application/recovery",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "Cancellation before the object command durably records no-write proof for freshly reviewed v1/v2 recovery; a failed proof save retains uncertainty.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher977-C96: cancelled preparation intent resumes through the real v2 journal after fresh approval"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "freshly reviewed legacy batch recovery through real Git delivery publisher977-C96: cancelled preparation intent resumes through the real v1 journal without repeating resources"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects publisher977-C96: cancellation while retaining preparation intent permits a fresh reviewed no-write resume"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared approved-file delivery and retained effects publisher977-C96: a failed durable no-write proof preserves preparation uncertainty"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C97",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Uninspected remote step actions, including pinned refs and container actions, remain unknown and cannot prove publisher absence.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C97: uninspected remote step other/action@v1 cannot prove publisher absence"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C97: uninspected remote step other/action@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa cannot prove publisher absence"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C97: uninspected remote step docker://example/publisher:1 cannot prove publisher absence"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C98",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Case-insensitive Windows environment markers at workflow, job, step or command scope block a renamed publisher.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C98: Windows case-insensitive marker at workflow blocks a renamed publisher"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C98: Windows case-insensitive marker at job blocks a renamed publisher"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C98: Windows case-insensitive marker at step blocks a renamed publisher"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C98: Windows case-insensitive marker at run blocks a renamed publisher"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C99",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G07"
+      ],
+      "assertion": "Unrelated backslash-named Git entries preserve fixed-path reads while malformed names and unsafe requested paths still reject.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "publisher977-C99: unrelated backslash names in tree 1111111111111111111111111111111111111111 do not block a fixed-path read"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "publisher977-C99: unrelated backslash names in tree 2222222222222222222222222222222222222222 do not block a fixed-path read"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C100",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G07"
+      ],
+      "assertion": "A valid oversized JSON manifest with the exact matching receipt rejects before transport and detects removal of the receipt byte guard.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider rejects invalid approved files before transport: oversized receipt"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C101",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Opaque workflow scripts remain unknown unless their behavior is independently inspected; missing literal publisher markers do not prove absence.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C101: opaque run cannot establish absence: ${{ inputs.script }}"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C101: opaque run cannot establish absence: curl --request POST https://api.github.com/repos/owner/project/actions/workflows/renamed.yml/dispatches"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C101: opaque run cannot establish absence: node -e \"const name = ['publish_bugbot', 'status_card_action'].join('_'); require('./action')[name]()\""
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+          "test": "publisher977-C101: opaque run cannot establish absence: node scripts/dispatch-status.js"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "publisher977-C101: actual composition blocks an opaque script before preview, approval or provider writes"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C102",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G02",
+        "PU977-G07"
+      ],
+      "assertion": "Malformed resume identities report invalid input before terminal, credential or provider work.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C102: malformed resume  reports invalid input before terminal or provider work"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C102: malformed resume ../other-operation reports invalid input before terminal or provider work"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C102: malformed resume 11111111-1111-1111-8111-111111111111 reports invalid input before terminal or provider work"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C102: malformed resume invalid-operation reports invalid input before terminal or provider work"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C103",
+      "area": "Packaged integration/security",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G07"
+      ],
+      "assertion": "Executable delivery-port error constructors have an independent per-module coverage gate that rejects missing and below-threshold entries.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/tooling/__tests__/coverage_budget_validator.test.ts",
+          "test": "publisher977-C103: delivery port error constructors have an independent runtime coverage gate"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C104",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Noncanonical form templates cannot establish installed-profile authority or obtain a two-file plan, including with self-consistent artifact hashes.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical feature template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical bugfix template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical help template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical chore template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical documentation template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical hotfix template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C104: rejects a noncanonical release template even when it is nonempty"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong feature form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong bugfix form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong help form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong chore form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong documentation form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong hotfix form template"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C104: self-consistent manifest hashes cannot authorize a wrong release form template"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C105",
+      "area": "Packaged integration/security",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G07"
+      ],
+      "assertion": "Actual UDP loopback controls prove send/sendto denial before dispatch and bind/connect fences record no hidden transport or listener effect.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences send guarded=false has a real loopback positive control and cannot send through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences send guarded=true has a real loopback positive control and cannot send through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences sendto guarded=false has a real loopback positive control and cannot send through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences sendto guarded=true has a real loopback positive control and cannot send through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences blocks UDP bind before creating a listener or connected socket"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C105: UDP package transport fences blocks UDP connect before creating a listener or connected socket"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C106",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Required issue field counts must match each workflow catalog while custom heading labels remain supported; matching manifest hashes cannot authorize empty required fields.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C106: rejects missing or excess required field counts while preserving custom labels"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C106: matching manifest hashes cannot authorize empty required issue fields"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C107",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Required issue headings must be unique ignoring case while distinct custom labels remain supported; matching manifest hashes cannot authorize duplicate required headings.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C107: rejects case-insensitive duplicate required headings while preserving distinct custom labels"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C107: matching manifest hashes cannot authorize duplicate required headings"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C108",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Configured and installed required headings must be distinct under the actual issue-body parser Unicode equivalence; matching manifest hashes cannot authorize aliases for two roles.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C108: matching manifest hashes cannot authorize Unicode-equivalent required headings"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C108: profile heading uniqueness follows the parser Unicode equivalence"
+        },
+        {
+          "file": "src/domain/__tests__/issue_workflow_field_mappings.test.ts",
+          "test": "configured Issue Form headings (#725) publisher977-C108: configuration cannot assign parser-equivalent Unicode aliases to different fields"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C109",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G08"
+      ],
+      "assertion": "Retained states link only the existing validated local operation record and known PR; navigation creates no state or native run and preserves the original operation status and error.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: actual CLI forwards the read-only known operation target to its presenter"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: apply preserves operation status while resolving navigation independently"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: journal-error preserves operation status while resolving navigation independently"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: lookup-failure preserves operation status while resolving navigation independently"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: links only an existing exact publisher record without creating preview state"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: missing roots and mismatched saved IDs remain read-only and unlinked"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: a legacy or malformed record cannot become a publisher navigation target"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "publisher977-C109: composition resolves its own validated record location without provider effects"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: applying output links the known saved operation without inventing a run"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: partial output links the known saved operation without inventing a run"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: waiting-for-merge output links the known saved operation without inventing a run"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: verification-pending output links the known saved operation without inventing a run"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: absent or unsafe record targets never create a navigation promise"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C110",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G07"
+      ],
+      "assertion": "Every malformed-entry and unsafe-lookup negative control is individually required by the cumulative gate for C99 rejection guarantees.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 0)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 1)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 2)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 3)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 4)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 5)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 6)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 7)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 8)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 9)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 10)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 11)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 12)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 13)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 14)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 15)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 0)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 1)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 2)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 3)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 4)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 5)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 6)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 7)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 8)"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C111",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Installed required headings obey configured mappings: trimmed single-line text within128UTF-8 bytes, rejecting Cc/Zl/Zp characters; matching hashes cannot authorize malformed labels.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C111: matching manifest hashes cannot authorize invalid required heading text"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C111: installed required headings obey the configured single-line UTF-8 constraints"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C112",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G05",
+        "PU977-G07"
+      ],
+      "assertion": "The source action manifest binds main and every declared pre/post executable to the fixed independently hashed bundle before source admission; matching proposal hashes cannot authorize another entrypoint.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects oversized rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects NUL rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects malformed YAML rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects duplicate executable key rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects null root rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects array root rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects absent runs rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects array runs rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects missing runtime rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects missing main rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects other runtime rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects other executable configuration rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects redirected main rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects redirected pre rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects redirected post rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding accepts node20 main only as fixed-bundle entrypoints"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding accepts node24 every declared entrypoint as fixed-bundle entrypoints"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding accepts exact byte boundary as fixed-bundle entrypoints"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_source_adapter.test.ts",
+          "test": "publisher977-C112 composed: rejects redirected main despite matching manifest and fixed-bundle pins"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_source_adapter.test.ts",
+          "test": "publisher977-C112 composed: rejects redirected pre despite matching manifest and fixed-bundle pins"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_source_adapter.test.ts",
+          "test": "publisher977-C112 composed: rejects redirected post despite matching manifest and fixed-bundle pins"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C113",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Workflow inventory skips unrelated YAML-named directories while rejecting fixed publisher-path tree collisions, workflow symlinks and oversized matching blobs.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C113 skips unrelated YAML-named directories without reading or counting them as workflows"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C113 rejects a directory colliding with the fixed publisher destination before blob transport"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "rejects workflow symlinks and oversized destination assets before fetching them"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C114",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G02",
+        "PU977-G07"
+      ],
+      "assertion": "Cumulative acceptance requires the actual authenticated base-revision drift assertion for C21 in addition to its retained default-branch control; omission, failure or pending status cannot pass the gate.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C21 blocks a changed or unavailable destination: base"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C114: authenticated ref SHA drift with the same default branch rejects the stale proposal"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C115",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Supported schema2 guidance requires the profile, guide and workflow skill records; empty or partial inventories cannot make the actual doctor report healthy.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/utils/__tests__/setup_files.test.ts",
+          "test": "setup_files publisher977-C115: incomplete guidance inventory .copilot/repository-profile.json cannot make the actual doctor report healthy"
+        },
+        {
+          "file": "src/utils/__tests__/setup_files.test.ts",
+          "test": "setup_files publisher977-C115: incomplete guidance inventory .copilot/AGENT_GUIDE.md cannot make the actual doctor report healthy"
+        },
+        {
+          "file": "src/utils/__tests__/setup_files.test.ts",
+          "test": "setup_files publisher977-C115: incomplete guidance inventory .agents/skills/copilot-repository-workflow/SKILL.md cannot make the actual doctor report healthy"
+        },
+        {
+          "file": "src/utils/__tests__/setup_files.test.ts",
+          "test": "setup_files publisher977-C115: incomplete guidance inventory all cannot make the actual doctor report healthy"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C116",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G05",
+        "PU977-G07"
+      ],
+      "assertion": "The package effect guard intercepts native DNS callback, promise and Resolver query APIs before dispatch, with real local positive controls and recorded denied attempts.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences callback guarded=false observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences callback guarded=true observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences promise guarded=false observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences promise guarded=true observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences callback-resolver guarded=false observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences callback-resolver guarded=true observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences promise-resolver guarded=false observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences promise-resolver guarded=true observes a real local DNS query and denies dispatch through the guard"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C117",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Workflow inventory ignores unrelated YAML-named gitlinks without fetching their targets while rejecting a gitlink at the fixed publisher destination.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C117 ignores an unrelated YAML-named gitlink in actual immutable publisher planning"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C117 rejects a gitlink at the fixed publisher path before fetching it"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C118",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G05",
+        "PU977-G07"
+      ],
+      "assertion": "Unavailable declared guidance rejects the read-only snapshot without inventing source facts or unrelated organization resources.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C118: unavailable required guidance with HTTP 403 cannot produce a fabricated planning snapshot"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C118: unavailable required guidance with HTTP 404 cannot produce a fabricated planning snapshot"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C119",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "PR recovery filters all-state reads to the exact operation owner/head while retaining complete bounded pagination and duplicate, base, commit, repository and marker checks; unrelated history cannot exhaust the scan.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C119: scoped recovery beyond1000 unrelated PRs preserves exact identity checks"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C119: scoped recovery beyond1000 unrelated PRs preserves duplicate identity checks"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C119: scoped recovery beyond1000 unrelated PRs preserves foreign base identity checks"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C119: scoped recovery beyond1000 unrelated PRs preserves foreign repository identity checks"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C120",
+      "area": "Pure/installed profile compatibility",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Only generator-supported routing cardinalities and workflow kinds are compatible, retaining custom label values and supported workflow names.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects labels routing cardinality empty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects labels routing cardinality short"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects labels routing cardinality extra"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects formLabels routing cardinality empty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects formLabels routing cardinality short"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects formLabels routing cardinality extra"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects an unsupported workflow name for feature"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects an unsupported workflow name for bugfix"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects an unsupported workflow name for documentation"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects an unsupported workflow name for chore"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects an unsupported workflow name for help"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: preserves custom routing values and supported hotfix/release workflow names"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C121",
+      "area": "Runtime/recovery and cancellation",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "A new PR requires complete open-marker conflict absence within the original shared ten-query budget; malformed, exhausted, cancelled or stale reads cannot authorize POST.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: incomplete full bounded inventory cannot authorize a new PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: incomplete missing marker text cannot authorize a new PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: complete unrelated open operations do not block one owned PR creation"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: a complete null-body open PR does not invent a marker conflict"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: scoped reads cannot reset the shared ten-query absence budget"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: not an array"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: too many rows"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: null row"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: duplicate number"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: closed row"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: non-text body"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: cancellation during open-claim inspection prevents POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: stale snapshot during open-claim inspection prevents POST"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C122",
+      "area": "Pure/installed profile compatibility",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Installed form labels retain the exact ordered routing-label prefix while preserving generated custom duplicate labels and custom priority values.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C122: rejects form routing prefix mismatch foreign label"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C122: rejects form routing prefix mismatch reordered prefix"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C122: rejects form routing prefix mismatch misplaced priority"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C122: preserves generated duplicate routing and priority labels"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C123",
+      "area": "Pure/installed profile compatibility",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Installed profiles enabling hotfix or release require managed branches even when forms are disabled, while otherwise valid manual-only workflow profiles remain compatible.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: rejects hotfix without managed branches when forms=true"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: rejects hotfix without managed branches when forms=false"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: rejects release without managed branches when forms=true"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: rejects release without managed branches when forms=false"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: preserves manual-only workflow profiles when forms=true"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: preserves manual-only workflow profiles when forms=false"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C124",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "A failed final resource checkpoint before delivery resumes from durable v1 proof without repeating resources, while unknown prior preparation remains blocked.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "publisher977-C124 durable resource checkpoint before delivery publisher977-C124 resumes after the final resource journal failure at before-save without repeating effects"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "publisher977-C124 durable resource checkpoint before delivery publisher977-C124 resumes after the final resource journal failure at after-save without repeating effects"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "publisher977-C124 durable resource checkpoint before delivery publisher977-C124 preserves unknown legacy preparation across a new pre-delivery read failure"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C125",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "Acquired lock-release I/O failures surface with retained durable effects, while absent locks remain idempotent and unverified replacements are never removed.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher977-C125 reports real lock-release failure with the completed PR and resumes only after confirmed orphan recovery"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 propagates readFile EACCES while retaining the owned lock"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 propagates readFile EIO while retaining the owned lock"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 propagates unlink EACCES while retaining the owned lock"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 propagates unlink EIO while retaining the owned lock"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 treats an already absent lock as released without unlinking another path"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 tolerates lock disappearance between its read and unlink"
+        }
+      ]
+    }
+  ]
+}

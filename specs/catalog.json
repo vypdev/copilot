@@ -1089,9 +1089,9 @@
       "id": "setup-and-doctor",
       "title": "Setup, configuration, credentials, and doctor",
       "status": "implemented",
-      "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
+      "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials; publisher delivery isolates exact operation PRs and structurally verifies the single pinned source invocation, with cumulative baseline and owning-appendix acceptance; malformed asset inventory fails closed before blob reads or an absent-manifest baseline. File delivery rechecks cancellation after awaited freshness and retained intents; mandatory published acceptance rows cannot fall back to future-case checks. The live session also fences each actual file-write transport dispatch after adapter preflight, preserving prior effects on cancellation.; complete remote-action inventory uncertainty, Windows publisher markers and durable known-preparation cancellation recovery; unresolved opaque script behavior cannot prove publisher absence; invalid resume UUID messaging and executable delivery-port coverage registration; installed profile required-field counts match the workflow catalog before publisher preview, retaining custom heading labels Required-heading uniqueness follows actual Unicode parser equivalence. Retained publisher output links existing validated local operation records and known PRs without creating state or inventing native runs. Installed required labels use trimmed single-line text within128UTF-8 bytes and reject Cc/Zl/Zp characters. Complete schema2 guidance requires all three core records before doctor health or publisher planning; unrelated YAML gitlinks are ignored while fixed-path collisions block. Cumulative118-case acceptance includes native DNS package effect fences and unavailable-guidance proof; selected64-case baseline is preserved. Operation-scoped all-state PR recovery retains fixed pagination bounds and all identity/conflict checks;119-case cumulative acceptance prevents unrelated history from hiding an existing operation PR. Publisher compatibility preserves generated routing/workflow facts, and new PR creation requires complete open-marker absence within the shared ten-query budget.; installed Issue Form routing-label prefix coherence preserving configured duplicate labels and priority reuse; installed hotfix/release facts require the existing managed-branch configuration while preserving manual-only workflows; durable final resource-save recovery preserves pre-delivery v1 proof and unknown legacy preparation; cumulative124-case acceptance explicitly gates actual receipt matching and fresh publisher-resume confirmation; acquired lock release reports real I/O failure with retained durable PR state, preserving missing-lock idempotency and replacement ownership; cumulative125-case acceptance",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-29",
+      "lastVerified": "2026-11-23",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -1099,7 +1099,8 @@
         "specs/github-runtime-doctor-command.md",
         "specs/organization-configuration-reuse-and-batch-setup.md",
         "specs/setup-runner-profiles-and-installation-parity.md",
-        "specs/copilot-comment-workflow-coordinator.md"
+        "specs/copilot-comment-workflow-coordinator.md",
+        "specs/setup-bugbot-publisher-manifest-route.md"
       ],
       "workflows": [
         "setup/workflows/agent-cli-provisioning.yml",
@@ -1119,7 +1120,9 @@
         "src/cli/commands/setup.ts",
         "src/cli/commands/doctor.ts",
         "src/application/usecases/issue_comment_use_case.ts",
-        "src/application/usecases/pull_request_review_comment_use_case.ts"
+        "src/application/usecases/pull_request_review_comment_use_case.ts",
+        "src/cli/setup_publisher_installation_adapter.ts",
+        "src/infrastructure/composition/setup_publisher_installation_composition_root.ts"
       ],
       "code": [
         "src/domain/setup.ts",
@@ -1285,7 +1288,43 @@
         "src/domain/copilot_comment_workflow.ts",
         "src/infrastructure/copilot_comment_inputs.json",
         "src/infrastructure/private_jvm_environment.ts",
-        "scripts/credential-health-source-contract.cjs"
+        "scripts/credential-health-source-contract.cjs",
+        "src/application/contracts/setup_installation_delivery.ts",
+        "src/application/policies/setup_installation_receipt_policy.ts",
+        "src/application/policies/setup_installation_tree_policy.ts",
+        "src/application/policies/setup_publisher_installation_policy.ts",
+        "src/application/policies/setup_publisher_message_catalog.ts",
+        "src/application/policies/setup_publisher_plan_policy.ts",
+        "src/application/policies/setup_token_value_policy.ts",
+        "src/application/ports/setup_installation_delivery_ports.ts",
+        "src/application/ports/setup_publisher_apply_ports.ts",
+        "src/application/ports/setup_publisher_review_ports.ts",
+        "src/application/usecases/setup/apply_setup_publisher_use_case.ts",
+        "src/application/usecases/setup/deliver_setup_installation_use_case.ts",
+        "src/application/usecases/setup/install_setup_publisher_use_case.ts",
+        "src/application/usecases/setup/review_setup_publisher_use_case.ts",
+        "src/cli/setup_publisher_installation_adapter.ts",
+        "src/cli/setup_publisher_installation_presenter.ts",
+        "src/cli/setup_publisher_proposal_file.ts",
+        "src/domain/setup_publisher_installation.ts",
+        "src/infrastructure/composition/setup_publisher_installation_composition_root.ts",
+        "src/infrastructure/setup_installation_github_delivery_adapter.ts",
+        "src/infrastructure/setup_operation_journal_store.ts",
+        "src/infrastructure/setup_publisher_credentials.ts",
+        "src/infrastructure/setup_publisher_git_reader.ts",
+        "src/infrastructure/setup_publisher_github_read_adapter.ts",
+        "src/infrastructure/setup_publisher_github_source_adapter.ts",
+        "src/infrastructure/setup_publisher_journal_adapter.ts",
+        "src/infrastructure/setup_publisher_workflow_inventory.ts",
+        "src/application/policies/repository_agent_guidance_policy.ts",
+        "src/cli/cli_program.ts",
+        "src/cli/commands/setup.ts",
+        "src/utils/repository_agent_guidance.ts",
+        "scripts/smoke-packaged-setup-publisher.cjs",
+        "scripts/smoke-test-npm-package.cjs",
+        "scripts/validate-setup-publisher-acceptance.cjs",
+        "src/domain/issue_workflow_body.ts",
+        "src/domain/issue_workflow_field_mapping.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1420,7 +1459,32 @@
         "src/domain/__tests__/copilot_comment_workflow.test.ts",
         "src/tooling/__tests__/credential_health_transport.test.ts",
         "src/infrastructure/__tests__/private_jvm_environment.test.ts",
-        "src/tooling/__tests__/credential_health_source_policy.test.ts"
+        "src/tooling/__tests__/credential_health_source_policy.test.ts",
+        "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+        "src/application/policies/__tests__/setup_publisher_message_catalog.test.ts",
+        "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+        "src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/install_setup_publisher_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/review_setup_publisher_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts",
+        "src/cli/__tests__/setup_publisher_command_routing.test.ts",
+        "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+        "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+        "src/cli/__tests__/setup_publisher_proposal_file.test.ts",
+        "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+        "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+        "src/infrastructure/__tests__/setup_publisher_credentials.test.ts",
+        "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+        "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+        "src/infrastructure/__tests__/setup_publisher_github_source_adapter.test.ts",
+        "src/infrastructure/__tests__/setup_publisher_identity_transport.test.ts",
+        "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+        "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts",
+        "src/tooling/__tests__/setup_publisher_acceptance_validator.test.ts",
+        "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+        "src/infrastructure/__tests__/fixtures/journal_io_diagnostics.cjs",
+        "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+        "src/domain/__tests__/issue_workflow_field_mappings.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1446,7 +1510,19 @@
         "docs/guides/work-with-the-bot.mdx",
         "docs/guides/releases-and-hotfixes.mdx",
         "docs/agents/repository-collaboration.mdx",
-        "quality/bugbot/evidence/issue-979/README.md"
+        "quality/bugbot/evidence/issue-979/README.md",
+        "docs/bugbot/failure-scenarios.mdx",
+        "specs/setup-publisher-installation-acceptance.json",
+        "quality/bugbot/evidence/issue-998/README.md",
+        "quality/bugbot/evidence/issue-998/implementation-notes.md",
+        "quality/bugbot/evidence/issue-998/review-round17/README.md",
+        "quality/bugbot/evidence/issue-998/review-round17/source-and-controls.json",
+        "quality/bugbot/evidence/issue-998/review-round18/README.md",
+        "quality/bugbot/evidence/issue-998/review-round19/README.md",
+        "quality/bugbot/evidence/issue-998/review-round22/README.md",
+        "quality/bugbot/evidence/issue-998/review-round22/source-and-controls.json",
+        "quality/bugbot/evidence/issue-998/review-round23/README.md",
+        "quality/bugbot/evidence/issue-998/review-round23/source-and-controls.json"
       ]
     },
     {
@@ -3275,9 +3351,9 @@
       "id": "repository-agent-collaboration",
       "title": "Repository agent collaboration contract",
       "status": "implemented",
-      "scope": "Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries",
+      "scope": "Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries; installed workflow required-field cardinality matches the canonical catalog while preserving custom heading labels Installed required issue headings must remain unique ignoring case before publisher planning. Required-heading uniqueness follows actual Unicode parser equivalence. Installed required labels use trimmed single-line text within128UTF-8 bytes and reject Cc/Zl/Zp characters.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-17",
+      "lastVerified": "2026-11-23",
       "specs": [
         "specs/repository-agent-collaboration-contract.md"
       ],
@@ -3305,7 +3381,9 @@
         "scripts/smoke-test-npm-package.cjs",
         "scripts/install-git-hooks.cjs",
         "scripts/git-hooks/pre-commit.cjs",
-        "scripts/git-hooks/verification-environment.cjs"
+        "scripts/git-hooks/verification-environment.cjs",
+        "src/domain/issue_workflow_body.ts",
+        "src/domain/issue_workflow_field_mapping.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_configuration_policy.test.ts",
@@ -3321,7 +3399,8 @@
         "src/tooling/__tests__/mdx_frontmatter.test.ts",
         "src/utils/__tests__/setup_files.test.ts",
         "src/tooling/__tests__/install_git_hooks.test.ts",
-        "src/tooling/__tests__/git_hook_environment.test.ts"
+        "src/tooling/__tests__/git_hook_environment.test.ts",
+        "src/domain/__tests__/issue_workflow_field_mappings.test.ts"
       ],
       "documentation": [
         "README.md",

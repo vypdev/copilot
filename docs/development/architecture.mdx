@@ -656,6 +656,49 @@ content, default SHA, run identity, freshness and unchanged Secret metadata.
 It never inherits the legacy bootstrap or dispatch adapter. Architecture/cycle,
 SDK contract, replay, drift and presentation tests enforce these boundaries.
 
+### Publisher-purpose Setup delivery
+
+The explicit CLI selection enters `InstallSetupPublisherUseCase` before generic
+configuration, local Git discovery, web or resource setup. Pure policies validate
+the closed proposal, immutable two-file plan, noncircular receipt/approval digests
+and complete approved-tree difference. `ReviewSetupPublisherUseCase` binds fresh
+approval to the exact files and private credential generation;
+`ApplySetupPublisherUseCase` owns locked purpose-v2 recovery and durable effect
+intents. No application use case imports raw HTTP, filesystem or process APIs.
+
+```mermaid
+flowchart LR
+  CLI[Publisher CLI] --> Review[Review and Apply]
+  Review --> Read[Relevant GitHub reads]
+  Review --> Files[Shared file delivery]
+  Batch[Ordinary batch resource stages] --> Files
+  Files --> Git[One Git delivery adapter]
+  Review --> Journal[Purpose-v2 journal]
+  Batch --> Legacy[Legacy-v1 journal]
+  Journal --> Store[Private operation store and lock]
+  Legacy --> Store
+```
+
+The diagram's two routes share file delivery and private storage; ordinary batch
+retains resource/Secret phases, while publisher composition receives only
+read/freshness, file delivery and journal capabilities. Both use
+`DeliverSetupInstallationUseCase`, `SetupInstallationGithubDeliveryAdapter` and
+the shared UUID store/nonce lock. Named composition roots construct the common
+coordinator and supply its required semantic port; application callers construct
+no concrete use case or default implementation. The publisher cannot adopt legacy resource
+effects. Source reads pin a merged maintainer revision and verified Git blob bytes;
+the destination reader proves compatible installed metadata and complete relevant
+workflow inventory without broad Secret or organization inspection.
+
+Prepared-tree proof descends approved ancestors and checks every unmentioned
+sibling's name, mode, type and object ID. It rejects truncation, unsafe names,
+symlink ancestors and any unapproved change. Exact parent, receipt, owned ref and
+PR marker checks remain separate. Unknown POST outcomes retain uncertainty;
+definitely unstarted writes are distinguished from lost responses. Credentials
+are private fields and never become journal/digest/preview data. This is source
+delivery evidence; default installation and native writer execution remain
+separate operational acceptance.
+
 ## Repository verification setup
 
 The optional [repository-owned composite action](/security-operations/operations/verification#repository-owned-setup)

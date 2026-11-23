@@ -1,3 +1,4 @@
+import { DeliverSetupInstallationUseCase } from '../../application/usecases/setup/deliver_setup_installation_use_case';
 import { getOctokitClient } from '../github/octokit_client_resolver';
 import type { GithubSetupBatchClient } from '../github/ports/github_setup_batch_protocol';
 import { SetupBatchGithubReadAdapter, SetupBatchGithubTransport, SetupBatchProviderError } from '../setup_batch_github_read_adapter';
@@ -46,5 +47,5 @@ export function createSetupBatchCompositionRoot() {
       if (result.errors.length) throw new SetupBatchProviderError('unknown');
     },
   });
-  return { discovery: read, inventory: read, writer, renderer: new SetupBatchWorkspaceAdapter(), journal: new SetupBatchJournalAdapter(), runnerDiscovery: createSetupRunnerDiscovery() };
+  return { coordinator: new DeliverSetupInstallationUseCase(), discovery: read, inventory: read, writer, renderer: new SetupBatchWorkspaceAdapter(), journal: new SetupBatchJournalAdapter(), runnerDiscovery: createSetupRunnerDiscovery() };
 }

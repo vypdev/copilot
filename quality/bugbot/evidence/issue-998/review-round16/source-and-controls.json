@@ -1,0 +1,263 @@
+{
+  "at": "2026-11-23T08:19:41.386164+00:00",
+  "parent": "ed47513168fac5225ac7589b8eea14b9aa65aa1e",
+  "sourceSha256": {
+    "scripts/validate-setup-publisher-acceptance.cjs": "a53ea249de653917a6b10d8dceb2b90a9ad3805b09f7aedf10bfcff620801bca",
+    "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts": "9cae53bd1f74ebe4f915ae630c83f861a08d1efa406071e34e26d32c37a280bd",
+    "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts": "609902fbd401184a8589c8cc1d8d9db25fd00960e578922541e313f188e92681",
+    "src/application/policies/repository_agent_guidance_policy.ts": "0c0eb17d072cb023390ba0f292240af54e940cb35386c39e0a0a5a10db5327d2",
+    "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts": "e8381d4a3e8fafd6b6e176d063277c2ddb85369dd839ad211378ffd8def70e91"
+  },
+  "prior109LedgerObjectsPreserved": true,
+  "originalC99AssertionAndEvidencePreserved": true,
+  "selectedCompanionSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "logicalIds": 111,
+  "mappedJestIds": 107,
+  "packageCases": 4,
+  "C110": {
+    "existingNegativeAssertions": 25,
+    "malformedEntries": 16,
+    "unsafeLookups": 9,
+    "allRowsUniquelyNamed": true,
+    "parserCounterfactualOldFalseAccepts": 75,
+    "parserCounterfactualCurrentRejects": 75,
+    "mutations": [
+      "one named row omitted",
+      "one named row failed",
+      "one named row pending"
+    ],
+    "actualUnmodifiedReportPasses": true,
+    "scope": "Parser-only projections retain exact actual report and mutation recipes; not feature reruns or native acceptance.",
+    "inputHashes": {
+      "scripts/validate-setup-publisher-acceptance.cjs": "a53ea249de653917a6b10d8dceb2b90a9ad3805b09f7aedf10bfcff620801bca",
+      "scripts/setup-acceptance-path.cjs": "13209f1f08e59dd455e7faaa560b921f3ece0b23baa450445bbac31b9de18dd2",
+      "specs/setup-publisher-installation-acceptance.json": "3e8e35188efbf266d673f45364ce93c505c406bcc0823c1530bb01b03b310bad",
+      "specs/setup-bugbot-publisher-manifest-route.md": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+      "specs/organization-configuration-reuse-and-batch-setup.md": "878d5d5c1840fa715bea3ff3effe00cec0fe4b3aa2df75e5cbbdac714d5b4e1f"
+    }
+  },
+  "C111": {
+    "causalTests": 2,
+    "originalFailures": 2,
+    "correctedPasses": 2,
+    "constraints": "Reuse existing isIssueFieldHeading: trimmed single-line,128UTF8byte max,no Cc/Zl/Zp; custom exact boundary remains valid",
+    "sameTestDefinitions": true
+  },
+  "coherent": {
+    "suites": 36,
+    "assertionsPassed": 1497,
+    "failed": 0,
+    "skipped": 0,
+    "originalRawJestExit": 1,
+    "limitation": "Focused collection does not satisfy unrelated global/web/specification-publication floors; not complete global acceptance.",
+    "finalLedgerMappedPassed": 107,
+    "finalToolingAssertionsPassed": 31,
+    "timing": "Feature cohort completed before final ledger append after initial metadata producer expected26 instead of25 rows and stopped without writes. Final111 ledger validates all107 mapped cases against that actual report; tooling31 reexecuted on final ledger."
+  },
+  "changedPurePolicyCoverage": {
+    "lines": {
+      "total": 104,
+      "covered": 104,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 27,
+      "covered": 27,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 122,
+      "covered": 122,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 151,
+      "covered": 151,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "publisherBudget": "PASS unchanged sixpure100/20runtime95-90 from same-source map",
+  "privateOriginalReports": {
+    "copilot-goal-998-heading-text-original-red-attempt1.json": {
+      "bytes": 79445,
+      "sha256": "3b459d656f0ec15771691bc16c11790545fc572a0c0793d6c332a049aba46062",
+      "summary": {
+        "numPassedTests": 0,
+        "numFailedTests": 2,
+        "numPendingTests": 141,
+        "numPassedTestSuites": 0,
+        "numFailedTestSuites": 2
+      }
+    },
+    "copilot-goal-998-heading-text-and-git-green-attempt1.json": {
+      "bytes": 99670,
+      "sha256": "34e479ae1287fdbcc50eba5893cb2593940d9c843bbaf78f12b5559ffb43ae02",
+      "summary": {
+        "numPassedTests": 217,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "numPassedTestSuites": 3,
+        "numFailedTestSuites": 0
+      }
+    },
+    "copilot-goal-998-round16-coherent-attempt1-results.json": {
+      "bytes": 10474045,
+      "sha256": "6c73839b9b3be9c709138963149fe2a0009a4758270d4cbb729600ec5c57eda8",
+      "summary": {
+        "numPassedTests": 1497,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "numPassedTestSuites": 36,
+        "numFailedTestSuites": 0
+      }
+    },
+    "copilot-goal-998-round16-final-ledger-tooling-attempt1.json": {
+      "bytes": 16107,
+      "sha256": "a83526941dec12021a2ba429694894880db2d9883778dbe8825183f90d1e60fc",
+      "summary": {
+        "numPassedTests": 31,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "numPassedTestSuites": 1,
+        "numFailedTestSuites": 0
+      }
+    }
+  },
+  "delivery": {
+    "at": "2026-11-23T08:14:06.604316+00:00",
+    "steps": [
+      {
+        "name": "generate-specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "generate:specifications"
+        ],
+        "exit": 0,
+        "bytes": 2495,
+        "sha256": "34546dc1442bb534298a0b3ae8e8fe6c4ab113178dff1e4630537bd65c9abc76"
+      },
+      {
+        "name": "specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:specifications"
+        ],
+        "exit": 0,
+        "bytes": 2487,
+        "sha256": "882521636abe3ed3e17564c08953922014a6bc1c4e28ef7949747eaacdcb4985"
+      },
+      {
+        "name": "documentation",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:documentation"
+        ],
+        "exit": 0,
+        "bytes": 319,
+        "sha256": "23dfee16bdd4387324aea08fac9577dc68e5bd41ee017c1a300a72cdf94ce0ab"
+      },
+      {
+        "name": "agent-docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:agent-docs"
+        ],
+        "exit": 0,
+        "bytes": 218,
+        "sha256": "c7cac2a12d0ff4ef07c5bc0b1404acc8f4569fa3b2c9b53e436622f418bff0d2"
+      },
+      {
+        "name": "docs-page",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:docs-page"
+        ],
+        "exit": 0,
+        "bytes": 208,
+        "sha256": "d0dd6e25d3529bfa8d4edc9f864d1262a292d16d3bdfff90960ce03caa24e76b"
+      },
+      {
+        "name": "workflows",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:workflows"
+        ],
+        "exit": 0,
+        "bytes": 215,
+        "sha256": "411d5670d7d68ba620c0d0a722f10d4df0015fb27ecb0451385be001ebb833b2"
+      },
+      {
+        "name": "graphify",
+        "command": [
+          "graphify",
+          "update",
+          "."
+        ],
+        "exit": 0,
+        "bytes": 3681,
+        "sha256": "1bb6b66ccbc6a1fc310eff19bcbd1e474a4676e876b619b6297f69abf1cc0d14"
+      },
+      {
+        "name": "build",
+        "command": [
+          "pnpm",
+          "run",
+          "build"
+        ],
+        "exit": 0,
+        "bytes": 442189,
+        "sha256": "e230d6c5fca1276949244cceb044e5e80fb0c05c885de4a858e2a5e09db98b3c"
+      },
+      {
+        "name": "package",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:npm-package"
+        ],
+        "exit": 0,
+        "bytes": 1004,
+        "sha256": "cd2082e63bd416d8c3faa8dc0a8b4d949d1759d4fa41b833a850bc19507a8d2f"
+      },
+      {
+        "name": "package-smoke",
+        "command": [
+          "pnpm",
+          "run",
+          "smoke:npm-package"
+        ],
+        "exit": 0,
+        "bytes": 1156,
+        "sha256": "1e8eed1f4ec4d84e288c3539f62d23d1ef925ef7a082f75bbbb507a9525f97b2"
+      }
+    ],
+    "bundles": {
+      "build/cli/index.js": "9e83dfa84c375fbe47631477fa97ead49e4ca1f5bb0fc14651ed4798b25ad722",
+      "build/github_action/index.js": "d7b9d2c2d02069eedbf0f18b5259dbcc6835315f510151d0689953229af9a385",
+      "build/api/index.js": "22cf88aa71e14a216e9ac0aac487317bfa8af0d7ca90bc898401a6f0279579a3",
+      "build/deployment_recovery/index.js": "66654ce0fab52f9084a86555cb893be7f5cee6832058ef9a66751297f9c71d18"
+    },
+    "scientificCallsAdded": 0,
+    "installation": "NOT_EXECUTED",
+    "pilotWrites": 0,
+    "production": "disabled",
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "nativeAcceptance": false,
+  "globalAcceptance": false,
+  "installation": "NOT_EXECUTED",
+  "scientificCallsAdded": 0,
+  "pilotWrites": 0,
+  "production": "disabled",
+  "normalHooksPendingAtPacketPreparation": true
+}

@@ -6,6 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { runNpmPack } = require('./npm-pack-command.cjs');
 const { smokePackagedWebSession } = require('./smoke-packaged-web-session.cjs');
+const { smokePackagedSetupPublisher } = require('./smoke-packaged-setup-publisher.cjs');
 
 const repositoryRoot = path.resolve(__dirname, '..');
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-npm-smoke-'));
@@ -136,6 +137,8 @@ try {
     path.join(consumerRoot, 'index.ts'),
   ], { cwd: consumerRoot, encoding: 'utf8' });
 
+  const publisher = smokePackagedSetupPublisher(cliPath, temporaryDirectory);
+  console.log(`Packaged publisher C55–C58: PASS (${publisher.invocations} actual CLI invocations; zero effect attempts).`);
   await smokePackagedWebSession(cliPath, temporaryDirectory);
   console.log(`npm package smoke test: PASS (@vypdev/copilot@${version}, CLI + typed Bugbot API + isolated local web session).`);
 } finally {

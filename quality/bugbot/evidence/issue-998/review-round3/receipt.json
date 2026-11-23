@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T19:00:59.290458+00:00",
+  "parent": "470f5ce7ba05837af4cd7ac0a20a99ddf6664931",
+  "findings": [
+    {
+      "thread": "PRRT_kwDONSeBW866aqqm",
+      "verdict": "reproduced and fixed",
+      "before": "two terminal reconciliation regressions fail; completed operation remains applying and failed final save is never attempted",
+      "after": "after exact inspect-only branch/PR verification, persist waiting-for-merge through existing validated retain; failed save reports attempted state and exact last durable state; no provider POST"
+    },
+    {
+      "thread": "PRRT_kwDONSeBW866aqqj",
+      "verdict": "premise refuted; coordinator change not required",
+      "proof": "existing missing-observer test passes unchanged before fix and in129 focal/903 mapped controls. Publisher retain callback rejects state.preparedCommit when the required ordered observer has not durably saved that commit; branch and PR are not called. Shared coordinator accepting an SHA alone does not bypass this publisher check."
+    },
+    {
+      "thread": "PRRT_kwDONSeBW866aqqp",
+      "verdict": "fixture strengthened",
+      "proof": "GET contents fixture now requires exact .copilot/setup-manifest.json path; unexpected paths take existing throw branch; full delivery test file passes"
+    }
+  ],
+  "focal": {
+    "passed": 129,
+    "failed": 0,
+    "pending": 0,
+    "commandExit": 1,
+    "exitReason": "unrun global owners in isolated coverage command",
+    "changedModule": {
+      "statements": 96.87,
+      "lines": 97.14,
+      "branches": 96.15,
+      "functions": 100
+    },
+    "fullRepositoryAcceptance": false
+  },
+  "mapped": {
+    "files": 19,
+    "passed": 903,
+    "failed": 0,
+    "pending": 0,
+    "acceptanceCasesPassed": 60
+  },
+  "types": "PASS",
+  "lint": "PASS",
+  "specifications": "PASS",
+  "graphify": "PASS",
+  "build": "PASS",
+  "package": {
+    "files": 104,
+    "actualCLIControls": 11,
+    "effectAttempts": 0,
+    "typedAPI": "PASS",
+    "isolatedWeb": "PASS"
+  },
+  "parent470Native": {
+    "CI": "4/4SUCCESS",
+    "SDKsuites": 966,
+    "SDKpassed": 19673,
+    "historicalSkips": 35,
+    "mappedCases": 60,
+    "extensionFiles": 385,
+    "extensionPassed": 5291,
+    "coverageCompleteReceipt": "/private/tmp/copilot-goal-998-470f5ce-native-coverage-complete-api-attempt1-receipt.json",
+    "priorGhRunViewCaptureIncomplete": true,
+    "partialLocalCapturesRetained": true
+  },
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8466958,
+      "sha256": "c7fabc981e6db77ed81b868d09a0b3a77a421bbc9e6cd62d121c804ba416add3"
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "selectedActionSDDUnchanged": true,
+  "normalHooks": "pending at this precommit snapshot",
+  "finalHeadNativeAcceptance": "pending",
+  "installation": false,
+  "actual174Started": false,
+  "actual42Started": false,
+  "qualifiedProfile": null,
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "production": "disabled"
+}

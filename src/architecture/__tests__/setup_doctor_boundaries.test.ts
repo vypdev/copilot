@@ -4,6 +4,38 @@ import * as path from 'node:path';
 const root = path.resolve(__dirname, '..', '..', '..');
 
 describe('setup and doctor architecture boundaries', () => {
+  it('publisher977-C59: gives the publisher only narrow capabilities and shares actual file delivery with batch', () => {
+    const composition = read('src/infrastructure/composition/setup_publisher_installation_composition_root.ts');
+    expect(composition).toContain('new SetupInstallationGithubDeliveryAdapter(');
+    expect(composition).not.toMatch(/import[^;]*(?:wizard|resource_probes|configuration_command|label_provisioning|issue_type_repository|setup_batch_composition)/u);
+    for (const root of ['setup_batch_composition_root', 'setup_publisher_installation_composition_root']) {
+      expect(read(`src/infrastructure/composition/${root}.ts`)).toContain('new DeliverSetupInstallationUseCase(');
+    }
+    const batch = read('src/infrastructure/setup_batch_github_apply_adapter.ts');
+    expect(batch).toContain('new SetupInstallationGithubDeliveryAdapter(');
+    for (const file of ['apply_setup_batch_use_case', 'apply_setup_publisher_use_case']) {
+      const application = read(`src/application/usecases/setup/${file}.ts`);
+      expect(application).toContain('this.ports.coordinator.execute(');
+      expect(application).not.toMatch(/new\s+[A-Z][A-Za-z0-9]+UseCase\s*\(/u);
+    }
+    for (const file of ['deliver_setup_installation_use_case', 'review_setup_publisher_use_case',
+      'apply_setup_publisher_use_case', 'install_setup_publisher_use_case']) {
+      expect(read(`src/application/usecases/setup/${file}.ts`)).not.toMatch(/from ['"](?:node:|https?:|.*infrastructure|.*cli\/)|\b(?:fetch|require)\(|process\./u);
+    }
+    for (const file of ['setup_publisher_installation_policy', 'setup_publisher_plan_policy', 'setup_installation_tree_policy',
+      'setup_installation_receipt_policy', 'setup_publisher_message_catalog', 'setup_token_value_policy']) {
+      const policy = read(`src/application/policies/${file}.ts`);
+      // Deterministic hashing is a pure value operation; filesystem/process/network APIs are not.
+      expect(policy).not.toMatch(/from ['"](?:node:(?:fs|http|https|net|tls|child_process|process)|.*infrastructure|.*cli\/)|\b(?:fetch|require)\(|process\./u);
+      for (const imported of policy.matchAll(/import\s+\{([^}]+)\}\s+from ['"]node:crypto['"]/gu)) {
+        expect(imported[1].trim()).toBe('createHash');
+      }
+    }
+    const ports = read('src/application/ports/setup_publisher_apply_ports.ts') + read('src/application/ports/setup_publisher_review_ports.ts')
+      + read('src/application/ports/setup_installation_delivery_ports.ts');
+    expect(ports).not.toMatch(/(?:createSecret|createVariable|grantAccess|permissionProbe|dispatchWorkflow|ensureInitialLabels|ensureIssueTypes)\s*\(/u);
+  });
+
   it('has one questionnaire contract and no legacy prompt adapter', () => {
     expect(existsSync(path.join(root, 'src/cli/setup_prompt_adapter.ts'))).toBe(false);
     const ports = read('src/application/ports/setup_wizard_ports.ts');

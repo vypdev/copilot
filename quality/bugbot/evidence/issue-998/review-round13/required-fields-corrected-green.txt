@@ -1,0 +1,6 @@
+Test Suites: 2 passed, 2 total
+Tests:       135 skipped, 2 passed, 137 total
+Snapshots:   0 total
+Time:        5.287 s
+Ran all test suites matching src/application/policies/__tests__/repository_agent_guidance_policy.test.ts|src/application/policies/__tests__/setup_publisher_plan_policy.test.ts with tests matching "publisher977-C106".
+Test results written to: ../copilot-goal-998-required-fields-green-attempt1.json

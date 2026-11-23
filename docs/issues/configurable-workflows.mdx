@@ -97,7 +97,9 @@ textareas use plain text so rendered code fences cannot invalidate their value.
 Mappings are one-to-one replacements for catalogued headings in enabled kinds,
 including release/hotfix headings. They change names, not `Automatic`, semantic
 version or release-type meanings. A target must be trimmed single-line text of
-at most 128 UTF-8 bytes; two roles cannot share a case-insensitive target. Unknown
+at most 128 UTF-8 bytes; two roles cannot share a target under the issue-body
+parser's Unicode-insensitive matching. For example, `S` and `ſ` collide, while
+`ß` and `SS` remain distinct. Unknown
 roles/kinds, mappings for disabled kinds, duplicate JSON keys and malformed input
 are rejected. The complete runtime profile remains limited to 4096 UTF-8 bytes.
 Schema 1 rejects mappings; schema 2 requires a nonempty explicit map. Upgrade both

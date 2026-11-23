@@ -27,6 +27,8 @@ Setup writes each generated artifact atomically and the manifest last. Approved 
 
 Older generated guides may link to `../docs/agents/` files that were never installed in the destination repository. Update Copilot and rerun setup with the same configuration to replace an unchanged, setup-owned guide with absolute links to the shared documentation. The previous guide is backed up. If the guide was edited or is not setup-owned, preserve those edits and follow the normal conflict recovery above.
 
+Publisher preview also requires each enabled workflow to retain the catalog count of required issue fields. An empty, shortened or excess list is unsupported even if manifest hashes match. Custom heading labels remain supported at that count. Regenerate guidance with the intended setup configuration before reviewing a new preview.
+
 Do not repair drift by editing `.copilot/repository-profile.json` or its hashes. Change the setup configuration and rerun setup so forms, Variables, workflows, guide, skill, and manifest converge from one plan.
 
 ## AGENTS.md pointer hash scope
@@ -94,3 +96,46 @@ larger than 64 KiB and forms with more than 100 elements require local repair.
 For an already submitted issue, inspect the blocked run's Job Summary, correct the
 exact visible heading/value, and rerun. Rejected admission leaves the issue's
 configuration and branches unchanged; it does not create a diagnostic comment.
+
+
+Required issue headings must be distinct ignoring case. A repeated label cannot
+stand in for another required field, even when the profile and manifest hashes
+match. Regenerate guidance from the intended setup configuration and preserve
+existing changes; updating hashes alone does not make a malformed profile valid.
+
+
+Installed required issue headings follow the same constraints as field mappings: trimmed single-line text, no line/control separators and at most128UTF-8 bytes per heading. A label containing a newline cannot be satisfied by an issue. Regenerate unsupported guidance using the intended setup configuration while preserving existing changes; changing manifest hashes alone cannot repair it.
+
+
+### A manifest is present but core guidance is missing
+
+A supported schema2 setup manifest must declare the repository profile, agent
+guide and workflow skill. An empty or partial inventory is unsupported, even if
+its profile digest matches. Doctor reports a missing/unsupported manifest rather
+than healthy schema/parity. Reconcile guidance from the intended setup
+configuration while preserving existing changes; editing hashes cannot restore
+missing ownership or semantic evidence. The optional AGENTS.md navigation block
+is separate from those three required records. Publisher preview also blocks
+when declared guidance cannot be read; unavailable access is not an empty file.
+
+
+Installed workflow facts must preserve the generator's routing-label count and
+one additional priority form label. Values may be customized. Only hotfix and
+release may name a workflow; the other kinds use null. If profile compatibility
+is rejected, regenerate the profile and managed guidance through the reviewed
+setup route. Editing hashes to bless an unsupported shape does not repair it.
+
+
+Form labels must start with exactly the workflow's routing labels in the same
+order, followed by the priority label. Custom values and configured duplicates
+remain supported. A matching digest does not make a different or reordered
+routing prefix compatible; regenerate and review the installed guidance/profile
+through the supported setup route before retrying.
+
+
+Enabled hotfix and release workflows require managed branches, including when
+Issue Forms are disabled. If branches are managed manually, select only the
+supported manual workflow kinds and disable the hotfix/release selection; keep
+pre-branch SDD disabled as required. These are existing configuration choices.
+An installed profile must satisfy the same compatibility rule before setup or
+publisher planning proceeds.

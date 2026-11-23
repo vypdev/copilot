@@ -1,0 +1,321 @@
+{
+  "schemaVersion": 1,
+  "kind": "Round20 source-bound controlled-provider verification; no installation or final-head native acceptance",
+  "parent": "8026c8005e15e7890c5b7c64ffe121da588eb7fa",
+  "sourceSha256": {
+    "src/application/policies/repository_agent_guidance_policy.ts": "d60dbc236c335c8778945bbf427e1ab65944bd1017647e2af87f2fb960952d24",
+    "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts": "56a6b2ff6fd5e4c1b18d48506c83fe304e1c9f0c3064c4e97a0649cb88dbdb95",
+    "src/infrastructure/setup_installation_github_delivery_adapter.ts": "c032fc1291ebfbb54e01d2d18e711c9d49dcbaf065c02f2bde847d3183c8dc6d",
+    "src/infrastructure/__tests__/setup_publisher_installation.test.ts": "6a7a8d4814193b1bb71d351cfafaa09669745a67a2a9c1cd2173b03583c865b9",
+    "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts": "94a98376ef8d6e5032c7ae02a5d6f2c78a8b9e862c309743001b73e237dd1b12",
+    "src/application/usecases/setup/__tests__/install_setup_publisher_use_case.test.ts": "bd76acdc17464c15082e87eaa1a6db12c55515828436db354f7a4b85e4bf96ba",
+    "scripts/validate-setup-publisher-acceptance.cjs": "599b0c26cab80be7058d9289c750a73c0acc4a20f094950d1ee8170f4f73c31d",
+    "specs/setup-publisher-installation-acceptance.json": "ab46f16b8282d359141f6155d263afd2170fe067ff30e2845edaca97a453b4fa"
+  },
+  "causal": {
+    "originalPassed": 2,
+    "originalFailed": 16,
+    "originalFiltered": 121,
+    "correctedFourSuitesPassed": 223,
+    "correctedFailed": 0,
+    "sameCausalAssertionBodies": true,
+    "wholeFixtureBytesIdentical": false,
+    "fixtureCorrections": "Respect state=open for unrelated closed PRs; repair typed object spread and fixture parameter typo. Production unchanged from first correction. Both earlier negative green attempts retained.",
+    "additionalC121BoundaryTestsAfterCausalRun": 10,
+    "responses": "controlled actual adapter and planner composition",
+    "realGitHubEffects": 0
+  },
+  "generatedLabels": "Generator constructs fixed arrays with no deduplication, including configured duplicate values; form arrays append one priority value. No label value is pinned to a default.",
+  "boundedCreate": {
+    "maximumPrewriteListRequests": 10,
+    "perPage": 100,
+    "exactRecovery": "all states, owner:operation-head, no base filter",
+    "beforeNewPr": "open operation-marker absence within remaining requests, then fresh active-session fence",
+    "incompleteMalformedConflict": "unknown/malformed; no POST",
+    "inspectOnly": "no open scan or POST",
+    "existingExactPr": "reuse retains identity checks; no extra creation scan"
+  },
+  "coverage": {
+    "cohortSuites": 36,
+    "passed": 1566,
+    "failed": 0,
+    "pending": 0,
+    "ledgerIds": 121,
+    "mappedPassed": 117,
+    "separateExtractedPackageCases": 4,
+    "changedGuidancePolicy": {
+      "lines": {
+        "total": 106,
+        "covered": 106,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 28,
+        "covered": 28,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 125,
+        "covered": 125,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 158,
+        "covered": 158,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "rawJestExit": 1,
+    "rawJestExitScope": "Global/web/publication floors not executed by this scoped cohort; not global acceptance",
+    "sixPureAnd20RuntimeBudgets": "PASS without threshold changes"
+  },
+  "baseline": {
+    "prior119IdsRetained": true,
+    "C114": "One read-adapter/planner assertion appended; original evidence prefix retained",
+    "other118ObjectsUnchanged": true,
+    "selected64CompanionSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18"
+  },
+  "privateOriginalReceipts": [
+    {
+      "file": "copilot-goal-998-round20-original-red-attempt1-receipt.json",
+      "bytes": 697,
+      "sha256": "272af26ab68415e825a101c56f228816dec8b1bd9b347466b151cedcefab8006",
+      "result": {
+        "exit": 1,
+        "results": {
+          "numPassedTests": 2,
+          "numFailedTests": 16,
+          "numPendingTests": 121
+        }
+      }
+    },
+    {
+      "file": "copilot-goal-998-round20-corrected-green-attempt1-receipt.json",
+      "bytes": 403,
+      "sha256": "ac9bc90543096890c1162845f1fc17c191421d5b0b0207651e324c516501810a",
+      "result": {
+        "exit": 1,
+        "results": {
+          "numPassedTests": 165,
+          "numFailedTests": 1,
+          "numPendingTests": 0,
+          "numPassedTestSuites": 2,
+          "numFailedTestSuites": 2
+        }
+      }
+    },
+    {
+      "file": "copilot-goal-998-round20-corrected-green-attempt2-receipt.json",
+      "bytes": 461,
+      "sha256": "c94eecfb7748670707269416e1c13a557167b6fa8279edb598115290b58b28be",
+      "result": {
+        "exit": 1,
+        "sameCausalAssertionBodies": true,
+        "productionUnchangedFromFirstCorrection": true,
+        "results": {
+          "numPassedTests": 133,
+          "numFailedTests": 0,
+          "numPendingTests": 0,
+          "numPassedTestSuites": 3,
+          "numFailedTestSuites": 1
+        }
+      }
+    },
+    {
+      "file": "copilot-goal-998-round20-corrected-green-attempt3-receipt.json",
+      "bytes": 461,
+      "sha256": "ae4d146698e6edb8731bce5fd5490cfdb2b6634fcec00537774afcee5c49fbee",
+      "result": {
+        "exit": 0,
+        "sameCausalAssertionBodies": true,
+        "productionUnchangedFromFirstCorrection": true,
+        "results": {
+          "numPassedTests": 223,
+          "numFailedTests": 0,
+          "numPendingTests": 0,
+          "numPassedTestSuites": 4,
+          "numFailedTestSuites": 0
+        }
+      }
+    },
+    {
+      "file": "copilot-goal-998-round20-coherent-attempt1-receipt.json",
+      "bytes": 9892,
+      "sha256": "f3a2806d26076c344f32346f64a3fce3c769dc806798a23ebb3392003cba046e",
+      "result": {
+        "commandExit": 1,
+        "validatorExit": 0,
+        "testResults": {
+          "numPassedTests": 1566,
+          "numFailedTests": 0,
+          "numPendingTests": 0,
+          "numPassedTestSuites": 36,
+          "numFailedTestSuites": 0
+        },
+        "testsUnchanged": true
+      }
+    },
+    {
+      "file": "copilot-goal-998-round20-source-validation-attempt1-receipt.json",
+      "bytes": 1667,
+      "sha256": "80e22e3897aa3bf26ecf81446f612db289f649a259d5753cd4ab1589fd2f9e4f",
+      "result": {}
+    }
+  ],
+  "sourceValidation": [
+    {
+      "name": "types",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "budgets",
+      "exit": 0,
+      "bytes": 151,
+      "sha256": "e8deb0de10c1b79c81cf399d66ea348c09287aafd23c5b22b6e1f21853046ff1"
+    }
+  ],
+  "nativeParent": "8026 CI/Commit/Verification PASS; five findings from completed28-partition review addressed here",
+  "currentNativeAcceptance": false,
+  "newScientificCalls": 0,
+  "pilotWrites": 0,
+  "installation": "NOT_EXECUTED",
+  "production": "disabled",
+  "deliveryValidation": {
+    "at": "2026-11-23T15:36:36.987438+00:00",
+    "steps": [
+      {
+        "name": "generate-specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "generate:specifications"
+        ],
+        "exit": 0,
+        "bytes": 2489,
+        "sha256": "9d94607d3ca30d69582c739570255f25ac4fde062cf16864fbcf037c0d91a5ae"
+      },
+      {
+        "name": "specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:specifications"
+        ],
+        "exit": 0,
+        "bytes": 2486,
+        "sha256": "db9c1d69d07f3bf3b35a482c1547990bdde90cfc408923b18db55ee20b40fc46"
+      },
+      {
+        "name": "documentation",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:documentation"
+        ],
+        "exit": 0,
+        "bytes": 319,
+        "sha256": "23dfee16bdd4387324aea08fac9577dc68e5bd41ee017c1a300a72cdf94ce0ab"
+      },
+      {
+        "name": "agent-docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:agent-docs"
+        ],
+        "exit": 0,
+        "bytes": 218,
+        "sha256": "c7cac2a12d0ff4ef07c5bc0b1404acc8f4569fa3b2c9b53e436622f418bff0d2"
+      },
+      {
+        "name": "docs-page",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:docs-page"
+        ],
+        "exit": 0,
+        "bytes": 208,
+        "sha256": "d0dd6e25d3529bfa8d4edc9f864d1262a292d16d3bdfff90960ce03caa24e76b"
+      },
+      {
+        "name": "workflows",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:workflows"
+        ],
+        "exit": 0,
+        "bytes": 215,
+        "sha256": "411d5670d7d68ba620c0d0a722f10d4df0015fb27ecb0451385be001ebb833b2"
+      },
+      {
+        "name": "graphify",
+        "command": [
+          "graphify",
+          "update",
+          "."
+        ],
+        "exit": 0,
+        "bytes": 3681,
+        "sha256": "89b1bc13ef573eaa34c2b1d394bd5ec8675490bb83d1d7da3caef4bdf019dbd5"
+      },
+      {
+        "name": "build",
+        "command": [
+          "pnpm",
+          "run",
+          "build"
+        ],
+        "exit": 0,
+        "bytes": 442189,
+        "sha256": "bfb9c1ba3a12db0f555319099615ba0ae999386ceb2158d142f6cd16ac91e574"
+      },
+      {
+        "name": "package",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:npm-package"
+        ],
+        "exit": 0,
+        "bytes": 1004,
+        "sha256": "cd2082e63bd416d8c3faa8dc0a8b4d949d1759d4fa41b833a850bc19507a8d2f"
+      },
+      {
+        "name": "package-smoke",
+        "command": [
+          "pnpm",
+          "run",
+          "smoke:npm-package"
+        ],
+        "exit": 0,
+        "bytes": 1156,
+        "sha256": "1e8eed1f4ec4d84e288c3539f62d23d1ef925ef7a082f75bbbb507a9525f97b2"
+      }
+    ],
+    "bundles": {
+      "build/cli/index.js": "b77844e38badf6c7844df7d5d07fe5d0a4beecf5603a9651ed82bc9da37c796e",
+      "build/github_action/index.js": "7839ce308b228feaa569f1267965c09260e7d1efb9831b4b076f09d5d8e36f3e",
+      "build/api/index.js": "22cf88aa71e14a216e9ac0aac487317bfa8af0d7ca90bc898401a6f0279579a3",
+      "build/deployment_recovery/index.js": "66654ce0fab52f9084a86555cb893be7f5cee6832058ef9a66751297f9c71d18"
+    },
+    "scientificCallsAdded": 0,
+    "installation": "NOT_EXECUTED",
+    "pilotWrites": 0,
+    "production": "disabled",
+    "DONE_DO_NOT_REPEAT": true
+  }
+}

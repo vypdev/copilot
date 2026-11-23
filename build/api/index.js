@@ -10308,16 +10308,25 @@ function validCount(value) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.distinctIssueWorkflowHeadings = distinctIssueWorkflowHeadings;
 exports.readIssueWorkflowFields = readIssueWorkflowFields;
 const markdown_visibility_1 = __nccwpck_require__(3591);
+function headingPattern(heading) {
+    const escaped = heading.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    return new RegExp(`^#{1,6}[ \t]+${escaped}[ \t]*$`, 'iu');
+}
+/** A single structural heading must never satisfy two configured roles. */
+function distinctIssueWorkflowHeadings(headings) {
+    const patterns = headings.map(headingPattern);
+    return headings.every((heading, index) => headings.slice(0, index).every((other, otherIndex) => !patterns[otherIndex].test('## ' + heading) && !patterns[index].test('## ' + other)));
+}
 /** Examples and hidden comments cannot supply or duplicate structural form headings. */
 function readIssueWorkflowFields(body, headings) {
     const { structural, uncommented } = (0, markdown_visibility_1.projectMarkdownVisibility)(body);
     const sections = structural.map((line, index) => ({ line, index })).filter(({ line }) => /^#{1,6}[ \t]+/u.test(line));
     return Object.freeze(headings.map(heading => {
-        const escaped = heading.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-        const headingPattern = new RegExp(`^#{1,6}[ \t]+${escaped}[ \t]*$`, 'iu');
-        const matches = sections.filter(({ line }) => headingPattern.test(line));
+        const pattern = headingPattern(heading);
+        const matches = sections.filter(({ line }) => pattern.test(line));
         if (matches.length !== 1)
             return Object.freeze({ heading, count: matches.length, value: '' });
         const start = matches[0].index;
@@ -10389,7 +10398,7 @@ function issueWorkflowDiagnosticPresentation(facts) {
 /***/ }),
 
 /***/ 4945:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -10398,6 +10407,7 @@ exports.ISSUE_FIELD_HEADING_MAX_BYTES = void 0;
 exports.normalizeWorkflowFieldMappings = normalizeWorkflowFieldMappings;
 exports.isIssueFieldHeading = isIssueFieldHeading;
 exports.escapeIssueFieldHeadingMarkdown = escapeIssueFieldHeadingMarkdown;
+const issue_workflow_body_1 = __nccwpck_require__(9376);
 exports.ISSUE_FIELD_HEADING_MAX_BYTES = 128;
 /** One explicit replacement per canonical semantic field; never guesses an alias from an issue body. */
 function normalizeWorkflowFieldMappings(value, definitions, enabled) {
@@ -10423,8 +10433,8 @@ function normalizeWorkflowFieldMappings(value, definitions, enabled) {
             return [heading, target];
         });
         const mapped = Object.fromEntries(entries);
-        const effective = headings.map(heading => (mapped[heading] ?? heading).toLowerCase());
-        if (new Set(effective).size !== effective.length)
+        const effective = headings.map(heading => mapped[heading] ?? heading);
+        if (!(0, issue_workflow_body_1.distinctIssueWorkflowHeadings)(effective))
             throw new Error('Issue field mappings cannot make two semantic fields share a heading.');
         if (entries.length)
             mappings[kind] = Object.freeze(mapped);

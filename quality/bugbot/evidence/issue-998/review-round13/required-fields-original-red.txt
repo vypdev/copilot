@@ -1,0 +1,43 @@
+FAIL src/application/policies/__tests__/setup_publisher_plan_policy.test.ts
+  ● publisher immutable two-file planning › publisher977-C106: matching manifest hashes cannot authorize empty required issue fields
+
+    expect(received).toThrow(expected)
+
+    Expected message: "Publisher installation review is blocked: installation-unsupported."
+
+    Received function did not throw
+
+      69 |       f.manifest.artifacts[file.path].sha256 = hash(file.content);
+      70 |       f.syncManifest();
+    > 71 |       expect(() => plan(f)).toThrow(new SetupPublisherPlanError('installation-unsupported'));
+         |                             ^
+      72 |     }
+      73 |   });
+      74 |   it.each(['feature', 'bugfix', 'help', 'chore', 'documentation', 'hotfix', 'release'] as const)(
+
+      at Object.<anonymous> (src/application/policies/__tests__/setup_publisher_plan_policy.test.ts:71:29)
+
+FAIL src/application/policies/__tests__/repository_agent_guidance_policy.test.ts
+  ● repository agent guidance policy › publisher977-C106: rejects missing or excess required field counts while preserving custom labels
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      21 |           forms: { ...profile.issueWorkflows.forms, [kind]: { ...fact, requiredFields } } } });
+      22 |       for (const fields of [[], fact.requiredFields.slice(1), [...fact.requiredFields, 'Extra heading']]) {
+    > 23 |         expect(validRepositoryAgentProfile(withFields(fields))).toBe(false);
+         |                                                                 ^
+      24 |       }
+      25 |       expect(validRepositoryAgentProfile(withFields(fact.requiredFields.map((_, index) => `Custom heading ${index}`)))).toBe(true);
+      26 |     }
+
+      at Object.<anonymous> (src/application/policies/__tests__/repository_agent_guidance_policy.test.ts:23:65)
+
+Test Suites: 2 failed, 2 total
+Tests:       2 failed, 135 skipped, 137 total
+Snapshots:   0 total
+Time:        3.697 s
+Ran all test suites matching src/application/policies/__tests__/repository_agent_guidance_policy.test.ts|src/application/policies/__tests__/setup_publisher_plan_policy.test.ts with tests matching "publisher977-C106".
+Test results written to: ../copilot-goal-998-required-fields-red-attempt1.json

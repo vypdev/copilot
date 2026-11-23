@@ -361,6 +361,26 @@ does not include arbitrary `actionInputs`; only allowlisted typed projections
 are serialized. Object keys and arrays use canonical ordering. A SHA-256 digest
 of canonical bytes is stored in the manifest, not trusted from the profile.
 
+Installed-profile validation MUST require each enabled workflow's required-field
+count to match its catalog definition. Empty, shortened or excess lists cannot
+establish compatibility even with matching manifest hashes; nonempty custom
+heading labels remain supported at the catalog count. The immutable publisher
+planner consumes this pure-policy decision before preview or writes. The two
+causal controls are publisher977-C106 in the owning batch-setup appendix and
+acceptance ledger; renderer fallback behavior does not establish profile validity.
+Required headings MUST also be unique ignoring case, consistent with configured
+workflow-field mappings. C107 covers duplicate and case-variant labels at the
+canonical count, including actual planning with matching hashes; distinct custom
+labels remain supported.
+
+Required-heading uniqueness MUST use the same literal Unicode-insensitive
+matching as the issue-body parser, rather than lowercasing strings. For example,
+`S` and `ſ` cannot identify two roles because a single structural heading matches
+both; `ß` and `SS` remain distinct under that parser. The shared domain matcher
+owns this equivalence for configured mappings and installed-profile validation.
+C108 proves the original failure, corrected direct validation and immutable
+planning with matching manifest hashes. No schema or configuration is added.
+
 The manifest contains its schema version, generator package/contract version,
 profile digest, and an ordered map of setup-managed path to source role and
 content hash. It never claims arbitrary existing repository files. Backups and
@@ -959,3 +979,6 @@ Executing the newly installed real hooks exposed inherited Git bindings in linke
 Pre-commit now obtains Git's native repository-local variable names through a bounded read-only call and removes those bindings, paired config key/value variables and the existing agent override fields only for validation child processes. The invoking commit's own environment remains unchanged. Runtime PATH, Windows settings, package manager and global Git policy remain available. Failure to enumerate the bindings stops commit verification with a closed message rather than running unisolated checks. No hook, test, platform or threshold is bypassed.
 
 Six pure environment contracts and one real linked-worktree commit prove preserved runtime/global settings, complete repository/config/agent isolation, immutable input and an unaffected checkout after another bare fixture is initialized. This adds seven to the earlier eight installer cases: package/tooling allocation 29 and total 109. The new pure CJS helper is collected by Jest and has an exhaustive 100% coverage gate. Normal commit hooks and cross-platform native smoke remain mandatory acceptance.
+
+
+Installed-profile required fields also MUST satisfy the configured heading validator: trimmed single-line text, no Cc/Zl/Zp controls and at most128UTF-8 bytes. The immutable planner rejects invalid text before preview even with matching manifest hashes. C111 retains direct-policy and actual-planning causal controls; exact-boundary custom labels remain supported. No new schema, setting or authority is added; regenerate unsupported guidance with the intended config.

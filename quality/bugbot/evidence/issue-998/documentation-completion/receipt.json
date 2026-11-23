@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T23:29:19.146404+00:00",
+  "parent": "a6ea4dd27c80ab105af06b32d2acb0f5a364e01a",
+  "requirement": "R381 documentation path in selected SDD section15",
+  "progressComment": 7064007659,
+  "doc": "docs/bugbot/failure-scenarios.mdx",
+  "docSha256": "8836003826a28131d4921ca8f4d135b4ad8fa2695f0c20ff8a5ee61760b960c5",
+  "change": "Expand existing shared-writer guidance into explicit preview/PR/installed/native-verified evidence states, exact reviewed-source/delivery/default/producer/run identity chain and drift/unknown/partial recovery.",
+  "sourceOrContractChanged": false,
+  "selectedSddSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "catalogAlreadyRegistersDoc": true,
+  "applicationCodeTestsSdkAndBundlesUnchanged": true,
+  "validation": "documentation/docs-page/Graphify/diff-checkALLPASS",
+  "additionalTests": "none; prose-only completion, existing execution proof remains explicitly historical until new normal/native gates",
+  "parentEvidence": "a6 normal967SDK/19761PASS35historicalskips;7a all four native jobs PASS including aggregate,966/19744+35historicalskips and385/5291extension. Overall workflow conclusion remains CANCELLED, so no overall workflow success is inferred. Final-head native/progress/review remain required.",
+  "progressBoundary": "116 other verification/clarification items are retained; this document change does not mark them verified or rewrite the Action progress report.",
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8470867,
+      "sha256": "3819818441d6154e6926b6384844491f2d24113b1f4779b9c801b74182fba8c0"
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "newArchives": 16,
+  "totalArchives": 248,
+  "actualDefaultInventory": "UNKNOWN14/20",
+  "installationEffects": 0,
+  "nativeCanary": "unstarted",
+  "actual174": "unstarted",
+  "actual42": "unstarted",
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "qualifiedProfile": null,
+  "production": "disabled",
+  "normalHooksAndFinalNative": "required",
+  "parentAggregateFinal": {
+    "at": "2026-11-21T23:30:18.174700+00:00",
+    "head": "7a0745e31587d8fdce0c4b6d76a55f0ec54e158f",
+    "job": 137010283414,
+    "run": 44956075173,
+    "jobConclusion": "success",
+    "workflowConclusion": "cancelled",
+    "rawBytes": 1919,
+    "sha256": "c3b4e05eb2848b41a91846833e0d44edacac79d2e303fc26d4baa519caa3f8e8",
+    "overallWorkflowPass": false
+  }
+}

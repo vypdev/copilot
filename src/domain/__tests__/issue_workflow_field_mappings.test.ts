@@ -8,6 +8,10 @@ function mappedProfile() {
     return parsed.profile;
 }
 describe('configured Issue Form headings (#725)', () => {
+    it('publisher977-C108: configuration cannot assign parser-equivalent Unicode aliases to different fields', () => {
+        expect(parseIssueWorkflowProfile(raw({ bugfix: { Description: 'S', 'copilot Version': '\u017f' } }))).toHaveProperty('error');
+        expect(parseIssueWorkflowProfile(raw({ bugfix: { Description: '\u00df', 'copilot Version': 'SS' } }))).toHaveProperty('profile');
+    });
     it('admits the populated consumer version heading without an upstream compatibility field', () => {
         expect(classifyIssueWorkflow(['bug', 'bugfix'], mappedProfile(), {}, body())).toEqual({ status: 'eligible', kind: 'bugfix' });
     });

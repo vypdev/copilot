@@ -32,9 +32,43 @@ Run repository-dependent commands from the root of the repository where you want
 Copilot to operate, not from the package installation directory. Version and help
 commands can be run from any directory.
 
-Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
+Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. The ordinary `copilot setup --dry-run` can run without a token; publisher-proposal previews require authenticated GitHub reads. See [CLI commands](/single-actions/workflow-and-cli).
 
-The target must be a working checkout. A bare Git repository has no files for setup or doctor to inspect and is rejected.
+The target must be a working checkout. A bare Git repository has no files for setup or doctor to inspect and is rejected. The explicit publisher-proposal route below instead inspects its named repository through GitHub and can run outside a checkout.
+
+### Review a Bugbot publisher proposal
+
+For an existing compatible Copilot installation, use a reviewed proposal to
+prepare only the Bugbot status publisher workflow and its installation receipt:
+
+```bash
+copilot setup --publisher-manifest /absolute/path/publisher-proposal.json --dry-run
+copilot setup --publisher-manifest /absolute/path/publisher-proposal.json
+```
+
+The first command authenticates relevant read-only GitHub inspection and prints
+both complete final files. It creates no operation journal, Git objects, branch
+or PR. This dry run requires a current credential, unlike generic setup's local
+dry run. The second command requires an interactive terminal, fresh review and
+the approval word shown in that terminal before creating an installation PR.
+You can cancel instead. Proposal fields never authorize a change.
+
+Only `--token`, `--debug`, `--dry-run` and `--resume-operation` can accompany
+`--publisher-manifest`; generic configuration and automation options are rejected.
+Credentials come from the explicit token, `PERSONAL_ACCESS_TOKEN`, or the hidden
+interactive prompt. Bundled English, Spanish, French and Portuguese content uses
+the terminal locale for display only, with complete English fallback and no
+language agent or model request.
+
+An installation PR still awaits review and merge. Native writer verification is
+separate; this command preserves production settings. See
+[publisher provisioning](/security-operations/operations/provisioning#reviewed-bugbot-publisher-proposals)
+for credentials, proposal constraints and recovery.
+
+For retained operations, the CLI links the existing validated local operation
+record and any known installation PR. An unsaved preview has no record link.
+If reading the link fails, the operation status and recovery instructions remain
+visible. A local record or PR link does not prove installation or a native run.
 
 For interactive onboarding, follow [Set up with the web assistant](/setup-web).
 It covers pairing, capability choices, the two PAT roles, plan approval, Apply,

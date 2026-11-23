@@ -60065,7 +60065,11 @@ exports.renderRepositoryAgentArtifacts = renderRepositoryAgentArtifacts;
 exports.renderRepositoryAgentGuide = renderRepositoryAgentGuide;
 exports.renderRepositoryAgentSkill = renderRepositoryAgentSkill;
 exports.renderRepositoryAgentPointerBlock = renderRepositoryAgentPointerBlock;
+exports.parseRepositoryAgentGuidanceManifest = parseRepositoryAgentGuidanceManifest;
+exports.validRepositoryAgentProfile = validRepositoryAgentProfile;
+const setup_batch_policy_1 = __nccwpck_require__(52214);
 const issue_workflow_field_mapping_1 = __nccwpck_require__(14945);
+const issue_workflow_body_1 = __nccwpck_require__(99376);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const issue_start_policy_1 = __nccwpck_require__(90332);
@@ -60076,6 +60080,12 @@ exports.REPOSITORY_AGENT_MANIFEST_PATH = '.copilot/setup-manifest.json';
 exports.REPOSITORY_AGENT_POINTER_PATH = 'AGENTS.md';
 exports.REPOSITORY_AGENT_POINTER_START = '<!-- copilot:agent-guidance:start -->';
 exports.REPOSITORY_AGENT_POINTER_END = '<!-- copilot:agent-guidance:end -->';
+const MANAGED_ROLES = Object.freeze({
+    [exports.REPOSITORY_AGENT_PROFILE_PATH]: 'profile',
+    [exports.REPOSITORY_AGENT_GUIDE_PATH]: 'guide',
+    [exports.REPOSITORY_AGENT_SKILL_PATH]: 'skill',
+    [exports.REPOSITORY_AGENT_POINTER_PATH]: 'pointer',
+});
 function buildRepositoryAgentProfile(configuration) {
     const profile = (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowProfile)(configuration);
     const labels = (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowLabels)(configuration);
@@ -60235,6 +60245,149 @@ Contribute through the linked pull request as a human would. Deployment labels, 
 }
 function renderRepositoryAgentPointerBlock() {
     return `${exports.REPOSITORY_AGENT_POINTER_START}\nBefore repository work, use the \`copilot-repository-workflow\` skill and read \`.copilot/AGENT_GUIDE.md\`. Managed remote branches are owned by the GitHub Action.\n${exports.REPOSITORY_AGENT_POINTER_END}`;
+}
+function parseRepositoryAgentGuidanceManifest(content) {
+    try {
+        const parsed = JSON.parse(content);
+        if (Object.keys(parsed).some(key => !['schemaVersion', 'generator', 'profileDigest', 'artifacts', 'installation'].includes(key)))
+            return undefined;
+        if (parsed.installation !== undefined && !(0, setup_batch_policy_1.isSetupBatchInstallationReceipt)(parsed.installation))
+            return undefined;
+        if (parsed.schemaVersion !== 2 || !isSha256(parsed.profileDigest))
+            return undefined;
+        const generator = parsed.generator;
+        if (!generator || Object.keys(generator).some(key => !['name', 'contractVersion'].includes(key))
+            || generator.name !== '@vypdev/copilot' || generator.contractVersion !== 1)
+            return undefined;
+        const artifacts = parsed.artifacts;
+        if (!artifacts || typeof artifacts !== 'object' || Array.isArray(artifacts))
+            return undefined;
+        const records = {};
+        for (const [relativePath, value] of Object.entries(artifacts)) {
+            if (!isManagedPath(relativePath) || !value || typeof value !== 'object' || Array.isArray(value))
+                return undefined;
+            const record = value;
+            if (Object.keys(record).some(key => !['role', 'sha256'].includes(key)))
+                return undefined;
+            if (!['profile', 'guide', 'skill', 'pointer'].includes(String(record.role)) || !isSha256(record.sha256))
+                return undefined;
+            if (record.role !== expectedManagedRole(relativePath))
+                return undefined;
+            records[relativePath] = { role: record.role, sha256: record.sha256 };
+        }
+        if ([exports.REPOSITORY_AGENT_PROFILE_PATH, exports.REPOSITORY_AGENT_GUIDE_PATH, exports.REPOSITORY_AGENT_SKILL_PATH]
+            .some(relativePath => !Object.prototype.hasOwnProperty.call(records, relativePath)))
+            return undefined;
+        return {
+            schemaVersion: 2,
+            generator: { name: '@vypdev/copilot', contractVersion: 1 },
+            profileDigest: parsed.profileDigest,
+            artifacts: records,
+            ...((0, setup_batch_policy_1.isSetupBatchInstallationReceipt)(parsed.installation) ? { installation: parsed.installation } : {}),
+        };
+    }
+    catch {
+        return undefined;
+    }
+}
+function isManagedPath(value) {
+    return Object.prototype.hasOwnProperty.call(MANAGED_ROLES, value);
+}
+function expectedManagedRole(relativePath) {
+    return MANAGED_ROLES[relativePath];
+}
+function isSha256(value) {
+    return typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value);
+}
+function validRepositoryAgentProfile(content) {
+    try {
+        const parsed = JSON.parse(content);
+        const profileKeys = ['schemaVersion', 'generator', 'issueWorkflows', 'branches', 'pullRequests', 'deployment'];
+        if (isRecord(parsed) && parsed.installation !== undefined)
+            profileKeys.push('installation');
+        if (!hasExactKeys(parsed, profileKeys)
+            || parsed.schemaVersion !== 2)
+            return false;
+        if (parsed.installation !== undefined && (!hasExactKeys(parsed.installation, ['lifecycleOwner', 'branchNamespace', 'requiresIssue', 'automaticMerge'])
+            || parsed.installation.lifecycleOwner !== 'setup-cli' || parsed.installation.branchNamespace !== 'setup/copilot/<operation-id>'
+            || parsed.installation.requiresIssue !== false || parsed.installation.automaticMerge !== false))
+            return false;
+        const { generator, issueWorkflows, branches, pullRequests, deployment } = parsed;
+        if (!hasExactKeys(generator, ['name', 'contractVersion'])
+            || generator.name !== '@vypdev/copilot' || generator.contractVersion !== 2)
+            return false;
+        if (!hasExactKeys(issueWorkflows, ['enabled', 'formsEnabled', 'forms']))
+            return false;
+        const { enabled: rawEnabled, formsEnabled, forms } = issueWorkflows;
+        if (typeof formsEnabled !== 'boolean'
+            || !isStringArray(rawEnabled)
+            || new Set(rawEnabled).size !== rawEnabled.length
+            || rawEnabled.some(kind => !issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.includes(kind))
+            || !isRecord(forms))
+            return false;
+        const enabled = rawEnabled;
+        if (Object.keys(forms).length !== enabled.length
+            || Object.keys(forms).some(kind => !enabled.includes(kind)))
+            return false;
+        if (enabled.some(kind => !validRepositoryAgentWorkflowFact(forms[kind], kind, formsEnabled, isRecord(branches) && branches.issueManagedBranches === true)))
+            return false;
+        if (!hasExactKeys(branches, ['remoteLifecycleOwner', 'issueManagedBranches', 'preBranchSdd', 'startLabel', 'readyLabel', 'helpCreatesBranch'])
+            || branches.remoteLifecycleOwner !== 'github-action'
+            || branches.helpCreatesBranch !== false
+            || typeof branches.issueManagedBranches !== 'boolean'
+            || typeof branches.preBranchSdd !== 'boolean'
+            || (branches.preBranchSdd && !branches.issueManagedBranches)
+            || branches.startLabel !== 'in-progress'
+            || branches.readyLabel !== 'branched')
+            return false;
+        if (!hasExactKeys(pullRequests, ['mustLinkIssue']) || pullRequests.mustLinkIssue !== true)
+            return false;
+        return hasExactKeys(deployment, ['agentMayInitiateWithoutExplicitAuthorization', 'launcherLabel'])
+            && deployment.agentMayInitiateWithoutExplicitAuthorization === false
+            && isNonEmptyString(deployment.launcherLabel);
+    }
+    catch {
+        return false;
+    }
+}
+function validRepositoryAgentWorkflowFact(value, kind, formsEnabled, issueManagedBranches) {
+    if (!hasExactKeys(value, [
+        'template', 'labels', 'formLabels', 'nativeIssueType', 'createsManagedBranch',
+        'branchPrefix', 'requiredFields', 'workflow',
+    ]))
+        return false;
+    const definition = issue_workflow_profile_1.ISSUE_WORKFLOW_CATALOG[kind];
+    return (formsEnabled ? value.template === definition.formFile : value.template === null)
+        && isStringArray(value.labels) && value.labels.length === definition.labels.length && value.labels.every(isNonEmptyString)
+        && isStringArray(value.formLabels) && value.formLabels.length === definition.labels.length + 1 && value.formLabels.every(isNonEmptyString)
+        && routingPrefixMatches(value.labels, value.formLabels)
+        && value.nativeIssueType === definition.nativeIssueType
+        && ((kind !== 'hotfix' && kind !== 'release') || issueManagedBranches)
+        && value.createsManagedBranch === (definition.branchManaged && issueManagedBranches)
+        && (definition.branchManaged ? isNonEmptyString(value.branchPrefix) : value.branchPrefix === null)
+        && isStringArray(value.requiredFields)
+        && value.requiredFields.length === definition.requiredHeadings.length
+        && value.requiredFields.every(issue_workflow_field_mapping_1.isIssueFieldHeading)
+        && (0, issue_workflow_body_1.distinctIssueWorkflowHeadings)(value.requiredFields)
+        && ((kind === 'hotfix' || kind === 'release') || value.workflow === null)
+        && (value.workflow === null || isNonEmptyString(value.workflow));
+}
+function routingPrefixMatches(labels, formLabels) {
+    return labels.every((label, index) => formLabels[index] === label);
+}
+function isRecord(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function hasExactKeys(value, keys) {
+    return isRecord(value)
+        && Object.keys(value).length === keys.length
+        && Object.keys(value).every(key => keys.includes(key));
+}
+function isStringArray(value) {
+    return Array.isArray(value) && value.every(item => typeof item === 'string');
+}
+function isNonEmptyString(value) {
+    return typeof value === 'string' && value.trim().length > 0;
 }
 
 
@@ -63900,6 +64053,113 @@ function localeDoctorCheck(scope, configured, effective, inheritedWhenEmpty, dyn
 
 /***/ }),
 
+/***/ 50362:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_INSTALLATION_MANIFEST_PATH = void 0;
+exports.setupInstallationFiles = setupInstallationFiles;
+const setup_batch_policy_1 = __nccwpck_require__(52214);
+exports.SETUP_INSTALLATION_MANIFEST_PATH = '.copilot/setup-manifest.json';
+/** Shared formatter; callers decide whether an absent baseline is supported. */
+function setupInstallationFiles(files, manifest, installation) {
+    if (!(0, setup_batch_policy_1.isSetupBatchInstallationReceipt)(installation) || !manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
+        throw new Error('Invalid Setup installation receipt or manifest.');
+    }
+    return [...files.filter(file => file.path !== exports.SETUP_INSTALLATION_MANIFEST_PATH), {
+            path: exports.SETUP_INSTALLATION_MANIFEST_PATH,
+            content: `${JSON.stringify({ ...manifest, installation }, null, 2)}\n`,
+        }];
+}
+
+
+/***/ }),
+
+/***/ 38327:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.setupInstallationTreeLevel = setupInstallationTreeLevel;
+exports.assertSetupInstallationApprovedBlobs = assertSetupInstallationApprovedBlobs;
+const sha = /^[a-f0-9]{40}$/u;
+const modes = {
+    '040000': 'tree', '100644': 'blob', '100755': 'blob', '120000': 'blob', '160000': 'commit',
+};
+/** Compare every sibling; descend only through ancestors of approved leaves. */
+function setupInstallationTreeLevel(prefix, base, prepared, approved) {
+    if (prefix && !safePath(prefix))
+        throw invalid();
+    assertSetupInstallationApprovedBlobs(approved);
+    const before = index(base), after = index(prepared), descend = [];
+    const start = prefix ? prefix + '/' : '';
+    const relevant = approved.filter(file => file.path.startsWith(start));
+    if (!relevant.length)
+        throw invalid();
+    const names = new Set([...before.keys(), ...after.keys(), ...relevant.map(file => file.path.slice(start.length).split('/')[0])]);
+    for (const name of names) {
+        const path = start + name, oldEntry = before.get(name), newEntry = after.get(name);
+        const leaf = relevant.find(file => file.path === path);
+        const children = relevant.filter(file => file.path.startsWith(path + '/'));
+        if (leaf) {
+            if (leaf.sha === null ? newEntry !== undefined : !newEntry || newEntry.type !== 'blob'
+                || newEntry.mode !== leaf.mode || newEntry.sha !== leaf.sha)
+                throw invalid();
+            // Replacing a tree or symlink with a regular file was never approved.
+            if (oldEntry && (oldEntry.type !== 'blob' || !['100644', '100755'].includes(oldEntry.mode)))
+                throw invalid();
+        }
+        else if (children.length) {
+            if (oldEntry && oldEntry.type !== 'tree' || newEntry && newEntry.type !== 'tree')
+                throw invalid();
+            descend.push({ path, ...(oldEntry ? { baseSha: oldEntry.sha } : {}), ...(newEntry ? { preparedSha: newEntry.sha } : {}) });
+        }
+        else if (!oldEntry || !newEntry || oldEntry.mode !== newEntry.mode || oldEntry.type !== newEntry.type || oldEntry.sha !== newEntry.sha) {
+            throw invalid();
+        }
+    }
+    return descend;
+}
+function assertSetupInstallationApprovedBlobs(approved) {
+    if (!approved.length)
+        throw invalid();
+    const paths = new Set();
+    for (const file of approved) {
+        if (!safePath(file.path) || paths.has(file.path) || file.mode !== '100644'
+            || file.sha !== null && !sha.test(file.sha))
+            throw invalid();
+        paths.add(file.path);
+    }
+    for (const file of approved) {
+        if (approved.some(other => other.path !== file.path && other.path.startsWith(file.path + '/')))
+            throw invalid();
+    }
+}
+function index(tree) {
+    if (tree.truncated)
+        throw invalid();
+    const entries = new Map();
+    for (const entry of tree.entries) {
+        if (!entry.path || entry.path === '.' || entry.path === '..' || /[\0/]/u.test(entry.path)
+            || entries.has(entry.path) || !sha.test(entry.sha)
+            || !Object.prototype.hasOwnProperty.call(modes, entry.mode) || modes[entry.mode] !== entry.type)
+            throw invalid();
+        entries.set(entry.path, entry);
+    }
+    return entries;
+}
+function safePath(path) {
+    return path.length > 0 && path.length <= 240 && !/[^A-Za-z0-9_.@+/-]/u.test(path)
+        && !path.split('/').some(part => !part || part === '.' || part === '..');
+}
+function invalid() { return new Error('The prepared Setup tree does not match the complete approved file scope.'); }
+
+
+/***/ }),
+
 /***/ 67323:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -64774,6 +65034,571 @@ function validateDiscoveredProjectStatuses(configuration, discovery) {
     const names = [configuration.projects.issueCreatedColumn, configuration.projects.pullRequestCreatedColumn,
         configuration.projects.issueInProgressColumn, configuration.projects.pullRequestInProgressColumn];
     return names.filter(name => !common.options.includes(name)).map(name => `Status value "${name}" is not available in every selected Project.`);
+}
+
+
+/***/ }),
+
+/***/ 33757:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.setupPublisherOperationMatchesPlan = setupPublisherOperationMatchesPlan;
+exports.parseSetupPublisherProposal = parseSetupPublisherProposal;
+exports.setupPublisherWorkflow = setupPublisherWorkflow;
+exports.assertSetupPublisherActionManifest = assertSetupPublisherActionManifest;
+exports.assertSetupPublisherOptions = assertSetupPublisherOptions;
+exports.parseSetupPublisherOperation = parseSetupPublisherOperation;
+const js_yaml_1 = __nccwpck_require__(783);
+const setup_publisher_installation_1 = __nccwpck_require__(95417);
+const setup_batch_policy_1 = __nccwpck_require__(52214);
+const sha = /^[a-f0-9]{40}$/u, digest = /^[a-f0-9]{64}$/u;
+const coordinate = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}\/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/u;
+const fields = ['schemaVersion', 'kind', 'destination', 'path', 'baseline', 'source', 'proposedWorkflowSha256', 'sourceChange',
+    'consumerTemplatesChanged', 'productionVerification', 'installationAuthorized', 'installedDestinationSha', 'nativeCanary', 'dependency', 'coordination'];
+function setupPublisherOperationMatchesPlan(operation, plan) {
+    return operation.operationId === plan.operationId && operation.purpose === plan.purpose && operation.repositoryId === plan.target.id
+        && operation.repository === `${plan.target.owner}/${plan.target.name}` && operation.defaultBranch === plan.target.defaultBranch
+        && operation.baseSha === plan.target.baseSha && operation.sourceCommit === plan.sourceCommit && operation.planDigest === plan.digest
+        && operation.approvalDigest === plan.approvalDigest && operation.actorId === plan.actorId;
+}
+function parseSetupPublisherProposal(value) {
+    if (!exact(value, fields) || value.schemaVersion !== 1 || value.kind !== 'review-only-publisher-installation-proposal'
+        || value.path !== setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH || !description(value.baseline) || !description(value.sourceChange)
+        || !matches(value.proposedWorkflowSha256, digest) || value.consumerTemplatesChanged !== false
+        || value.productionVerification !== 'disabled' || value.installationAuthorized !== false || value.installedDestinationSha !== null
+        || value.dependency !== 976 || value.coordination !== 814)
+        throw invalid();
+    const destination = value.destination, source = value.source, native = value.nativeCanary;
+    if (!exact(destination, ['repository', 'repositoryId', 'defaultBranch', 'head'])
+        || !matches(destination.repository, coordinate) || !positive(destination.repositoryId)
+        || !branch(destination.defaultBranch) || !matches(destination.head, sha))
+        throw invalid();
+    if (!exact(source, ['repository', 'commit', 'pullRequest', 'merged', 'maintainerApproval', 'workflowSha256', 'actionManifestSha256', 'actionBundleSha256'])
+        || source.repository !== 'vypdev/copilot' || !matches(source.commit, sha) || !positive(source.pullRequest)
+        || typeof source.merged !== 'boolean' || !description(source.maintainerApproval)
+        || !matches(source.workflowSha256, digest) || !matches(source.actionManifestSha256, digest) || !matches(source.actionBundleSha256, digest))
+        throw invalid();
+    if (!exact(native, ['status', 'explicitlyAuthorizedPullRequest', 'runId']) || native.status !== 'not-run'
+        || native.explicitlyAuthorizedPullRequest !== null || native.runId !== null)
+        throw invalid();
+    return JSON.parse(JSON.stringify(value));
+}
+/** The independently reviewed source bytes are transformed at exactly one fixed invocation. */
+function setupPublisherWorkflow(source, sourceCommit) {
+    if (!sha.test(sourceCommit))
+        throw invalid();
+    const invocations = workflowInvocations(source);
+    if (invocations.filter(value => value === './').length !== 1)
+        throw invalid();
+    const root = /^([ \t]+uses: )\.\/(\r?)$/gmu;
+    if ([...source.matchAll(root)].length !== 1)
+        throw invalid();
+    const pinned = `vypdev/copilot@${sourceCommit}`;
+    const transformed = source.replace(root, `$1${pinned}$2`);
+    // The lexical match must be the executed scalar, never text inside a run block.
+    if (JSON.stringify(workflowInvocations(transformed)) !== JSON.stringify(invocations.map(value => value === './' ? pinned : value)))
+        throw invalid();
+    return transformed;
+}
+/** Every executable source entrypoint is bound to the one independently hashed bundle. */
+function assertSetupPublisherActionManifest(source) {
+    if (Buffer.byteLength(source, 'utf8') > 100000 || source.includes('\0'))
+        throw invalid();
+    const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+    let document;
+    try {
+        document = (0, js_yaml_1.load)(source, { schema: js_yaml_1.JSON_SCHEMA });
+    }
+    catch {
+        throw invalid();
+    }
+    if (!object(document) || !object(document.runs))
+        throw invalid();
+    const runs = document.runs, keys = new Set(['using', 'main', 'pre', 'post', 'pre-if', 'post-if']);
+    if (runs.using !== 'node20' && runs.using !== 'node24' || Object.keys(runs).some(key => !keys.has(key)))
+        throw invalid();
+    const bundle = 'build/github_action/index.js';
+    for (const role of ['main', 'pre', 'post']) {
+        if (role === 'main' || Object.prototype.hasOwnProperty.call(runs, role)) {
+            if (runs[role] !== bundle && runs[role] !== `./${bundle}`)
+                throw invalid();
+        }
+    }
+}
+/** Stateless parsing only: preserve original bytes and inspect every executable uses value. */
+function workflowInvocations(source) {
+    if (Buffer.byteLength(source, 'utf8') > 100000 || source.includes('\0'))
+        throw invalid();
+    const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+    const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+    let document;
+    try {
+        document = (0, js_yaml_1.load)(source, { schema: js_yaml_1.JSON_SCHEMA });
+    }
+    catch {
+        throw invalid();
+    }
+    if (!object(document) || !object(document.jobs) || !Object.keys(document.jobs).length)
+        throw invalid();
+    let nodes = 0;
+    const ancestors = new Set();
+    const visit = (value, depth) => {
+        if (++nodes > 10000 || depth > 64)
+            throw invalid();
+        if (value === null || typeof value !== 'object')
+            return;
+        if (ancestors.has(value))
+            throw invalid();
+        ancestors.add(value);
+        if (Array.isArray(value))
+            value.forEach(child => visit(child, depth + 1));
+        else {
+            if (own(value, '<<'))
+                throw invalid();
+            Object.values(value).forEach(child => visit(child, depth + 1));
+        }
+        ancestors.delete(value);
+    };
+    visit(document, 0);
+    const invocations = [];
+    const invocation = (scope, step) => {
+        if (!own(scope, 'uses'))
+            return;
+        const value = scope.uses;
+        if (typeof value !== 'string' || !value || /\s/u.test(value) || value.includes('${{')
+            || /^[./\\]/u.test(value) && (!step || value !== './') || step && own(scope, 'run'))
+            throw invalid();
+        invocations.push(value);
+    };
+    for (const job of Object.values(document.jobs)) {
+        if (!object(job) || own(job, 'steps') === own(job, 'uses'))
+            throw invalid();
+        invocation(job, false);
+        if (own(job, 'steps')) {
+            if (!Array.isArray(job.steps) || job.steps.some(step => !object(step)))
+                throw invalid();
+            job.steps.forEach(step => invocation(step, true));
+        }
+    }
+    return invocations;
+}
+/** Commander adaptation supplies explicit option names, including explicit false/empty values. */
+function assertSetupPublisherOptions(explicit) {
+    const allowed = new Set(['publisherManifest', 'token', 'debug', 'dryRun', 'resumeOperation']);
+    if (!explicit.includes('publisherManifest') || explicit.some(key => !allowed.has(key))) {
+        throw new Error('The publisher proposal supports only --token, --debug, --dry-run and --resume-operation.');
+    }
+}
+function parseSetupPublisherOperation(value) {
+    const required = ['schemaVersion', 'purpose', 'operationId', 'repositoryId', 'repository', 'defaultBranch', 'baseSha',
+        'sourceCommit', 'planDigest', 'approvalDigest', 'actorId', 'status', 'effects'];
+    const optional = ['preparedTree', 'preparedCommit', 'pullRequestNumber', 'uncertain'];
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        throw invalid();
+    const record = value;
+    if (!exact(record, [...required, ...optional.filter(key => Object.prototype.hasOwnProperty.call(record, key))])
+        || record.schemaVersion !== 2 || record.purpose !== setup_publisher_installation_1.SETUP_PUBLISHER_PURPOSE || typeof record.operationId !== 'string'
+        || !positive(record.repositoryId) || !matches(record.repository, coordinate) || !branch(record.defaultBranch)
+        || !matches(record.baseSha, sha) || !matches(record.sourceCommit, sha) || !matches(record.planDigest, digest)
+        || !matches(record.approvalDigest, digest) || !positive(record.actorId)
+        || !['ready', 'applying', 'blocked', 'partial', 'waiting-for-merge', 'verification-pending', 'unchanged', 'cancelled'].includes(String(record.status))
+        || !Array.isArray(record.effects))
+        throw invalid();
+    (0, setup_batch_policy_1.setupBatchBranch)(record.operationId);
+    const effects = ['tree', 'commit', 'branch', 'pull-request'];
+    if (record.effects.length > effects.length || record.effects.some((effect, index) => effect !== effects[index])
+        || record.preparedTree !== undefined && !matches(record.preparedTree, sha)
+        || record.preparedCommit !== undefined && !matches(record.preparedCommit, sha)
+        || record.pullRequestNumber !== undefined && !positive(record.pullRequestNumber)
+        || record.effects.includes('tree') !== (record.preparedTree !== undefined)
+        || record.effects.includes('commit') !== (record.preparedCommit !== undefined)
+        || record.effects.includes('pull-request') !== (record.pullRequestNumber !== undefined)
+        || record.uncertain !== undefined && (record.uncertain !== effects[record.effects.length]
+            || !['applying', 'partial'].includes(String(record.status)))
+        || record.status === 'waiting-for-merge' && record.effects.length !== effects.length)
+        throw invalid();
+    return JSON.parse(JSON.stringify(record));
+}
+function exact(value, keys) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+        && Object.keys(value).length === keys.length && keys.every(key => Object.prototype.hasOwnProperty.call(value, key));
+}
+function positive(value) { return Number.isSafeInteger(value) && Number(value) > 0; }
+function matches(value, pattern) { return typeof value === 'string' && pattern.test(value); }
+function description(value) { return typeof value === 'string' && value.length > 0 && value.length <= 512 && !/[\p{Cc}\p{Cf}]/u.test(value); }
+function branch(value) {
+    return typeof value === 'string' && value.length > 0 && value.length <= 200 && value !== '@' && !value.includes(']')
+        && !/^[/-]|[/.]$|\.\.|@\{|[\p{Cc}\p{Cf}\s~^:?*[\\]/u.test(value)
+        && !value.split('/').some(part => !part || part.startsWith('.') || part.endsWith('.lock'));
+}
+function invalid() { return new Error('The publisher proposal is invalid or unsupported. No installation was started.'); }
+
+
+/***/ }),
+
+/***/ 79229:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_PUBLISHER_MESSAGE_IDS = exports.SETUP_PUBLISHER_CATALOG_DEFINITIONS = void 0;
+exports.setupPublisherEnvironmentLocale = setupPublisherEnvironmentLocale;
+exports.resolveStaticSetupPublisherCatalog = resolveStaticSetupPublisherCatalog;
+const locale_1 = __nccwpck_require__(15386);
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const english = Object.freeze({
+    title: 'Install the Bugbot status publisher — {repository}',
+    inspecting: 'Inspecting the proposal, source and destination. No changes started.',
+    preview: 'Review both complete files before creating the installation PR.',
+    effects: 'Approval permits one Git tree, one commit, one installation branch and one PR for these files.',
+    dryRun: 'Preview complete. No GitHub changes or operation journal were written.',
+    unchanged: 'The exact publisher is already present. No empty PR was created.',
+    declined: 'You declined this snapshot. No new installation effects started.',
+    cancelled: 'Installation stopped. Inspect any retained effects before continuing.',
+    applying: 'Creating the approved installation PR. The default branch is not updated.',
+    waitingMerge: 'The installation PR is ready for review: {url}',
+    nextMerge: 'Review and merge that PR separately, then obtain the separately authorized native verification.',
+    nativePending: 'Native verification remains pending. Delivery does not prove installation.',
+    production: 'This publisher plan preserves the production verification settings.',
+    retained: 'Previously retained effects: {effects}',
+    uncertain: 'Unconfirmed effect: {effect}. Inspect the operation; do not repeat an unknown object creation.',
+    journalUnconfirmed: 'The latest operation could not be saved. Preserve this report and inspect the existing receipt before resuming.',
+    operationRecord: 'Saved operation record: {url}',
+    knownPullRequest: 'Installation pull request: {url}',
+    operation: 'Operation: {id}',
+    source: 'Source: vypdev/copilot@{commit}',
+    target: 'Target: {repository} · {branch}@{head}',
+    actor: 'Authenticated actor ID: {id}',
+    digest: 'Approved plan: {digest}',
+    file: 'Complete file: {path} · {bytes} bytes · SHA-256 {hash}',
+    object: '{effect}: {sha}',
+    'effect.tree': 'Git tree',
+    'effect.commit': 'commit',
+    'effect.branch': 'installation branch',
+    'effect.pull-request': 'installation PR',
+    noEffects: 'No confirmed effects.',
+    confirm: 'Type {approve} to approve these exact files, {decline} to decline, or press Enter to cancel: ',
+    approve: 'APPROVE',
+    decline: 'DECLINE',
+    tokenPrompt: 'GitHub token (hidden)',
+    tokenRequired: 'Provide a valid --token or PERSONAL_ACCESS_TOKEN, or use an interactive terminal for hidden entry.',
+    interactiveRequired: 'Fresh approval needs an interactive terminal. Use --dry-run to inspect without applying.',
+    invalid: 'The publisher options or local proposal are invalid. Check the supported options and the regular UTF-8 proposal file.',
+    blocked: 'The installation could not continue. Inspect access and the retained operation, then prepare a fresh preview.',
+    stale: 'The reviewed source, target, actor or operation changed. Prepare a fresh preview before applying.',
+    authority: 'Relevant write authority is denied or cannot be established. Inspect the existing credential and repository access.',
+    sourceUnverified: 'The exact reviewed, merged source and its file identities could not be established.',
+    unsupported: 'The installed manifest, guidance or workflow inventory is unsupported or uncertain. Inspect it before preparing another proposal.',
+    resumeMissing: 'No compatible publisher operation exists for this ID. Check the selected receipt.',
+    resumeRequired: 'This operation already exists. Inspect it and explicitly select --resume-operation for fresh review.',
+    recovery: 'Keep the operation ID and known object identities. Review a fresh snapshot before any further change.',
+    prTitle: 'Install the Bugbot status publisher',
+    prBody: 'Install the reviewed publisher workflow and preserve compatible Setup metadata.\n\nSource: vypdev/copilot@{commit}\n\nDefault-branch merge and native verification remain pending. This PR preserves the production verification settings.',
+});
+const spanish = Object.freeze({
+    title: 'Instalar el publicador de estados de Bugbot — {repository}',
+    inspecting: 'Comprobando la propuesta, la fuente y el destino. No se han iniciado cambios.',
+    preview: 'Revisa los dos archivos completos antes de crear la PR de instalación.',
+    effects: 'La aprobación permite un árbol Git, un commit, una rama de instalación y una PR para estos archivos.',
+    dryRun: 'Vista previa completada. No se han escrito cambios en GitHub ni un diario de operación.',
+    unchanged: 'El publicador exacto ya está presente. No se ha creado una PR vacía.',
+    declined: 'Has rechazado esta revisión. No se han iniciado nuevos efectos de instalación.',
+    cancelled: 'Instalación detenida. Revisa los efectos conservados antes de continuar.',
+    applying: 'Creando la PR de instalación aprobada. La rama por defecto no se actualiza.',
+    waitingMerge: 'La PR de instalación está lista para revisión: {url}',
+    nextMerge: 'Revisa y fusiona esa PR por separado; después, obtén la autorización específica para la verificación nativa.',
+    nativePending: 'La verificación nativa sigue pendiente. La entrega no demuestra la instalación.',
+    production: 'Este plan del publicador conserva la configuración de verificación en producción.',
+    retained: 'Efectos conservados anteriormente: {effects}',
+    uncertain: 'Efecto sin confirmar: {effect}. Inspecciona la operación; no repitas una creación de objetos de resultado desconocido.',
+    journalUnconfirmed: 'No se ha podido guardar el último estado. Conserva este informe y revisa el recibo existente antes de reanudar.',
+    operationRecord: 'Registro guardado de la operación: {url}',
+    knownPullRequest: 'PR de instalación: {url}',
+    operation: 'Operación: {id}', source: 'Fuente: vypdev/copilot@{commit}',
+    target: 'Destino: {repository} · {branch}@{head}', actor: 'ID del actor autenticado: {id}',
+    digest: 'Plan aprobado: {digest}', file: 'Archivo completo: {path} · {bytes} bytes · SHA-256 {hash}', object: '{effect}: {sha}',
+    'effect.tree': 'árbol Git', 'effect.commit': 'commit', 'effect.branch': 'rama de instalación', 'effect.pull-request': 'PR de instalación',
+    noEffects: 'No hay efectos confirmados.',
+    confirm: 'Escribe {approve} para aprobar estos archivos exactos, {decline} para rechazarlos o pulsa Intro para cancelar: ',
+    approve: 'APROBAR', decline: 'RECHAZAR', tokenPrompt: 'Token de GitHub (oculto)',
+    tokenRequired: 'Proporciona un --token válido o PERSONAL_ACCESS_TOKEN, o usa un terminal interactivo para introducirlo de forma oculta.',
+    interactiveRequired: 'Una aprobación nueva requiere un terminal interactivo. Usa --dry-run para inspeccionar sin aplicar.',
+    invalid: 'Las opciones del publicador o la propuesta local no son válidas. Revisa las opciones admitidas y el archivo regular UTF-8 de la propuesta.',
+    blocked: 'La instalación no puede continuar. Revisa el acceso y la operación conservada; después, prepara una vista previa nueva.',
+    stale: 'Han cambiado la fuente, el destino, el actor o la operación revisados. Prepara una vista previa nueva antes de aplicar.',
+    authority: 'Los permisos de escritura necesarios están denegados o no se pueden acreditar. Revisa la credencial existente y el acceso al repositorio.',
+    sourceUnverified: 'No se han podido acreditar la fuente exacta revisada y fusionada ni las identidades de sus archivos.',
+    unsupported: 'El manifiesto, las instrucciones o el inventario de workflows instalados son incompatibles o inciertos. Revísalos antes de preparar otra propuesta.',
+    resumeMissing: 'No existe una operación compatible del publicador para este ID. Revisa el recibo seleccionado.',
+    resumeRequired: 'Esta operación ya existe. Revísala y selecciona --resume-operation explícitamente para obtener una aprobación nueva.',
+    recovery: 'Conserva el ID de operación y las identidades de los objetos conocidos. Revisa una vista previa nueva antes de cambiar nada más.',
+    prTitle: 'Instalar el publicador de estados de Bugbot',
+    prBody: 'Instalar el workflow revisado del publicador y conservar los metadatos compatibles de Setup.\n\nFuente: vypdev/copilot@{commit}\n\nLa fusión en la rama por defecto y la verificación nativa siguen pendientes. Esta PR conserva la configuración de verificación en producción.',
+});
+const french = Object.freeze({
+    title: 'Installer le publicateur de statuts Bugbot — {repository}',
+    inspecting: 'Vérification de la proposition, de la source et de la destination. Aucune modification commencée.',
+    preview: 'Examinez les deux fichiers complets avant de créer la PR d’installation.',
+    effects: 'L’approbation autorise un arbre Git, un commit, une branche d’installation et une PR pour ces fichiers.',
+    dryRun: 'Aperçu terminé. Aucune modification GitHub ni écriture du journal d’opération.',
+    unchanged: 'Le publicateur exact est déjà présent. Aucune PR vide créée.',
+    declined: 'Vous avez refusé cet état. Aucun nouvel effet d’installation commencé.',
+    cancelled: 'Installation arrêtée. Examinez les effets conservés avant de continuer.',
+    applying: 'Création de la PR d’installation approuvée. La branche par défaut reste inchangée.',
+    waitingMerge: 'La PR d’installation est prête à être examinée : {url}',
+    nextMerge: 'Examinez et fusionnez cette PR séparément, puis obtenez l’autorisation spécifique de vérification native.',
+    nativePending: 'La vérification native reste en attente. La livraison ne prouve pas l’installation.',
+    production: 'Ce plan du publicateur conserve les paramètres de vérification en production.',
+    retained: 'Effets précédemment conservés : {effects}',
+    uncertain: 'Effet non confirmé : {effect}. Examinez l’opération ; ne répétez pas une création d’objet au résultat inconnu.',
+    journalUnconfirmed: 'Le dernier état n’a pas pu être enregistré. Conservez ce rapport et examinez le reçu existant avant de reprendre.',
+    operationRecord: 'Enregistrement sauvegardé de l’opération : {url}',
+    knownPullRequest: 'Pull request d’installation : {url}',
+    operation: 'Opération : {id}', source: 'Source : vypdev/copilot@{commit}',
+    target: 'Destination : {repository} · {branch}@{head}', actor: 'ID de l’acteur authentifié : {id}',
+    digest: 'Plan approuvé : {digest}', file: 'Fichier complet : {path} · {bytes} octets · SHA-256 {hash}', object: '{effect} : {sha}',
+    'effect.tree': 'arbre Git', 'effect.commit': 'commit', 'effect.branch': 'branche d’installation', 'effect.pull-request': 'PR d’installation',
+    noEffects: 'Aucun effet confirmé.',
+    confirm: 'Saisissez {approve} pour approuver ces fichiers exacts, {decline} pour refuser, ou Entrée pour annuler : ',
+    approve: 'APPROUVER', decline: 'REFUSER', tokenPrompt: 'Jeton GitHub (masqué)',
+    tokenRequired: 'Fournissez un --token valide ou PERSONAL_ACCESS_TOKEN, ou utilisez un terminal interactif pour une saisie masquée.',
+    interactiveRequired: 'Une nouvelle approbation nécessite un terminal interactif. Utilisez --dry-run pour examiner sans appliquer.',
+    invalid: 'Les options du publicateur ou la proposition locale sont invalides. Vérifiez les options admises et le fichier régulier UTF-8 de la proposition.',
+    blocked: 'L’installation ne peut pas continuer. Examinez les accès et l’opération conservée, puis préparez un nouvel aperçu.',
+    stale: 'La source, la destination, l’acteur ou l’opération examinés ont changé. Préparez un nouvel aperçu avant d’appliquer.',
+    authority: 'Les droits d’écriture nécessaires sont refusés ou ne peuvent pas être établis. Examinez le jeton existant et l’accès au dépôt.',
+    sourceUnverified: 'La source exacte examinée et fusionnée, ainsi que l’identité de ses fichiers, n’ont pas pu être établies.',
+    unsupported: 'Le manifeste installé, les instructions ou l’inventaire des workflows sont incompatibles ou incertains. Examinez-les avant de préparer une autre proposition.',
+    resumeMissing: 'Aucune opération compatible du publicateur ne correspond à cet ID. Vérifiez le reçu sélectionné.',
+    resumeRequired: 'Cette opération existe déjà. Examinez-la et sélectionnez explicitement --resume-operation pour une nouvelle approbation.',
+    recovery: 'Conservez l’ID de l’opération et l’identité des objets connus. Examinez un nouvel aperçu avant toute autre modification.',
+    prTitle: 'Installer le publicateur de statuts Bugbot',
+    prBody: 'Installer le workflow examiné du publicateur et conserver les métadonnées Setup compatibles.\n\nSource : vypdev/copilot@{commit}\n\nLa fusion dans la branche par défaut et la vérification native restent en attente. Cette PR conserve les paramètres de vérification en production.',
+});
+const portuguese = Object.freeze({
+    title: 'Instalar o publicador de estados do Bugbot — {repository}',
+    inspecting: 'Verificando a proposta, a origem e o destino. Nenhuma alteração iniciada.',
+    preview: 'Revise os dois arquivos completos antes de criar a PR de instalação.',
+    effects: 'A aprovação permite uma árvore Git, um commit, uma branch de instalação e uma PR para estes arquivos.',
+    dryRun: 'Prévia concluída. Nenhuma alteração no GitHub ou gravação no diário da operação.',
+    unchanged: 'O publicador exato já está presente. Nenhuma PR vazia foi criada.',
+    declined: 'Você recusou este estado. Nenhum novo efeito de instalação foi iniciado.',
+    cancelled: 'Instalação interrompida. Revise os efeitos preservados antes de continuar.',
+    applying: 'Criando a PR de instalação aprovada. A branch padrão não será atualizada.',
+    waitingMerge: 'A PR de instalação está pronta para revisão: {url}',
+    nextMerge: 'Revise e faça o merge dessa PR separadamente; depois, obtenha a autorização específica para a verificação nativa.',
+    nativePending: 'A verificação nativa continua pendente. A entrega não comprova a instalação.',
+    production: 'Este plano do publicador preserva a configuração de verificação em produção.',
+    retained: 'Efeitos preservados anteriormente: {effects}',
+    uncertain: 'Efeito não confirmado: {effect}. Inspecione a operação; não repita a criação de um objeto com resultado desconhecido.',
+    journalUnconfirmed: 'Não foi possível salvar o último estado. Preserve este relatório e revise o recibo existente antes de retomar.',
+    operationRecord: 'Registro salvo da operação: {url}',
+    knownPullRequest: 'Pull request de instalação: {url}',
+    operation: 'Operação: {id}', source: 'Origem: vypdev/copilot@{commit}',
+    target: 'Destino: {repository} · {branch}@{head}', actor: 'ID do ator autenticado: {id}',
+    digest: 'Plano aprovado: {digest}', file: 'Arquivo completo: {path} · {bytes} bytes · SHA-256 {hash}', object: '{effect}: {sha}',
+    'effect.tree': 'árvore Git', 'effect.commit': 'commit', 'effect.branch': 'branch de instalação', 'effect.pull-request': 'PR de instalação',
+    noEffects: 'Nenhum efeito confirmado.',
+    confirm: 'Digite {approve} para aprovar estes arquivos exatos, {decline} para recusar, ou pressione Enter para cancelar: ',
+    approve: 'APROVAR', decline: 'RECUSAR', tokenPrompt: 'Token do GitHub (oculto)',
+    tokenRequired: 'Forneça um --token válido ou PERSONAL_ACCESS_TOKEN, ou use um terminal interativo para inserir o token de forma oculta.',
+    interactiveRequired: 'Uma nova aprovação exige um terminal interativo. Use --dry-run para inspecionar sem aplicar.',
+    invalid: 'As opções do publicador ou a proposta local são inválidas. Verifique as opções aceitas e o arquivo regular UTF-8 da proposta.',
+    blocked: 'A instalação não pode continuar. Revise o acesso e a operação preservada; depois, prepare uma nova prévia.',
+    stale: 'A origem, o destino, o ator ou a operação revisados mudaram. Prepare uma nova prévia antes de aplicar.',
+    authority: 'Os direitos de gravação necessários foram negados ou não podem ser comprovados. Revise a credencial existente e o acesso ao repositório.',
+    sourceUnverified: 'Não foi possível comprovar a origem exata revisada e integrada nem a identidade dos arquivos.',
+    unsupported: 'O manifesto, as instruções ou o inventário de workflows instalados são incompatíveis ou incertos. Revise-os antes de preparar outra proposta.',
+    resumeMissing: 'Não existe uma operação compatível do publicador para este ID. Verifique o recibo selecionado.',
+    resumeRequired: 'Esta operação já existe. Revise-a e selecione --resume-operation explicitamente para uma nova aprovação.',
+    recovery: 'Preserve o ID da operação e a identidade dos objetos conhecidos. Revise uma nova prévia antes de qualquer outra alteração.',
+    prTitle: 'Instalar o publicador de estados do Bugbot',
+    prBody: 'Instalar o workflow revisado do publicador e preservar os metadados compatíveis do Setup.\n\nOrigem: vypdev/copilot@{commit}\n\nO merge na branch padrão e a verificação nativa continuam pendentes. Esta PR preserva a configuração de verificação em produção.',
+});
+const definition = (locale, compatibleBaseLanguage, messages) => Object.freeze({ version: message_catalog_1.MESSAGE_CATALOG_VERSION, locale, compatibleBaseLanguage, messages });
+exports.SETUP_PUBLISHER_CATALOG_DEFINITIONS = Object.freeze([
+    definition('en-US', 'en', english), definition('es-ES', 'es', spanish), definition('fr-FR', 'fr', french), definition('pt-BR', 'pt', portuguese),
+]);
+exports.SETUP_PUBLISHER_MESSAGE_IDS = Object.freeze(Object.keys(english));
+function setupPublisherEnvironmentLocale(environment) {
+    const raw = [environment.LC_ALL, environment.LC_MESSAGES, environment.LANG].find(value => value !== undefined && value !== '');
+    if (typeof raw !== 'string' || raw.length > 255)
+        return 'en-US';
+    const match = /^([A-Za-z]{2,3})(?:[-_]([A-Za-z]{2}|\d{3}))?(?:\.[A-Za-z0-9-]+)?$/u.exec(raw);
+    if (!match)
+        return 'en-US';
+    try {
+        return (0, locale_1.canonicalizeLocaleTag)(match[1] + (match[2] ? '-' + match[2] : ''));
+    }
+    catch {
+        return 'en-US';
+    }
+}
+function resolveStaticSetupPublisherCatalog(locale = 'en-US') {
+    let normalized;
+    try {
+        if (typeof locale !== 'string' || locale !== locale.trim() || /[\p{Cc}\p{Cf}]/u.test(locale))
+            throw new Error('Invalid display locale.');
+        normalized = (0, locale_1.canonicalizeLocaleTag)(locale);
+    }
+    catch {
+        normalized = 'en-US';
+    }
+    const complete = exports.SETUP_PUBLISHER_CATALOG_DEFINITIONS.filter(definition => (0, message_catalog_1.validateCatalogDefinition)(definition, exports.SETUP_PUBLISHER_MESSAGE_IDS).length === 0);
+    return (0, resolved_message_catalog_policy_1.resolveStaticMessageCatalogView)(normalized, exports.SETUP_PUBLISHER_CATALOG_DEFINITIONS[0], complete);
+}
+
+
+/***/ }),
+
+/***/ 75733:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupPublisherPlanError = void 0;
+exports.planSetupPublisherInstallation = planSetupPublisherInstallation;
+exports.setupPublisherApprovalMatches = setupPublisherApprovalMatches;
+const node_crypto_1 = __nccwpck_require__(6005);
+const setup_publisher_installation_1 = __nccwpck_require__(95417);
+const setup_batch_policy_1 = __nccwpck_require__(52214);
+const setup_installation_receipt_policy_1 = __nccwpck_require__(50362);
+const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
+const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
+class SetupPublisherPlanError extends Error {
+    constructor(reason) {
+        super(`Publisher installation review is blocked: ${reason}.`);
+        this.reason = reason;
+    }
+}
+exports.SetupPublisherPlanError = SetupPublisherPlanError;
+const sha256 = (content) => (0, node_crypto_1.createHash)('sha256').update(content, 'utf8').digest('hex');
+const positive = (value) => Number.isSafeInteger(value) && value > 0;
+const regular = (file) => ['100644', '100755'].includes(file.mode);
+const requiredGuidance = [repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH, repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH, repository_agent_guidance_policy_1.REPOSITORY_AGENT_SKILL_PATH];
+/** Fixed transformation and receipt derivation. No renderer, credential, transport or write authority. */
+function planSetupPublisherInstallation(input, inspection, operationId) {
+    const proposal = (0, setup_publisher_installation_policy_1.parseSetupPublisherProposal)(input);
+    (0, setup_batch_policy_1.setupBatchBranch)(operationId);
+    const { target, authority, source, installation } = inspection;
+    if ((0, setup_batch_policy_1.validateSetupBatchTargets)(target.owner, [target]).length || typeof target.private !== 'boolean'
+        || target.archived !== false || target.disabled !== false || target.canPush !== true
+        || target.id !== proposal.destination.repositoryId || `${target.owner}/${target.name}`.toLowerCase() !== proposal.destination.repository.toLowerCase()
+        || target.defaultBranch !== proposal.destination.defaultBranch || target.baseSha !== proposal.destination.head) {
+        throw new SetupPublisherPlanError('destination-changed');
+    }
+    if (!positive(authority.actorId) || authority.repositoryId !== target.id
+        || authority.contents !== 'write' || authority.pullRequests !== 'write' || authority.workflows !== 'write') {
+        throw new SetupPublisherPlanError('authority-unverified');
+    }
+    const boundTarget = { id: target.id, ownerId: target.ownerId, owner: target.owner, name: target.name,
+        defaultBranch: target.defaultBranch, baseSha: target.baseSha, private: target.private,
+        archived: target.archived, disabled: target.disabled, canPush: target.canPush };
+    if (source.repository !== proposal.source.repository || !positive(source.repositoryId)
+        || source.commit !== proposal.source.commit || source.pullRequest !== proposal.source.pullRequest
+        || source.reviewedRevision !== source.commit || source.mergedRevision !== source.commit
+        || typeof source.workflow !== 'string' || Buffer.byteLength(source.workflow, 'utf8') > 100000 || source.workflow.includes('\0')
+        || sha256(source.workflow) !== proposal.source.workflowSha256
+        || source.actionManifestSha256 !== proposal.source.actionManifestSha256 || source.actionBundleSha256 !== proposal.source.actionBundleSha256) {
+        throw new SetupPublisherPlanError('source-unverified');
+    }
+    let workflow;
+    try {
+        workflow = (0, setup_publisher_installation_policy_1.setupPublisherWorkflow)(source.workflow, source.commit);
+    }
+    catch {
+        throw new SetupPublisherPlanError('source-unverified');
+    }
+    if (sha256(workflow) !== proposal.proposedWorkflowSha256)
+        throw new SetupPublisherPlanError('source-unverified');
+    const manifest = compatibleManifest(inspection);
+    const workflows = uniqueFiles(installation.workflows);
+    const existing = workflows.get(setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH);
+    const publisher = installation.publisher;
+    const unchanged = publisher.kind === 'exact' && publisher.paths.length === 1 && publisher.paths[0] === setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH
+        && existing?.mode === '100644' && existing.content === workflow;
+    if (!unchanged && (publisher.kind !== 'absent' || publisher.paths.length !== 0 || existing !== undefined)) {
+        throw new SetupPublisherPlanError('installation-unsupported');
+    }
+    // Include only audited public identity/authority facts. Session generation is
+    // fenced privately by orchestration, never a credential hash in this digest.
+    const identity = { purpose: setup_publisher_installation_1.SETUP_PUBLISHER_PURPOSE, operationId, receiptSchemaVersion: 1, target: boundTarget,
+        authority: { actorId: authority.actorId, repositoryId: authority.repositoryId, contents: authority.contents,
+            pullRequests: authority.pullRequests, workflows: authority.workflows },
+        source: { repository: source.repository, repositoryId: source.repositoryId, commit: source.commit,
+            pullRequest: source.pullRequest, reviewedRevision: source.reviewedRevision, mergedRevision: source.mergedRevision,
+            workflowSha256: proposal.source.workflowSha256, actionManifestSha256: source.actionManifestSha256,
+            actionBundleSha256: source.actionBundleSha256 },
+        workflowSha256: sha256(workflow), originalManifestSha256: sha256(installation.manifest.content) };
+    const digest = sha256(JSON.stringify(identity));
+    const files = unchanged ? [] : (0, setup_installation_receipt_policy_1.setupInstallationFiles)([{ path: setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH, content: workflow }], manifest, { schemaVersion: 1, operationId, repositoryId: target.id, baseSha: target.baseSha, planDigest: digest });
+    return Object.freeze({ purpose: setup_publisher_installation_1.SETUP_PUBLISHER_PURPOSE, operationId, target: Object.freeze(boundTarget),
+        actorId: authority.actorId, sourceCommit: source.commit, status: unchanged ? 'unchanged' : 'review', digest,
+        approvalDigest: unchanged ? null : approvalDigest(digest, files), files: Object.freeze(files.map(file => Object.freeze({ ...file }))),
+        nativeVerification: 'pending' });
+}
+/** Byte identity only; a serialized plan or matching digest never grants Apply. */
+function setupPublisherApprovalMatches(plan, files) {
+    return plan.purpose === setup_publisher_installation_1.SETUP_PUBLISHER_PURPOSE && plan.status === 'review' && files.length === 2
+        && files[0].path === setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH && files[1].path === setup_installation_receipt_policy_1.SETUP_INSTALLATION_MANIFEST_PATH
+        && files.every(file => Object.keys(file).sort().join(',') === 'content,path' && typeof file.content === 'string')
+        && approvalDigest(plan.digest, files) === plan.approvalDigest;
+}
+function approvalDigest(digest, files) {
+    return sha256(JSON.stringify({ purpose: 'bugbot-status-publisher:approved-bytes:v1', planDigest: digest,
+        files: files.map(file => ({ path: file.path, content: file.content })) }));
+}
+function compatibleManifest(inspection) {
+    const { installation, target } = inspection, file = installation.manifest;
+    if (installation.complete !== true || !file || file.path !== setup_installation_receipt_policy_1.SETUP_INSTALLATION_MANIFEST_PATH || file.mode !== '100644'
+        || typeof file.content !== 'string' || Buffer.byteLength(file.content, 'utf8') > 100000)
+        throw new SetupPublisherPlanError('installation-unsupported');
+    const manifest = (0, repository_agent_guidance_policy_1.parseRepositoryAgentGuidanceManifest)(file.content);
+    if (!manifest || manifest.installation && manifest.installation.repositoryId !== target.id
+        || requiredGuidance.some(path => !manifest.artifacts[path]))
+        throw new SetupPublisherPlanError('installation-unsupported');
+    const guidance = uniqueFiles(installation.guidance);
+    for (const [path, artifact] of Object.entries(manifest.artifacts)) {
+        const observed = guidance.get(path);
+        if (!observed || !regular(observed))
+            throw new SetupPublisherPlanError('installation-unsupported');
+        const content = path === repository_agent_guidance_policy_1.REPOSITORY_AGENT_POINTER_PATH ? pointer(observed.content) : observed.content;
+        if (content === undefined || sha256(content.replace(/\r\n/gu, '\n')) !== artifact.sha256)
+            throw new SetupPublisherPlanError('installation-unsupported');
+    }
+    const profile = guidance.get(repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH).content;
+    if (!(0, repository_agent_guidance_policy_1.validRepositoryAgentProfile)(profile) || sha256(profile.replace(/\r\n/gu, '\n')) !== manifest.profileDigest) {
+        throw new SetupPublisherPlanError('installation-unsupported');
+    }
+    return JSON.parse(file.content);
+}
+function uniqueFiles(files) {
+    const result = new Map();
+    if (!Array.isArray(files))
+        throw new SetupPublisherPlanError('installation-unsupported');
+    for (const file of files) {
+        if (!file || typeof file.path !== 'string' || typeof file.content !== 'string'
+            || Buffer.byteLength(file.content, 'utf8') > 100000 || result.has(file.path) || !regular(file)) {
+            throw new SetupPublisherPlanError('installation-unsupported');
+        }
+        result.set(file.path, file);
+    }
+    return result;
+}
+function pointer(content) {
+    const start = content.indexOf(repository_agent_guidance_policy_1.REPOSITORY_AGENT_POINTER_START), end = content.indexOf(repository_agent_guidance_policy_1.REPOSITORY_AGENT_POINTER_END);
+    if (start < 0 || end < start)
+        return undefined;
+    const after = end + repository_agent_guidance_policy_1.REPOSITORY_AGENT_POINTER_END.length;
+    if (content.indexOf(repository_agent_guidance_policy_1.REPOSITORY_AGENT_POINTER_START, start + 1) >= 0 || content.indexOf(repository_agent_guidance_policy_1.REPOSITORY_AGENT_POINTER_END, after) >= 0)
+        return undefined;
+    return content.slice(start, after);
 }
 
 
@@ -67560,6 +68385,22 @@ function levelRank(level) {
 
 /***/ }),
 
+/***/ 51974:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isSetupTokenValueValid = isSetupTokenValueValid;
+/** Existing Setup admission only; actual authenticated authority is established separately. */
+function isSetupTokenValueValid(token) {
+    const value = token.trim();
+    return value.length >= 20 && value !== 'github_pat_11..';
+}
+
+
+/***/ }),
+
 /***/ 15818:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -68240,6 +69081,27 @@ function bindSddEvidenceReadPorts(ports) {
         }),
     });
 }
+
+
+/***/ }),
+
+/***/ 10308:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupInstallationDeliveryCancelled = exports.SetupInstallationSnapshotChanged = void 0;
+/** A verified snapshot mismatch, distinct from an unavailable provider read. */
+class SetupInstallationSnapshotChanged extends Error {
+    constructor() { super('GitHub setup request is unknown because the reviewed installation snapshot changed.'); }
+}
+exports.SetupInstallationSnapshotChanged = SetupInstallationSnapshotChanged;
+/** Observed before dispatch; no provider write was started by that command. */
+class SetupInstallationDeliveryCancelled extends Error {
+    constructor() { super('Setup file delivery was cancelled before provider dispatch.'); }
+}
+exports.SetupInstallationDeliveryCancelled = SetupInstallationDeliveryCancelled;
 
 
 /***/ }),
@@ -77935,6 +78797,8 @@ function canonicalLabels(labels) { return JSON.stringify([...new Set(labels.map(
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplySetupBatchUseCase = void 0;
 const setup_batch_policy_1 = __nccwpck_require__(52214);
+const deliver_setup_installation_use_case_1 = __nccwpck_require__(32789);
+const resourceEffects = ['access', 'variables', 'labels', 'issue-types'];
 class ApplySetupBatchUseCase {
     constructor(ports) {
         this.ports = ports;
@@ -77964,14 +78828,23 @@ class ApplySetupBatchUseCase {
             for (let index = 0; index < plan.targets.length; index += 1) {
                 const targetPlan = plan.targets[index];
                 let receipt = operation.targets[index];
+                const retainedReceipt = receipt;
                 if (['waiting-for-merge', 'verification-pending', 'unchanged', 'blocked'].includes(receipt.status))
                     continue;
                 if (!this.ports.presentation.active()) {
-                    await update(index, { ...receipt, status: 'cancelled', reason: 'cancelled' });
+                    await update(index, { ...receipt, status: 'cancelled', reason: receipt.reason === 'preflight' ? 'preflight' : 'cancelled' });
                     continue;
                 }
-                receipt = { ...receipt, status: 'applying', reason: undefined };
+                receipt = { ...receipt, status: 'applying', reason: receipt.reason === 'preflight' ? 'preflight' : undefined };
                 await update(index, receipt);
+                // Infer only from the retained state, before this invocation adds
+                // resources. A prior unknown preparation must never become preflight.
+                const interrupted = ['partial', 'applying', 'cancelled'].includes(retainedReceipt.status) && retainedReceipt.reason !== 'preflight';
+                const uncertain = interrupted && !retainedReceipt.preparedCommit
+                    && resourceEffects.every(name => retainedReceipt.effects.includes(name))
+                    ? 'prepared-objects' : interrupted && retainedReceipt.preparedCommit
+                    ? !retainedReceipt.effects.includes('branch') ? 'branch' : !retainedReceipt.effects.includes('pull-request') ? 'pull-request' : undefined : undefined;
+                let deliveryStarted = false;
                 const effect = async (name, work) => {
                     if (receipt.effects.includes(name))
                         return;
@@ -78000,23 +78873,33 @@ class ApplySetupBatchUseCase {
                         await update(index, { ...receipt, status: 'verification-pending' });
                         continue;
                     }
-                    if (!receipt.preparedCommit) {
-                        const commit = await this.ports.writer.prepareCommit(targetPlan, plan.operationId, token);
-                        receipt = { ...receipt, preparedCommit: commit };
-                        await update(index, receipt);
-                    }
-                    const commit = receipt.preparedCommit;
-                    await effect('branch', () => this.ports.writer.branch(targetPlan, plan.operationId, commit, token));
-                    await effect('pull-request', async () => {
-                        const number = await this.ports.writer.pullRequest(targetPlan, plan.operationId, commit, token);
-                        receipt = { ...receipt, pullRequestNumber: number };
-                    });
+                    deliveryStarted = true;
+                    await this.ports.coordinator.execute({
+                        prepareCommit: observe => this.ports.writer.prepareCommit(targetPlan, plan.operationId, token, observe, () => this.ports.presentation.active()),
+                        branch: (commit, inspectOnly) => this.ports.writer.branch(targetPlan, plan.operationId, commit, token, inspectOnly, () => this.ports.presentation.active()),
+                        pullRequest: (commit, inspectOnly) => this.ports.writer.pullRequest(targetPlan, plan.operationId, commit, token, inspectOnly, () => this.ports.presentation.active()),
+                    }, {
+                        active: () => this.ports.presentation.active(),
+                        revalidate: () => this.ports.writer.revalidate(targetPlan, token, receipt.effects),
+                        recovery: 'reviewed-create-if-absent',
+                        retain: async (state) => {
+                            receipt = { ...receipt, preparedCommit: state.preparedCommit, pullRequestNumber: state.pullRequestNumber,
+                                reason: !state.preparedCommit && state.uncertain === undefined ? 'preflight' : undefined,
+                                effects: [...receipt.effects.filter(name => name !== 'branch' && name !== 'pull-request'), ...state.effects] };
+                            await update(index, receipt);
+                        },
+                    }, { preparedCommit: receipt.preparedCommit, pullRequestNumber: receipt.pullRequestNumber,
+                        effects: receipt.effects.filter(name => name === 'branch' || name === 'pull-request'), uncertain });
                     await update(index, { ...receipt, status: 'waiting-for-merge' });
                 }
                 catch (error) {
-                    await update(index, { ...receipt, status: error instanceof StaleSetupApply ? 'blocked'
-                            : error instanceof CancelledSetupApply ? 'cancelled' : 'partial',
-                        reason: error instanceof StaleSetupApply ? 'drift' : error instanceof CancelledSetupApply ? 'cancelled' : 'provider' });
+                    const stale = error instanceof StaleSetupApply || error instanceof deliver_setup_installation_use_case_1.SetupInstallationDeliveryError && error.reason === 'drift';
+                    const cancelled = error instanceof CancelledSetupApply || error instanceof deliver_setup_installation_use_case_1.SetupInstallationDeliveryError && error.reason === 'cancelled';
+                    const beforePreparation = !receipt.preparedCommit && ((!deliveryStarted && uncertain === undefined
+                        && resourceEffects.every(name => receipt.effects.includes(name))) || receipt.reason === 'preflight'
+                        || error instanceof deliver_setup_installation_use_case_1.SetupInstallationDeliveryError && !error.retained.preparedCommit && error.retained.uncertain === undefined);
+                    await update(index, { ...receipt, status: stale ? 'blocked' : cancelled ? 'cancelled' : 'partial',
+                        reason: stale ? 'drift' : beforePreparation ? 'preflight' : cancelled ? 'cancelled' : 'provider' });
                 }
             }
             return operation;
@@ -78035,6 +78918,160 @@ exports.ApplySetupBatchUseCase = ApplySetupBatchUseCase;
 class CancelledSetupApply extends Error {
 }
 class StaleSetupApply extends Error {
+}
+
+
+/***/ }),
+
+/***/ 64303:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ApplySetupPublisherUseCase = exports.SetupPublisherApplyError = void 0;
+const setup_installation_delivery_ports_1 = __nccwpck_require__(10308);
+const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
+const setup_publisher_plan_policy_1 = __nccwpck_require__(75733);
+class SetupPublisherApplyError extends Error {
+    constructor(reason, retained, lastPersisted) {
+        super(`Publisher delivery stopped: ${reason}. Inspect the retained operation before resuming.`);
+        this.reason = reason;
+        this.retained = retained;
+        this.lastPersisted = lastPersisted;
+    }
+}
+exports.SetupPublisherApplyError = SetupPublisherApplyError;
+/** Invoked only by fresh review admission; shared delivery owns prepare/ref/PR phases. */
+class ApplySetupPublisherUseCase {
+    constructor(ports) {
+        this.ports = ports;
+    }
+    async execute(plan, session, revalidate, reviewedOperation) {
+        let operation = initialOperation(plan), lastPersisted;
+        let journalFailed = false;
+        const fail = (reason) => new SetupPublisherApplyError(reason, operation, lastPersisted);
+        const journal = async (work) => {
+            try {
+                return await work();
+            }
+            catch {
+                journalFailed = true;
+                throw fail('journal');
+            }
+        };
+        const retain = async (next) => {
+            operation = (0, setup_publisher_installation_policy_1.parseSetupPublisherOperation)(next);
+            await journal(() => this.ports.journal.save(operation));
+            lastPersisted = operation;
+        };
+        if (!(0, setup_publisher_plan_policy_1.setupPublisherApprovalMatches)(plan, plan.files))
+            throw fail('operation-mismatch');
+        let expected;
+        try {
+            expected = reviewedOperation === undefined ? undefined : (0, setup_publisher_installation_policy_1.parseSetupPublisherOperation)(reviewedOperation);
+        }
+        catch {
+            throw fail('operation-mismatch');
+        }
+        if (expected && !(0, setup_publisher_installation_policy_1.setupPublisherOperationMatchesPlan)(expected, plan))
+            throw fail('operation-mismatch');
+        const release = await journal(() => this.ports.journal.lock(plan.operationId));
+        try {
+            const current = await journal(() => this.ports.journal.load(plan.operationId));
+            if (JSON.stringify(current) !== JSON.stringify(expected))
+                throw fail('operation-mismatch');
+            if (current) {
+                operation = (0, setup_publisher_installation_policy_1.parseSetupPublisherOperation)(current);
+                lastPersisted = operation;
+            }
+            if (!this.ports.active())
+                throw fail('cancelled');
+            const fresh = async () => this.ports.active() && await revalidate() && this.ports.active();
+            if (!await fresh())
+                throw fail(this.ports.active() ? 'stale' : 'cancelled');
+            if (operation.uncertain === 'tree' || operation.uncertain === 'commit')
+                throw fail('uncertain-preparation');
+            const writer = this.ports.delivery(plan, session, fresh);
+            // A completed journal is metadata, never fresh proof that its ref/PR still match.
+            if (operation.effects.includes('pull-request')) {
+                await writer.branch(operation.preparedCommit, true);
+                if (await writer.pullRequest(operation.preparedCommit, true) !== operation.pullRequestNumber)
+                    throw fail('operation-mismatch');
+                if (operation.status !== 'waiting-for-merge')
+                    await retain({ ...operation, status: 'waiting-for-merge' });
+                return operation;
+            }
+            await retain({ ...operation, status: 'applying' });
+            const observe = async (event) => {
+                const next = operation.preparedTree ? 'commit' : 'tree';
+                if (event.effect !== next || operation.preparedCommit)
+                    throw fail('delivery');
+                if (event.state === 'not-started') {
+                    if (operation.uncertain === event.effect)
+                        await retain({ ...operation, uncertain: undefined });
+                    return;
+                }
+                if (event.state === 'starting')
+                    await retain({ ...operation, uncertain: event.effect });
+                else {
+                    if (operation.uncertain !== event.effect)
+                        throw fail('delivery');
+                    await retain({ ...operation, effects: [...operation.effects, event.effect], uncertain: undefined,
+                        ...(event.effect === 'tree' ? { preparedTree: event.sha } : { preparedCommit: event.sha }) });
+                }
+            };
+            const deliveryState = {
+                preparedCommit: operation.preparedCommit, pullRequestNumber: operation.pullRequestNumber,
+                effects: operation.effects.filter(effect => effect === 'branch' || effect === 'pull-request'),
+                uncertain: operation.uncertain,
+            };
+            try {
+                await this.ports.coordinator.execute({
+                    prepareCommit: () => writer.prepareCommit(observe, operation.preparedTree),
+                    branch: (commit, inspectOnly) => writer.branch(commit, inspectOnly),
+                    pullRequest: (commit, inspectOnly) => writer.pullRequest(commit, inspectOnly),
+                }, {
+                    active: () => this.ports.active(), revalidate: fresh, recovery: 'reviewed-create-if-absent',
+                    retain: async (state) => {
+                        if (state.preparedCommit !== undefined && state.preparedCommit !== operation.preparedCommit)
+                            throw fail('delivery');
+                        const uncertain = state.uncertain === 'prepared-objects'
+                            ? operation.preparedTree ? 'commit' : 'tree' : state.uncertain;
+                        await retain({ ...operation, uncertain, pullRequestNumber: state.pullRequestNumber,
+                            effects: [...operation.effects.filter(effect => effect === 'tree' || effect === 'commit'), ...state.effects] });
+                    },
+                }, deliveryState);
+                await retain({ ...operation, status: 'waiting-for-merge' });
+                return operation;
+            }
+            catch (error) {
+                if (journalFailed)
+                    throw fail('journal');
+                const stoppedBy = error.reason;
+                const reason = stoppedBy === 'cancelled' || stoppedBy === 'drift' && !this.ports.active()
+                    ? 'cancelled' : stoppedBy === 'drift' ? 'stale' : 'delivery';
+                await retain({ ...operation, status: operation.effects.length || operation.uncertain ? 'partial'
+                        : reason === 'cancelled' ? 'cancelled' : 'blocked' });
+                throw fail(reason);
+            }
+        }
+        catch (error) {
+            if (error instanceof SetupPublisherApplyError)
+                throw error;
+            throw fail(!this.ports.active() ? 'cancelled' : error instanceof setup_installation_delivery_ports_1.SetupInstallationSnapshotChanged ? 'stale' : 'delivery');
+        }
+        finally {
+            await journal(release);
+        }
+    }
+}
+exports.ApplySetupPublisherUseCase = ApplySetupPublisherUseCase;
+function initialOperation(plan) {
+    return (0, setup_publisher_installation_policy_1.parseSetupPublisherOperation)({ schemaVersion: 2, purpose: plan.purpose, operationId: plan.operationId,
+        repositoryId: plan.target.id, repository: `${plan.target.owner}/${plan.target.name}`,
+        defaultBranch: plan.target.defaultBranch, baseSha: plan.target.baseSha, sourceCommit: plan.sourceCommit,
+        planDigest: plan.digest, approvalDigest: plan.approvalDigest, actorId: plan.actorId, status: 'ready', effects: [] });
 }
 
 
@@ -78176,6 +79213,110 @@ class ConfigureSetupBatchTargetUseCase {
     }
 }
 exports.ConfigureSetupBatchTargetUseCase = ConfigureSetupBatchTargetUseCase;
+
+
+/***/ }),
+
+/***/ 32789:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeliverSetupInstallationUseCase = exports.SetupInstallationDeliveryError = void 0;
+const setup_installation_delivery_ports_1 = __nccwpck_require__(10308);
+class SetupInstallationDeliveryError extends Error {
+    constructor(reason, retained) {
+        super(`Setup file delivery stopped: ${reason}. Inspect the retained operation before resuming.`);
+        this.reason = reason;
+        this.retained = retained;
+    }
+}
+exports.SetupInstallationDeliveryError = SetupInstallationDeliveryError;
+/** Common prepare/ref/PR coordinator; no configuration, resource stages or provider DTOs. */
+class DeliverSetupInstallationUseCase {
+    async execute(commands, control, initial) {
+        let state = { ...initial, effects: [...initial.effects] };
+        const retain = async (next) => {
+            state = next;
+            await control.retain(state);
+        };
+        const active = () => {
+            if (!control.active())
+                throw new SetupInstallationDeliveryError('cancelled', state);
+        };
+        const fresh = async () => {
+            active();
+            if (!await control.revalidate())
+                throw new SetupInstallationDeliveryError('drift', state);
+            active();
+        };
+        try {
+            // An unknown Git-object POST cannot be discovered safely by guessing its ID.
+            if (state.uncertain === 'prepared-objects')
+                throw new SetupInstallationDeliveryError('uncertain-preparation', state);
+            if (!state.preparedCommit) {
+                await fresh();
+                await retain({ ...state, uncertain: 'prepared-objects' });
+                if (!control.active()) {
+                    // This owner has not invoked an object command. Persist that proof
+                    // before allowing reviewed recovery; a failed save keeps uncertainty.
+                    const notStarted = { ...state, uncertain: undefined };
+                    await control.retain(notStarted);
+                    state = notStarted;
+                    throw new SetupInstallationDeliveryError('cancelled', state);
+                }
+                let treeCreated = false;
+                const commit = await commands.prepareCommit(async (event) => {
+                    if (event.effect === 'tree' && event.state === 'completed')
+                        treeCreated = true;
+                    // Legacy batch journals cannot retain a tree ID. A known tree without
+                    // a commit remains uncertain; only proof of no object POST clears it.
+                    if (event.effect === 'tree' && event.state === 'not-started' && !treeCreated) {
+                        await retain({ ...state, uncertain: undefined });
+                    }
+                    if (event.effect === 'commit' && event.state === 'completed') {
+                        if (!/^[a-f0-9]{40}$/u.test(event.sha))
+                            throw new SetupInstallationDeliveryError('provider', state);
+                        await retain({ ...state, preparedCommit: event.sha, uncertain: undefined });
+                    }
+                });
+                if (!/^[a-f0-9]{40}$/u.test(commit))
+                    throw new SetupInstallationDeliveryError('provider', state);
+                await retain({ ...state, preparedCommit: commit, uncertain: undefined });
+            }
+            const commit = state.preparedCommit;
+            const effect = async (name, work) => {
+                if (state.effects.includes(name))
+                    return;
+                await fresh();
+                const inspectOnly = state.uncertain === name && control.recovery !== 'reviewed-create-if-absent';
+                await retain({ ...state, uncertain: name });
+                active();
+                await work(inspectOnly);
+                await retain({ ...state, effects: [...state.effects, name], uncertain: undefined });
+            };
+            await effect('branch', inspectOnly => commands.branch(commit, inspectOnly));
+            await effect('pull-request', async (inspectOnly) => {
+                const number = await commands.pullRequest(commit, inspectOnly);
+                if (!Number.isSafeInteger(number) || number <= 0)
+                    throw new SetupInstallationDeliveryError('provider', state);
+                state = { ...state, pullRequestNumber: number };
+            });
+            return state;
+        }
+        catch (error) {
+            if (error instanceof SetupInstallationDeliveryError)
+                throw error;
+            if (error instanceof setup_installation_delivery_ports_1.SetupInstallationDeliveryCancelled)
+                throw new SetupInstallationDeliveryError('cancelled', state);
+            if (error instanceof setup_installation_delivery_ports_1.SetupInstallationSnapshotChanged)
+                throw new SetupInstallationDeliveryError('drift', state);
+            throw new SetupInstallationDeliveryError('provider', state);
+        }
+    }
+}
+exports.DeliverSetupInstallationUseCase = DeliverSetupInstallationUseCase;
 
 
 /***/ }),
@@ -78628,6 +79769,66 @@ var setup_questionnaire_controller_1 = __nccwpck_require__(41644);
 Object.defineProperty(exports, "SetupQuestionnaireController", ({ enumerable: true, get: function () { return setup_questionnaire_controller_1.SetupQuestionnaireController; } }));
 var setup_credentials_use_case_1 = __nccwpck_require__(67438);
 Object.defineProperty(exports, "SetupCredentialsUseCase", ({ enumerable: true, get: function () { return setup_credentials_use_case_1.SetupCredentialsUseCase; } }));
+
+
+/***/ }),
+
+/***/ 58453:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.InstallSetupPublisherUseCase = exports.SetupPublisherInstallationError = void 0;
+const setup_batch_policy_1 = __nccwpck_require__(52214);
+const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
+class SetupPublisherInstallationError extends Error {
+    constructor(reason) {
+        super(`Publisher installation stopped: ${reason}. Inspect the retained operation and prepare a fresh review.`);
+        this.reason = reason;
+    }
+}
+exports.SetupPublisherInstallationError = SetupPublisherInstallationError;
+/** Load and disclose retained effects before fresh review; no approval inferred from storage. */
+class InstallSetupPublisherUseCase {
+    constructor(review, apply, journal) {
+        this.review = review;
+        this.apply = apply;
+        this.journal = journal;
+    }
+    async execute(input) {
+        const { operationId, dryRun, resume } = input;
+        const proposal = (() => {
+            try {
+                (0, setup_batch_policy_1.setupBatchBranch)(operationId);
+                if (typeof dryRun !== 'boolean' || typeof resume !== 'boolean')
+                    throw new SetupPublisherInstallationError('invalid');
+                return (0, setup_publisher_installation_policy_1.parseSetupPublisherProposal)(input.proposal);
+            }
+            catch {
+                throw new SetupPublisherInstallationError('invalid');
+            }
+        })();
+        const retained = await (async () => {
+            try {
+                const value = await this.journal.load(operationId);
+                if (value === undefined)
+                    return undefined;
+                const operation = (0, setup_publisher_installation_policy_1.parseSetupPublisherOperation)(value);
+                return Object.freeze({ ...operation, effects: Object.freeze([...operation.effects]) });
+            }
+            catch {
+                throw new SetupPublisherInstallationError('journal');
+            }
+        })();
+        if (resume && !retained)
+            throw new SetupPublisherInstallationError('resume-missing');
+        if (!resume && retained)
+            throw new SetupPublisherInstallationError('resume-required');
+        return this.review.execute({ proposal, operationId, dryRun, reviewedOperation: retained }, (plan, session, fresh) => this.apply.execute(plan, session, fresh, retained));
+    }
+}
+exports.InstallSetupPublisherUseCase = InstallSetupPublisherUseCase;
 
 
 /***/ }),
@@ -79219,6 +80420,135 @@ class ResolveSetupWorkflowPatConflictUseCase {
     }
 }
 exports.ResolveSetupWorkflowPatConflictUseCase = ResolveSetupWorkflowPatConflictUseCase;
+
+
+/***/ }),
+
+/***/ 13466:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReviewSetupPublisherUseCase = exports.SetupPublisherReviewError = void 0;
+const setup_batch_policy_1 = __nccwpck_require__(52214);
+const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
+const setup_publisher_plan_policy_1 = __nccwpck_require__(75733);
+class SetupPublisherReviewError extends Error {
+    constructor(reason) {
+        super(`Publisher review stopped: ${reason}. Prepare and review a fresh snapshot before applying.`);
+        this.reason = reason;
+    }
+}
+exports.SetupPublisherReviewError = SetupPublisherReviewError;
+/** Fresh review admission only. Shared delivery owns effects and durable recovery. */
+class ReviewSetupPublisherUseCase {
+    constructor(ports) {
+        this.ports = ports;
+    }
+    async execute(input, apply) {
+        const { operationId, dryRun } = input;
+        const proposal = (() => {
+            try {
+                (0, setup_batch_policy_1.setupBatchBranch)(operationId);
+                return (0, setup_publisher_installation_policy_1.parseSetupPublisherProposal)(input.proposal);
+            }
+            catch {
+                throw new SetupPublisherReviewError('invalid');
+            }
+        })();
+        const retained = input.reviewedOperation === undefined ? undefined : (() => {
+            try {
+                const operation = (0, setup_publisher_installation_policy_1.parseSetupPublisherOperation)(input.reviewedOperation);
+                return Object.freeze({ ...operation, effects: Object.freeze([...operation.effects]) });
+            }
+            catch {
+                throw new SetupPublisherReviewError('invalid');
+            }
+        })();
+        if (!this.ports.active())
+            throw new SetupPublisherReviewError('cancelled');
+        const inspect = async () => {
+            try {
+                const snapshot = await this.ports.inspect(proposal);
+                if (snapshot.session === null || typeof snapshot.session !== 'object')
+                    throw new SetupPublisherReviewError('unavailable');
+                return snapshot;
+            }
+            catch {
+                throw new SetupPublisherReviewError(this.ports.active() ? 'unavailable' : 'cancelled');
+            }
+        };
+        const snapshot = await inspect();
+        if (!this.ports.active())
+            throw new SetupPublisherReviewError('cancelled');
+        const session = snapshot.session;
+        const plan = (0, setup_publisher_plan_policy_1.planSetupPublisherInstallation)(proposal, snapshot.inspection, operationId);
+        if (retained && !(0, setup_publisher_installation_policy_1.setupPublisherOperationMatchesPlan)(retained, plan))
+            throw new SetupPublisherReviewError('stale');
+        try {
+            if (retained)
+                await this.ports.present(plan, retained);
+            else
+                await this.ports.present(plan);
+        }
+        catch {
+            throw new SetupPublisherReviewError('presentation');
+        }
+        if (!this.ports.active())
+            return { plan, stage: 'cancelled' };
+        if (plan.status === 'unchanged')
+            return { plan, stage: 'unchanged' };
+        if (dryRun)
+            return { plan, stage: 'dry-run' };
+        if (!this.ports.active())
+            return { plan, stage: 'cancelled' };
+        let answer;
+        try {
+            answer = await this.ports.confirm(plan);
+        }
+        catch {
+            throw new SetupPublisherReviewError('presentation');
+        }
+        if (answer !== 'approve')
+            return { plan, stage: answer === 'decline' ? 'declined' : 'cancelled' };
+        if (!this.ports.active())
+            return { plan, stage: 'cancelled' };
+        let live = true;
+        const revalidate = async () => {
+            if (!live || !this.ports.active()) {
+                live = false;
+                return false;
+            }
+            try {
+                const next = await inspect();
+                if (next.session !== session) {
+                    live = false;
+                    return false;
+                }
+                const current = (0, setup_publisher_plan_policy_1.planSetupPublisherInstallation)(proposal, next.inspection, operationId);
+                const matches = live && this.ports.active() && current.status === 'review'
+                    && current.digest === plan.digest && current.approvalDigest === plan.approvalDigest;
+                if (!matches)
+                    live = false;
+                return matches;
+            }
+            catch {
+                live = false;
+                return false;
+            }
+        };
+        try {
+            if (!await revalidate())
+                throw new SetupPublisherReviewError(this.ports.active() ? 'stale' : 'cancelled');
+            return { plan, stage: 'apply', result: await apply(plan, session, revalidate) };
+        }
+        finally {
+            live = false;
+        }
+    }
+}
+exports.ReviewSetupPublisherUseCase = ReviewSetupPublisherUseCase;
 
 
 /***/ }),
@@ -90875,6 +92205,11 @@ function createCliProgram(updateChecker = (0, cli_update_check_composition_root_
         .description('GitHub workflow automation and repository management CLI')
         .version(installedVersion, '-V, --version', 'Display the installed Copilot version');
     program.hook('preAction', async (_thisCommand, actionCommand) => {
+        // Publisher admission must precede every provider read, including update discovery.
+        const publisherSource = actionCommand.getOptionValueSource('publisherManifest');
+        if (actionCommand.name() === 'setup' && (actionCommand.opts().publisherManifest !== undefined
+            || publisherSource !== undefined && publisherSource !== 'default'))
+            return;
         if ((0, cli_update_check_policy_1.isUpdateCheckDisabled)() || !(0, cli_update_check_policy_1.shouldCheckForUpdates)(actionCommand.name()))
             return;
         await (0, cli_update_notification_1.notifyAboutCliUpdate)(updateChecker, installedVersion);
@@ -91837,7 +93172,8 @@ function registerSetupCommand(program) {
         .option('--non-interactive', 'Use defaults and config-file values without prompting', false)
         .option('--web', 'Run the optional local browser setup assistant (127.0.0.1 only)', false)
         .option('--batch', 'Interactively select 1–25 repositories in one organization and create reviewed setup PRs', false)
-        .option('--resume-operation <id>', 'Review and resume an existing batch operation from its private local receipt')
+        .option('--publisher-manifest <path>', 'Review one Bugbot publisher proposal and deliver its approved two-file installation PR')
+        .option('--resume-operation <id>', 'Review an existing batch operation, or publisher operation with --publisher-manifest, from its private receipt')
         .option('--yes', 'Apply the plan without the final confirmation prompt', false)
         .option('--confirm-unverifiable-write-permissions', 'Deprecated: rejected because manual confirmation cannot prove PAT Write access', false)
         .option('--dry-run', 'Show the setup plan without changing files or GitHub', false)
@@ -91860,10 +93196,43 @@ function registerSetupCommand(program) {
 /***/ }),
 
 /***/ 51293:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.executeSetupCommand = executeSetupCommand;
 const setup_runner_composition_root_1 = __nccwpck_require__(80035);
@@ -91916,7 +93285,17 @@ const setup_batch_policy_1 = __nccwpck_require__(52214);
 const setup_token_permission_policy_2 = __nccwpck_require__(99590);
 const setup_token_permission_policy_3 = __nccwpck_require__(99590);
 const setup_configuration_policy_2 = __nccwpck_require__(56637);
-async function executeSetupCommand(options) {
+async function executeSetupCommand(options, command) {
+    const publisherSource = command?.getOptionValueSource('publisherManifest');
+    if (options.publisherManifest !== undefined || publisherSource !== undefined && publisherSource !== 'default'
+        || !command && Object.prototype.hasOwnProperty.call(options, 'publisherManifest')) {
+        const { executeSetupPublisherCommand } = await Promise.resolve().then(() => __importStar(__nccwpck_require__(58555)));
+        const keys = new Set([...Object.keys(options), ...Object.keys(command?.opts() ?? {})]);
+        const explicitOptions = [...keys].filter(key => command?.getOptionValueSource(key) === 'cli');
+        await executeSetupPublisherCommand({ proposalPath: options.publisherManifest, explicitOptions,
+            token: options.token, dryRun: Boolean(options.dryRun), resumeOperation: options.resumeOperation });
+        return;
+    }
     const terminal = options.nonInteractive || options.web ? undefined : (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
     const webBridge = options.web ? new web_setup_bridge_1.WebSetupBridge('Resolving repository…') : undefined;
     let webServer;
@@ -92731,7 +94110,7 @@ async function executeSetupBatch(input) {
                 input.bridge?.setBatch((0, setup_batch_view_policy_1.buildSetupBatchView)(currentPlan, operation, 'applying', retryRemaining));
             (0, logger_1.logInfo)(operation.targets.map(target => `${target.repository}: ${target.status}`).join(' · '));
         }, };
-    const apply = new apply_setup_batch_use_case_1.ApplySetupBatchUseCase({ writer: composition.writer, journal: composition.journal,
+    const apply = new apply_setup_batch_use_case_1.ApplySetupBatchUseCase({ coordinator: composition.coordinator, writer: composition.writer, journal: composition.journal,
         presentation: { active: approved, progress: operation => presentation.progress(operation), review: async () => approved() } });
     const session = new setup_batch_session_use_case_1.SetupBatchSessionUseCase({ selection, prepare, writer: composition.writer, journal: composition.journal,
         sessionActive: alive, planning: () => input.present('plan'),
@@ -94314,6 +95693,335 @@ function renderRepositoryInventory(names, access) {
 }
 function stripAnsi(value) {
     return value.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g'), '');
+}
+
+
+/***/ }),
+
+/***/ 58555:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.executeSetupPublisherCommand = executeSetupPublisherCommand;
+const node_crypto_1 = __nccwpck_require__(6005);
+const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
+const setup_batch_policy_1 = __nccwpck_require__(52214);
+const setup_token_value_policy_1 = __nccwpck_require__(51974);
+const setup_publisher_message_catalog_1 = __nccwpck_require__(79229);
+const apply_setup_publisher_use_case_1 = __nccwpck_require__(64303);
+const review_setup_publisher_use_case_1 = __nccwpck_require__(13466);
+const install_setup_publisher_use_case_1 = __nccwpck_require__(58453);
+const setup_publisher_plan_policy_1 = __nccwpck_require__(75733);
+const setup_publisher_installation_composition_root_1 = __nccwpck_require__(79795);
+const setup_publisher_credentials_1 = __nccwpck_require__(33237);
+const setup_batch_github_read_adapter_1 = __nccwpck_require__(9703);
+const setup_terminal_driver_1 = __nccwpck_require__(43448);
+const setup_publisher_proposal_file_1 = __nccwpck_require__(24528);
+const setup_publisher_installation_presenter_1 = __nccwpck_require__(90983);
+class PublisherCommandError extends Error {
+    constructor(reason) {
+        super(reason);
+        this.reason = reason;
+    }
+}
+/** Explicit publisher CLI only. No local Git discovery, generic config, resource probes or web setup. */
+async function executeSetupPublisherCommand(input) {
+    const { proposalPath, dryRun, resumeOperation, token: providedToken } = input;
+    const explicitOptions = [...input.explicitOptions];
+    const catalog = (0, setup_publisher_message_catalog_1.resolveStaticSetupPublisherCatalog)((0, setup_publisher_message_catalog_1.setupPublisherEnvironmentLocale)(process.env));
+    const write = (text) => process.stdout.write(text);
+    const presenter = new setup_publisher_installation_presenter_1.SetupPublisherInstallationPresenter(catalog, write);
+    let installation;
+    const operationLocation = async (id) => {
+        try {
+            return await installation?.operationLocation?.(id);
+        }
+        catch {
+            return undefined;
+        }
+    };
+    let terminal, active = true;
+    const stop = () => { active = false; terminal?.close(); };
+    try {
+        try {
+            (0, setup_publisher_installation_policy_1.assertSetupPublisherOptions)(explicitOptions);
+        }
+        catch {
+            throw new PublisherCommandError('invalid');
+        }
+        if (typeof proposalPath !== 'string' || !proposalPath || typeof dryRun !== 'boolean')
+            throw new PublisherCommandError('invalid');
+        const proposal = (0, setup_publisher_proposal_file_1.readSetupPublisherProposalFile)(proposalPath);
+        const resume = explicitOptions.includes('resumeOperation');
+        const operationId = resume ? resumeOperation : (0, node_crypto_1.randomUUID)();
+        if (typeof operationId !== 'string')
+            throw new PublisherCommandError('invalid');
+        try {
+            (0, setup_batch_policy_1.setupBatchBranch)(operationId);
+        }
+        catch {
+            throw new PublisherCommandError('invalid');
+        }
+        terminal = (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
+        if (!dryRun && !terminal)
+            throw new PublisherCommandError('interactiveRequired');
+        let token = explicitOptions.includes('token') ? providedToken : process.env.PERSONAL_ACCESS_TOKEN;
+        // An explicit invalid/empty override never falls back to another credential.
+        if (explicitOptions.includes('token') && (typeof token !== 'string' || !(0, setup_token_value_policy_1.isSetupTokenValueValid)(token)))
+            throw new PublisherCommandError('tokenRequired');
+        if (token === undefined || token === '') {
+            if (!terminal)
+                throw new PublisherCommandError('tokenRequired');
+            const entered = await terminal.readSecret(catalog.message('tokenPrompt'));
+            if (entered.kind !== 'value') {
+                process.exitCode = 130;
+                write(catalog.message('cancelled') + '\n');
+                return;
+            }
+            token = entered.value;
+        }
+        if (typeof token !== 'string' || !(0, setup_token_value_policy_1.isSetupTokenValueValid)(token))
+            throw new PublisherCommandError('tokenRequired');
+        token = token.trim();
+        process.on('SIGINT', stop);
+        write(catalog.message('inspecting') + '\n');
+        installation = (0, setup_publisher_installation_composition_root_1.createSetupPublisherInstallationCompositionRoot)(token, {
+            present: async (plan, retained) => presenter.preview(plan, retained, retained ? await operationLocation(retained.operationId) : undefined),
+            active: () => active,
+            confirm: async () => {
+                const answer = await terminal.readText(catalog.message('confirm', { approve: catalog.message('approve'), decline: catalog.message('decline') }));
+                if (answer.kind !== 'value') {
+                    active = false;
+                    return 'cancel';
+                }
+                if (answer.value.trim() === catalog.message('approve')) {
+                    write(catalog.message('applying') + '\n');
+                    return 'approve';
+                }
+                return answer.value.trim() === catalog.message('decline') ? 'decline' : 'cancel';
+            },
+        }, catalog.locale);
+        token = undefined;
+        const result = await installation.execute({ proposal, operationId, dryRun, resume });
+        if (result.stage === 'cancelled')
+            process.exitCode = 130;
+        if (result.stage === 'apply')
+            presenter.delivered(result.result, await operationLocation(result.result.operationId));
+        else
+            write(catalog.message(result.stage === 'dry-run' ? 'dryRun' : result.stage === 'unchanged' ? 'unchanged'
+                : result.stage === 'declined' ? 'declined' : 'cancelled') + '\n');
+    }
+    catch (error) {
+        let message = 'blocked';
+        if (error instanceof PublisherCommandError)
+            message = error.reason;
+        else if (error instanceof setup_publisher_proposal_file_1.SetupPublisherProposalFileError)
+            message = 'invalid';
+        else if (error instanceof setup_publisher_credentials_1.SetupPublisherCredentialError)
+            message = 'tokenRequired';
+        else if (error instanceof setup_publisher_plan_policy_1.SetupPublisherPlanError)
+            message = error.reason === 'destination-changed' ? 'stale'
+                : error.reason === 'authority-unverified' ? 'authority' : error.reason === 'source-unverified' ? 'sourceUnverified' : 'unsupported';
+        else if (error instanceof review_setup_publisher_use_case_1.SetupPublisherReviewError)
+            message = error.reason === 'cancelled' ? 'cancelled' : error.reason === 'stale' ? 'stale' : 'blocked';
+        else if (error instanceof apply_setup_publisher_use_case_1.SetupPublisherApplyError)
+            message = error.reason === 'cancelled' ? 'cancelled' : error.reason === 'stale' ? 'stale' : 'blocked';
+        else if (error instanceof install_setup_publisher_use_case_1.SetupPublisherInstallationError)
+            message = error.reason === 'resume-missing' ? 'resumeMissing'
+                : error.reason === 'resume-required' ? 'resumeRequired' : error.reason === 'invalid' ? 'invalid' : 'blocked';
+        else if (error instanceof setup_batch_github_read_adapter_1.SetupBatchProviderError && error.code === 'forbidden')
+            message = 'authority';
+        write(catalog.message(message) + '\n');
+        if (error instanceof apply_setup_publisher_use_case_1.SetupPublisherApplyError)
+            presenter.operation(error.retained, error.reason === 'journal', await operationLocation(error.retained.operationId));
+        process.exitCode = message === 'cancelled' ? 130 : 1;
+    }
+    finally {
+        process.off('SIGINT', stop);
+        terminal?.close();
+    }
+}
+
+
+/***/ }),
+
+/***/ 90983:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupPublisherInstallationPresenter = void 0;
+exports.setupPublisherInertText = setupPublisherInertText;
+const node_crypto_1 = __nccwpck_require__(6005);
+/** Preserve displayed data while preventing cursor, bidi and invisible-control execution. */
+function setupPublisherInertText(text) {
+    return text.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, character => character === '\n' ? '\n'
+        : character === '\r' ? '\\r' : character === '\t' ? '\\t' : `\\u{${character.codePointAt(0).toString(16)}}`);
+}
+class SetupPublisherInstallationPresenter {
+    constructor(catalog, write) {
+        this.catalog = catalog;
+        this.write = write;
+    }
+    line(text) { this.write(setupPublisherInertText(text) + '\n'); }
+    preview(plan, retained, recordLocation) {
+        const repository = `${plan.target.owner}/${plan.target.name}`;
+        this.line(this.catalog.message('title', { repository }));
+        this.line(this.catalog.message(plan.status === 'unchanged' ? 'unchanged' : 'preview'));
+        if (plan.status === 'review')
+            this.line(this.catalog.message('effects'));
+        if (retained)
+            this.operation(retained, false, recordLocation);
+        this.line(this.catalog.message('operation', { id: plan.operationId }));
+        this.line(this.catalog.message('target', { repository, branch: plan.target.defaultBranch, head: plan.target.baseSha }));
+        this.line(this.catalog.message('source', { commit: plan.sourceCommit }));
+        this.line(this.catalog.message('actor', { id: String(plan.actorId) }));
+        this.line(this.catalog.message('digest', { digest: plan.digest }));
+        for (const file of plan.files) {
+            this.line(this.catalog.message('file', { path: file.path, bytes: String(Buffer.byteLength(file.content, 'utf8')),
+                hash: (0, node_crypto_1.createHash)('sha256').update(file.content).digest('hex') }));
+            // Every data line has its own inert prefix; data cannot imitate a prompt.
+            for (const line of file.content.split('\n'))
+                this.write('  | ' + setupPublisherInertText(line) + '\n');
+        }
+        this.line(this.catalog.message('nativePending'));
+        this.line(this.catalog.message('production'));
+    }
+    operation(operation, journalUnconfirmed = false, recordLocation) {
+        this.line(this.catalog.message('operation', { id: operation.operationId }));
+        const location = this.localRecordLocation(recordLocation, operation.operationId);
+        if (location)
+            this.line(this.catalog.message('operationRecord', { url: location }));
+        if (operation.pullRequestNumber)
+            this.line(this.catalog.message('knownPullRequest', { url: `https://github.com/${operation.repository}/pull/${operation.pullRequestNumber}` }));
+        this.line(operation.effects.length ? this.catalog.message('retained', {
+            effects: operation.effects.map(effect => this.catalog.message(`effect.${effect}`)).join(', '),
+        }) : this.catalog.message('noEffects'));
+        if (operation.preparedTree)
+            this.line(this.catalog.message('object', { effect: this.catalog.message('effect.tree'), sha: operation.preparedTree }));
+        if (operation.preparedCommit)
+            this.line(this.catalog.message('object', { effect: this.catalog.message('effect.commit'), sha: operation.preparedCommit }));
+        if (operation.uncertain)
+            this.line(this.catalog.message('uncertain', { effect: this.catalog.message(`effect.${operation.uncertain}`) }));
+        if (journalUnconfirmed)
+            this.line(this.catalog.message('journalUnconfirmed'));
+        this.line(this.catalog.message('recovery'));
+    }
+    delivered(operation, recordLocation) {
+        this.operation(operation, false, recordLocation);
+        this.line(this.catalog.message('waitingMerge', {
+            url: `https://github.com/${operation.repository}/pull/${operation.pullRequestNumber}`,
+        }));
+        this.line(this.catalog.message('nextMerge'));
+        this.line(this.catalog.message('nativePending'));
+        this.line(this.catalog.message('production'));
+    }
+    localRecordLocation(value, operationId) {
+        if (!value || /[\p{Cc}\p{Cf}]/u.test(value))
+            return undefined;
+        try {
+            const url = new URL(value);
+            return url.protocol === 'file:' && !url.host && !url.search && !url.hash
+                && url.pathname.endsWith(`/${operationId}.json`) ? url.href : undefined;
+        }
+        catch {
+            return undefined;
+        }
+    }
+}
+exports.SetupPublisherInstallationPresenter = SetupPublisherInstallationPresenter;
+
+
+/***/ }),
+
+/***/ 24528:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupPublisherProposalFileError = void 0;
+exports.readSetupPublisherProposalFile = readSetupPublisherProposalFile;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_util_1 = __nccwpck_require__(47261);
+const setup_publisher_installation_1 = __nccwpck_require__(95417);
+const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
+class SetupPublisherProposalFileError extends Error {
+    constructor(reason) {
+        super('The publisher proposal could not be read safely. No installation was started.');
+        this.reason = reason;
+    }
+}
+exports.SetupPublisherProposalFileError = SetupPublisherProposalFileError;
+/** Read untrusted data before transport. This function grants no installation authority. */
+function readSetupPublisherProposalFile(path) {
+    try {
+        const initial = (0, node_fs_1.lstatSync)(path, { bigint: true });
+        if (!initial.isFile())
+            throw new SetupPublisherProposalFileError('not-regular');
+        if (initial.size > BigInt(setup_publisher_installation_1.SETUP_PUBLISHER_PROPOSAL_MAX_BYTES))
+            throw new SetupPublisherProposalFileError('too-large');
+        const fd = (0, node_fs_1.openSync)(path, node_fs_1.constants.O_RDONLY | (node_fs_1.constants.O_NOFOLLOW ?? 0) | (node_fs_1.constants.O_NONBLOCK ?? 0));
+        try {
+            return readOpenedProposal(path, initial, fd);
+        }
+        finally {
+            (0, node_fs_1.closeSync)(fd);
+        }
+    }
+    catch (error) {
+        if (error instanceof SetupPublisherProposalFileError)
+            throw error;
+        throw new SetupPublisherProposalFileError(error.code === 'ELOOP' ? 'not-regular' : 'unavailable');
+    }
+}
+function readOpenedProposal(path, initial, fd) {
+    const opened = (0, node_fs_1.fstatSync)(fd, { bigint: true });
+    // Some platforms lack O_NOFOLLOW. Never read proposal bytes until the
+    // opened descriptor and a second lstat both identify the original file.
+    if (!sameFile(initial, opened) || !sameFile(initial, (0, node_fs_1.lstatSync)(path, { bigint: true }))) {
+        throw new SetupPublisherProposalFileError('changed');
+    }
+    const bytes = Buffer.alloc(setup_publisher_installation_1.SETUP_PUBLISHER_PROPOSAL_MAX_BYTES + 1);
+    let size = 0;
+    while (size < bytes.length) {
+        const count = (0, node_fs_1.readSync)(fd, bytes, size, bytes.length - size, size);
+        if (count === 0)
+            break;
+        size += count;
+    }
+    if (size > setup_publisher_installation_1.SETUP_PUBLISHER_PROPOSAL_MAX_BYTES)
+        throw new SetupPublisherProposalFileError('too-large');
+    if (!sameFile(opened, (0, node_fs_1.fstatSync)(fd, { bigint: true })) || !sameFile(opened, (0, node_fs_1.lstatSync)(path, { bigint: true }))) {
+        throw new SetupPublisherProposalFileError('changed');
+    }
+    let text;
+    try {
+        text = new node_util_1.TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes.subarray(0, size));
+    }
+    catch {
+        throw new SetupPublisherProposalFileError('invalid-utf8');
+    }
+    let proposal;
+    try {
+        proposal = JSON.parse(text);
+    }
+    catch {
+        throw new SetupPublisherProposalFileError('invalid-json');
+    }
+    try {
+        return (0, setup_publisher_installation_policy_1.parseSetupPublisherProposal)(proposal);
+    }
+    catch {
+        throw new SetupPublisherProposalFileError('unsupported');
+    }
+}
+function sameFile(expected, observed) {
+    return observed.isFile() && expected.dev === observed.dev && expected.ino === observed.ino && expected.size === observed.size
+        && expected.mtimeNs === observed.mtimeNs && expected.ctimeNs === observed.ctimeNs;
 }
 
 
@@ -112149,16 +113857,25 @@ function branchIsReady(input) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.distinctIssueWorkflowHeadings = distinctIssueWorkflowHeadings;
 exports.readIssueWorkflowFields = readIssueWorkflowFields;
 const markdown_visibility_1 = __nccwpck_require__(43591);
+function headingPattern(heading) {
+    const escaped = heading.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    return new RegExp(`^#{1,6}[ \t]+${escaped}[ \t]*$`, 'iu');
+}
+/** A single structural heading must never satisfy two configured roles. */
+function distinctIssueWorkflowHeadings(headings) {
+    const patterns = headings.map(headingPattern);
+    return headings.every((heading, index) => headings.slice(0, index).every((other, otherIndex) => !patterns[otherIndex].test('## ' + heading) && !patterns[index].test('## ' + other)));
+}
 /** Examples and hidden comments cannot supply or duplicate structural form headings. */
 function readIssueWorkflowFields(body, headings) {
     const { structural, uncommented } = (0, markdown_visibility_1.projectMarkdownVisibility)(body);
     const sections = structural.map((line, index) => ({ line, index })).filter(({ line }) => /^#{1,6}[ \t]+/u.test(line));
     return Object.freeze(headings.map(heading => {
-        const escaped = heading.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-        const headingPattern = new RegExp(`^#{1,6}[ \t]+${escaped}[ \t]*$`, 'iu');
-        const matches = sections.filter(({ line }) => headingPattern.test(line));
+        const pattern = headingPattern(heading);
+        const matches = sections.filter(({ line }) => pattern.test(line));
         if (matches.length !== 1)
             return Object.freeze({ heading, count: matches.length, value: '' });
         const start = matches[0].index;
@@ -112230,7 +113947,7 @@ function issueWorkflowDiagnosticPresentation(facts) {
 /***/ }),
 
 /***/ 14945:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -112239,6 +113956,7 @@ exports.ISSUE_FIELD_HEADING_MAX_BYTES = void 0;
 exports.normalizeWorkflowFieldMappings = normalizeWorkflowFieldMappings;
 exports.isIssueFieldHeading = isIssueFieldHeading;
 exports.escapeIssueFieldHeadingMarkdown = escapeIssueFieldHeadingMarkdown;
+const issue_workflow_body_1 = __nccwpck_require__(99376);
 exports.ISSUE_FIELD_HEADING_MAX_BYTES = 128;
 /** One explicit replacement per canonical semantic field; never guesses an alias from an issue body. */
 function normalizeWorkflowFieldMappings(value, definitions, enabled) {
@@ -112264,8 +113982,8 @@ function normalizeWorkflowFieldMappings(value, definitions, enabled) {
             return [heading, target];
         });
         const mapped = Object.fromEntries(entries);
-        const effective = headings.map(heading => (mapped[heading] ?? heading).toLowerCase());
-        if (new Set(effective).size !== effective.length)
+        const effective = headings.map(heading => mapped[heading] ?? heading);
+        if (!(0, issue_workflow_body_1.distinctIssueWorkflowHeadings)(effective))
             throw new Error('Issue field mappings cannot make two semantic fields share a heading.');
         if (entries.length)
             mappings[kind] = Object.freeze(mapped);
@@ -116747,6 +118465,20 @@ exports.SETUP_CREDENTIAL_HEALTH_BINDINGS = {
     OPENCODE_API_KEY: { input: 'check_opencode', job: 'Verify OPENCODE_API_KEY' },
     CODEX_API_KEY: { input: 'check_codex_api_key', job: 'Verify CODEX_API_KEY' },
 };
+
+
+/***/ }),
+
+/***/ 95417:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_PUBLISHER_PROPOSAL_MAX_BYTES = exports.SETUP_PUBLISHER_PURPOSE = exports.SETUP_PUBLISHER_WORKFLOW_PATH = void 0;
+exports.SETUP_PUBLISHER_WORKFLOW_PATH = '.github/workflows/copilot_bugbot_status_card.yml';
+exports.SETUP_PUBLISHER_PURPOSE = 'bugbot-status-publisher';
+exports.SETUP_PUBLISHER_PROPOSAL_MAX_BYTES = 128 * 1024;
 
 
 /***/ }),
@@ -121414,6 +123146,7 @@ function createSddEvidenceQueryPort(binding, comments) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSetupBatchCompositionRoot = createSetupBatchCompositionRoot;
+const deliver_setup_installation_use_case_1 = __nccwpck_require__(32789);
 const octokit_client_resolver_1 = __nccwpck_require__(54047);
 const setup_batch_github_read_adapter_1 = __nccwpck_require__(9703);
 const setup_batch_github_apply_adapter_1 = __nccwpck_require__(51005);
@@ -121458,7 +123191,7 @@ function createSetupBatchCompositionRoot() {
                 throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
         },
     });
-    return { discovery: read, inventory: read, writer, renderer: new setup_batch_workspace_adapter_1.SetupBatchWorkspaceAdapter(), journal: new setup_batch_journal_adapter_1.SetupBatchJournalAdapter(), runnerDiscovery: (0, setup_runner_composition_root_1.createSetupRunnerDiscovery)() };
+    return { coordinator: new deliver_setup_installation_use_case_1.DeliverSetupInstallationUseCase(), discovery: read, inventory: read, writer, renderer: new setup_batch_workspace_adapter_1.SetupBatchWorkspaceAdapter(), journal: new setup_batch_journal_adapter_1.SetupBatchJournalAdapter(), runnerDiscovery: (0, setup_runner_composition_root_1.createSetupRunnerDiscovery)() };
 }
 
 
@@ -121534,6 +123267,53 @@ function createSetupDoctorUseCase() {
         approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
         catalogResolver,
     });
+}
+
+
+/***/ }),
+
+/***/ 79795:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSetupPublisherInstallationCompositionRoot = createSetupPublisherInstallationCompositionRoot;
+const deliver_setup_installation_use_case_1 = __nccwpck_require__(32789);
+const setup_batch_policy_1 = __nccwpck_require__(52214);
+const setup_publisher_message_catalog_1 = __nccwpck_require__(79229);
+const apply_setup_publisher_use_case_1 = __nccwpck_require__(64303);
+const install_setup_publisher_use_case_1 = __nccwpck_require__(58453);
+const review_setup_publisher_use_case_1 = __nccwpck_require__(13466);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
+const setup_batch_github_read_adapter_1 = __nccwpck_require__(9703);
+const setup_installation_github_delivery_adapter_1 = __nccwpck_require__(56184);
+const setup_publisher_credentials_1 = __nccwpck_require__(33237);
+const setup_publisher_github_read_adapter_1 = __nccwpck_require__(37713);
+const setup_publisher_journal_adapter_1 = __nccwpck_require__(3469);
+/** No Variables, Secret/grant inventories, label/type writers, probes or broad Setup renderer. */
+function createSetupPublisherInstallationCompositionRoot(token, presentation, locale = 'en-US') {
+    const catalog = (0, setup_publisher_message_catalog_1.resolveStaticSetupPublisherCatalog)(locale);
+    const credentials = new setup_publisher_credentials_1.SetupPublisherCredentials(token);
+    const transport = new setup_batch_github_read_adapter_1.SetupBatchGithubTransport({ getClient: value => (0, octokit_client_resolver_1.getOctokitClient)(value) });
+    const readTransport = new setup_batch_github_read_adapter_1.SetupBatchGithubTransport({ getClient: value => {
+            if (!presentation.active())
+                throw new Error('Publisher inspection cancelled.');
+            return (0, octokit_client_resolver_1.getOctokitClient)(value);
+        } });
+    const read = new setup_publisher_github_read_adapter_1.SetupPublisherGithubReadAdapter(readTransport, credentials), journal = new setup_publisher_journal_adapter_1.SetupPublisherJournalAdapter();
+    const review = new review_setup_publisher_use_case_1.ReviewSetupPublisherUseCase({ inspect: proposal => read.inspect(proposal),
+        present: (plan, retained) => presentation.present(plan, retained), confirm: plan => presentation.confirm(plan),
+        active: () => presentation.active() });
+    const apply = new apply_setup_publisher_use_case_1.ApplySetupPublisherUseCase({ coordinator: new deliver_setup_installation_use_case_1.DeliverSetupInstallationUseCase(), journal, active: () => presentation.active(),
+        delivery: (plan, session, fresh) => credentials.bind(session, value => new setup_installation_github_delivery_adapter_1.SetupInstallationGithubDeliveryAdapter(transport, { target: plan.target, operationId: plan.operationId, digest: plan.digest, files: plan.files,
+            title: catalog.message('prTitle'), body: [
+                catalog.message('prBody', { commit: plan.sourceCommit }),
+                (0, setup_batch_policy_1.setupBatchMarker)(plan.operationId, plan.target.id),
+            ].join('\n\n') }, value, fresh, () => presentation.active())) });
+    const installation = new install_setup_publisher_use_case_1.InstallSetupPublisherUseCase(review, apply, journal);
+    return Object.freeze({ execute: installation.execute.bind(installation),
+        operationLocation: (id) => journal.recordLocation(id) });
 }
 
 
@@ -124271,6 +126051,8 @@ const node_crypto_1 = __nccwpck_require__(6005);
 const setup_runner_1 = __nccwpck_require__(94301);
 const setup_runner_policy_1 = __nccwpck_require__(91027);
 const setup_runner_installation_summary_policy_1 = __nccwpck_require__(14706);
+const setup_installation_receipt_policy_1 = __nccwpck_require__(50362);
+const setup_installation_github_delivery_adapter_1 = __nccwpck_require__(56184);
 /** Reused shared resources have an additive access command only. No shared value or Secret writer is injected. */
 class SetupBatchGithubApplyAdapter {
     constructor(read, variableWriter, resources) {
@@ -124280,6 +126062,7 @@ class SetupBatchGithubApplyAdapter {
         // Same-process grants can advance a reviewed timestamp. Cross-process resume
         // never restores this cache: the session reconstructs and reviews a fresh plan
         // with current shared metadata before any audit or Apply (including access).
+        this.deliveryPlans = new WeakMap();
         this.ownAccessRevisions = new Map();
     }
     async revalidate(plan, token, completed) {
@@ -124377,130 +126160,61 @@ class SetupBatchGithubApplyAdapter {
     }
     labels(plan, token) { return this.resources.labels(plan, token); }
     issueTypes(plan, token) { return this.resources.issueTypes(plan, token); }
-    async prepareCommit(plan, operationId, token) {
-        if (!await this.revalidate(plan, token, []))
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
-        const coordinates = { owner: plan.target.owner, repo: plan.target.name };
-        const base = (0, setup_batch_github_read_adapter_1.batchObject)(await this.read.transport.call(token, 'GET /repos/{owner}/{repo}/git/commits/{commit_sha}', { ...coordinates, commit_sha: plan.target.baseSha }));
-        const baseTree = (0, setup_batch_github_read_adapter_1.batchObject)(base?.tree)?.sha;
-        if (!(0, setup_batch_github_read_adapter_1.batchSha)(baseTree))
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
-        const manifestPath = '.copilot/setup-manifest.json';
-        let manifest = plan.files.find(file => file.path === manifestPath)?.content;
-        if (!manifest)
-            manifest = (await this.read.files(plan.target, token)).find(file => file.path === manifestPath)?.content;
-        const parsed = manifest ? (0, setup_batch_github_read_adapter_1.batchObject)(JSON.parse(manifest)) : { schemaVersion: 2,
-            generator: { name: '@vypdev/copilot', contractVersion: 1 }, artifacts: {}, profileDigest: (0, node_crypto_1.createHash)('sha256').update('').digest('hex') };
-        if (!parsed)
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+    async prepareCommit(plan, operationId, token, observe, active = () => true) {
+        let delivery;
+        try {
+            if (!await this.revalidate(plan, token, []))
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+            delivery = await this.fileDelivery(plan, operationId, token, active);
+        }
+        catch (error) {
+            // These reads precede delegation, so neither Git-object POST can have started.
+            await observe?.({ effect: 'tree', state: 'not-started' });
+            throw error;
+        }
+        return delivery.prepareCommit(observe);
+    }
+    async branch(plan, operationId, commit, token, inspectOnly = false, active = () => true) {
+        return (await this.fileDelivery(plan, operationId, token, active)).branch(commit, inspectOnly);
+    }
+    async pullRequest(plan, operationId, commit, token, inspectOnly = false, active = () => true) {
+        return (await this.fileDelivery(plan, operationId, token, active)).pullRequest(commit, inspectOnly);
+    }
+    async fileDelivery(plan, operationId, token, active) {
         const installation = { schemaVersion: 1, operationId, repositoryId: plan.target.id, baseSha: plan.target.baseSha, planDigest: plan.digest };
         if (!(0, setup_batch_policy_1.isSetupBatchInstallationReceipt)(installation))
             throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
-        const files = [...plan.files.filter(file => file.path !== manifestPath), { path: manifestPath, content: `${JSON.stringify({ ...parsed, installation }, null, 2)}\n` }];
-        const tree = (0, setup_batch_github_read_adapter_1.batchObject)(await this.read.transport.call(token, 'POST /repos/{owner}/{repo}/git/trees', { ...coordinates, base_tree: baseTree,
-            tree: files.map(file => ({ path: file.path, type: 'blob', mode: '100644', ...(file.content === null ? { sha: null } : { content: file.content }) })) }));
-        if (!(0, setup_batch_github_read_adapter_1.batchSha)(tree?.sha))
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
-        const commit = (0, setup_batch_github_read_adapter_1.batchObject)(await this.read.transport.call(token, 'POST /repos/{owner}/{repo}/git/commits', { ...coordinates, tree: tree.sha,
-            parents: [plan.target.baseSha], message: `chore: configure Copilot (setup ${operationId})` }));
-        if (!(0, setup_batch_github_read_adapter_1.batchSha)(commit?.sha))
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
-        await this.assertPrepared(plan, operationId, commit.sha, token);
-        return commit.sha;
-    }
-    async branch(plan, operationId, commit, token) {
-        const ref = (0, setup_batch_policy_1.setupBatchBranch)(operationId);
-        await this.assertPrepared(plan, operationId, commit, token);
-        const current = await this.branchSha(plan, ref, token);
-        if (current) {
-            if (current !== commit)
-                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
-            return;
+        let byOperation = this.deliveryPlans.get(plan);
+        if (!byOperation) {
+            byOperation = new Map();
+            this.deliveryPlans.set(plan, byOperation);
         }
-        try {
-            await this.read.transport.call(token, 'POST /repos/{owner}/{repo}/git/refs', { owner: plan.target.owner, repo: plan.target.name, ref: `refs/heads/${ref}`, sha: commit });
-        }
-        catch { /* An uncertain create must be inspected, never retried blindly. */ }
-        if (await this.branchSha(plan, ref, token) !== commit)
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
-    }
-    async pullRequest(plan, operationId, commit, token) {
-        const branch = (0, setup_batch_policy_1.setupBatchBranch)(operationId);
-        if (await this.branchSha(plan, branch, token) !== commit)
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
-        await this.assertPrepared(plan, operationId, commit, token);
-        const inspect = async () => {
-            let match;
-            for (let page = 1; page <= 10; page += 1) {
-                const response = await this.read.transport.call(token, 'GET /repos/{owner}/{repo}/pulls', { owner: plan.target.owner, repo: plan.target.name, state: 'all', per_page: 100, page });
-                if (!Array.isArray(response) || response.length > 100)
-                    throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
-                for (const value of response) {
-                    const pull = (0, setup_batch_github_read_adapter_1.batchObject)(value);
-                    const head = (0, setup_batch_github_read_adapter_1.batchObject)(pull?.head);
-                    const base = (0, setup_batch_github_read_adapter_1.batchObject)(pull?.base);
-                    if (typeof head?.ref !== 'string' || !head.ref.startsWith('setup/copilot/'))
-                        continue;
-                    if (pull?.state !== 'open' && head.ref !== branch)
-                        continue;
-                    if (pull?.state !== 'open' || head.ref !== branch || head.sha !== commit || (0, setup_batch_github_read_adapter_1.batchObject)(head.repo)?.id !== plan.target.id
-                        || base?.ref !== plan.target.defaultBranch || typeof pull?.body !== 'string'
-                        || !pull.body.includes((0, setup_batch_policy_1.setupBatchMarker)(operationId, plan.target.id)) || !(0, setup_batch_github_read_adapter_1.batchPositive)(pull.number) || match !== undefined)
-                        throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
-                    match = pull.number;
-                }
-                if (response.length < 100)
-                    return match;
+        let snapshot = byOperation.get(operationId);
+        if (!snapshot) {
+            const manifestPath = '.copilot/setup-manifest.json';
+            let manifest = plan.files.find(file => file.path === manifestPath)?.content;
+            if (!manifest)
+                manifest = (await this.read.files(plan.target, token)).find(file => file.path === manifestPath)?.content;
+            let parsed;
+            try {
+                parsed = manifest ? (0, setup_batch_github_read_adapter_1.batchObject)(JSON.parse(manifest)) : { schemaVersion: 2,
+                    generator: { name: '@vypdev/copilot', contractVersion: 1 }, artifacts: {}, profileDigest: (0, node_crypto_1.createHash)('sha256').update('').digest('hex') };
             }
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
-        };
-        const existing = await inspect();
-        if (existing)
-            return existing;
-        try {
-            await this.read.transport.call(token, 'POST /repos/{owner}/{repo}/pulls', { owner: plan.target.owner, repo: plan.target.name,
-                head: branch, base: plan.target.defaultBranch, title: 'chore: configure Copilot',
-                body: `${(0, setup_batch_policy_1.setupBatchMarker)(operationId, plan.target.id)}\n\nConfigure Copilot using the reviewed setup plan. Shared Secret values are retained.\n\n**Status:** PR created; installation awaits human review and merge. Runtime credential and capability verification remain pending.\n\nReview the generated workflows, repository guidance and configuration before merging. Setup never merges, releases or deploys this PR.${(0, setup_runner_installation_summary_policy_1.setupRunnerInstallationSummary)(plan)}` });
+            catch {
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            }
+            if (!parsed)
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            snapshot = { target: plan.target, operationId, digest: plan.digest,
+                files: (0, setup_installation_receipt_policy_1.setupInstallationFiles)(plan.files, parsed, installation), title: 'chore: configure Copilot',
+                body: `${(0, setup_batch_policy_1.setupBatchMarker)(operationId, plan.target.id)}\n\nConfigure Copilot using the reviewed setup plan. Shared Secret values are retained.\n\n**Status:** PR created; installation awaits human review and merge. Runtime credential and capability verification remain pending.\n\nReview the generated workflows, repository guidance and configuration before merging. Setup never merges, releases or deploys this PR.${(0, setup_runner_installation_summary_policy_1.setupRunnerInstallationSummary)(plan)}` };
+            byOperation.set(operationId, snapshot);
         }
-        catch { /* Inspect the durable marker after any uncertain create response. */ }
-        const number = await inspect();
-        if (!number)
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
-        return number;
+        return new setup_installation_github_delivery_adapter_1.SetupInstallationGithubDeliveryAdapter(this.read.transport, snapshot, token, () => this.revalidate(plan, token, ['access', 'variables', 'labels', 'issue-types']), active);
     }
     sharedRevision(organization, resource) {
         const own = this.ownAccessRevisions.get(`${organization}/${resource.kind}/${resource.name}`);
         return own?.before === resource.updatedAt ? own.after : resource.updatedAt;
-    }
-    async branchSha(plan, branch, token) {
-        try {
-            const value = (0, setup_batch_github_read_adapter_1.batchObject)(await this.read.transport.call(token, 'GET /repos/{owner}/{repo}/git/ref/{ref}', { owner: plan.target.owner, repo: plan.target.name, ref: `heads/${branch}` }));
-            const sha = (0, setup_batch_github_read_adapter_1.batchObject)(value?.object)?.sha;
-            if (!(0, setup_batch_github_read_adapter_1.batchSha)(sha))
-                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
-            return sha;
-        }
-        catch (error) {
-            if (error instanceof setup_batch_github_read_adapter_1.SetupBatchProviderError && error.code === 'not-found')
-                return undefined;
-            throw error;
-        }
-    }
-    async assertPrepared(plan, operationId, commit, token) {
-        if (!(0, setup_batch_github_read_adapter_1.batchSha)(commit))
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
-        const parameters = { owner: plan.target.owner, repo: plan.target.name };
-        const response = (0, setup_batch_github_read_adapter_1.batchObject)(await this.read.transport.call(token, 'GET /repos/{owner}/{repo}/git/commits/{commit_sha}', { ...parameters, commit_sha: commit }));
-        if (!Array.isArray(response?.parents) || response.parents.length !== 1 || (0, setup_batch_github_read_adapter_1.batchObject)(response.parents[0])?.sha !== plan.target.baseSha)
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
-        const content = (0, setup_batch_github_read_adapter_1.batchObject)(await this.read.transport.call(token, 'GET /repos/{owner}/{repo}/contents/{path}', { ...parameters, path: '.copilot/setup-manifest.json', ref: commit }));
-        if (content?.encoding !== 'base64' || typeof content.content !== 'string' || content.content.length > 140000)
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
-        const manifest = (0, setup_batch_github_read_adapter_1.batchObject)(JSON.parse(Buffer.from(content.content, 'base64').toString('utf8')));
-        const receipt = manifest?.installation;
-        if (!(0, setup_batch_policy_1.isSetupBatchInstallationReceipt)(receipt) || receipt.operationId !== operationId || receipt.repositoryId !== plan.target.id
-            || receipt.baseSha !== plan.target.baseSha || receipt.planDigest !== plan.digest)
-            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
     }
 }
 exports.SetupBatchGithubApplyAdapter = SetupBatchGithubApplyAdapter;
@@ -124541,6 +126255,17 @@ class SetupBatchGithubTransport {
         this.clock = clock;
     }
     async call(token, route, parameters) {
+        return (await this.response(token, route, parameters)).data;
+    }
+    /** Granted OAuth scopes only. Endpoint-required permission headers are not grants. */
+    async identity(token) {
+        const response = await this.response(token, 'GET /user', {});
+        const value = response.headers?.['x-oauth-scopes'];
+        const scopes = typeof value === 'string' && value.length <= 4096 ? value.split(',').map(scope => scope.trim()) : [];
+        return { user: response.data, oauthScopes: scopes.length > 0 && scopes.length <= 64
+                && scopes.every(scope => /^[a-z][a-z0-9_:.-]*$/u.test(scope)) ? Object.freeze([...new Set(scopes)].sort()) : null };
+    }
+    async response(token, route, parameters) {
         const read = route.startsWith('GET ');
         for (let attempt = 0;; attempt += 1) {
             const controller = new AbortController();
@@ -124554,7 +126279,7 @@ class SetupBatchGithubTransport {
                 });
                 const response = await Promise.race([this.provider.getClient(token).request(route, { ...parameters,
                         request: { timeout: 15000, signal: controller.signal } }), timeout]);
-                return response.data;
+                return response;
             }
             catch (error) {
                 const record = batchObject(error);
@@ -124685,24 +126410,27 @@ class SetupBatchGithubReadAdapter {
         const response = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}', { owner: target.owner, repo: target.name, tree_sha: target.baseSha, recursive: '1' }));
         if (!response || response.truncated !== false || !Array.isArray(response.tree) || response.tree.length > 100000)
             throw new SetupBatchProviderError('malformed');
+        const inventory = [];
         for (const raw of response.tree) {
             const item = batchObject(raw);
-            if (typeof item?.path !== 'string')
-                continue;
+            if (!item || typeof item.path !== 'string' || item.path.includes('\0')
+                || item.path.split('/').some(part => !part || part === '.' || part === '..'))
+                throw new SetupBatchProviderError('malformed');
             const candidatePath = item.path;
             const fixed = [...setup_verification_action_1.SETUP_VERIFICATION_ACTION_PARENTS, setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH].find(path => path.toLowerCase() === candidatePath.toLowerCase());
             if (fixed && (item.path !== fixed || (fixed === setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH
                 ? item.type !== 'blob' || !['100644', '100755'].includes(String(item.mode))
                 : item.type !== 'tree' || item.mode !== '040000')))
                 throw new SetupBatchProviderError('malformed');
+            inventory.push(item);
         }
-        const entries = response.tree.map(batchObject).filter(entry => entry?.type !== 'tree' && typeof entry?.path === 'string' && (0, setup_batch_policy_1.validSetupBatchAssetPath)(entry.path));
+        const entries = inventory.filter(entry => entry.type !== 'tree' && (0, setup_batch_policy_1.validSetupBatchAssetPath)(entry.path));
         if (entries.length > 300)
             throw new SetupBatchProviderError('malformed');
         const files = [];
         let bytes = 0;
         for (const entry of entries) {
-            if (!entry || entry.type !== 'blob' || !['100644', '100755'].includes(String(entry.mode))
+            if (entry.type !== 'blob' || !['100644', '100755'].includes(String(entry.mode))
                 || !batchSha(entry.sha) || !Number.isSafeInteger(entry.size) || Number(entry.size) > 100000)
                 throw new SetupBatchProviderError('malformed');
             bytes += Number(entry.size);
@@ -124761,83 +126489,20 @@ function sharedMetadata(value, kind) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupBatchJournalAdapter = void 0;
-const node_fs_1 = __nccwpck_require__(87561);
-const promises_1 = __nccwpck_require__(93977);
-const node_path_1 = __nccwpck_require__(49411);
-const node_os_1 = __nccwpck_require__(70612);
-const node_crypto_1 = __nccwpck_require__(6005);
 const setup_batch_policy_1 = __nccwpck_require__(52214);
-/** A private durable receipt store. Credentials, configuration values and file contents are excluded by the parser. */
+const setup_operation_journal_store_1 = __nccwpck_require__(21298);
+/** Legacy schema-v1 facade: no migration or purpose inference. */
 class SetupBatchJournalAdapter {
-    constructor(root = (0, node_path_1.join)((0, node_os_1.homedir)(), '.copilot', 'setup-operations')) {
-        this.root = root;
-    }
-    path(id) { (0, setup_batch_policy_1.setupBatchBranch)(id); return (0, node_path_1.join)(this.root, `${id}.json`); }
-    async ensureRoot() {
-        await (0, promises_1.mkdir)(this.root, { recursive: true, mode: 0o700 });
-        const info = await (0, promises_1.lstat)(this.root);
-        if (!info.isDirectory() || info.isSymbolicLink() || process.platform !== 'win32' && (info.mode & 0o077) !== 0)
-            throw new Error('Setup operation journal directory must be private.');
-    }
+    constructor(root) { this.store = new setup_operation_journal_store_1.SetupOperationJournalStore(setup_batch_policy_1.parseSetupBatchOperation, root); }
     async load(id) {
-        const path = this.path(id);
-        try {
-            const info = await (0, promises_1.lstat)(path);
-            if (!info.isFile() || info.isSymbolicLink() || info.size > 40000)
-                throw new Error('Invalid setup operation journal file.');
-            return (0, setup_batch_policy_1.parseSetupBatchOperation)(JSON.parse(await (0, promises_1.readFile)(path, 'utf8')));
-        }
-        catch (error) {
-            if (error.code === 'ENOENT')
-                return undefined;
-            throw error;
-        }
+        const value = await this.store.load(id);
+        return value === undefined ? undefined : (0, setup_batch_policy_1.parseSetupBatchOperation)(value);
     }
     async save(operation) {
         const validated = (0, setup_batch_policy_1.parseSetupBatchOperation)(operation);
-        await this.ensureRoot();
-        const destination = this.path(validated.operationId);
-        const temporary = `${destination}.${(0, node_crypto_1.randomBytes)(8).toString('hex')}.tmp`;
-        const file = await (0, promises_1.open)(temporary, node_fs_1.constants.O_CREAT | node_fs_1.constants.O_EXCL | node_fs_1.constants.O_WRONLY, 0o600);
-        try {
-            await file.writeFile(JSON.stringify(validated));
-            await file.sync();
-        }
-        finally {
-            await file.close();
-        }
-        try {
-            await (0, promises_1.rename)(temporary, destination);
-        }
-        catch (error) {
-            await (0, promises_1.unlink)(temporary).catch(() => undefined);
-            throw error;
-        }
+        return this.store.save(validated.operationId, validated);
     }
-    async lock(id) {
-        await this.ensureRoot();
-        const destination = `${this.path(id)}.lock`;
-        const nonce = (0, node_crypto_1.randomBytes)(16).toString('hex');
-        const file = await (0, promises_1.open)(destination, node_fs_1.constants.O_CREAT | node_fs_1.constants.O_EXCL | node_fs_1.constants.O_WRONLY, 0o600).catch(error => {
-            if (error.code !== 'EEXIST')
-                throw error;
-            throw Object.assign(new Error(`Setup operation ${id} is locked at ${destination}. Stop all setup processes and verify the recorded owner before orphan-lock recovery. See https://github.com/vypdev/copilot/blob/master/docs/security-operations/operations/troubleshooting.mdx#recover-an-orphaned-batch-operation-lock`), { code: 'EEXIST' });
-        });
-        try {
-            await file.writeFile(JSON.stringify({ pid: process.pid, nonce }));
-            await file.sync();
-        }
-        finally {
-            await file.close();
-        }
-        return async () => {
-            await (0, promises_1.readFile)(destination, 'utf8').then(content => {
-                const current = JSON.parse(content);
-                if (current.pid === process.pid && current.nonce === nonce)
-                    return (0, promises_1.unlink)(destination);
-            }).catch(() => undefined);
-        };
-    }
+    lock(id) { return this.store.lock(id); }
 }
 exports.SetupBatchJournalAdapter = SetupBatchJournalAdapter;
 
@@ -125166,6 +126831,316 @@ exports.SetupGithubIdentityQueryAdapter = SetupGithubIdentityQueryAdapter;
 
 /***/ }),
 
+/***/ 56184:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+};
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
+var _SetupInstallationGithubDeliveryAdapter_token;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupInstallationGithubDeliveryAdapter = void 0;
+const node_crypto_1 = __nccwpck_require__(6005);
+const setup_installation_delivery_ports_1 = __nccwpck_require__(10308);
+const setup_batch_policy_1 = __nccwpck_require__(52214);
+const setup_installation_receipt_policy_1 = __nccwpck_require__(50362);
+const setup_installation_tree_policy_1 = __nccwpck_require__(38327);
+const setup_batch_github_read_adapter_1 = __nccwpck_require__(9703);
+/** Shared Git delivery. This object has no resource writers or general Setup configuration. */
+class SetupInstallationGithubDeliveryAdapter {
+    constructor(transport, plan, token, revalidate, active = () => true) {
+        this.transport = transport;
+        this.revalidate = revalidate;
+        this.active = active;
+        _SetupInstallationGithubDeliveryAdapter_token.set(this, void 0);
+        __classPrivateFieldSet(this, _SetupInstallationGithubDeliveryAdapter_token, token, "f");
+        this.plan = Object.freeze({ ...plan, target: Object.freeze({ ...plan.target }),
+            files: Object.freeze(plan.files.map(file => Object.freeze({ ...file }))) });
+        this.approved = this.validatePlan();
+    }
+    async prepareCommit(observe, preparedTree) {
+        if (preparedTree !== undefined && !(0, setup_batch_github_read_adapter_1.batchSha)(preparedTree))
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        let pending = preparedTree === undefined ? 'tree' : 'commit';
+        let posted = false, notifying = false;
+        const record = async (event) => {
+            notifying = true;
+            await observe?.(event);
+            notifying = false;
+        };
+        try {
+            await this.fresh();
+            const baseTree = await this.commitTree(this.plan.target.baseSha);
+            let treeSha = preparedTree;
+            if (treeSha === undefined) {
+                await record({ effect: 'tree', state: 'starting' });
+                await this.fresh();
+                const tree = (0, setup_batch_github_read_adapter_1.batchObject)(await this.post('POST /repos/{owner}/{repo}/git/trees', { base_tree: baseTree,
+                    tree: this.plan.files.map(file => ({ path: file.path, type: 'blob', mode: '100644',
+                        ...(file.content === null ? { sha: null } : { content: file.content }) })) }, () => { posted = true; }));
+                if (!(0, setup_batch_github_read_adapter_1.batchSha)(tree?.sha))
+                    throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+                treeSha = tree.sha;
+                await record({ effect: 'tree', state: 'completed', sha: treeSha });
+                pending = 'commit';
+                posted = false;
+            }
+            // Retained identities still require the complete approved difference.
+            await this.assertTrees(baseTree, treeSha);
+            await record({ effect: 'commit', state: 'starting' });
+            await this.fresh();
+            const commit = (0, setup_batch_github_read_adapter_1.batchObject)(await this.post('POST /repos/{owner}/{repo}/git/commits', { tree: treeSha,
+                parents: [this.plan.target.baseSha], message: `chore: configure Copilot (setup ${this.plan.operationId})` }, () => { posted = true; }));
+            if (!(0, setup_batch_github_read_adapter_1.batchSha)(commit?.sha))
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            await record({ effect: 'commit', state: 'completed', sha: commit.sha });
+            pending = undefined;
+            posted = false;
+            await this.assertPrepared(commit.sha);
+            return commit.sha;
+        }
+        catch (error) {
+            // Only an observed stop before POST clears an intent. A lost POST result
+            // or failed journal callback retains uncertainty and is never replayed.
+            if (pending !== undefined && !posted && !notifying)
+                await record({ effect: pending, state: 'not-started' });
+            throw error;
+        }
+    }
+    async branch(commit, inspectOnly = false) {
+        const ref = (0, setup_batch_policy_1.setupBatchBranch)(this.plan.operationId);
+        await this.assertPrepared(commit);
+        const current = await this.branchSha();
+        if (current) {
+            if (current !== commit)
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+            await this.fresh();
+            return;
+        }
+        if (inspectOnly)
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+        await this.fresh();
+        try {
+            await this.post('POST /repos/{owner}/{repo}/git/refs', { ref: `refs/heads/${ref}`, sha: commit });
+        }
+        catch (error) {
+            if (error instanceof setup_installation_delivery_ports_1.SetupInstallationDeliveryCancelled)
+                throw error;
+            /* Read the exact owned ref after an uncertain response; never repeat POST. */
+        }
+        if (await this.branchSha() !== commit)
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+        await this.fresh();
+    }
+    async pullRequest(commit, inspectOnly = false) {
+        if (await this.branchSha() !== commit)
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+        await this.assertPrepared(commit);
+        let number = await this.inspectPullRequest(commit, !inspectOnly);
+        if (!number) {
+            if (inspectOnly)
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+            await this.fresh();
+            try {
+                await this.post('POST /repos/{owner}/{repo}/pulls', { head: (0, setup_batch_policy_1.setupBatchBranch)(this.plan.operationId),
+                    base: this.plan.target.defaultBranch, title: this.plan.title, body: this.plan.body });
+            }
+            catch (error) {
+                if (error instanceof setup_installation_delivery_ports_1.SetupInstallationDeliveryCancelled)
+                    throw error;
+                /* Inspect the exact marker/head/base after any uncertain response. */
+            }
+            number = await this.inspectPullRequest(commit);
+        }
+        if (!number || await this.branchSha() !== commit)
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+        await this.fresh();
+        return number;
+    }
+    async assertPrepared(commit) {
+        if (!(0, setup_batch_github_read_adapter_1.batchSha)(commit))
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        const observed = (0, setup_batch_github_read_adapter_1.batchObject)(await this.call('GET /repos/{owner}/{repo}/git/commits/{commit_sha}', { commit_sha: commit }));
+        const tree = (0, setup_batch_github_read_adapter_1.batchObject)(observed?.tree)?.sha;
+        if (observed?.sha !== commit || !Array.isArray(observed.parents) || observed.parents.length !== 1
+            || (0, setup_batch_github_read_adapter_1.batchObject)(observed.parents[0])?.sha !== this.plan.target.baseSha || !(0, setup_batch_github_read_adapter_1.batchSha)(tree))
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+        await this.assertTrees(await this.commitTree(this.plan.target.baseSha), tree);
+        const content = (0, setup_batch_github_read_adapter_1.batchObject)(await this.call('GET /repos/{owner}/{repo}/contents/{path}', { path: setup_installation_receipt_policy_1.SETUP_INSTALLATION_MANIFEST_PATH, ref: commit }));
+        if (content?.encoding !== 'base64' || typeof content.content !== 'string' || content.content.length > 140000)
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        let manifest;
+        try {
+            manifest = JSON.parse(Buffer.from(content.content, 'base64').toString('utf8'));
+        }
+        catch {
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        }
+        this.assertReceipt((0, setup_batch_github_read_adapter_1.batchObject)(manifest)?.installation);
+    }
+    validatePlan() {
+        if ((0, setup_batch_policy_1.validateSetupBatchTargets)(this.plan.target.owner, [this.plan.target]).length)
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        const files = this.plan.files;
+        if (files.length > 300 || files.some(file => !(0, setup_batch_policy_1.validSetupBatchAssetPath)(file.path) || file.content !== null && typeof file.content !== 'string')
+            || files.reduce((bytes, file) => bytes + Buffer.byteLength(file.content ?? ''), 0) > 2000000
+            || files.some(file => file.content !== null && (file.path === setup_installation_receipt_policy_1.SETUP_INSTALLATION_MANIFEST_PATH
+                ? Buffer.byteLength(file.content, 'utf8') > 105000 : Buffer.byteLength(file.content, 'utf8') > 100000)))
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        const approved = files.map(file => ({ path: file.path, mode: '100644',
+            sha: file.content === null ? null : (0, node_crypto_1.createHash)('sha1').update(`blob ${Buffer.byteLength(file.content)}\0`).update(file.content).digest('hex') }));
+        (0, setup_installation_tree_policy_1.assertSetupInstallationApprovedBlobs)(approved);
+        const content = files.find(file => file.path === setup_installation_receipt_policy_1.SETUP_INSTALLATION_MANIFEST_PATH)?.content;
+        let manifest;
+        try {
+            manifest = JSON.parse(content ?? 'null');
+        }
+        catch {
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        }
+        this.assertReceipt((0, setup_batch_github_read_adapter_1.batchObject)(manifest)?.installation);
+        return approved;
+    }
+    assertReceipt(value) {
+        if (!(0, setup_batch_policy_1.isSetupBatchInstallationReceipt)(value) || value.operationId !== this.plan.operationId
+            || value.repositoryId !== this.plan.target.id || value.baseSha !== this.plan.target.baseSha
+            || value.planDigest !== this.plan.digest)
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+    }
+    async fresh() { if (!await this.revalidate())
+        throw new setup_installation_delivery_ports_1.SetupInstallationSnapshotChanged(); }
+    post(route, parameters, dispatched) {
+        // No await separates current-session admission from the actual transport call.
+        // Mark object intent as dispatched only after this final cancellation check.
+        if (!this.active())
+            throw new setup_installation_delivery_ports_1.SetupInstallationDeliveryCancelled();
+        dispatched?.();
+        return this.call(route, parameters);
+    }
+    call(route, parameters) {
+        return this.transport.call(__classPrivateFieldGet(this, _SetupInstallationGithubDeliveryAdapter_token, "f"), route, { owner: this.plan.target.owner, repo: this.plan.target.name, ...parameters });
+    }
+    async commitTree(commit) {
+        const value = (0, setup_batch_github_read_adapter_1.batchObject)(await this.call('GET /repos/{owner}/{repo}/git/commits/{commit_sha}', { commit_sha: commit }));
+        const tree = (0, setup_batch_github_read_adapter_1.batchObject)(value?.tree)?.sha;
+        if (value?.sha !== commit || !(0, setup_batch_github_read_adapter_1.batchSha)(tree))
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        return tree;
+    }
+    async branchSha() {
+        try {
+            const response = (0, setup_batch_github_read_adapter_1.batchObject)(await this.call('GET /repos/{owner}/{repo}/git/ref/{ref}', { ref: `heads/${(0, setup_batch_policy_1.setupBatchBranch)(this.plan.operationId)}` }));
+            const value = (0, setup_batch_github_read_adapter_1.batchObject)(response?.object)?.sha;
+            if (!(0, setup_batch_github_read_adapter_1.batchSha)(value))
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            return value;
+        }
+        catch (error) {
+            if (error instanceof setup_batch_github_read_adapter_1.SetupBatchProviderError && error.code === 'not-found')
+                return undefined;
+            throw error;
+        }
+    }
+    async inspectPullRequest(commit, beforeCreate = false) {
+        let match;
+        const branch = (0, setup_batch_policy_1.setupBatchBranch)(this.plan.operationId);
+        for (let page = 1; page <= 10; page += 1) {
+            // The fixed-head POST can only create this operation's owned branch PR.
+            // Keep all states and omit base so human base drift remains observable.
+            const response = await this.call('GET /repos/{owner}/{repo}/pulls', {
+                state: 'all', head: `${this.plan.target.owner}:${branch}`, per_page: 100, page,
+            });
+            if (!Array.isArray(response) || response.length > 100)
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            for (const value of response) {
+                const pull = (0, setup_batch_github_read_adapter_1.batchObject)(value), head = (0, setup_batch_github_read_adapter_1.batchObject)(pull?.head), base = (0, setup_batch_github_read_adapter_1.batchObject)(pull?.base);
+                const claimsOperation = typeof pull?.body === 'string' && pull.body.includes((0, setup_batch_policy_1.setupBatchMarker)(this.plan.operationId, this.plan.target.id));
+                if (head?.ref !== branch && !claimsOperation)
+                    continue;
+                if (pull?.state !== 'open' || head?.ref !== branch || head.sha !== commit || (0, setup_batch_github_read_adapter_1.batchObject)(head.repo)?.id !== this.plan.target.id
+                    || base?.ref !== this.plan.target.defaultBranch || (0, setup_batch_github_read_adapter_1.batchObject)(base.repo)?.id !== this.plan.target.id || typeof pull?.body !== 'string'
+                    || !pull.body.includes((0, setup_batch_policy_1.setupBatchMarker)(this.plan.operationId, this.plan.target.id)) || !(0, setup_batch_github_read_adapter_1.batchPositive)(pull.number)
+                    || match !== undefined)
+                    throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+                match = pull.number;
+            }
+            if (response.length < 100) {
+                // A scoped absence cannot rule out this operation's marker on another
+                // head. Before a new write, inspect open claims with the SAME remaining
+                // ten-request budget; exhausted or incomplete evidence stays unknown.
+                if (match === undefined && beforeCreate)
+                    await this.assertNoOpenOperationClaim(10 - page);
+                return match;
+            }
+        }
+        throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+    }
+    async assertNoOpenOperationClaim(maximumPages) {
+        const seen = new Set(), marker = (0, setup_batch_policy_1.setupBatchMarker)(this.plan.operationId, this.plan.target.id);
+        for (let page = 1; page <= maximumPages; page += 1) {
+            const response = await this.call('GET /repos/{owner}/{repo}/pulls', { state: 'open', per_page: 100, page });
+            if (!Array.isArray(response) || response.length > 100)
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            for (const value of response) {
+                const pull = (0, setup_batch_github_read_adapter_1.batchObject)(value);
+                if (!(0, setup_batch_github_read_adapter_1.batchPositive)(pull?.number) || seen.has(pull.number) || pull.state !== 'open'
+                    || !(pull.body === null || typeof pull.body === 'string'))
+                    throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+                seen.add(pull.number);
+                if (typeof pull.body === 'string' && pull.body.includes(marker))
+                    throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+            }
+            if (response.length < 100)
+                return;
+        }
+        throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+    }
+    /** GitHub recommends complete non-recursive reads when recursive trees truncate. */
+    async assertTrees(baseSha, preparedSha) {
+        const cache = new Map();
+        const read = async (sha) => {
+            if (!sha)
+                return { entries: [], truncated: false };
+            const cached = cache.get(sha);
+            if (cached)
+                return cached;
+            const response = (0, setup_batch_github_read_adapter_1.batchObject)(await this.call('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', { tree_sha: sha }));
+            if (response?.sha !== sha || response.truncated !== false || !Array.isArray(response.tree) || response.tree.length > 100000)
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            const entries = response.tree.map(value => {
+                const row = (0, setup_batch_github_read_adapter_1.batchObject)(value);
+                if (!row || typeof row.path !== 'string' || typeof row.mode !== 'string' || !(0, setup_batch_github_read_adapter_1.batchSha)(row.sha)
+                    || !['blob', 'tree', 'commit'].includes(String(row.type)))
+                    throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+                return { path: row.path, mode: row.mode, sha: row.sha, type: row.type };
+            });
+            const result = { entries, truncated: false };
+            cache.set(sha, result);
+            return result;
+        };
+        const pending = [{ path: '', baseSha, preparedSha }];
+        while (pending.length) {
+            const current = pending.shift();
+            pending.push(...(0, setup_installation_tree_policy_1.setupInstallationTreeLevel)(current.path, await read(current.baseSha), await read(current.preparedSha), this.approved));
+        }
+    }
+}
+exports.SetupInstallationGithubDeliveryAdapter = SetupInstallationGithubDeliveryAdapter;
+_SetupInstallationGithubDeliveryAdapter_token = new WeakMap();
+
+
+/***/ }),
+
 /***/ 75545:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -125311,6 +127286,143 @@ class SetupManagementWorkspaceAdapter {
     }
 }
 exports.SetupManagementWorkspaceAdapter = SetupManagementWorkspaceAdapter;
+
+
+/***/ }),
+
+/***/ 21298:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupOperationJournalStore = void 0;
+const node_fs_1 = __nccwpck_require__(87561);
+const promises_1 = __nccwpck_require__(93977);
+const node_path_1 = __nccwpck_require__(49411);
+const node_os_1 = __nccwpck_require__(70612);
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_url_1 = __nccwpck_require__(41041);
+const setup_batch_policy_1 = __nccwpck_require__(52214);
+/** Shared private UUID/store/lock primitives. Typed facades own their closed journal schemas. */
+class SetupOperationJournalStore {
+    constructor(validate, root = (0, node_path_1.join)((0, node_os_1.homedir)(), '.copilot', 'setup-operations')) {
+        this.validate = validate;
+        this.root = root;
+    }
+    path(id) { (0, setup_batch_policy_1.setupBatchBranch)(id); return (0, node_path_1.join)(this.root, `${id}.json`); }
+    async ensureRoot() {
+        await (0, promises_1.mkdir)(this.root, { recursive: true, mode: 0o700 });
+        const info = await (0, promises_1.lstat)(this.root);
+        if (!info.isDirectory() || info.isSymbolicLink() || process.platform !== 'win32' && (info.mode & 0o077) !== 0)
+            throw new Error('Setup operation journal directory must be private.');
+    }
+    async load(id) {
+        const path = this.path(id);
+        try {
+            const info = await (0, promises_1.lstat)(path);
+            if (!info.isFile() || info.isSymbolicLink() || info.size > 40000)
+                throw new Error('Invalid setup operation journal file.');
+            return this.validate(JSON.parse(await (0, promises_1.readFile)(path, 'utf8')));
+        }
+        catch (error) {
+            if (error.code === 'ENOENT')
+                return undefined;
+            throw error;
+        }
+    }
+    /** Navigation only after the existing reader validates the exact saved ID. */
+    async location(id) {
+        const record = await this.load(id);
+        return record?.operationId === id ? (0, node_url_1.pathToFileURL)(this.path(id)).href : undefined;
+    }
+    async save(id, value) {
+        const serialized = JSON.stringify(value);
+        if (serialized === undefined || Buffer.byteLength(serialized, 'utf8') > 40000)
+            throw new Error('Invalid setup operation journal size.');
+        this.validate(value);
+        const destination = this.path(id);
+        await this.ensureRoot();
+        // The operation's exclusive lock is held by the application. Preserve a
+        // foreign, future or malformed prior record rather than migrating it.
+        await this.load(id);
+        const temporary = `${destination}.${(0, node_crypto_1.randomBytes)(8).toString('hex')}.tmp`;
+        const file = await (0, promises_1.open)(temporary, node_fs_1.constants.O_CREAT | node_fs_1.constants.O_EXCL | node_fs_1.constants.O_WRONLY, 0o600);
+        try {
+            await file.writeFile(serialized);
+            await file.sync();
+        }
+        finally {
+            await file.close();
+        }
+        try {
+            await (0, promises_1.rename)(temporary, destination);
+        }
+        catch (error) {
+            await (0, promises_1.unlink)(temporary).catch(() => undefined);
+            throw error;
+        }
+    }
+    async lock(id) {
+        await this.ensureRoot();
+        const destination = `${this.path(id)}.lock`;
+        const nonce = (0, node_crypto_1.randomBytes)(16).toString('hex');
+        const file = await (0, promises_1.open)(destination, node_fs_1.constants.O_CREAT | node_fs_1.constants.O_EXCL | node_fs_1.constants.O_WRONLY, 0o600).catch(error => {
+            if (error.code !== 'EEXIST')
+                throw error;
+            throw Object.assign(new Error(`Setup operation ${id} is locked at ${destination}. Stop all setup processes and verify the recorded owner before orphan-lock recovery. See https://github.com/vypdev/copilot/blob/master/docs/security-operations/operations/troubleshooting.mdx#recover-an-orphaned-batch-operation-lock`), { code: 'EEXIST' });
+        });
+        let identity;
+        let failure;
+        try {
+            identity = await file.stat();
+            await file.writeFile(JSON.stringify({ pid: process.pid, nonce }));
+            await file.sync();
+        }
+        catch (cause) {
+            failure = { cause };
+        }
+        try {
+            await file.close();
+        }
+        catch (cause) {
+            failure ?? (failure = { cause });
+        }
+        if (failure) {
+            // A failed acquisition has no release callback. Reclaim only the exact
+            // inode created here; a replacement or unverified owner must remain.
+            if (identity)
+                await (0, promises_1.lstat)(destination).then(current => {
+                    if (current.isFile() && !current.isSymbolicLink() && current.dev === identity.dev && current.ino === identity.ino)
+                        return (0, promises_1.unlink)(destination);
+                }).catch(() => undefined);
+            throw failure.cause;
+        }
+        return async () => {
+            const content = await (0, promises_1.readFile)(destination, 'utf8').catch(error => {
+                if (error.code === 'ENOENT')
+                    return undefined;
+                throw error;
+            });
+            if (content === undefined)
+                return;
+            let owned;
+            try {
+                const current = JSON.parse(content);
+                owned = current.pid === process.pid && current.nonce === nonce;
+            }
+            catch {
+                return;
+            } // Unverified replacement contents never grant removal.
+            if (owned)
+                await (0, promises_1.unlink)(destination).catch(error => {
+                    if (error.code !== 'ENOENT')
+                        throw error;
+                });
+        };
+    }
+}
+exports.SetupOperationJournalStore = SetupOperationJournalStore;
 
 
 /***/ }),
@@ -127252,6 +129364,538 @@ function nextOrganizationProjectsProbePage(link, owner) {
     }
     catch {
         return { status: 'unsafe' };
+    }
+}
+
+
+/***/ }),
+
+/***/ 33237:
+/***/ (function(__unused_webpack_module, exports) {
+
+"use strict";
+
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+};
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
+var _SetupPublisherCredentials_token, _SetupPublisherCredentials_identity;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupPublisherCredentials = exports.SetupPublisherCredentialError = void 0;
+class SetupPublisherCredentialError extends Error {
+    constructor() { super('The publisher credential is unavailable. Prepare and review a fresh snapshot.'); }
+}
+exports.SetupPublisherCredentialError = SetupPublisherCredentialError;
+/** One private credential generation; no token or token hash is serializable. */
+class SetupPublisherCredentials {
+    constructor(token) {
+        _SetupPublisherCredentials_token.set(this, void 0);
+        _SetupPublisherCredentials_identity.set(this, Object.freeze({}));
+        this.replace(token);
+    }
+    replace(token) {
+        // An unsuccessful credential change must also revoke the old approval.
+        __classPrivateFieldSet(this, _SetupPublisherCredentials_identity, Object.freeze({}), "f");
+        __classPrivateFieldSet(this, _SetupPublisherCredentials_token, undefined, "f");
+        if (typeof token !== 'string' || !token || /[\s\p{Cc}\p{Cf}]/u.test(token))
+            throw new SetupPublisherCredentialError();
+        __classPrivateFieldSet(this, _SetupPublisherCredentials_token, token, "f");
+    }
+    identity() { return __classPrivateFieldGet(this, _SetupPublisherCredentials_identity, "f"); }
+    /** Only infrastructure receives the raw token; application receives its facts/reference. */
+    async read(work) {
+        const identity = __classPrivateFieldGet(this, _SetupPublisherCredentials_identity, "f"), token = __classPrivateFieldGet(this, _SetupPublisherCredentials_token, "f");
+        if (token === undefined)
+            throw new SetupPublisherCredentialError();
+        const result = await work(token, identity);
+        if (identity !== __classPrivateFieldGet(this, _SetupPublisherCredentials_identity, "f"))
+            throw new SetupPublisherCredentialError();
+        return result;
+    }
+    bind(identity, create) {
+        if (identity !== __classPrivateFieldGet(this, _SetupPublisherCredentials_identity, "f") || __classPrivateFieldGet(this, _SetupPublisherCredentials_token, "f") === undefined)
+            throw new SetupPublisherCredentialError();
+        return create(__classPrivateFieldGet(this, _SetupPublisherCredentials_token, "f"));
+    }
+}
+exports.SetupPublisherCredentials = SetupPublisherCredentials;
+_SetupPublisherCredentials_token = new WeakMap(), _SetupPublisherCredentials_identity = new WeakMap();
+
+
+/***/ }),
+
+/***/ 38567:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+};
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
+var _SetupPublisherGitReader_token;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupPublisherGitReader = void 0;
+const node_crypto_1 = __nccwpck_require__(6005);
+const setup_batch_github_read_adapter_1 = __nccwpck_require__(9703);
+/** Complete nonrecursive immutable reads. No resource inventory or write capability. */
+class SetupPublisherGitReader {
+    constructor(transport, token, repository) {
+        this.transport = transport;
+        this.repository = repository;
+        _SetupPublisherGitReader_token.set(this, void 0);
+        this.trees = new Map();
+        __classPrivateFieldSet(this, _SetupPublisherGitReader_token, token, "f");
+    }
+    async commitTree(commit) {
+        if (!(0, setup_batch_github_read_adapter_1.batchSha)(commit))
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        const data = (0, setup_batch_github_read_adapter_1.batchObject)(await this.transport.call(__classPrivateFieldGet(this, _SetupPublisherGitReader_token, "f"), 'GET /repos/{owner}/{repo}/git/commits/{commit_sha}', { ...this.repository, commit_sha: commit }));
+        const tree = (0, setup_batch_github_read_adapter_1.batchObject)(data?.tree)?.sha;
+        if (data?.sha !== commit || !(0, setup_batch_github_read_adapter_1.batchSha)(tree))
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        return tree;
+    }
+    async tree(sha) {
+        if (!(0, setup_batch_github_read_adapter_1.batchSha)(sha))
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        const cached = this.trees.get(sha);
+        if (cached)
+            return cached;
+        const data = (0, setup_batch_github_read_adapter_1.batchObject)(await this.transport.call(__classPrivateFieldGet(this, _SetupPublisherGitReader_token, "f"), 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}', { ...this.repository, tree_sha: sha }));
+        if (data?.sha !== sha || data.truncated !== false || !Array.isArray(data.tree) || data.tree.length > 100000) {
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        }
+        const names = new Set();
+        const entries = data.tree.map((raw) => {
+            const item = (0, setup_batch_github_read_adapter_1.batchObject)(raw);
+            if (!item || typeof item.path !== 'string' || !item.path || /[/\p{Cc}\p{Cf}]/u.test(item.path)
+                || item.path === '.' || item.path === '..' || names.has(item.path) || !(0, setup_batch_github_read_adapter_1.batchSha)(item.sha)
+                || !(item.type === 'tree' && item.mode === '040000' || item.type === 'blob'
+                    && ['100644', '100755', '120000'].includes(String(item.mode)) && Number.isSafeInteger(item.size) && Number(item.size) >= 0
+                    || item.type === 'commit' && item.mode === '160000'))
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            names.add(item.path);
+            return Object.freeze({ path: item.path, type: item.type, mode: item.mode, sha: item.sha,
+                ...(item.type === 'blob' ? { size: item.size } : {}) });
+        });
+        const result = Object.freeze(entries);
+        this.trees.set(sha, result);
+        return result;
+    }
+    /** Null means proven absence in a complete tree, never a failed read. */
+    async find(root, path) {
+        const parts = path.split('/');
+        if (parts.some(part => !part || part === '.' || part === '..' || /[\\\p{Cc}\p{Cf}]/u.test(part))) {
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        }
+        let tree = root;
+        for (const name of parts.slice(0, -1)) {
+            const entry = await this.child(tree, name);
+            if (!entry)
+                return null;
+            if (entry.type !== 'tree' || entry.mode !== '040000')
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            tree = entry.sha;
+        }
+        return this.child(tree, parts[parts.length - 1]);
+    }
+    async child(tree, name) {
+        const matches = (await this.tree(tree)).filter(entry => entry.path.toLowerCase() === name.toLowerCase());
+        if (matches.length === 0)
+            return null;
+        if (matches.length !== 1 || matches[0].path !== name)
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        return matches[0];
+    }
+    async text(entry, maxBytes) {
+        // Source bundles use the provider's documented 100 MB blob ceiling.
+        // Destination callers retain their existing 100,000-byte asset limit.
+        if (entry.type !== 'blob' || !['100644', '100755'].includes(entry.mode) || !(0, setup_batch_github_read_adapter_1.batchSha)(entry.sha)
+            || !Number.isSafeInteger(maxBytes) || maxBytes < 0 || maxBytes > 100000000
+            || !Number.isSafeInteger(entry.size) || entry.size < 0 || entry.size > maxBytes)
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        const data = (0, setup_batch_github_read_adapter_1.batchObject)(await this.transport.call(__classPrivateFieldGet(this, _SetupPublisherGitReader_token, "f"), 'GET /repos/{owner}/{repo}/git/blobs/{file_sha}', { ...this.repository, file_sha: entry.sha }));
+        if (data?.sha !== entry.sha || data.size !== entry.size || data.encoding !== 'base64' || typeof data.content !== 'string'
+            || data.content.length > 4 * Math.ceil(maxBytes / 3) + Math.ceil(4 * Math.ceil(maxBytes / 3) / 60) * 2) {
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        }
+        const encoded = data.content.replace(/\r?\n/gu, '');
+        if (!/^[A-Za-z0-9+/]*={0,2}$/u.test(encoded))
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        const bytes = Buffer.from(encoded, 'base64'), text = bytes.toString('utf8');
+        const oid = (0, node_crypto_1.createHash)('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+        if (bytes.length !== entry.size || bytes.toString('base64') !== encoded || !Buffer.from(text, 'utf8').equals(bytes)
+            || oid !== entry.sha)
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        return text;
+    }
+}
+exports.SetupPublisherGitReader = SetupPublisherGitReader;
+_SetupPublisherGitReader_token = new WeakMap();
+
+
+/***/ }),
+
+/***/ 37713:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupPublisherGithubReadAdapter = void 0;
+const setup_publisher_installation_1 = __nccwpck_require__(95417);
+const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
+const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
+const setup_installation_receipt_policy_1 = __nccwpck_require__(50362);
+const setup_batch_policy_1 = __nccwpck_require__(52214);
+const setup_batch_github_read_adapter_1 = __nccwpck_require__(9703);
+const setup_publisher_git_reader_1 = __nccwpck_require__(38567);
+const setup_publisher_github_source_adapter_1 = __nccwpck_require__(93185);
+const setup_publisher_workflow_inventory_1 = __nccwpck_require__(42186);
+/** One relevant authenticated snapshot, paired to a private credential generation. */
+class SetupPublisherGithubReadAdapter {
+    constructor(transport, credentials) {
+        this.transport = transport;
+        this.credentials = credentials;
+        this.source = new setup_publisher_github_source_adapter_1.SetupPublisherGithubSourceAdapter(transport);
+    }
+    async inspect(input) {
+        const proposal = (0, setup_publisher_installation_policy_1.parseSetupPublisherProposal)(input);
+        return this.credentials.read(async (token, session) => {
+            const identity = await this.transport.identity(token), actor = (0, setup_batch_github_read_adapter_1.batchObject)(identity.user);
+            if (!(0, setup_batch_github_read_adapter_1.batchPositive)(actor?.id))
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            const [owner, repo] = proposal.destination.repository.split('/'), coordinate = { owner, repo };
+            const data = (0, setup_batch_github_read_adapter_1.batchObject)(await this.transport.call(token, 'GET /repos/{owner}/{repo}', coordinate));
+            const account = (0, setup_batch_github_read_adapter_1.batchObject)(data?.owner), permissions = (0, setup_batch_github_read_adapter_1.batchObject)(data?.permissions);
+            if (!data || !(0, setup_batch_github_read_adapter_1.batchPositive)(data.id) || !(0, setup_batch_github_read_adapter_1.batchPositive)(account?.id) || typeof account.login !== 'string'
+                || account.login.toLowerCase() !== owner.toLowerCase() || typeof data.name !== 'string' || data.name.toLowerCase() !== repo.toLowerCase()
+                || typeof data.full_name !== 'string' || data.full_name.toLowerCase() !== proposal.destination.repository.toLowerCase()
+                || typeof data.default_branch !== 'string' || typeof data.private !== 'boolean'
+                || typeof data.archived !== 'boolean' || typeof data.disabled !== 'boolean')
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            const ref = (0, setup_batch_github_read_adapter_1.batchObject)(await this.transport.call(token, 'GET /repos/{owner}/{repo}/git/ref/{ref}', { ...coordinate, ref: `heads/${data.default_branch}` })), object = (0, setup_batch_github_read_adapter_1.batchObject)(ref?.object);
+            if (ref?.ref !== `refs/heads/${data.default_branch}` || object?.type !== 'commit' || !(0, setup_batch_github_read_adapter_1.batchSha)(object.sha)) {
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            }
+            const target = { id: data.id, ownerId: account.id, owner: account.login, name: data.name,
+                defaultBranch: data.default_branch, baseSha: object.sha, private: data.private, archived: data.archived,
+                disabled: data.disabled, canPush: permissions?.push === true || permissions?.admin === true };
+            // Validate provider-selected names/refs before any tree or file lookup.
+            if ((0, setup_batch_policy_1.validateSetupBatchTargets)(target.owner, [target]).length)
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('forbidden');
+            const scopes = identity.oauthScopes;
+            const repositoryGrant = scopes?.includes('repo') || !target.private && scopes?.includes('public_repo');
+            const authority = { actorId: actor.id, repositoryId: target.id,
+                contents: scopes === null ? 'unknown' : repositoryGrant ? 'write' : 'denied',
+                pullRequests: scopes === null ? 'unknown' : repositoryGrant ? 'write' : 'denied',
+                workflows: scopes === null ? 'unknown' : repositoryGrant && scopes.includes('workflow') ? 'write' : 'denied' };
+            const source = await this.source.read(proposal, token, session);
+            const expected = (0, setup_publisher_installation_policy_1.setupPublisherWorkflow)(source.workflow, source.commit);
+            const reader = new setup_publisher_git_reader_1.SetupPublisherGitReader(this.transport, token, coordinate), root = await reader.commitTree(target.baseSha);
+            let bytes = 0, count = 0;
+            const load = async (path, entry) => {
+                bytes += entry.size ?? 0;
+                if (++count > 300 || bytes > 2000000)
+                    throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+                return { path, mode: entry.mode, content: await reader.text(entry, 100000) };
+            };
+            const file = async (path) => {
+                const entry = await reader.find(root, path);
+                return entry ? load(path, entry) : null;
+            };
+            const manifest = await file(setup_installation_receipt_policy_1.SETUP_INSTALLATION_MANIFEST_PATH);
+            const parsed = manifest && (0, repository_agent_guidance_policy_1.parseRepositoryAgentGuidanceManifest)(manifest.content);
+            if (!parsed)
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            const guidance = [];
+            for (const path of Object.keys(parsed.artifacts)) {
+                const observed = await file(path);
+                if (!observed)
+                    throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+                guidance.push(observed);
+            }
+            const directory = await reader.find(root, '.github/workflows');
+            if (directory && (directory.type !== 'tree' || directory.mode !== '040000'))
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            const workflows = [];
+            for (const entry of directory ? await reader.tree(directory.sha) : []) {
+                const path = `.github/workflows/${entry.path}`;
+                if ((entry.type === 'tree' || entry.type === 'commit') && path !== setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH || !/\.ya?ml$/iu.test(entry.path))
+                    continue;
+                workflows.push(await load(path, entry));
+            }
+            return { session, inspection: { target, authority, source, installation: { complete: true, manifest,
+                        guidance, workflows, publisher: (0, setup_publisher_workflow_inventory_1.inspectSetupPublisherWorkflows)(workflows, expected) } } };
+        });
+    }
+}
+exports.SetupPublisherGithubReadAdapter = SetupPublisherGithubReadAdapter;
+
+
+/***/ }),
+
+/***/ 93185:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+};
+var _SetupPublisherGithubSourceAdapter_cache;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupPublisherGithubSourceAdapter = void 0;
+const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
+const node_crypto_1 = __nccwpck_require__(6005);
+const setup_publisher_installation_1 = __nccwpck_require__(95417);
+const setup_batch_github_read_adapter_1 = __nccwpck_require__(9703);
+const setup_publisher_git_reader_1 = __nccwpck_require__(38567);
+const source = Object.freeze({ owner: 'vypdev', repo: 'copilot' });
+const sourceId = 891781467, ownerId = 63705403;
+/** Source selection is authenticated provider evidence, never proposal approval flags. */
+class SetupPublisherGithubSourceAdapter {
+    constructor(transport) {
+        this.transport = transport;
+        _SetupPublisherGithubSourceAdapter_cache.set(this, void 0);
+    }
+    async read(proposal, token, session) {
+        if (proposal.source.repository !== 'vypdev/copilot' || !(0, setup_batch_github_read_adapter_1.batchSha)(proposal.source.commit)
+            || !(0, setup_batch_github_read_adapter_1.batchPositive)(proposal.source.pullRequest))
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        const repository = (0, setup_batch_github_read_adapter_1.batchObject)(await this.transport.call(token, 'GET /repos/{owner}/{repo}', source));
+        if (repository?.id !== sourceId || repository.full_name !== 'vypdev/copilot'
+            || (0, setup_batch_github_read_adapter_1.batchObject)(repository.owner)?.id !== ownerId || repository.archived !== false || repository.disabled !== false) {
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        }
+        const pull = (0, setup_batch_github_read_adapter_1.batchObject)(await this.transport.call(token, 'GET /repos/{owner}/{repo}/pulls/{pull_number}', { ...source, pull_number: proposal.source.pullRequest }));
+        const merger = (0, setup_batch_github_read_adapter_1.batchObject)(pull?.merged_by), head = (0, setup_batch_github_read_adapter_1.batchObject)(pull?.head), base = (0, setup_batch_github_read_adapter_1.batchObject)(pull?.base);
+        if (pull?.number !== proposal.source.pullRequest || pull.state !== 'closed' || pull.merged !== true
+            || pull.merge_commit_sha !== proposal.source.commit || (0, setup_batch_github_read_adapter_1.batchObject)(base?.repo)?.id !== sourceId
+            || !(0, setup_batch_github_read_adapter_1.batchSha)(head?.sha) || !(0, setup_batch_github_read_adapter_1.batchPositive)(merger?.id) || merger.type !== 'User'
+            || typeof merger.login !== 'string' || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/u.test(merger.login)) {
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        }
+        const permission = (0, setup_batch_github_read_adapter_1.batchObject)(await this.transport.call(token, 'GET /repos/{owner}/{repo}/collaborators/{username}/permission', { ...source, username: merger.login }));
+        const user = (0, setup_batch_github_read_adapter_1.batchObject)(permission?.user);
+        if (user?.id !== merger.id || typeof user.login !== 'string' || user.login.toLowerCase() !== merger.login.toLowerCase()
+            || !['admin', 'write'].includes(String(permission?.permission)))
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('forbidden');
+        // An authenticated maintainer merge is the source review decision. Prove
+        // its complete tree equals the selected PR head, including generated code.
+        // This is not independent producer-code attestation or a human UX observation.
+        const reader = new setup_publisher_git_reader_1.SetupPublisherGitReader(this.transport, token, source);
+        const tree = await reader.commitTree(proposal.source.commit), reviewedTree = await reader.commitTree(head.sha);
+        if (tree !== reviewedTree)
+            throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+        let files = __classPrivateFieldGet(this, _SetupPublisherGithubSourceAdapter_cache, "f")?.session === session && __classPrivateFieldGet(this, _SetupPublisherGithubSourceAdapter_cache, "f").tree === tree ? __classPrivateFieldGet(this, _SetupPublisherGithubSourceAdapter_cache, "f").files : undefined;
+        if (!files) {
+            const read = async (path, maximum) => {
+                const entry = await reader.find(tree, path);
+                if (!entry || entry.mode !== '100644')
+                    throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+                return reader.text(entry, maximum);
+            };
+            const workflow = await read(setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH, 100000);
+            const manifest = await read('action.yml', 100000);
+            try {
+                (0, setup_publisher_installation_policy_1.assertSetupPublisherActionManifest)(manifest);
+            }
+            catch {
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            }
+            // https://docs.github.com/en/rest/git/blobs#get-a-blob: provider ceiling.
+            // This bound applies only to the fixed source bundle, never destination assets.
+            const bundle = await read('build/github_action/index.js', 100000000);
+            const hash = (content) => (0, node_crypto_1.createHash)('sha256').update(content, 'utf8').digest('hex');
+            files = Object.freeze({ workflow, actionManifestSha256: hash(manifest), actionBundleSha256: hash(bundle) });
+            __classPrivateFieldSet(this, _SetupPublisherGithubSourceAdapter_cache, { session, tree, files }, "f");
+        }
+        return { repository: 'vypdev/copilot', repositoryId: sourceId, commit: proposal.source.commit,
+            pullRequest: proposal.source.pullRequest, reviewedRevision: proposal.source.commit, mergedRevision: proposal.source.commit, ...files };
+    }
+}
+exports.SetupPublisherGithubSourceAdapter = SetupPublisherGithubSourceAdapter;
+_SetupPublisherGithubSourceAdapter_cache = new WeakMap();
+
+
+/***/ }),
+
+/***/ 3469:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupPublisherJournalAdapter = void 0;
+const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
+const setup_operation_journal_store_1 = __nccwpck_require__(21298);
+/** Publisher-v2 facade over the same UUID namespace and exclusive lock as legacy batch. */
+class SetupPublisherJournalAdapter {
+    constructor(root) { this.store = new setup_operation_journal_store_1.SetupOperationJournalStore(setup_publisher_installation_policy_1.parseSetupPublisherOperation, root); }
+    async load(id) {
+        const value = await this.store.load(id);
+        return value === undefined ? undefined : (0, setup_publisher_installation_policy_1.parseSetupPublisherOperation)(value);
+    }
+    async save(operation) {
+        const validated = (0, setup_publisher_installation_policy_1.parseSetupPublisherOperation)(operation);
+        return this.store.save(validated.operationId, validated);
+    }
+    lock(id) { return this.store.lock(id); }
+    async recordLocation(id) {
+        try {
+            return await this.store.location(id);
+        }
+        catch {
+            return undefined;
+        } // A missing navigation target never grants recovery or hides the main operation error.
+    }
+}
+exports.SetupPublisherJournalAdapter = SetupPublisherJournalAdapter;
+
+
+/***/ }),
+
+/***/ 42186:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.inspectSetupPublisherWorkflows = inspectSetupPublisherWorkflows;
+const js_yaml_1 = __nccwpck_require__(783);
+const setup_publisher_installation_1 = __nccwpck_require__(95417);
+const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+/** Parse workflow structure; comments and display names never establish publisher absence. */
+function inspectSetupPublisherWorkflows(files, expected) {
+    const foreign = [], unknown = [], exact = [];
+    for (const file of files) {
+        if (file.path.toLowerCase() === setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH.toLowerCase()) {
+            (file.path === setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH && file.mode === '100644' && file.content === expected ? exact : foreign).push(file.path);
+            continue;
+        }
+        const kind = meaning(file.content);
+        if (kind === 'publisher')
+            foreign.push(file.path);
+        if (kind === 'unknown')
+            unknown.push(file.path);
+    }
+    const result = (kind, paths) => ({ kind, paths: Object.freeze(paths.sort()) });
+    if (foreign.length)
+        return result('foreign', [...foreign, ...exact]);
+    if (unknown.length)
+        return result('unknown', [...unknown, ...exact]);
+    return exact.length ? result('exact', exact) : result('absent', []);
+}
+function meaning(content) {
+    if (Buffer.byteLength(content, 'utf8') > 100000 || content.includes('\0'))
+        return 'unknown';
+    try {
+        const document = (0, js_yaml_1.load)(content, { schema: js_yaml_1.JSON_SCHEMA });
+        if (!object(document) || !object(document.jobs) || !Object.keys(document.jobs).length
+            || Object.values(document.jobs).some(job => !object(job) || !Array.isArray(job.steps) && typeof job.uses !== 'string'))
+            return 'unknown';
+        let nodes = 0;
+        const stack = new Set();
+        const visit = (value, depth) => {
+            if (++nodes > 10000 || depth > 64)
+                throw new Error('Unsupported workflow structure.');
+            if (value === null || typeof value !== 'object')
+                return;
+            if (stack.has(value))
+                throw new Error('Cyclic workflow.');
+            stack.add(value);
+            if (Array.isArray(value))
+                value.forEach(child => visit(child, depth + 1));
+            else
+                Object.values(value).forEach(child => visit(child, depth + 1));
+            stack.delete(value);
+        };
+        visit(document, 0);
+        let publisher = false, unknown = false;
+        const own = (scope, key) => Object.prototype.hasOwnProperty.call(scope, key);
+        const environment = (scope) => {
+            if (!own(scope, 'env'))
+                return;
+            if (!object(scope.env))
+                unknown = true;
+            // Windows environment lookups are case-insensitive. Runner expressions
+            // may select Windows, so every case variant remains a publisher marker.
+            else if (Object.keys(scope.env).some(key => key.toUpperCase() === 'COPILOT_BUGBOT_STATUS_CARD_WORKFLOW'))
+                publisher = true;
+        };
+        const execution = (scope, step) => {
+            environment(scope);
+            if (own(scope, 'uses')) {
+                if (typeof scope.uses !== 'string' || scope.uses.includes('${{'))
+                    unknown = true;
+                else if (/(?:^|\/)copilot_bugbot_status_card\.ya?ml(?:@|$)/iu.test(scope.uses))
+                    publisher = true;
+                // No local/remote action or reusable implementation is resolved here.
+                // A ref pin establishes identity, never absence of publisher behavior.
+                else
+                    unknown = true;
+            }
+            if (own(scope, 'with')) {
+                if (!object(scope.with))
+                    unknown = true;
+                else if (own(scope.with, 'single-action')) {
+                    const selected = scope.with['single-action'];
+                    if (typeof selected !== 'string' || selected.includes('${{'))
+                        unknown = true;
+                    else if (selected === 'publish_bugbot_status_card_action')
+                        publisher = true;
+                }
+            }
+            if (step && own(scope, 'run')) {
+                if (typeof scope.run !== 'string')
+                    unknown = true;
+                else if (/COPILOT_BUGBOT_STATUS_CARD_WORKFLOW|publish_bugbot_status_card_action/iu.test(scope.run))
+                    publisher = true;
+                // A script may invoke a publisher indirectly or construct its marker.
+                // Literal marker absence cannot establish executable behavior absence.
+                else
+                    unknown = true;
+            }
+        };
+        environment(document);
+        for (const value of Object.values(document.jobs)) {
+            const job = value;
+            execution(job, false);
+            if (own(job, 'steps')) {
+                if (!Array.isArray(job.steps) || job.steps.some(step => !object(step)))
+                    unknown = true;
+                else
+                    job.steps.forEach(step => execution(step, true));
+            }
+        }
+        return publisher ? 'publisher' : unknown ? 'unknown' : 'ordinary';
+    }
+    catch {
+        return 'unknown';
     }
 }
 
@@ -131175,16 +133819,8 @@ exports.inspectRepositoryAgentGuidance = inspectRepositoryAgentGuidance;
 const fs = __importStar(__nccwpck_require__(87561));
 const path = __importStar(__nccwpck_require__(49411));
 const node_crypto_1 = __nccwpck_require__(6005);
-const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
 const logger_1 = __nccwpck_require__(91151);
-const setup_batch_policy_1 = __nccwpck_require__(52214);
-const MANAGED_ROLES = Object.freeze({
-    [repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH]: 'profile',
-    [repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH]: 'guide',
-    [repository_agent_guidance_policy_1.REPOSITORY_AGENT_SKILL_PATH]: 'skill',
-    [repository_agent_guidance_policy_1.REPOSITORY_AGENT_POINTER_PATH]: 'pointer',
-});
 function reconcileRepositoryAgentGuidance(cwd, configuration) {
     const prior = readGuidanceManifest(cwd);
     const manifestDestination = path.join(cwd, repository_agent_guidance_policy_1.REPOSITORY_AGENT_MANIFEST_PATH);
@@ -131268,7 +133904,7 @@ function inspectRepositoryAgentGuidance(cwd, configuration) {
         const matchesManifest = actual !== undefined && sha256(actual) === record.sha256;
         const matchesDesired = record.role === 'pointer' || !desired
             || desired.get(relativePath) === canonicalGuidanceText(content);
-        const semantic = record.role !== 'profile' || validRepositoryAgentProfile(content);
+        const semantic = record.role !== 'profile' || (0, repository_agent_guidance_policy_1.validRepositoryAgentProfile)(content);
         checks.push(matchesManifest && matchesDesired && semantic
             ? { id: checkId(record.role), status: 'pass', summary: `${relativePath} matches the setup manifest.`, path: relativePath }
             : { id: checkId(record.role), status: 'fail', summary: `${relativePath} has drifted, is stale, or violates its generated contract.`, path: relativePath });
@@ -131398,50 +134034,11 @@ function readGuidanceManifest(cwd) {
     if (!fs.existsSync(manifestPath))
         return undefined;
     try {
-        const parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-        if (Object.keys(parsed).some(key => !['schemaVersion', 'generator', 'profileDigest', 'artifacts', 'installation'].includes(key)))
-            return undefined;
-        if (parsed.installation !== undefined && !(0, setup_batch_policy_1.isSetupBatchInstallationReceipt)(parsed.installation))
-            return undefined;
-        if (parsed.schemaVersion !== 2 || !isSha256(parsed.profileDigest))
-            return undefined;
-        const generator = parsed.generator;
-        if (!generator || Object.keys(generator).some(key => !['name', 'contractVersion'].includes(key))
-            || generator.name !== '@vypdev/copilot' || generator.contractVersion !== 1)
-            return undefined;
-        const artifacts = parsed.artifacts;
-        if (!artifacts || typeof artifacts !== 'object' || Array.isArray(artifacts))
-            return undefined;
-        const records = {};
-        for (const [relativePath, value] of Object.entries(artifacts)) {
-            if (!isManagedPath(relativePath) || !value || typeof value !== 'object' || Array.isArray(value))
-                return undefined;
-            const record = value;
-            if (Object.keys(record).some(key => !['role', 'sha256'].includes(key)))
-                return undefined;
-            if (!['profile', 'guide', 'skill', 'pointer'].includes(String(record.role)) || !isSha256(record.sha256))
-                return undefined;
-            if (record.role !== expectedManagedRole(relativePath))
-                return undefined;
-            records[relativePath] = { role: record.role, sha256: record.sha256 };
-        }
-        return {
-            schemaVersion: 2,
-            generator: { name: '@vypdev/copilot', contractVersion: 1 },
-            profileDigest: parsed.profileDigest,
-            artifacts: records,
-            ...((0, setup_batch_policy_1.isSetupBatchInstallationReceipt)(parsed.installation) ? { installation: parsed.installation } : {}),
-        };
+        return (0, repository_agent_guidance_policy_1.parseRepositoryAgentGuidanceManifest)(fs.readFileSync(manifestPath, 'utf8'));
     }
     catch {
         return undefined;
     }
-}
-function isManagedPath(value) {
-    return Object.prototype.hasOwnProperty.call(MANAGED_ROLES, value);
-}
-function expectedManagedRole(relativePath) {
-    return MANAGED_ROLES[relativePath];
 }
 function pointerBlock(content) {
     const start = content.indexOf(repository_agent_guidance_policy_1.REPOSITORY_AGENT_POINTER_START);
@@ -131486,9 +134083,6 @@ function canonicalGuidanceText(content) {
 function containsSensitiveGuidance(content) {
     return /(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|\/(?:Users|home)\/[^/\s]+\/)/u.test(content);
 }
-function isSha256(value) {
-    return typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value);
-}
 function checkId(role) {
     return ({
         profile: 'agent-profile-schema',
@@ -131496,87 +134090,6 @@ function checkId(role) {
         skill: 'agent-skill-contract',
         pointer: 'agent-guidance-discovery',
     })[role];
-}
-function validRepositoryAgentProfile(content) {
-    try {
-        const parsed = JSON.parse(content);
-        const profileKeys = ['schemaVersion', 'generator', 'issueWorkflows', 'branches', 'pullRequests', 'deployment'];
-        if (isRecord(parsed) && parsed.installation !== undefined)
-            profileKeys.push('installation');
-        if (!hasExactKeys(parsed, profileKeys)
-            || parsed.schemaVersion !== 2)
-            return false;
-        if (parsed.installation !== undefined && (!hasExactKeys(parsed.installation, ['lifecycleOwner', 'branchNamespace', 'requiresIssue', 'automaticMerge'])
-            || parsed.installation.lifecycleOwner !== 'setup-cli' || parsed.installation.branchNamespace !== 'setup/copilot/<operation-id>'
-            || parsed.installation.requiresIssue !== false || parsed.installation.automaticMerge !== false))
-            return false;
-        const { generator, issueWorkflows, branches, pullRequests, deployment } = parsed;
-        if (!hasExactKeys(generator, ['name', 'contractVersion'])
-            || generator.name !== '@vypdev/copilot' || generator.contractVersion !== 2)
-            return false;
-        if (!hasExactKeys(issueWorkflows, ['enabled', 'formsEnabled', 'forms']))
-            return false;
-        const { enabled: rawEnabled, formsEnabled, forms } = issueWorkflows;
-        if (typeof formsEnabled !== 'boolean'
-            || !isStringArray(rawEnabled)
-            || new Set(rawEnabled).size !== rawEnabled.length
-            || rawEnabled.some(kind => !issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.includes(kind))
-            || !isRecord(forms))
-            return false;
-        const enabled = rawEnabled;
-        if (Object.keys(forms).length !== enabled.length
-            || Object.keys(forms).some(kind => !enabled.includes(kind)))
-            return false;
-        if (enabled.some(kind => !validRepositoryAgentWorkflowFact(forms[kind], kind, formsEnabled, isRecord(branches) && branches.issueManagedBranches === true)))
-            return false;
-        if (!hasExactKeys(branches, ['remoteLifecycleOwner', 'issueManagedBranches', 'preBranchSdd', 'startLabel', 'readyLabel', 'helpCreatesBranch'])
-            || branches.remoteLifecycleOwner !== 'github-action'
-            || branches.helpCreatesBranch !== false
-            || typeof branches.issueManagedBranches !== 'boolean'
-            || typeof branches.preBranchSdd !== 'boolean'
-            || (branches.preBranchSdd && !branches.issueManagedBranches)
-            || branches.startLabel !== 'in-progress'
-            || branches.readyLabel !== 'branched')
-            return false;
-        if (!hasExactKeys(pullRequests, ['mustLinkIssue']) || pullRequests.mustLinkIssue !== true)
-            return false;
-        return hasExactKeys(deployment, ['agentMayInitiateWithoutExplicitAuthorization', 'launcherLabel'])
-            && deployment.agentMayInitiateWithoutExplicitAuthorization === false
-            && isNonEmptyString(deployment.launcherLabel);
-    }
-    catch {
-        return false;
-    }
-}
-function validRepositoryAgentWorkflowFact(value, kind, formsEnabled, issueManagedBranches) {
-    if (!hasExactKeys(value, [
-        'template', 'labels', 'formLabels', 'nativeIssueType', 'createsManagedBranch',
-        'branchPrefix', 'requiredFields', 'workflow',
-    ]))
-        return false;
-    const definition = issue_workflow_profile_1.ISSUE_WORKFLOW_CATALOG[kind];
-    return (formsEnabled ? isNonEmptyString(value.template) : value.template === null)
-        && isStringArray(value.labels) && value.labels.every(isNonEmptyString)
-        && isStringArray(value.formLabels) && value.formLabels.every(isNonEmptyString)
-        && value.nativeIssueType === definition.nativeIssueType
-        && value.createsManagedBranch === (definition.branchManaged && issueManagedBranches)
-        && (definition.branchManaged ? isNonEmptyString(value.branchPrefix) : value.branchPrefix === null)
-        && isStringArray(value.requiredFields) && value.requiredFields.every(isNonEmptyString)
-        && (value.workflow === null || isNonEmptyString(value.workflow));
-}
-function isRecord(value) {
-    return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-function hasExactKeys(value, keys) {
-    return isRecord(value)
-        && Object.keys(value).length === keys.length
-        && Object.keys(value).every(key => keys.includes(key));
-}
-function isStringArray(value) {
-    return Array.isArray(value) && value.every(item => typeof item === 'string');
-}
-function isNonEmptyString(value) {
-    return typeof value === 'string' && value.trim().length > 0;
 }
 function inspectIssueWorkflowProjection(cwd, configuration) {
     const profile = (0, repository_agent_guidance_policy_1.renderRepositoryAgentArtifacts)(configuration)
@@ -131767,6 +134280,7 @@ exports.compareSetupWorkflows = compareSetupWorkflows;
 exports.getSetupToken = getSetupToken;
 exports.hasValidSetupToken = hasValidSetupToken;
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const setup_token_value_policy_1 = __nccwpck_require__(51974);
 const fs = __importStar(__nccwpck_require__(57147));
 const path = __importStar(__nccwpck_require__(71017));
 const setup_file_copy_1 = __nccwpck_require__(90102);
@@ -132042,13 +134556,6 @@ function isLocalSourceApprovalObserver(cwd, destination) {
         && fs.readFileSync(destination, 'utf8') === fs.readFileSync(sourceObserver, 'utf8');
 }
 const ENV_TOKEN_KEY = 'PERSONAL_ACCESS_TOKEN';
-const ENV_PLACEHOLDER_VALUE = 'github_pat_11..';
-/** Minimum length for a token to be considered "defined" (not placeholder). */
-const MIN_VALID_TOKEN_LENGTH = 20;
-function isTokenValueValid(token) {
-    const t = token.trim();
-    return t.length >= MIN_VALID_TOKEN_LENGTH && t !== ENV_PLACEHOLDER_VALUE;
-}
 /**
  * Resolves the PERSONAL_ACCESS_TOKEN for setup from a single priority order:
  * 1. override (e.g. CLI --token) if provided and valid,
@@ -132057,10 +134564,10 @@ function isTokenValueValid(token) {
  */
 function getSetupToken(_cwd, override) {
     const overrideTrimmed = override?.trim();
-    if (overrideTrimmed && isTokenValueValid(overrideTrimmed))
+    if (overrideTrimmed && (0, setup_token_value_policy_1.isSetupTokenValueValid)(overrideTrimmed))
         return overrideTrimmed;
     const fromEnv = process.env[ENV_TOKEN_KEY]?.trim();
-    if (fromEnv && isTokenValueValid(fromEnv))
+    if (fromEnv && (0, setup_token_value_policy_1.isSetupTokenValueValid)(fromEnv))
         return fromEnv;
     return undefined;
 }

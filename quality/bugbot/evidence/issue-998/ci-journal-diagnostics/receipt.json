@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T21:26:02.524175+00:00",
+  "parent": "7bddc5656c41c3c6cf8f9f1a5a5154901c101383",
+  "purpose": "Test-only bounded phase observation for actual native journal timeouts. No claimed runtime fix or native-cause attribution.",
+  "native7b": {
+    "CI": 44948996936,
+    "static": "PASS",
+    "buildAndPackage": "PASS104files/11actualCLI0effects/API/web",
+    "coverage": "FAIL5timeouts/2suites;964suites19725assertionsPASS+35historicalskips",
+    "aggregate": "FAIL",
+    "coverageRawSha256": "c034de706c00cec5edff8e28bce6ac9e51e8c45c8bc6a88e27f53c460d5bf48d",
+    "noObsoleteRerun": true
+  },
+  "localIsolation": {
+    "passed": 64,
+    "failed": 0,
+    "observationalRealFsSyncs": 279,
+    "maxObservedSyncMs": 16.708041999999296,
+    "scope": "Same64 tests pass locally with method-only diagnostic observation; focused coverage command exits1 for unexecuted web/publication owners. Native cause remains UNPROVEN."
+  },
+  "newDiagnosticControls": {
+    "passed": 64,
+    "failed": 0,
+    "skipped": 0,
+    "runtimeDeadlinesUnchanged": true,
+    "recordedFields": "fixedmethodlabel,ordinal,elapsed/completion/errorcode; no arguments/paths/content/token/environment",
+    "bounds": "128retainedrows/32reportedphases, one warning per slow/pending test, explicit omittedcount; observation never cancels/retries or affects admission",
+    "sharedFsMethodsRestoredAfterSuite": true,
+    "helperSha256": "7548174e5199d7b8d20024fe212d6d83aab34287ec42a2684642259ef5187615"
+  },
+  "lintNegative": "Initial CJS helper used undeclared Jest hook globals. Explicit globalThis destructuring fixes lint without a configuration/rule change. Both logs retained.",
+  "runtimeSourceHashes": {
+    "src/application/policies/setup_publisher_installation_policy.ts": "79af4fa2c637e29472a200fcbf9eb45181ad121b3c4edbe8d106dd4b8615c68c",
+    "src/infrastructure/setup_installation_github_delivery_adapter.ts": "f4511df3571bcfe40ab4a811b0c5f16f8032778edd721d193691dfbac9312368",
+    "src/infrastructure/setup_operation_journal_store.ts": "a564185d6fdc5f5e6b5c66d9bd8c0f264f89dbd2678c89f89a5bc04681b153c0"
+  },
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8469725,
+      "sha256": "8e20f5b835f4d1571ef43ee54bea5fb1d16eb1c09d2f62b7fe5f28c5b06aaf32"
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "newArchives": 20,
+  "totalArchives": 188,
+  "sourceBehaviorUnchanged": true,
+  "newHeadNormalHooksAndNativeRequired": true,
+  "production": "disabled",
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "actual174": "unstarted",
+  "actual42": "unstarted",
+  "qualifiedProfile": null,
+  "currentCoherent": {
+    "passed": 1085,
+    "failed": 0,
+    "skipped": 0,
+    "suites": 23,
+    "mappedJest": 86,
+    "registered": 90,
+    "focusedCoverageCommandExit": 1,
+    "reason": "Both unchanged runtime modules100%allmetrics; web/publication owners unexecuted. No global pass claimed."
+  }
+}

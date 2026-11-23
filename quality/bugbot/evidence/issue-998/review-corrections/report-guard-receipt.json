@@ -1,0 +1,57 @@
+{
+  "at": "2026-11-21T14:57:49.471317+00:00",
+  "headBefore": "aef4e273280688db6d05cd5bdb8c2d3721992ff0",
+  "finding": "PRRT_kwDONSeBW866X8l0/comment4653177835",
+  "confirmedFalseyReportAcceptanceBefore": 4,
+  "beforeRegression": {
+    "pass": 6,
+    "fail": 8,
+    "skip": 0
+  },
+  "afterRegression": {
+    "pass": 14,
+    "fail": 0,
+    "skip": 0
+  },
+  "sameTestFileForBothRuns": true,
+  "testSha256": "330ac812f7305d6e20443869a0f0fe73a1f6e7ea78ec3a34877f5233b06c16b4",
+  "validatorBeforeSha256": "eb7b0279c6dcd6fd18cf9ad86dd0d173dabdd1f708b44be80705c5e68077e932",
+  "validatorAfterSha256": "1b6521a704211e58be105442158fbba989071508e771ba37254758e665d30450",
+  "registrationOnly": "only omitted argument",
+  "suppliedReports": "require object with testResults array and all mapped named assertions passed",
+  "syntheticReportPositiveIsParserFixtureOnly": true,
+  "retainedActualJestReportAccepted": true,
+  "remaining": "local fix; final full SDK/native gates and seven other review findings remain",
+  "qualificationCalls": 0,
+  "production": "disabled",
+  "archives": [
+    {
+      "path": "review-corrections/report-guard-before.log.gz",
+      "rawBytes": 136354,
+      "rawSha256": "373ffeeae4e1a8432a5f6cec8e83d3ddc1a8793d61b48b4f192af87f27333c84",
+      "gzipBytes": 13022,
+      "gzipSha256": "ac7b06c8ec20a9b52e99cb76707f1d5499d7c4e8f170d1f26eadc95353acd963"
+    },
+    {
+      "path": "review-corrections/report-guard-before-results.json.log.gz",
+      "rawBytes": 423047,
+      "rawSha256": "1c2701eb99c011b72b515122f8ff2a4f2f204dd50c99ad7bbbaa5951fff09ea6",
+      "gzipBytes": 38535,
+      "gzipSha256": "3acdfebc74b2647ab2b90fa9cdd253ee1b6974c303ac4ce40541657904a71143"
+    },
+    {
+      "path": "review-corrections/report-guard-after.log.gz",
+      "rawBytes": 321,
+      "rawSha256": "2a3dd0882b78c0bc1849e31bba1890a67444a8f4f5c6d101d2a80d21c494139a",
+      "gzipBytes": 230,
+      "gzipSha256": "8f4734b81bc219965731cf5a6d8e90c0efcffb3e54eb922ae5b87e42ca82da4a"
+    },
+    {
+      "path": "review-corrections/report-guard-after-results.json.log.gz",
+      "rawBytes": 7549,
+      "rawSha256": "39c11b1b6bc6413e835df565223d8b465e00933897401a3e7bc332d9208c0ead",
+      "gzipBytes": 927,
+      "gzipSha256": "2dfa2509041b1211b7d509c586c4bb707b7ebaaacc47f7290e81bf060ffb7a88"
+    }
+  ]
+}

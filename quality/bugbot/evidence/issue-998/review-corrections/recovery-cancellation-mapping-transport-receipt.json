@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T15:31:23.803849+00:00",
+  "publishedParent": "aef4e273280688db6d05cd5bdb8c2d3721992ff0",
+  "sourceStatus": "Uncommitted local corrections; final native new-head acceptance and review remain pending",
+  "batch": {
+    "before": "2PASS7FAIL;57unselected",
+    "after": "9PASS0FAIL;57unselected",
+    "sameExecutedNames": true,
+    "harnessNote": "After the negative, one redundant array-shape assertion was removed; the nine behavior controls and failure expectations stayed identical. Raw reports are retained.",
+    "focusedInitial": "169PASS/4suites/commandexit0",
+    "expandedCoverage": "177PASS/4suites;commandexit1 because global unrelated owners are unrun",
+    "changedModules": {
+      "/private/tmp/copilot-goal-998/src/application/usecases/setup/apply_setup_batch_use_case.ts": {
+        "lines": {
+          "total": 68,
+          "covered": 68,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 19,
+          "covered": 19,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 86,
+          "covered": 86,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 70,
+          "covered": 70,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "/private/tmp/copilot-goal-998/src/application/usecases/setup/deliver_setup_installation_use_case.ts": {
+        "lines": {
+          "total": 45,
+          "covered": 45,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 8,
+          "covered": 8,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 56,
+          "covered": 56,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 37,
+          "covered": 37,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "/private/tmp/copilot-goal-998/src/infrastructure/setup_batch_github_apply_adapter.ts": {
+        "lines": {
+          "total": 98,
+          "covered": 98,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 31,
+          "covered": 31,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 137,
+          "covered": 137,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 122,
+          "covered": 122,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "legacyJournalSchema": 1,
+    "publisherCompletedRecovery": "inspect-only"
+  },
+  "cancellation": {
+    "before": "131PASS13FAIL/3suites",
+    "after": "144PASS0FAIL/3suites",
+    "tokenOrApprovalCancelExit": 130,
+    "explicitDeclineExit": 0,
+    "sourceChanged": true
+  },
+  "C02": {
+    "planSuite": "95PASS0FAIL",
+    "dedicatedAssertions": 4,
+    "oldMapping": "publisher977-C21 inspected coordinate drift",
+    "idsAndRequirementAssertionsUnchanged": true,
+    "wholeMappedAcceptanceProven": false
+  },
+  "undici": {
+    "controls": "4PASS0FAIL",
+    "guardChanged": false,
+    "positiveConnectionsPerTransport": 1,
+    "positiveRequestsPerTransport": 1,
+    "guardedConnectionsPerTransport": 0,
+    "guardedRequestsPerTransport": 0,
+    "guardedNetworkAttempt": [
+      "socket.connect"
+    ],
+    "guardedDiagnosticRequests": 1,
+    "transports": [
+      "native fetch captured before guard",
+      "actual Octokit dependency Undici fetch"
+    ],
+    "findingReproduced": false
+  },
+  "selectedSDDSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "qualificationCalls": 0,
+  "pilotWriteAttempts": 0,
+  "production": "disabled",
+  "files": {
+    "batch-recovery-before.log.gz": {
+      "rawBytes": 8094,
+      "rawSha256": "f8b6014aa13bd3315438c90395f2e68228b795d0266988b891f59d65913f2c08",
+      "gzipBytes": 1217,
+      "gzipSha256": "bfbe8ba30775d04d8aa2eaf4c3befdca74206913b050b3b97d3a1436216cc915"
+    },
+    "batch-recovery-before-results.json.log.gz": {
+      "rawBytes": 46452,
+      "rawSha256": "4beb02948c16a8bdb66eaa08c3f3303e9c28441c1d1117766d2f65eb0527398e",
+      "gzipBytes": 4210,
+      "gzipSha256": "aa32cf1e829b41dfb3fc479d2f89f5b2fd623622b4cd91f4e0846be6ed1956e1"
+    },
+    "batch-recovery-after.log.gz": {
+      "rawBytes": 366,
+      "rawSha256": "5f51b9964fc089e2651dc2b178818917bb8115010909a0b0fcbaebdf82fd4ebf",
+      "gzipBytes": 250,
+      "gzipSha256": "705e914645019475eab4ecb4c794ce8295a5342ecb8b8ca54dc5bfceb888aa6f"
+    },
+    "batch-recovery-after-results.json.log.gz": {
+      "rawBytes": 33845,
+      "rawSha256": "2270b27c53f492723be3a397a7245ae2ca5e0bc1e28494291c041bcf18f9e1c2",
+      "gzipBytes": 3014,
+      "gzipSha256": "18774f52f1a4e122481ec5b6e967766b2343abcb83cf4dbc8a806e0a1f938cf6"
+    },
+    "batch-recovery-focused-initial.log.gz": {
+      "rawBytes": 533,
+      "rawSha256": "c55977c2a20312751a2b3283fe46de2c9ce068f071a6899f8d1580da196203df",
+      "gzipBytes": 279,
+      "gzipSha256": "7edaaba0092cbc64a1a60a5bdd88e509b993bca771251d485f433216963b37ab"
+    },
+    "batch-recovery-focused-initial-results.json.log.gz": {
+      "rawBytes": 83111,
+      "rawSha256": "d4aec74bb04b1f0eb298bd9d25d0dda7b2d1c1d7689c85a777ce4344c1eb36f4",
+      "gzipBytes": 6976,
+      "gzipSha256": "d588035aafa4e177e758e2bb27a121f74ea79666e142118e8d78346afc40cf6b"
+    },
+    "batch-recovery-focused-coverage.log.gz": {
+      "rawBytes": 242858,
+      "rawSha256": "0c120f685a5c22012304a975304b05b0a6a2d8f4c2f565565d83800c93536ef8",
+      "gzipBytes": 18639,
+      "gzipSha256": "59a40e16a1a656988c6c8d6d30a10b5d3dd186201c7d12a8ba03600b0eb2ffd4"
+    },
+    "batch-recovery-focused-coverage-results.json.log.gz": {
+      "rawBytes": 9541901,
+      "rawSha256": "62cf4eb4c5cced4cabd0438fc8901aab8aff1ba237098b8591d845e3c1537618",
+      "gzipBytes": 1064928,
+      "gzipSha256": "c2051a7611987e7366c455c2bad86549148a8762287c4f59fd19b6ea66e678e0"
+    },
+    "cancellation-before.log.gz": {
+      "rawBytes": 13832,
+      "rawSha256": "ee7afae9f0c7e1ff23719441c8935b5a322a29cdc88fe20722e56063c514b594",
+      "gzipBytes": 2080,
+      "gzipSha256": "d9b55f31fa235a57960cd680f625ef0b4265ec5f594e1f267a94a07a3eca9d1e"
+    },
+    "cancellation-before-results.json.log.gz": {
+      "rawBytes": 87813,
+      "rawSha256": "b4558340d6e066d905846b97ec6134ffab80cb4396544f228e863476733c5a6e",
+      "gzipBytes": 7074,
+      "gzipSha256": "0ef84865a05e2beb97550ae4481bebfcb1a6346154b348360b8f65a8a504126e"
+    },
+    "cancellation-after.log.gz": {
+      "rawBytes": 448,
+      "rawSha256": "cba8016eceb598f23c3f6be0b2c016b0f8c83a6f07f07b252927482f3d3ca6fe",
+      "gzipBytes": 248,
+      "gzipSha256": "7089cbdeac04d9f32bd767b96d4666570fd507fbfe0610c2c4639e5ba62a6a98"
+    },
+    "cancellation-after-results.json.log.gz": {
+      "rawBytes": 56895,
+      "rawSha256": "a4f55893ab4d59b7eae222f8a2252a53d4ca6f253d40a2c8c14ce2f6ff93cf58",
+      "gzipBytes": 4516,
+      "gzipSha256": "1d15dd5fcb6c5f1242f2b9939681d74845f2bc304ab2ba977ed21813cf864073"
+    },
+    "c02-mapping.log.gz": {
+      "rawBytes": 286,
+      "rawSha256": "8c2e00cab1fac4082952dc72d3e9027b1ad0122b42c823455b16c7b41d3334e0",
+      "gzipBytes": 208,
+      "gzipSha256": "0daeeb5813606d6d697139878c6cf06c78ca9d8b7c085f4029e41eab3defd92a"
+    },
+    "c02-mapping-results.json.log.gz": {
+      "rawBytes": 47978,
+      "rawSha256": "d7bf54f8724a2d5e8fa4ccf6defaac7d0925ab2397d62fa4753dcaf876025d2f",
+      "gzipBytes": 2675,
+      "gzipSha256": "d947a03f6f57c4fcd8f4bb194dd1095058fdc09f5dbd2cd1fb3d59b9ed160f15"
+    },
+    "undici-guard-counterfactual.log.gz": {
+      "rawBytes": 289,
+      "rawSha256": "bd2ea8368e132302340b22b4e4842073a67923ada5340969db24728cc5133afa",
+      "gzipBytes": 210,
+      "gzipSha256": "fd2130f2887d0029ff66b80354b1b174c495b107193fd5de3ec1f9bf2755cd0c"
+    },
+    "undici-guard-counterfactual-results.json.log.gz": {
+      "rawBytes": 3049,
+      "rawSha256": "91da53bdbf709d955ef59a2d2f98a66459eb173a8fdcadd1ff63133dad079b52",
+      "gzipBytes": 668,
+      "gzipSha256": "8eb5f2982c037f545c91f16ab873ced637da58d3eb9776547e6fc820528537ab"
+    }
+  }
+}

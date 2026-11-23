@@ -24,6 +24,17 @@ export class SetupBatchGithubTransport {
     now: () => Date.now(), wait: (milliseconds: number): Promise<void> => new Promise(resolve => setTimeout(resolve, milliseconds)),
   }) {}
   async call(token: string, route: string, parameters: BatchRecord): Promise<unknown> {
+    return (await this.response(token, route, parameters)).data;
+  }
+  /** Granted OAuth scopes only. Endpoint-required permission headers are not grants. */
+  async identity(token: string): Promise<{ readonly user: unknown; readonly oauthScopes: readonly string[] | null }> {
+    const response = await this.response(token, 'GET /user', {});
+    const value = response.headers?.['x-oauth-scopes'];
+    const scopes = typeof value === 'string' && value.length <= 4096 ? value.split(',').map(scope => scope.trim()) : [];
+    return { user: response.data, oauthScopes: scopes.length > 0 && scopes.length <= 64
+      && scopes.every(scope => /^[a-z][a-z0-9_:.-]*$/u.test(scope)) ? Object.freeze([...new Set(scopes)].sort()) : null };
+  }
+  private async response(token: string, route: string, parameters: BatchRecord): ReturnType<GithubSetupBatchClient['request']> {
     const read = route.startsWith('GET ');
     for (let attempt = 0; ; attempt += 1) {
       const controller = new AbortController();
@@ -34,7 +45,7 @@ export class SetupBatchGithubTransport {
         }, 15_000); });
         const response = await Promise.race([this.provider.getClient(token).request(route, { ...parameters,
           request: { timeout: 15_000, signal: controller.signal } }), timeout]);
-        return response.data;
+        return response;
       } catch (error) {
         const record = batchObject(error);
         const status = record?.status;
@@ -142,20 +153,23 @@ export class SetupBatchGithubReadAdapter implements SetupBatchDiscoveryPort, Set
     const response = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}',
       { owner: target.owner, repo: target.name, tree_sha: target.baseSha, recursive: '1' }));
     if (!response || response.truncated !== false || !Array.isArray(response.tree) || response.tree.length > 100_000) throw new SetupBatchProviderError('malformed');
+    const inventory: (BatchRecord & { path: string })[] = [];
     for (const raw of response.tree) {
       const item = batchObject(raw);
-      if (typeof item?.path !== 'string') continue;
+      if (!item || typeof item.path !== 'string' || item.path.includes('\0')
+        || item.path.split('/').some(part => !part || part === '.' || part === '..')) throw new SetupBatchProviderError('malformed');
       const candidatePath = item.path;
       const fixed = [...SETUP_VERIFICATION_ACTION_PARENTS, SETUP_VERIFICATION_ACTION_PATH].find(path => path.toLowerCase() === candidatePath.toLowerCase());
       if (fixed && (item.path !== fixed || (fixed === SETUP_VERIFICATION_ACTION_PATH
         ? item.type !== 'blob' || !['100644', '100755'].includes(String(item.mode))
         : item.type !== 'tree' || item.mode !== '040000'))) throw new SetupBatchProviderError('malformed');
+      inventory.push(item as BatchRecord & { path: string });
     }
-    const entries = response.tree.map(batchObject).filter(entry => entry?.type !== 'tree' && typeof entry?.path === 'string' && validSetupBatchAssetPath(entry.path));
+    const entries = inventory.filter(entry => entry.type !== 'tree' && validSetupBatchAssetPath(entry.path));
     if (entries.length > 300) throw new SetupBatchProviderError('malformed');
     const files: SetupBatchFile[] = []; let bytes = 0;
     for (const entry of entries) {
-      if (!entry || entry.type !== 'blob' || !['100644', '100755'].includes(String(entry.mode))
+      if (entry.type !== 'blob' || !['100644', '100755'].includes(String(entry.mode))
         || !batchSha(entry.sha) || !Number.isSafeInteger(entry.size) || Number(entry.size) > 100_000) throw new SetupBatchProviderError('malformed');
       bytes += Number(entry.size); if (bytes > 2_000_000) throw new SetupBatchProviderError('malformed');
       const blob = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/git/blobs/{file_sha}',
@@ -163,7 +177,7 @@ export class SetupBatchGithubReadAdapter implements SetupBatchDiscoveryPort, Set
       if (!blob || blob.encoding !== 'base64' || typeof blob.content !== 'string' || blob.content.length > 140_000) throw new SetupBatchProviderError('malformed');
       const decoded = Buffer.from(blob.content, 'base64'); const content = decoded.toString('utf8');
       if (decoded.length !== entry.size || !Buffer.from(content).equals(decoded)) throw new SetupBatchProviderError('malformed');
-      files.push({ path: entry.path as string, content });
+      files.push({ path: entry.path, content });
     }
     if (new Set(files.map(file => file.path)).size !== files.length) throw new SetupBatchProviderError('malformed');
     return files.sort((a, b) => a.path.localeCompare(b.path));

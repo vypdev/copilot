@@ -21,6 +21,10 @@ export function createCliProgram(
     .description('GitHub workflow automation and repository management CLI')
     .version(installedVersion, '-V, --version', 'Display the installed Copilot version');
   program.hook('preAction', async (_thisCommand, actionCommand) => {
+    // Publisher admission must precede every provider read, including update discovery.
+    const publisherSource = actionCommand.getOptionValueSource('publisherManifest');
+    if (actionCommand.name() === 'setup' && (actionCommand.opts().publisherManifest !== undefined
+      || publisherSource !== undefined && publisherSource !== 'default')) return;
     if (isUpdateCheckDisabled() || !shouldCheckForUpdates(actionCommand.name())) return;
     await notifyAboutCliUpdate(updateChecker, installedVersion);
   });
