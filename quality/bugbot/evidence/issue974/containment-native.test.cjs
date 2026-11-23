@@ -267,6 +267,8 @@ for (const id of ids.slice(0, 2)) test(id + ' actual contained SDK cancels escap
             const { launcher, nested } = ready.evidence.nestedNamespace;
             assert.equal(launcher.ppid, 1); assert.equal(launcher.session, launcher.pid);
             assert.notEqual(launcher.state, 'Z'); assert.notEqual(nested.state, 'Z');
+            assert.equal(nested.procfsScope, 'outer-operation');
+            assert(Number.isSafeInteger(nested.namespacePid) && nested.namespacePid > 0);
             assert.match(launcher.bwrapSha256, /^[a-f0-9]{64}$/u);
             for (const name of ['user', 'pid', 'mnt', 'ipc', 'net']) assert.notEqual(nested.namespaces[name], launcher.namespaces[name]);
         }

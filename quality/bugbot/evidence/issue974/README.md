@@ -593,6 +593,16 @@ plans or receipts. A deterministic PASS, build, syscall trial or native-only
 control does not qualify a profile. Production remains disabled and evaluated
 pilot writes remain0.
 
+C32's first literal-root native attempt failed while mounting a new `/proc`;
+C33–C35 passed. A matched two-arm contrast reproduced the fresh-proc refusal
+and entered five distinct namespaces with capabilities0 when retaining the
+existing procfs. The nested fixture now preserves the outer procfs and its
+masks. It records the outer `/proc/self` PID separately from its inner
+`process.pid`, checks the nested process is still alive, and retains every
+namespace, reparenting and cancellation assertion. No privilege, filter or
+scientific threshold changes. Keep the negative and contrast; fresh image and
+committed common-tuple native proof remain required.
+
 The previous fixed-filter image's actual CLI result is12PASS/1FAIL: the private
 controller directory glob did not hide its file content. Codex expands these
 globs as regular-file matches. The worker now exclusively creates the fixed

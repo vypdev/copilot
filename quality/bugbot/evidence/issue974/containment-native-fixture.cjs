@@ -63,7 +63,10 @@ function descendant(role) {
         let child;
         try {
             child = spawn(bwrap, ['--new-session', '--unshare-user', '--unshare-pid', '--unshare-ipc', '--unshare-net',
-                '--ro-bind', '/', '/', '--bind', '/qualification-output', '/qualification-output', '--proc', '/proc',
+                // Preserve the outer operation's existing procfs and its
+                // masks. A fresh proc mount is neither required by this
+                // control nor permitted by unprivileged masked-proc hosts.
+                '--ro-bind', '/', '/', '--bind', '/qualification-output', '/qualification-output',
                 '--cap-drop', 'ALL', '--', process.execPath, fixtureFile, '--native-descendant', 'nested'],
             { stdio: ['ignore', stdout, stderr] });
         } finally { fs.closeSync(stdout); fs.closeSync(stderr); }
@@ -87,8 +90,13 @@ function descendant(role) {
     process.on('SIGTERM', () => undefined);
     const nested = role === 'nested';
     if (nested) assert.equal(input.slot.caseId, 'ev974-C32');
+    // The inherited procfs translates PIDs in the outer operation namespace.
+    // /proc/self identifies this actual process; process.pid uses the new
+    // nested namespace and cannot index that inherited procfs.
+    const procfsPid = nested ? Number(fs.readFileSync('/proc/self/stat', 'utf8').split(' ')[0]) : process.pid;
     write(path.join(directory, nested ? 'nested.json' : 'descendant.json'), {
-        caseId: input.slot.caseId, ...processState(process.pid), ...(nested ? {
+        caseId: input.slot.caseId, ...processState(procfsPid), ...(nested ? {
+            namespacePid: process.pid, procfsScope: 'outer-operation',
             namespaces: Object.fromEntries(['user', 'pid', 'mnt', 'ipc', 'net'].map(name =>
                 [name, fs.readlinkSync('/proc/self/ns/' + name)])),
         } : {}),
@@ -164,10 +172,14 @@ async function runWorker(output, plan, operation) {
         await untilNative(() => processState(launcher.pid).ppid === 1);
         const launcherState = processState(launcher.pid);
         assert.notEqual(launcherState.state, 'Z'); assert.equal(launcherState.session, launcher.pid);
+        const nestedState = processState(nested.pid);
+        assert.notEqual(nestedState.state, 'Z');
+        assert(Number.isSafeInteger(nested.namespacePid) && nested.namespacePid > 0);
+        assert.equal(nested.procfsScope, 'outer-operation');
         for (const name of ['user', 'pid', 'mnt', 'ipc', 'net']) {
             assert.notEqual(nested.namespaces[name], launcher.namespaces[name], 'actual nested ' + name + ' namespace required');
         }
-        nestedNamespace = { launcher: { ...launcher, ...launcherState }, nested };
+        nestedNamespace = { launcher: { ...launcher, ...launcherState }, nested: { ...nested, ...nestedState } };
     }
     if (['ev974-C32', 'ev974-C35'].includes(operation.slot.caseId)) await executing;
     else assert.equal(settled, false, 'inherited pipes or live SDK execution must still be pending');

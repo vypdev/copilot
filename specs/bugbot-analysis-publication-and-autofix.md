@@ -5348,6 +5348,31 @@ The quality operations page and evidence README MUST describe the fixed filter,
 authorization, distinction between component/native evidence, recovery and
 rollback; the catalog includes source, provenance/license and component tests.
 
+#### Nested native control retains the masked outer procfs
+
+The first common literal-root tuple retained actualCLI14PASS and native
+C33–C35 PASS, but C32 failed before readiness: its added bubblewrap command
+could not mount a new `/proc` (`EPERM`). A separate two-arm model-free contrast
+kept the same image, fixed filter, UID, capabilities, mounts and five namespace
+flags. The fresh-proc arm reproduced that refusal; the inherited-proc arm
+entered all five different USER/MNT/PID/IPC/NET namespaces with effective
+capabilities0. This isolates a fixture prerequisite; it does not establish a
+model-tool or scientific PASS. Preserve both arms and the native negative.
+
+C32 MUST retain the outer operation's existing procfs and its submount masks.
+It MUST NOT require a fresh procfs mount, remove masks, add capabilities or
+change the fixed seccomp profile. The [kernel procfs contract](https://kernel.org/doc/html/v7.2/filesystems/proc.html#mount-restrictions)
+restricts fresh unprivileged mounts when existing procfs entries are hidden.
+The pinned CLI also has an inherited-procfs fallback; the fixture does not alter
+CLI behavior. The nested process MUST record its actual `/proc/self` PID in the
+outer procfs separately from `process.pid` in its new PID namespace. The worker
+MUST reread that outer process state and require it alive before readiness,
+while retaining the five distinct namespace identities, reparented live
+launcher, original escaped descendant and whole-operation cancellation proof.
+All previous C32–C35 assertions and the existing35 logical IDs remain effective.
+A fresh image and exact committed native plan are required after this causal
+fixture correction; prior receipts retain their original identities/results.
+
 #### Literal private controller root after actual CLI exclusion failure
 
 The approved fixed-filter image at implementation `faea9e2c` produced an actual
