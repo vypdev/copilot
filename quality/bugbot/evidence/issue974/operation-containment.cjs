@@ -507,9 +507,8 @@ async function runContainedOperation({ root, plan, mode, slot, outputDirectory, 
         imageSha256: plan.containment.image.slice(7),
         purpose: mode === 'corpus' ? 'corpus-case' : mode === 'review' ? 'paired-review'
             : mode === 'runtime-admission' ? 'runtime-admission' : 'native-control' });
-    const staging = fs.realpathSync(fs.mkdtempSync(path.join(tmpdir(), 'bugbot-owned-operation-')));
-    fs.chmodSync(staging, 0o700);
-    const input = path.join(staging, 'input'); fs.mkdirSync(input, { mode: 0o700 });
+    const staging = fs.mkdtempSync(path.join(fs.realpathSync(tmpdir()), 'bugbot-owned-operation-'));
+    const input = path.join(staging, 'input');
     let bundleSha256;
     let scope, createdEffect = false, confirmed = false, removed = false, cancelled = signal.aborted, stopping;
     const retained = async event => {
@@ -529,6 +528,8 @@ async function runContainedOperation({ root, plan, mode, slot, outputDirectory, 
     };
     signal.addEventListener('abort', abort, { once: true });
     try {
+        fs.chmodSync(staging, 0o700);
+        fs.mkdirSync(input, { mode: 0o700 });
         fs.mkdirSync(outputDirectory, { mode: 0o700 }); outputDirectory = fs.realpathSync(outputDirectory);
         const bundle = path.join(input, 'plan.bundle');
         bundleSha256 = provenance.materializePlanBundle(root, plan.implementation, proof.planCommit, bundle);

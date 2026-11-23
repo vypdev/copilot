@@ -206,9 +206,11 @@ function createRecordedVerifier({ caseId, record, artifactDirectory, transport, 
                 providerReported: { model: result.fact?.reportedModel ?? null, usage: result.fact?.usage ?? null } });
             return result;
         } catch (error) {
-            record({ event: 'verifier-attempt-finish', attemptId, at: new Date().toISOString(),
-                status: request.signal?.aborted ? 'interrupted' : 'failed', failure: boundedFailure(error),
-                providerReported: { model: null, usage: null } });
+            try {
+                record({ event: 'verifier-attempt-finish', attemptId, at: new Date().toISOString(),
+                    status: request.signal?.aborted ? 'interrupted' : 'failed', failure: boundedFailure(error),
+                    providerReported: { model: null, usage: null } });
+            } catch { /* Preserve the original failure; missing evidence stays incomplete. */ }
             throw error;
         }
     };

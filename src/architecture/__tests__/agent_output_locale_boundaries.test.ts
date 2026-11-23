@@ -47,7 +47,7 @@ describe('qualification operation composition boundaries', () => {
   });
 
   it('admits and stops plans only through the ordinary planner and executor, and grants live scopes only in the immutable bootstrap', () => {
-    const files = productionTypeScriptFiles(root).filter(file => !file.endsWith('/qualification_operation_scope.ts'));
+    const files = productionTypeScriptFiles(root).filter(file => !file.endsWith(join('agents', 'qualification_operation_scope.ts')));
     const callers = (name: string) => files.filter(file => new RegExp(`\\b${name}\\s*\\(`, 'u').test(readFileSync(file, 'utf8')))
       .map(file => file.slice(root.length + 1).replace(/\\/gu, '/')).sort();
     expect(callers('bindQualificationOperationPlan')).toEqual(['infrastructure/agents/qualification_investigation_admission.ts']);

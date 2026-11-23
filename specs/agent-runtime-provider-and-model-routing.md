@@ -1516,3 +1516,48 @@ characters against64 in the tool output. It remains FAIL_NOT_ADMITTED and is not
 rerun or relabelled by this amendment. Same-assertion controls2PASS/5FAIL become
 65componentPASS with unchanged95/90 floors. Full source/native review gates and
 existing scope/credential/output/cancellation boundaries remain unchanged.
+
+
+#### Source626e completed review: pre-creation cleanup and first failure
+
+The complete54-partition review identifies two reproducible operational faults.
+Owned staging MUST enter its cleanup-protected region before chmod or input
+directory creation. Resolve the system temporary parent before creating the
+owned directory so no fallible post-creation path resolution escapes cleanup.
+If setup fails before any Engine side effect, remove only that owned directory,
+retain incomplete evidence and propagate the setup failure. Unknown container
+creation/lifetime still retains staging under the existing ownership rule.
+
+When verifier transport rejects and terminal-ledger persistence also fails,
+the caller MUST receive the original transport error. Terminal persistence is
+best-effort only on this rejection path; its missing durable row remains
+incomplete evidence and MUST NOT admit a review or conceal failure. Start,
+request, success response and critical capture persistence keep their existing
+mandatory boundaries. No error payload, credential or private path is logged.
+
+| Failure | Retained fact | Outcome |
+|---|---|---|
+| chmod/input setup before Engine creation | Incomplete event; no scope | Owned staging removed; original failure |
+| Verifier rejects; terminal row also fails | Start without complete terminal evidence | Original transport error; admission incomplete |
+| Unknown Engine creation/lifetime | Existing owned identity/uncertainty | Keep staging; existing stopped-scope recovery |
+
+The incremental budget is four model-free physical controls: real temporary
+staging with injected chmod failure and input-mkdir failure2; verifier transport
+plus terminal-write failure with active and aborted signals2. The same four
+assertion bodies fail0PASS/4FAIL before correction and pass4/4 afterward. They
+extend the earlier7 observed-CLI controls without recounting the35 logical
+qualification IDs,174 scientific cases or42 paired slots. Existing95% lines/
+statements and90% branches/functions CJS floors and all source/native gates
+remain mandatory. A platform-aware scope-module exclusion is verified by the
+normal architecture scan; no real Windows execution is inferred.
+
+The public archive index MUST omit the original revision/path associations;
+retain its exact pre-minimization bytes privately. All129 sanitized mirror
+entries, gzip/decoded bytes and digests stay exact. The report accurately states
+that the private plan path is intentionally omitted. Previously published
+versions and cached original data still await Support5044568; removing current
+locators does not establish hosted erasure. Existing execution/quality docs and
+catalog evidence MUST explain these operational limits. No public setting,
+schema, privilege, retry, model query, installation or activation changes.
+The actual failed nonce canary remains failed; scientific174negative and42not
+admitted are unchanged. Update Graphify and require final reviewed-source CI.

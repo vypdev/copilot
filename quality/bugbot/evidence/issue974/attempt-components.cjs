@@ -139,6 +139,29 @@ test('attempt ledger component cannot invent absent case-attempt accounting', as
     assert.throws(() => f.validate(f.rows, [{ id: 'component-case' }]), /accounting/);
 });
 
+for (const aborted of [false, true]) {
+    test('verifier terminal write failure preserves original transport rejection aborted=' + aborted, async t => {
+        const f = fixture(t), first = new Error('controlled verifier transport failure');
+        const later = new Error('controlled terminal ledger failure');
+        const durable = createDurableRecorder(path.join(f.directory, 'verifier-first-error.jsonl'));
+        const rows = []; let finishes = 0, dispatches = 0;
+        const verifier = createRecordedVerifier({ caseId: 'verifier-first-error', artifactDirectory: f.verifiers,
+            admitRuntime: () => ({}),
+            record(row) {
+                if (row.event === 'verifier-attempt-finish') {
+                    finishes++; assert.equal(row.status, aborted ? 'interrupted' : 'failed'); throw later;
+                }
+                durable(row); rows.push(row);
+            },
+            async transport() { dispatches++; if (aborted) f.controller.abort(); throw first; },
+        });
+        await assert.rejects(verifier(f.verifyRequest), error => error === first);
+        assert.equal(dispatches, 1); assert.equal(finishes, 1);
+        assert.deepEqual(rows.map(row => row.event), ['verifier-attempt-start']);
+        assert(!fs.readdirSync(f.verifiers).some(name => name.endsWith('.response.txt')));
+    });
+}
+
 test('attempt ledger component requires an actual delivered schema artifact identity', async t => {
     const f = fixture(t); await f.cli.execute(f.request); const records = copy(f.rows);
     delete records.find(row => row.event === 'attempt-prepared').prepared.schemaArtifactSha256;

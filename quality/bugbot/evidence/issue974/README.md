@@ -751,3 +751,16 @@ profilesNONE,pilotwrites0,productiondisabled. All13 owned container IDs checked
 across these technical steps are absent. The executions are Linux ARM containers
 on the Mac listener host, not GitHub Actions jobs. [Evidence and limits](
 ../issue-974/controls/observed-cli-protocol/README.md).
+
+
+The completed source626e54-partition review adds four model-free physical
+controls for pre-creation staging cleanup and original verifier-error retention.
+All four fail on the original source and pass corrected with exact assertion
+bytes. The architecture scope-module exclusion now uses the host path separator.
+The public129-entry mirror index drops130 original revision associations; exact
+old index bytes remain private, and all mirror payload/digest fields are exact.
+The report correctly states that the private plan path is omitted. See
+[review correction](../issue-974/controls/completed626e-review/README.md).
+No additional query or campaign is executed; actual nonce mismatch remains FAIL,
+174negative/42not admitted, pilotwrites0, productiondisabled. Support5044568 is
+still required for hosted erasure; current source minimization is not a purge.

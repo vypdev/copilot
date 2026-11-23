@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "parentPublicSource": "626e4b7ee2c176d77381ecabdb0080665f3917ef",
+  "localPriorCorrection": "79d64fa6fd166952de05a44f01584fd9bc094c38",
+  "review": {
+    "check": 137846059395,
+    "partitions": 54,
+    "validated": 54,
+    "elapsedMs": 7013001,
+    "newObservations": 6,
+    "decisions": "two duplicate locator minimization findings plus staging setup, report wording, Windows architecture suffix and verifier failure masking: all valid; three older hosted-purge observations stay open"
+  },
+  "sourceSha256": {
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "5f38f19ea00dd85c3719000af8812f06e1ff2c8d5fdcbcce0d40feed5600c684",
+    "quality/bugbot/evidence/issue974/attempt-ledger.cjs": "00cf8d0b11b8f9afc8434e94b1c90d2b86cc619249ada49717b4ee44a9f7256a",
+    "quality/bugbot/evidence/issue974/staging-setup-components.cjs": "f6503ce8426c96b308a7ccd792f6a28b4dba1fc3686fd3c833a3acc45684015f",
+    "quality/bugbot/evidence/issue974/attempt-components.cjs": "44b44f4e329ca6c278c88d3b16b84dee9d2c581c2e103d0ae44a1e1528afabc0",
+    "quality/bugbot/evidence/issue974/engine-transport-components.cjs": "b84b5d2b31a2267e076e988c27b98af82ed613b9b8b1631330329a7656003712",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "2ece1bf5110856de90928c18ccde3d196b5a5bd83eb2d7d2ed5e815ab93d1613",
+    "src/architecture/__tests__/agent_output_locale_boundaries.test.ts": "a87a2d01976ee5ca8cfacff6b201b29de902f674d8666512215d06d0af224b68",
+    "quality/bugbot/evidence/issue-974/campaigns/093fd141/source093-additional-gzip-history.json": "f577060fa6697ddf95c451a948ec447b2dc12c61d26a4dd39473a06fbf771877",
+    "quality/bugbot/evidence/issue-974/campaigns/093fd141/results.md": "77c9a98275ee1ed09009219d51d1d81e287e9e81e51cab9b9ffe5939cccb2e38"
+  },
+  "causal": {
+    "original": {
+      "passed": 0,
+      "failed": 4,
+      "rawBytes": 5194,
+      "rawSha256": "f58371dc7b9f4a50c2f21e46678c485dbd3e9e71e0c5901039dd8e2ac0b6911f"
+    },
+    "corrected": {
+      "passed": 4,
+      "failed": 0,
+      "rawBytes": 494,
+      "rawSha256": "f5ba60e3d6babb54c81ce40f15122418bc90b93b8906bed7ab115d78affe2907"
+    },
+    "sameAssertionBytes": true,
+    "testSha256": {
+      "quality/bugbot/evidence/issue974/staging-setup-components.cjs": "f6503ce8426c96b308a7ccd792f6a28b4dba1fc3686fd3c833a3acc45684015f",
+      "quality/bugbot/evidence/issue974/attempt-components.cjs": "44b44f4e329ca6c278c88d3b16b84dee9d2c581c2e103d0ae44a1e1528afabc0",
+      "quality/bugbot/evidence/issue974/engine-transport-components.cjs": "b84b5d2b31a2267e076e988c27b98af82ed613b9b8b1631330329a7656003712"
+    },
+    "limits": "Real owned filesystem and injected failures; modeled Engine/transport; no actual Docker/model admission"
+  },
+  "minimization": {
+    "removedOriginalRevisionAssociations": 130,
+    "mirrorEntries": 129,
+    "everyOtherIndexFieldExact": true,
+    "oldExactIndexBytes": 107540,
+    "oldExactIndexSha256": "6cc84b2a6115a3636dc388f735d80444541598b72cbea9de3fde7df2a13aeefb",
+    "hostedPurgeConfirmed": false,
+    "support": 5044568
+  },
+  "newModels": 0,
+  "pilotWrites": 0,
+  "production": "disabled",
+  "installation": "NOT_EXECUTED",
+  "sourceCoverage": "PENDING",
+  "sourceGlobal": "PENDING",
+  "nativeFinalHead": "PENDING",
+  "deliveryValidation": [
+    {
+      "name": "types",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "generate-specifications",
+      "exit": 0,
+      "bytes": 2499,
+      "sha256": "d01d0391c897f7aac1580ffd21168dd192150c855ed2b7bd55a118dccc7f9ed8"
+    },
+    {
+      "name": "specifications",
+      "exit": 0,
+      "bytes": 2494,
+      "sha256": "c08b97e05be8bedeae334169926b4154952d1b19feca1c27a1e16378f9041835"
+    },
+    {
+      "name": "documentation",
+      "exit": 0,
+      "bytes": 323,
+      "sha256": "ba86a3bc3e17d55ab4ac0f5896a05f637d0773a9fcc164da9573c0ca813a34c5"
+    },
+    {
+      "name": "agent-docs",
+      "exit": 0,
+      "bytes": 222,
+      "sha256": "81934e9d1ed714a62a12d252845e2b9a26040888af5387b86d8ec7afdc423608"
+    },
+    {
+      "name": "docs-page",
+      "exit": 0,
+      "bytes": 212,
+      "sha256": "e2c8d557fef6846b41bc998c59ae00e596fab587da20b0979cb6d219ab7d8482"
+    },
+    {
+      "name": "workflows",
+      "exit": 0,
+      "bytes": 219,
+      "sha256": "f7fe3bf2347d3490e24d9f574522c62e0aa40fa9751c68dc4179378e96982612"
+    },
+    {
+      "name": "graphify",
+      "exit": 0,
+      "bytes": 3743,
+      "sha256": "0d3f46289306307e17e496fc534232cb559158499f8e0994fc8554dab2f07c30"
+    },
+    {
+      "name": "build",
+      "exit": 0,
+      "bytes": 434552,
+      "sha256": "306abf46f3596163c878127d996ebe01e4bedc26e7b9b036c4267588bc15010e"
+    },
+    {
+      "name": "package",
+      "exit": 0,
+      "bytes": 799,
+      "sha256": "6de5c9e01f249e5a9bf116718695603a4680e738c8bc419e8763be8f58ef6042"
+    }
+  ],
+  "bundles": {
+    "build/cli/index.js": "20aa48a885d1b198a1a30706d0dd92501a6cec9e5e3f4fddd6d3b679698c7a1f",
+    "build/github_action/index.js": "05bcc2cd1a90051816979a96f41d0e2471c73fe0f5cae7158cc241d4c298a784",
+    "build/api/index.js": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+    "build/deployment_recovery/index.js": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+  }
+}
