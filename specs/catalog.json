@@ -1514,7 +1514,9 @@
         "docs/bugbot/failure-scenarios.mdx",
         "specs/setup-publisher-installation-acceptance.json",
         "quality/bugbot/evidence/issue-998/README.md",
-        "quality/bugbot/evidence/issue-998/implementation-notes.md"
+        "quality/bugbot/evidence/issue-998/implementation-notes.md",
+        "quality/bugbot/evidence/issue-998/review-round17/README.md",
+        "quality/bugbot/evidence/issue-998/review-round17/source-and-controls.json"
       ]
     },
     {

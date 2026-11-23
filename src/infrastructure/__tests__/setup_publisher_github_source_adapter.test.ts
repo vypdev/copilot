@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import { setupPublisherFixture as planningFixture } from '../../application/policies/__tests__/fixtures/setup_publisher_fixture';
+import { planSetupPublisherInstallation } from '../../application/policies/setup_publisher_plan_policy';
 import { setupPublisherGithubSourceFixture as fixture, sourceId, head, tree, digest } from './fixtures/setup_publisher_github_source_fixture';
 
 it('derives exact source facts from an authenticated maintainer merge and equal complete reviewed trees', async () => {
@@ -77,3 +80,29 @@ it('a provider denial remains a denial and cannot become a positive source obser
   const f = fixture(); f.request.mockRejectedValue({ status: 403, response: { data: 'do not render this provider payload' } });
   await expect(f.read()).rejects.toMatchObject({ code: 'forbidden' }); expect(f.request).toHaveBeenCalledTimes(1);
 });
+
+function replaceActionManifest(f: ReturnType<typeof fixture>, manifest: string): void {
+  const entry = f.trees[tree].tree.find(item => item.path === 'action.yml')!;
+  const bytes = Buffer.from(manifest), sha = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+  f.files['action.yml'] = manifest; entry.sha = sha; entry.size = bytes.length;
+  f.blobs[sha] = { sha, size: bytes.length, encoding: 'base64', content: bytes.toString('base64') };
+}
+async function readAndPlanSource(f: ReturnType<typeof fixture>) {
+  f.proposal.source.actionManifestSha256 = digest(f.files['action.yml']);
+  f.proposal.source.actionBundleSha256 = digest(f.files['build/github_action/index.js']);
+  const baseline = planningFixture(), source = await f.read();
+  return planSetupPublisherInstallation(f.proposal, { ...baseline.inspection, source }, '11111111-1111-4111-8111-111111111111');
+}
+it.each(['main', 'pre', 'post'])(
+  'publisher977-C112 composed: rejects redirected %s despite matching manifest and fixed-bundle pins', async role => {
+    const valid = fixture(); expect((await readAndPlanSource(valid)).status).toBe('review');
+    const f = fixture(), manifest = role === 'main'
+      ? f.files['action.yml'].replace('main: build/github_action/index.js', 'main: unmeasured.js')
+      : f.files['action.yml'] + `  ${role}: unmeasured.js\n`;
+    replaceActionManifest(f, manifest);
+    await expect(readAndPlanSource(f)).rejects.toMatchObject({ code: 'malformed' });
+    expect(f.proposal.source.actionManifestSha256).toBe(digest(manifest));
+    expect(f.proposal.source.actionBundleSha256).toBe(digest(f.files['build/github_action/index.js']));
+    expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+    expect(f.request.mock.calls.filter(([route]) => route.includes('/git/blobs/'))).toHaveLength(2);
+  });

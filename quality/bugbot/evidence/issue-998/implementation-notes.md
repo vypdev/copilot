@@ -22,7 +22,15 @@ that refinement of the selected Clean Architecture contract.
 
 The current file map and executable acceptance registration follow.
 
-Current Round9 acceptance is95 logical IDs:91mapped Jest cases and the same four
+Current Round17 acceptance has114 logical IDs /110 mapped Jest cases plus the
+same four extracted-package cases. Source executable entrypoints are bound to
+the hashed bundle; unrelated YAML-named directories are ignored without accepting
+fixed-target collisions or symlinks. C03/C102 tests now directly observe their
+full retained claims, and C114 requires the existing base-drift evidence. Earlier
+rounds and their inventory/results below are historical snapshots. Current
+normal/native acceptance remains pending until executed on the final head.
+
+Historical Round9 acceptance was95 logical IDs:91mapped Jest cases and the same four
 package cases. C95 binds eight real batch-use-case/private-v1-journal/Git-adapter
 scenarios to cancellation during successful adapter freshness or Git-proof reads.
 Both interactive compositions carry current session activity to a synchronous

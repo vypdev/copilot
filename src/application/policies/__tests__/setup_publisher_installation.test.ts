@@ -1,7 +1,7 @@
 import { setupInstallationTreeLevel } from '../setup_installation_tree_policy';
 import { setupInstallationFiles, SETUP_INSTALLATION_MANIFEST_PATH } from '../setup_installation_receipt_policy';
 import type { SetupInstallationApprovedBlob, SetupInstallationTree, SetupInstallationTreeEntry } from '../../contracts/setup_installation_delivery';
-import { assertSetupPublisherOptions, parseSetupPublisherOperation, parseSetupPublisherProposal, setupPublisherWorkflow } from '../setup_publisher_installation_policy';
+import { assertSetupPublisherActionManifest, assertSetupPublisherOptions, parseSetupPublisherOperation, parseSetupPublisherProposal, setupPublisherWorkflow } from '../setup_publisher_installation_policy';
 import { SETUP_PUBLISHER_WORKFLOW_PATH } from '../../../domain/setup_publisher_installation';
 
 const oldSha = '1'.repeat(40), newSha = '2'.repeat(40), otherSha = '3'.repeat(40);
@@ -166,6 +166,8 @@ describe('closed publisher input and option policy', () => {
     ['maintainerApproval', ''], ['workflowSha256', null], ['actionManifestSha256', 'short'], ['actionBundleSha256', 42],
   ])('rejects an invalid source %s', (key, value) => {
     expect(() => parseSetupPublisherProposal({ ...proposal(), source: { ...proposal().source as object, [key]: value } })).toThrow();
+    const missing = { ...proposal().source as Record<string, unknown> }; delete missing[key];
+    expect(() => parseSetupPublisherProposal({ ...proposal(), source: missing })).toThrow();
   });
   it.each([['status', 'passed'], ['explicitlyAuthorizedPullRequest', 951], ['runId', 42]])('rejects an invented completed canary %s', (key, value) => {
     expect(() => parseSetupPublisherProposal({ ...proposal(), nativeCanary: { ...proposal().nativeCanary as object, [key]: value } })).toThrow();
@@ -273,5 +275,30 @@ describe('purpose-bound publisher recovery metadata', () => {
   it('does not permit uncertainty to coexist with a completed effect or a nonpending state', () => {
     expect(() => parseSetupPublisherOperation({ ...operation(), uncertain: 'tree' })).toThrow();
     expect(() => parseSetupPublisherOperation({ ...finished(), status: 'partial', uncertain: 'pull-request' })).toThrow();
+  });
+});
+
+describe('publisher977-C112 action-manifest bundle binding', () => {
+  const bundle = 'build/github_action/index.js';
+  const manifest = (runs: string) => `name: Copilot\nruns:\n${runs}\n`;
+  it.each([
+    ['node20 main only', manifest(`  using: node20\n  main: ${bundle}`)],
+    ['node24 every declared entrypoint', manifest(`  using: node24\n  main: ./${bundle}\n  pre: ${bundle}\n  post: ./${bundle}\n  pre-if: runner.os == 'Linux'\n  post-if: always()`) ],
+    ['exact byte boundary', (() => { const base = manifest(`  using: node24\n  main: ${bundle}`); return base + '#' + 'x'.repeat(100_000 - Buffer.byteLength(base) - 1); })()],
+  ])('accepts %s as fixed-bundle entrypoints', (_label, source) => {
+    expect(() => assertSetupPublisherActionManifest(source)).not.toThrow();
+  });
+  it.each([
+    ['oversized', 'x'.repeat(100_001)], ['NUL', 'name: fixed\0'], ['malformed YAML', 'runs: ['],
+    ['duplicate executable key', manifest(`  using: node24\n  main: ${bundle}\n  main: other.js`)],
+    ['null root', 'null'], ['array root', '[]'], ['absent runs', 'name: fixed'], ['array runs', 'runs: []'],
+    ['missing runtime', manifest(`  main: ${bundle}`)], ['missing main', manifest('  using: node24')],
+    ['other runtime', manifest(`  using: composite\n  main: ${bundle}`)],
+    ['other executable configuration', manifest(`  using: node24\n  main: ${bundle}\n  image: attacker`) ],
+    ['redirected main', manifest('  using: node24\n  main: other.js')],
+    ['redirected pre', manifest(`  using: node24\n  main: ${bundle}\n  pre: other.js`)],
+    ['redirected post', manifest(`  using: node24\n  main: ${bundle}\n  post: other.js`)],
+  ])('rejects %s rather than attesting an unbound entrypoint', (_label, source) => {
+    expect(() => assertSetupPublisherActionManifest(source)).toThrow('invalid or unsupported');
   });
 });

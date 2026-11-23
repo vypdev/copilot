@@ -65039,6 +65039,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.setupPublisherOperationMatchesPlan = setupPublisherOperationMatchesPlan;
 exports.parseSetupPublisherProposal = parseSetupPublisherProposal;
 exports.setupPublisherWorkflow = setupPublisherWorkflow;
+exports.assertSetupPublisherActionManifest = assertSetupPublisherActionManifest;
 exports.assertSetupPublisherOptions = assertSetupPublisherOptions;
 exports.parseSetupPublisherOperation = parseSetupPublisherOperation;
 const js_yaml_1 = __nccwpck_require__(783);
@@ -65092,6 +65093,31 @@ function setupPublisherWorkflow(source, sourceCommit) {
     if (JSON.stringify(workflowInvocations(transformed)) !== JSON.stringify(invocations.map(value => value === './' ? pinned : value)))
         throw invalid();
     return transformed;
+}
+/** Every executable source entrypoint is bound to the one independently hashed bundle. */
+function assertSetupPublisherActionManifest(source) {
+    if (Buffer.byteLength(source, 'utf8') > 100000 || source.includes('\0'))
+        throw invalid();
+    const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+    let document;
+    try {
+        document = (0, js_yaml_1.load)(source, { schema: js_yaml_1.JSON_SCHEMA });
+    }
+    catch {
+        throw invalid();
+    }
+    if (!object(document) || !object(document.runs))
+        throw invalid();
+    const runs = document.runs, keys = new Set(['using', 'main', 'pre', 'post', 'pre-if', 'post-if']);
+    if (runs.using !== 'node20' && runs.using !== 'node24' || Object.keys(runs).some(key => !keys.has(key)))
+        throw invalid();
+    const bundle = 'build/github_action/index.js';
+    for (const role of ['main', 'pre', 'post']) {
+        if (role === 'main' || Object.prototype.hasOwnProperty.call(runs, role)) {
+            if (runs[role] !== bundle && runs[role] !== `./${bundle}`)
+                throw invalid();
+        }
+    }
 }
 /** Stateless parsing only: preserve original bytes and inspect every executable uses value. */
 function workflowInvocations(source) {
@@ -129474,6 +129500,7 @@ _SetupPublisherGitReader_token = new WeakMap();
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupPublisherGithubReadAdapter = void 0;
+const setup_publisher_installation_1 = __nccwpck_require__(95417);
 const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
 const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
 const setup_installation_receipt_policy_1 = __nccwpck_require__(50362);
@@ -129550,9 +129577,10 @@ class SetupPublisherGithubReadAdapter {
                 throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
             const workflows = [];
             for (const entry of directory ? await reader.tree(directory.sha) : []) {
-                if (!/\.ya?ml$/iu.test(entry.path))
+                const path = `.github/workflows/${entry.path}`;
+                if (entry.type === 'tree' && path !== setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH || !/\.ya?ml$/iu.test(entry.path))
                     continue;
-                workflows.push(await load(`.github/workflows/${entry.path}`, entry));
+                workflows.push(await load(path, entry));
             }
             return { session, inspection: { target, authority, source, installation: { complete: true, manifest,
                         guidance, workflows, publisher: (0, setup_publisher_workflow_inventory_1.inspectSetupPublisherWorkflows)(workflows, expected) } } };
@@ -129583,6 +129611,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
 var _SetupPublisherGithubSourceAdapter_cache;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupPublisherGithubSourceAdapter = void 0;
+const setup_publisher_installation_policy_1 = __nccwpck_require__(33757);
 const node_crypto_1 = __nccwpck_require__(6005);
 const setup_publisher_installation_1 = __nccwpck_require__(95417);
 const setup_batch_github_read_adapter_1 = __nccwpck_require__(9703);
@@ -129634,6 +129663,12 @@ class SetupPublisherGithubSourceAdapter {
             };
             const workflow = await read(setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH, 100000);
             const manifest = await read('action.yml', 100000);
+            try {
+                (0, setup_publisher_installation_policy_1.assertSetupPublisherActionManifest)(manifest);
+            }
+            catch {
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            }
             // https://docs.github.com/en/rest/git/blobs#get-a-blob: provider ceiling.
             // This bound applies only to the fixed source bundle, never destination assets.
             const bundle = await read('build/github_action/index.js', 100000000);

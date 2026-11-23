@@ -29,7 +29,7 @@ it.each([403, 404])('publisher977-C18: unavailable workflow inventory with HTTP 
   await expect(f.reader.inspect(f.proposal)).rejects.toMatchObject({ code: status === 403 ? 'forbidden' : 'not-found' });
   expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
 });
-it.each(['setup-manifest.json', 'ci.yml'])('rejects a tree named as required file %s before reading it as a blob', async name => {
+it.each(['setup-manifest.json'])('rejects a tree named as required file %s before reading it as a blob', async name => {
   const f = fixture(), entry = f.entries().find(item => item.path === name)!;
   entry.type = 'tree'; entry.mode = '040000'; delete entry.size;
   await expect(f.reader.inspect(f.proposal)).rejects.toMatchObject({ code: 'malformed' });
@@ -123,4 +123,22 @@ it('a credential replacement during real composed reads revokes the snapshot bef
   const f = fixture(), original = f.request.getMockImplementation()!;
   f.request.mockImplementation(async (route, p) => { const result = await original(route, p); if (route === 'GET /user') f.credentials.replace('new-fixture'); return result; });
   await expect(f.reader.inspect(f.proposal)).rejects.toThrow('credential is unavailable');
+});
+
+it('publisher977-C113 skips unrelated YAML-named directories without reading or counting them as workflows', async () => {
+  const f = fixture(), directory = Object.values(f.trees).find(t => t.tree.some(e => e.path === 'ci.yml'))!;
+  const ignored = 'f'.repeat(40);
+  directory.tree.push({ path: 'archive.yml', mode: '040000', type: 'tree', sha: ignored });
+  const snapshot = await f.reader.inspect(f.proposal);
+  expect(snapshot.inspection.installation.workflows.map(file => file.path)).toEqual(['.github/workflows/ci.yml']);
+  expect(snapshot.inspection.installation.publisher).toEqual({ kind: 'absent', paths: [] });
+  expect(f.request.mock.calls.some(([, p]) => p.tree_sha === ignored || p.file_sha === ignored)).toBe(false);
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+});
+it('publisher977-C113 rejects a directory colliding with the fixed publisher destination before blob transport', async () => {
+  const f = fixture(), directory = Object.values(f.trees).find(t => t.tree.some(e => e.path === 'ci.yml'))!;
+  const collision = 'e'.repeat(40);
+  directory.tree.push({ path: SETUP_PUBLISHER_WORKFLOW_PATH.split('/').at(-1)!, mode: '040000', type: 'tree', sha: collision });
+  await expect(f.reader.inspect(f.proposal)).rejects.toMatchObject({ code: 'malformed' });
+  expect(f.request.mock.calls.some(([, p]) => p.tree_sha === collision || p.file_sha === collision)).toBe(false);
 });

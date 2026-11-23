@@ -1,3 +1,4 @@
+import { assertSetupPublisherActionManifest } from '../application/policies/setup_publisher_installation_policy';
 import { createHash } from 'node:crypto';
 import type { SetupPublisherInspection, SetupPublisherProposal } from '../domain/setup_publisher_installation';
 import { SETUP_PUBLISHER_WORKFLOW_PATH } from '../domain/setup_publisher_installation';
@@ -51,6 +52,8 @@ export class SetupPublisherGithubSourceAdapter {
       };
       const workflow = await read(SETUP_PUBLISHER_WORKFLOW_PATH, 100_000);
       const manifest = await read('action.yml', 100_000);
+      try { assertSetupPublisherActionManifest(manifest); }
+      catch { throw new SetupBatchProviderError('malformed'); }
       // https://docs.github.com/en/rest/git/blobs#get-a-blob: provider ceiling.
       // This bound applies only to the fixed source bundle, never destination assets.
       const bundle = await read('build/github_action/index.js', 100_000_000);

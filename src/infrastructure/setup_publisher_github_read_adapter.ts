@@ -1,6 +1,6 @@
 import type { SetupPublisherReadSnapshot } from '../application/ports/setup_publisher_review_ports';
 import type { SetupBatchTarget } from '../domain/setup_batch';
-import type { SetupPublisherObservedFile, SetupPublisherProposal } from '../domain/setup_publisher_installation';
+import { SETUP_PUBLISHER_WORKFLOW_PATH, type SetupPublisherObservedFile, type SetupPublisherProposal } from '../domain/setup_publisher_installation';
 import { parseSetupPublisherProposal, setupPublisherWorkflow } from '../application/policies/setup_publisher_installation_policy';
 import { parseRepositoryAgentGuidanceManifest } from '../application/policies/repository_agent_guidance_policy';
 import { SETUP_INSTALLATION_MANIFEST_PATH } from '../application/policies/setup_installation_receipt_policy';
@@ -70,8 +70,9 @@ export class SetupPublisherGithubReadAdapter {
       if (directory && (directory.type !== 'tree' || directory.mode !== '040000')) throw new SetupBatchProviderError('malformed');
       const workflows: SetupPublisherObservedFile[] = [];
       for (const entry of directory ? await reader.tree(directory.sha) : []) {
-        if (!/\.ya?ml$/iu.test(entry.path)) continue;
-        workflows.push(await load(`.github/workflows/${entry.path}`, entry));
+        const path = `.github/workflows/${entry.path}`;
+        if (entry.type === 'tree' && path !== SETUP_PUBLISHER_WORKFLOW_PATH || !/\.ya?ml$/iu.test(entry.path)) continue;
+        workflows.push(await load(path, entry));
       }
       return { session, inspection: { target, authority, source, installation: { complete: true, manifest,
         guidance, workflows, publisher: inspectSetupPublisherWorkflows(workflows, expected) } } };

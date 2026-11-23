@@ -56,6 +56,16 @@ function fixture() {
   const text = () => output.mock.calls.map(call => String(call[0])).join('');
   return { ...data, plan, operation, input, run, execute, terminal, readText, readSecret, close, text, confirmed: () => confirmed };
 }
+function observeCommandCredentials() {
+  const environment = process.env, environmentReads: string[] = [];
+  const policy = jest.requireActual<typeof import('../../application/policies/setup_token_value_policy')>('../../application/policies/setup_token_value_policy');
+  const validation = jest.spyOn(policy, 'isSetupTokenValueValid');
+  process.env = new Proxy({ ...environment }, { get(target, key, receiver) {
+    if (key === 'PERSONAL_ACCESS_TOKEN') environmentReads.push(key);
+    return Reflect.get(target, key, receiver);
+  } });
+  return { environmentReads, validation, restore() { process.env = environment; validation.mockRestore(); } };
+}
 it('publisher977-C109: actual CLI forwards the read-only known operation target to its presenter', async () => {
   const f = fixture(), url = `file:///owned/setup-operations/${f.operation.operationId}.json`;
   const factory = jest.mocked(createSetupPublisherInstallationCompositionRoot).getMockImplementation()!;
@@ -165,17 +175,31 @@ it.each(['stale', 'delivery'] as const)('keeps an active-session %s Apply failur
 });
 it.each(['', 'invalid-operation', '../other-operation', '11111111-1111-1111-8111-111111111111'])(
   'publisher977-C102: malformed resume %s reports invalid input before terminal or provider work', async resumeOperation => {
-    const f = fixture();
-    await f.run({ explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation });
-    expect(process.exitCode).toBe(1);
-    expect(f.text()).toBe(resolveStaticSetupPublisherCatalog().message('invalid') + '\n');
-    expect(createInteractiveTerminalDriver).not.toHaveBeenCalled();
-    expect(createSetupPublisherInstallationCompositionRoot).not.toHaveBeenCalled();
-    expect(f.execute).not.toHaveBeenCalled();
+    const f = fixture(), credential = observeCommandCredentials();
+    try {
+      for (const explicitToken of [false, true]) {
+        output.mockClear();
+        await f.run({ explicitOptions: ['publisherManifest', 'resumeOperation', ...(explicitToken ? ['token'] : [])],
+          token: explicitToken ? 'private-explicit-fixture-token' : undefined, resumeOperation });
+        expect(process.exitCode).toBe(1);
+        expect(f.text()).toBe(resolveStaticSetupPublisherCatalog().message('invalid') + '\n');
+        expect(createInteractiveTerminalDriver).not.toHaveBeenCalled();
+        expect(createSetupPublisherInstallationCompositionRoot).not.toHaveBeenCalled();
+        expect(f.execute).not.toHaveBeenCalled();
+        expect(credential.environmentReads).toEqual([]);
+        expect(credential.validation).not.toHaveBeenCalled();
+      }
+    } finally { credential.restore(); }
   });
 it('validates explicit resume identity before transport and passes a valid selection through', async () => {
-  const f = fixture(); await f.run({ explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation: 7 }); expect(f.execute).not.toHaveBeenCalled();
-  await f.run({ explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation: f.operation.operationId }); expect(f.execute).toHaveBeenCalledWith(expect.objectContaining({ operationId: f.operation.operationId, resume: true }));
+  const f = fixture(), credential = observeCommandCredentials();
+  try {
+    await f.run({ explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation: 7 }); expect(f.execute).not.toHaveBeenCalled();
+    expect(credential.environmentReads).toEqual([]); expect(credential.validation).not.toHaveBeenCalled();
+    await f.run({ explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation: f.operation.operationId });
+    expect(f.execute).toHaveBeenCalledWith(expect.objectContaining({ operationId: f.operation.operationId, resume: true }));
+    expect(credential.environmentReads).toEqual(['PERSONAL_ACCESS_TOKEN']); expect(credential.validation).toHaveBeenCalledTimes(1);
+  } finally { credential.restore(); }
 });
 it.each([
   [() => new SetupPublisherCredentialError(), 'tokenRequired'],

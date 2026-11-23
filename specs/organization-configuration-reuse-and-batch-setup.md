@@ -1468,3 +1468,61 @@ Traceability: C110 -> G03/G07 -> existing Git reader/adversarial assertions and
 cumulative validator -> evidence packet; C111 -> G01/G07 -> shared heading
 validator/profile/planner -> repository guidance troubleshooting. Source failures
 retain current bounded error copy; arbitrary malformed label text is not echoed.
+
+
+### Source entrypoint binding and complete retained evidence — issue #998, Round17
+
+The fixed source pair MUST attest the file actually selected by the source Action
+manifest. Parse the exact UTF-8 action.yml under the existing100,000-byte limit
+with JSON-schema YAML. Only known JavaScript metadata runtimes node20/node24 and
+runs keys using/main/pre/post/pre-if/post-if are supported by this route. The
+required main and every declared pre/post MUST be exactly the fixed
+build/github_action/index.js path, optionally prefixed by ./; redirects, missing
+main, duplicate YAML keys, unsupported runtime/configuration or malformed entrypoint values
+block before the fixed bundle fetch or source cache insertion. Preserve exact
+manifest bytes for hashing. Recognizing a metadata format is not execution or
+qualification of that runtime. No source authority, producer-code attestation,
+permission or configuration override is added.
+
+Destination inventory MUST ignore unrelated tree entries named with .yml/.yaml,
+without descending into or counting them as executable workflow files. A tree
+colliding with the one fixed publisher target remains unsupported, as do matching
+symlink/nonregular/oversized blobs. Complete Git-tree validation and all existing
+read/count/byte ceilings remain in force. This changes no UNKNOWN inventory into
+authority and adds no independent-inventory review channel.
+
+Preserve every C01–C111 ledger object and the selected64-case companion exactly.
+Strengthen the existing mapped C03 tests with deletion of each required source
+field as well as malformed values. Strengthen the existing C102 assertions with
+observable environment-token reads and supplied-token validation; a valid resume
+must positively exercise those observers. No new credential seam or runtime
+credential behavior is required. C114 makes the already existing base-drift
+assertion mandatory without editing or narrowing C21.
+
+| Case ID | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C112 | Pure proposal/scope/plan policy | PU977-G01, PU977-G05, PU977-G07 | The source action manifest binds main and every declared pre/post executable to the fixed independently hashed bundle before source admission; matching proposal hashes cannot authorize another entrypoint. |
+| publisher977-C113 | Provider/delivery contracts | PU977-G01, PU977-G07 | Workflow inventory skips unrelated YAML-named directories while rejecting fixed publisher-path tree collisions, workflow symlinks and oversized matching blobs. |
+| publisher977-C114 | Read-only planning/freshness | PU977-G01, PU977-G02, PU977-G07 | Cumulative acceptance requires the actual authenticated base-revision drift assertion for C21 in addition to its retained default-branch control; omission, failure or pending status cannot pass the gate. |
+
+The cumulative floor is **114 logical IDs /110 mapped Jest cases plus four
+extracted-package cases**. Budget at most24 new Jest tests:18 pure manifest
+controls, three composed source-reader/immutable-planner redirections and two
+inventory controls use23; replace one obsolete unmapped assertion that rejected
+an unrelated YAML-named directory. Existing C03/C102 controls are strengthened,
+not duplicated. C114 binds the existing base-drift assertion; C21 retains its mandatory default-drift evidence without duplicate evidence keys. Three report-parser
+counterfactuals (missing/failed/pending base evidence) must pass the previous gate
+and fail the corrected gate, while the complete actual report passes. Parser
+projections are not new feature executions.
+
+The same four composed adversarial control bodies MUST fail before and pass after
+source correction, with valid complete source/planning preconditions proved. All
+pure-policy100%, runtime95/90, changed-path/global, architecture, normal hooks,
+package and fresh exact-head native review gates remain mandatory. Preserve all
+negative attempts and report focused/global/native scopes separately. Update the
+implementation notes, current evidence floor, source-selection documentation,
+SDD/catalog/Graphify and a bounded Round17 evidence packet together. Source merge,
+actual installation, native canary and174/42 qualification remain separate;
+production disabled, evaluated-pilot writes0. Traceability: C112 -> G01/G05/G07 ->
+pure manifest policy/source adapter; C113 -> G01/G07 -> complete read adapter;
+C114 -> G01/G02/G07 -> cumulative validator and actual drift assertions.

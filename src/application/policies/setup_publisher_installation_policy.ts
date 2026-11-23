@@ -47,6 +47,23 @@ export function setupPublisherWorkflow(source: string, sourceCommit: string): st
   return transformed;
 }
 
+/** Every executable source entrypoint is bound to the one independently hashed bundle. */
+export function assertSetupPublisherActionManifest(source: string): void {
+  if (Buffer.byteLength(source, 'utf8') > 100_000 || source.includes('\0')) throw invalid();
+  const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
+  let document: unknown;
+  try { document = load(source, { schema: JSON_SCHEMA }); } catch { throw invalid(); }
+  if (!object(document) || !object(document.runs)) throw invalid();
+  const runs = document.runs, keys = new Set(['using', 'main', 'pre', 'post', 'pre-if', 'post-if']);
+  if (runs.using !== 'node20' && runs.using !== 'node24' || Object.keys(runs).some(key => !keys.has(key))) throw invalid();
+  const bundle = 'build/github_action/index.js';
+  for (const role of ['main', 'pre', 'post']) {
+    if (role === 'main' || Object.prototype.hasOwnProperty.call(runs, role)) {
+      if (runs[role] !== bundle && runs[role] !== `./${bundle}`) throw invalid();
+    }
+  }
+}
+
 /** Stateless parsing only: preserve original bytes and inspect every executable uses value. */
 function workflowInvocations(source: string): string[] {
   if (Buffer.byteLength(source, 'utf8') > 100_000 || source.includes('\0')) throw invalid();

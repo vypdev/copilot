@@ -554,6 +554,13 @@ instead of applying a previously audited permission set.
 Use the explicit `--publisher-manifest <path>` route for publisher operations.
 The ordinary batch route retains its own records and cannot adopt this purpose.
 
+If source inspection blocks despite matching hashes, review the source PR’s
+`action.yml`: every declared main/pre/post executable must name the fixed
+`build/github_action/index.js` bundle (`./` is also supported). Select or correct
+the reviewed source instead of changing the proposal hashes to accept another
+entrypoint. An unrelated YAML-named directory is not a workflow, while a directory
+at the fixed publisher path is an unsupported file collision.
+
 Retained-state output includes the validated saved operation's local file URL
 and any known installation PR. Open that record on the machine that ran setup;
 it remains private and is not uploaded. Lookup never creates a missing journal

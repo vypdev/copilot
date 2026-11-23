@@ -93,6 +93,16 @@ local Action invocation to that verified source commit. A maintainer merge
 establishes this source review boundary; it is not independent attestation of
 the producer's executable code.
 
+Setup also parses the source Action metadata before accepting its hashes. Its
+required `runs.main` and any declared `runs.pre` or `runs.post` must point to the
+fixed `build/github_action/index.js` bundle, optionally prefixed by `./`. A
+redirect or unsupported metadata blocks inspection even if the proposal hashes
+match. The manifest bytes are hashed exactly as read. Recognizing the supported
+Node20/Node24 metadata formats does not establish actual runtime execution.
+Unrelated `.yml`/`.yaml` directories are ignored as non-workflows; a directory
+colliding with the fixed publisher file, symlinks and unreadable matching blobs
+still block the proposal.
+
 The source workflow must contain exactly one canonical local invocation. Setup
 checks executable YAML scopes, including aliases and quoted references, and
 rejects additional or ambiguous local invocations before preview. The generated

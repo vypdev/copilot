@@ -296,3 +296,13 @@ Round8 native Commit/Verification failed on nine newly named .json.gz report arc
 [Round15 parser-equivalence and retained-navigation controls](./review-round15/README.md) preserve C53, the first107 ledger objects and the selected companion. Source-only validation does not establish installation.
 
 [Round16 required-heading and cumulative negative-evidence controls](./review-round16/README.md) preserve all109 prior ledger objects and the companion, with111IDs/107mapped plus four package cases.
+
+## Current Round17 source and evidence closure
+
+The cumulative floor is114 logical IDs /110 mapped Jest cases plus four
+extracted-package cases. C112 binds the Action’s declared executable entrypoints
+to the fixed hashed bundle; C113 distinguishes unrelated YAML-named directories
+from fixed-target collisions and unsafe blobs. Existing C03/C102 controls are
+strengthened in place, and C114 requires the existing authenticated base-drift
+assertion. All111 prior ledger objects and the selected companion remain exact.
+[Round17 controls and current validation limits](./review-round17/README.md).

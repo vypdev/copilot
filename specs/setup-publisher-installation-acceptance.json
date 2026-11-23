@@ -2884,6 +2884,144 @@
           "test": "repository agent guidance policy publisher977-C111: installed required headings obey the configured single-line UTF-8 constraints"
         }
       ]
+    },
+    {
+      "id": "publisher977-C112",
+      "area": "Pure proposal/scope/plan policy",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G05",
+        "PU977-G07"
+      ],
+      "assertion": "The source action manifest binds main and every declared pre/post executable to the fixed independently hashed bundle before source admission; matching proposal hashes cannot authorize another entrypoint.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects oversized rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects NUL rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects malformed YAML rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects duplicate executable key rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects null root rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects array root rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects absent runs rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects array runs rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects missing runtime rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects missing main rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects other runtime rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects other executable configuration rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects redirected main rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects redirected pre rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding rejects redirected post rather than attesting an unbound entrypoint"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding accepts node20 main only as fixed-bundle entrypoints"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding accepts node24 every declared entrypoint as fixed-bundle entrypoints"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+          "test": "publisher977-C112 action-manifest bundle binding accepts exact byte boundary as fixed-bundle entrypoints"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_source_adapter.test.ts",
+          "test": "publisher977-C112 composed: rejects redirected main despite matching manifest and fixed-bundle pins"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_source_adapter.test.ts",
+          "test": "publisher977-C112 composed: rejects redirected pre despite matching manifest and fixed-bundle pins"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_source_adapter.test.ts",
+          "test": "publisher977-C112 composed: rejects redirected post despite matching manifest and fixed-bundle pins"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C113",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Workflow inventory skips unrelated YAML-named directories while rejecting fixed publisher-path tree collisions, workflow symlinks and oversized matching blobs.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C113 skips unrelated YAML-named directories without reading or counting them as workflows"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C113 rejects a directory colliding with the fixed publisher destination before blob transport"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "rejects workflow symlinks and oversized destination assets before fetching them"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C114",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G02",
+        "PU977-G07"
+      ],
+      "assertion": "Cumulative acceptance requires the actual authenticated base-revision drift assertion for C21 in addition to its retained default-branch control; omission, failure or pending status cannot pass the gate.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher independently read snapshot admission publisher977-C21 blocks a changed or unavailable destination: base"
+        }
+      ]
     }
   ]
 }
