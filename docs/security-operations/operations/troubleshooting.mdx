@@ -513,6 +513,12 @@ additive; cancellation does not roll them back or revoke the operator PAT.
 
 ### Recover an orphaned batch operation lock
 
+A final lock-cleanup error can occur after a known installation PR is already
+created. Preserve that PR and the durable operation receipt. Do not repeat the
+installation or delete its receipt; the same owner checks below apply before
+removing a confirmed orphan. Fresh reviewed resume reuses the existing PR.
+
+
 If setup reports an operation is locked, its error gives the exact private lock
 path and operation ID. The lock contains a PID and nonce; a PID alone cannot
 prove ownership because operating systems reuse it. Setup never automatically

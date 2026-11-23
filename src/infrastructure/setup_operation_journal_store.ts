@@ -70,9 +70,20 @@ export class SetupOperationJournalStore {
       }).catch(() => undefined);
       throw failure.cause;
     }
-    return async () => { await readFile(destination, 'utf8').then(content => {
-      const current = JSON.parse(content) as { pid: number; nonce: string };
-      if (current.pid === process.pid && current.nonce === nonce) return unlink(destination);
-    }).catch(() => undefined); };
+    return async () => {
+      const content = await readFile(destination, 'utf8').catch(error => {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+        throw error;
+      });
+      if (content === undefined) return;
+      let owned: boolean;
+      try {
+        const current = JSON.parse(content) as { pid: number; nonce: string };
+        owned = current.pid === process.pid && current.nonce === nonce;
+      } catch { return; } // Unverified replacement contents never grant removal.
+      if (owned) await unlink(destination).catch(error => {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      });
+    };
   }
 }

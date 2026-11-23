@@ -72,4 +72,36 @@ describe('private operation lock initialization', () => {
     await expect(store(root).lock(id)).rejects.toBe(failure);
     expect(readdirSync(root)).toEqual([`${id}.json.lock`]);
   });
+
+  it.each([
+    ['readFile', 'EACCES'], ['readFile', 'EIO'], ['unlink', 'EACCES'], ['unlink', 'EIO'],
+  ] as const)('publisher977-C125 propagates %s %s while retaining the owned lock', async (phase, code) => {
+    const journal = store(root), release = await journal.lock(id), destination = join(root, `${id}.json.lock`);
+    const original = readFileSync(destination, 'utf8');
+    const failure = Object.assign(new Error('component release failure'), { code });
+    const fault = phase === 'readFile' ? jest.spyOn(filesystem, 'readFile').mockRejectedValueOnce(failure)
+      : jest.spyOn(filesystem, 'unlink').mockRejectedValueOnce(failure);
+    await expect(release()).rejects.toBe(failure);
+    expect(readFileSync(destination, 'utf8')).toBe(original);
+    await expect(journal.lock(id)).rejects.toMatchObject({ code: 'EEXIST' });
+    fault.mockRestore(); await release();
+    const next = await journal.lock(id); await next(); expect(readdirSync(root)).toEqual([]);
+  });
+
+  it('publisher977-C125 treats an already absent lock as released without unlinking another path', async () => {
+    const journal = store(root), release = await journal.lock(id), destination = join(root, `${id}.json.lock`);
+    rmSync(destination); const unlink = jest.spyOn(filesystem, 'unlink');
+    await expect(release()).resolves.toBeUndefined(); expect(unlink).not.toHaveBeenCalled();
+    expect(readdirSync(root)).toEqual([]);
+  });
+
+  it('publisher977-C125 tolerates lock disappearance between its read and unlink', async () => {
+    const journal = store(root), release = await journal.lock(id), destination = join(root, `${id}.json.lock`);
+    const original = filesystem.unlink;
+    jest.spyOn(filesystem, 'unlink').mockImplementationOnce(async path => {
+      expect(path).toBe(destination); await original(path);
+      throw Object.assign(new Error('component concurrent disappearance'), { code: 'ENOENT' });
+    });
+    await expect(release()).resolves.toBeUndefined(); expect(readdirSync(root)).toEqual([]);
+  });
 });

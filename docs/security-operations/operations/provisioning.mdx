@@ -42,6 +42,12 @@ requires unchanged target/base/plan identities; otherwise inspect retained PRs
 and start a fresh preview. Do not delete a journal or lock to bypass an active
 setup. Verify the owning process and retained effects before manual recovery.
 
+A failure to read or remove an acquired operation lock is reported even if the
+installation PR was already created. Keep its receipt and known PR; do not repeat
+the delivery. The remaining lock blocks another Apply until its owner is checked
+and a confirmed orphan is recovered. A freshly reviewed resume then reuses the
+existing proved PR.
+
 An interrupted process can leave an exclusive operation lock. Its error links to
 [orphan-lock recovery](/security-operations/operations/troubleshooting#recover-an-orphaned-batch-operation-lock);
 use a maintenance window with all setup owners stopped, preserve the receipt,

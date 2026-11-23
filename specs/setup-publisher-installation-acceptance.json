@@ -3398,6 +3398,46 @@
           "test": "publisher977-C124 durable resource checkpoint before delivery publisher977-C124 preserves unknown legacy preparation across a new pre-delivery read failure"
         }
       ]
+    },
+    {
+      "id": "publisher977-C125",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "Acquired lock-release I/O failures surface with retained durable effects, while absent locks remain idempotent and unverified replacements are never removed.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_application.test.ts",
+          "test": "publisher977-C125 reports real lock-release failure with the completed PR and resumes only after confirmed orphan recovery"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 propagates readFile EACCES while retaining the owned lock"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 propagates readFile EIO while retaining the owned lock"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 propagates unlink EACCES while retaining the owned lock"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 propagates unlink EIO while retaining the owned lock"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 treats an already absent lock as released without unlinking another path"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+          "test": "private operation lock initialization publisher977-C125 tolerates lock disappearance between its read and unlink"
+        }
+      ]
     }
   ]
 }

@@ -13,6 +13,7 @@ import { SetupInstallationGithubDeliveryAdapter } from '../setup_installation_gi
 import { SetupBatchProviderError } from '../setup_batch_github_read_adapter';
 import type { SetupPublisherPlan, SetupPublisherOperation } from '../../domain/setup_publisher_installation';
 import { setupInstallationTreeFixture } from './fixtures/setup_installation_tree_fixture';
+const filesystem = jest.requireActual<typeof import('node:fs/promises')>('node:fs/promises');
 
 // Preserve phase evidence if the unchanged CI test deadline expires.
 jest.requireActual<{ installJournalIoDiagnostics(): void }>('./fixtures/journal_io_diagnostics.cjs').installJournalIoDiagnostics();
@@ -81,6 +82,34 @@ function fixture() {
     transform: (next: typeof transform) => { transform = next; }, setBranch: (sha: string | undefined) => { branch = sha; },
     setPulls: (value: unknown[]) => { pulls = value; } };
 }
+
+it('publisher977-C125 reports real lock-release failure with the completed PR and resumes only after confirmed orphan recovery', async () => {
+  const f = fixture(), destination = join(root, `${id}.json.lock`), original = filesystem.unlink;
+  const fault = jest.spyOn(filesystem, 'unlink').mockImplementation(async path => {
+    if (path === destination) throw Object.assign(new Error('private-release-cause'), { code: 'EACCES' });
+    return original(path);
+  });
+  try {
+    const error = await f.executeInstalled(false).catch((failure: unknown) => failure) as {
+      reason?: string; message?: string; retained?: SetupPublisherOperation; lastPersisted?: SetupPublisherOperation;
+    };
+    expect(error).toMatchObject({ reason: 'journal', retained: { status: 'waiting-for-merge', pullRequestNumber: 73 },
+      lastPersisted: { status: 'waiting-for-merge', pullRequestNumber: 73 } });
+    expect(error.message).not.toContain('private-release-cause');
+    const durable = await f.journal.load(id); expect(durable).toEqual(error.lastPersisted);
+    const lock = await readFile(destination, 'utf8');
+    expect(JSON.parse(lock)).toMatchObject({ pid: process.pid, nonce: expect.stringMatching(/^[a-f0-9]{32}$/u) });
+    const posts = [...f.posts()]; expect(posts).toHaveLength(4);
+    await expect(f.executeInstalled(true)).rejects.toMatchObject({ reason: 'journal' });
+    expect(f.posts()).toEqual(posts); expect(await readFile(destination, 'utf8')).toBe(lock);
+    fault.mockRestore();
+    // All fixture owners stopped; remove only this verified private test lock.
+    await original(destination);
+    expect(await f.executeInstalled(true)).toMatchObject({ stage: 'apply', result: { status: 'waiting-for-merge', pullRequestNumber: 73 } });
+    expect(f.posts()).toEqual(posts); expect(await f.journal.load(id)).toEqual(durable);
+    expect(await readdir(root)).toEqual([`${id}.json`]);
+  } finally { fault.mockRestore(); }
+});
 
 it('publisher977-C96: cancelled preparation intent resumes through the real v2 journal after fresh approval', async () => {
   const f = fixture(), save = f.journal.save.bind(f.journal); let cancelled = false;

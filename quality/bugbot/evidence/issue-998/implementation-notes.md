@@ -460,3 +460,19 @@ and both executable64-only counterfactuals. GitHub renders the exact documented
 heading permalink. Both review threads were replied to and resolved; neither
 requires changing the selected companion. Final source-bound cohort, normal
 hooks and native review/CI remain separate gates. See [Round22](review-round22/README.md).
+
+
+## Round23: acquired-lock release error propagation
+
+The completed2748 review has one valid new finding: the shared store swallowed
+owned unlink errors. Non-ENOENT read/unlink failures now propagate to the existing
+journal-error and retained-PR path; missing locks stay idempotent, and damaged/
+foreign replacements retain their ownership-safe no-op. Seven physical controls
+give2PASS/5FAIL before correction and7PASS after it with identical assertion
+bytes. The real v2 journal/application/concrete delivery fixture proves a known
+PR survives the error, a retained lock prevents another Apply, and confirmed
+fixture orphan recovery resumes with no new provider effects. Current125IDs/
+121mapped+4package; first124objects and selected64companion exact. Bounds,
+schemas, private modes, message IDs and installation authority are unchanged.
+See [Round23](review-round23/README.md). Full cohort and delivery/native gates
+remain separate requirements; no real installation or model call is inferred.

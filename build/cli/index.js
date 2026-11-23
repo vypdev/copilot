@@ -127399,11 +127399,26 @@ class SetupOperationJournalStore {
             throw failure.cause;
         }
         return async () => {
-            await (0, promises_1.readFile)(destination, 'utf8').then(content => {
+            const content = await (0, promises_1.readFile)(destination, 'utf8').catch(error => {
+                if (error.code === 'ENOENT')
+                    return undefined;
+                throw error;
+            });
+            if (content === undefined)
+                return;
+            let owned;
+            try {
                 const current = JSON.parse(content);
-                if (current.pid === process.pid && current.nonce === nonce)
-                    return (0, promises_1.unlink)(destination);
-            }).catch(() => undefined);
+                owned = current.pid === process.pid && current.nonce === nonce;
+            }
+            catch {
+                return;
+            } // Unverified replacement contents never grant removal.
+            if (owned)
+                await (0, promises_1.unlink)(destination).catch(error => {
+                    if (error.code !== 'ENOENT')
+                        throw error;
+                });
         };
     }
 }

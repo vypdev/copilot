@@ -1910,3 +1910,59 @@ and C52 retain their published assertions with stronger executable evidence.
 The64-case baseline remains necessary alongside every owning appendix; the
 existing two validator counterfactuals reject a64-only completion gate. The
 reviewed GitHub heading permalink is valid and requires no source change.
+
+
+### Round23: acquired-lock release must report I/O failure
+
+The completed30-partition2748 review finds that the shared release callback
+catches read, parse and unlink errors together. An owned lock can remain after
+unlink fails while Apply reports completion. The shared store MUST propagate
+non-ENOENT lock-read and owned-unlink I/O failures. An already missing lock,
+including disappearance between its read and unlink, remains idempotent. Keep
+the existing ownership boundary: only matching PID/nonce authorizes unlink;
+damaged or foreign replacement contents MUST remain untouched with their
+existing safe no-op behavior. Do not adopt the suggested broad parse-error
+propagation, which would change that retained compatibility contract.
+
+| Release observation | Store behavior | Publisher/operator outcome |
+|---|---|---|
+| Owned read/unlink fails with EACCES or EIO | Reject; lock remains | Existing journal error with known durable operation/PR; no success report |
+| Lock absent before read or disappears before unlink | Resolve; no unrelated cleanup | Existing idempotent completion |
+| Damaged or foreign replacement | Never unlink it | Existing ownership-safe no-op; inspect unknown ownership |
+
+The operator flow retains completed effects and the known PR when final lock
+cleanup fails. A second attempt while that lock remains MUST fail without new
+delivery effects. Use the documented orphan-lock procedure: stop Setup owners,
+verify the recorded owner, preserve the receipt and clear only a confirmed
+orphan. Freshly reviewed recovery then reuses the proved existing PR, without
+recreating tree/commit/ref/PR. Existing localized journal-error and retained
+operation/PR content is sufficient; no new message, public option or state is
+introduced. The shared v1/v2 store, schemas, private modes,40k record cap,
+resource/write fences and ten-query provider bounds remain unchanged.
+
+Incremental budget is seven physical controls: real-file read/unlink faults
+crossed with EACCES/EIO4, absent-before-read and disappear-before-unlink2, and
+one actual v2 journal/application/concrete delivery composition with a modeled
+provider1. The composition proves a known completed PR and actual durable state
+are reported with a journal failure, that the retained lock blocks another Apply,
+and that confirmed fixture orphan recovery resumes without new provider effects.
+The same assertions give2PASS/5FAIL original and7PASS corrected;37 other tests
+are filtered only in this causal run. The full cohort MUST run without omissions.
+Existing damaged/foreign lock, first initialization-error, safe acquisition
+cleanup and semantic failed-release controls remain mandatory.
+
+Current floor is **125 IDs/121 mapped Jest cases plus four separate package
+cases**. All first124 ledger objects and the complete selected64-case companion
+remain exact; append C125 with all seven required assertions. The unchanged
+36-suite cohort adds these seven controls. Keep pure100% and runtime95%lines/
+statements/functions,90%branches, including the changed store, plus complete
+mapping, source/global, docs/catalog, build/package and required native gates.
+Update provisioning and orphan-lock troubleshooting together. No runtime
+qualification, installation, activation or permission change follows.
+
+| Case ID | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C125 | Provider/delivery contracts | PU977-G04, PU977-G07 | Acquired lock-release I/O failures surface with retained durable effects, while absent locks remain idempotent and unverified replacements are never removed. |
+
+Traceability: C125 -> G04/G07 -> shared store release -> real publisher finalizer
+and retained-state handling -> provisioning/orphan-lock recovery documentation.

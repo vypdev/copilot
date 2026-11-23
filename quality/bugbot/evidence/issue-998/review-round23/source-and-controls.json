@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "parent": "2748a93abc951a9c0b5763249b006f943a3adfb8",
+  "review": {
+    "check": 137933106149,
+    "partitions": 30,
+    "validated": 30,
+    "elapsedMs": 2976628,
+    "newValidFindings": 1,
+    "thread": "PRRT_kwDONSeBW867CBku"
+  },
+  "sourceSha256": {
+    "src/infrastructure/setup_operation_journal_store.ts": "d29814b920e1143d74db2fc47df69b0bb485763abb6f9befb9ef371d604c2d96",
+    "src/infrastructure/__tests__/setup_operation_journal_store.test.ts": "8b6b141fde0d443b30c3ef9e6849bb895bfc760d92d1bbc949b12b213459c18e",
+    "src/infrastructure/__tests__/setup_publisher_application.test.ts": "6b6330b2fb1aaaf15c46b513f365ddb3cd3e4efb993cdf15dfb604d3b6540a75",
+    "specs/setup-publisher-installation-acceptance.json": "1b0e8a782fee0c8b7c26fb9a497fd332d08b712f9207cfe6cfc908d40513bd50",
+    "specs/organization-configuration-reuse-and-batch-setup.md": "928d2587fcf2e6e0782b7217ea8bf1c0ee430ff2f87253a3c121be166bd38304",
+    "scripts/validate-setup-publisher-acceptance.cjs": "d54db85be72e3516ba8255bf3869e7378af83ab24e4eed6770f9abf9374a7160"
+  },
+  "causal": {
+    "original": {
+      "passed": 2,
+      "failed": 5,
+      "filtered": 37,
+      "rawBytes": 9160,
+      "rawSha256": "15e602e5916757dba88d0e682c83d27e9d28dc437fbafd5c39d4709498c1efcd"
+    },
+    "corrected": {
+      "passed": 7,
+      "failed": 0,
+      "filtered": 37,
+      "rawBytes": 404,
+      "rawSha256": "bdd364daf8e4bfa2e9d0f9f0ae176bb231e46a244a9063ac71cf9e0688600982"
+    },
+    "sameWholeTestFileBytes": true,
+    "testSha256": {
+      "src/infrastructure/__tests__/setup_operation_journal_store.test.ts": "8b6b141fde0d443b30c3ef9e6849bb895bfc760d92d1bbc949b12b213459c18e",
+      "src/infrastructure/__tests__/setup_publisher_application.test.ts": "6b6330b2fb1aaaf15c46b513f365ddb3cd3e4efb993cdf15dfb604d3b6540a75"
+    },
+    "limits": "Real filesystem and injected errors; concrete application/delivery with modeled provider, not an actual installation"
+  },
+  "baseline": {
+    "first124ObjectsExact": true,
+    "selected64CompanionSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+    "ledger": 125,
+    "mapped": 121,
+    "separatePackage": 4
+  },
+  "cohort": {
+    "at": "2026-11-23T19:54:09.484675+00:00",
+    "commandExit": 1,
+    "validatorExit": 0,
+    "testResults": {
+      "numPassedTests": 1588,
+      "numFailedTests": 0,
+      "numPendingTests": 0,
+      "numPassedTestSuites": 36,
+      "numFailedTestSuites": 0
+    },
+    "testsUnchanged": true,
+    "changedRuntimeCoverage": {
+      "lines": {
+        "total": 61,
+        "covered": 61,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 14,
+        "covered": 14,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 82,
+        "covered": 82,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 44,
+        "covered": 44,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "globalAcceptance": false,
+    "scientificCallsAdded": 0,
+    "installationWrites": 0,
+    "production": "disabled",
+    "rawExitScope": "Scoped Jest exit1 is unexecuted global/web/publication floors, not global PASS"
+  },
+  "normal": "PENDING",
+  "nativeFinalHead": "PENDING",
+  "models": 0,
+  "installation": "NOT_EXECUTED",
+  "pilotWrites": 0,
+  "production": "disabled",
+  "sourceValidation": [
+    {
+      "name": "types",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "budgets",
+      "exit": 0,
+      "bytes": 151,
+      "sha256": "e8deb0de10c1b79c81cf399d66ea348c09287aafd23c5b22b6e1f21853046ff1"
+    }
+  ],
+  "deliveryValidation": [
+    {
+      "name": "generate-specifications",
+      "exit": 0,
+      "bytes": 2490,
+      "sha256": "408fb41be6a8d8099a141f0e880ff910ea699d28cac24ead8e1d438647f62c77"
+    },
+    {
+      "name": "specifications",
+      "exit": 0,
+      "bytes": 2489,
+      "sha256": "7eaec75e1337aa4fb7621a387dac23db29f71d8b5ea3ecc43d348b77119857ab"
+    },
+    {
+      "name": "documentation",
+      "exit": 0,
+      "bytes": 319,
+      "sha256": "23dfee16bdd4387324aea08fac9577dc68e5bd41ee017c1a300a72cdf94ce0ab"
+    },
+    {
+      "name": "agent-docs",
+      "exit": 0,
+      "bytes": 218,
+      "sha256": "c7cac2a12d0ff4ef07c5bc0b1404acc8f4569fa3b2c9b53e436622f418bff0d2"
+    },
+    {
+      "name": "docs-page",
+      "exit": 0,
+      "bytes": 208,
+      "sha256": "d0dd6e25d3529bfa8d4edc9f864d1262a292d16d3bdfff90960ce03caa24e76b"
+    },
+    {
+      "name": "workflows",
+      "exit": 0,
+      "bytes": 215,
+      "sha256": "411d5670d7d68ba620c0d0a722f10d4df0015fb27ecb0451385be001ebb833b2"
+    },
+    {
+      "name": "graphify",
+      "exit": 0,
+      "bytes": 3681,
+      "sha256": "5522da4ba373bccb8a24e0634dca7580aa01eedf74aca4f1235c27e7933a865e"
+    },
+    {
+      "name": "build",
+      "exit": 0,
+      "bytes": 442189,
+      "sha256": "45f6acc67571b01d52c90d2741b6f15abd84e6e590bf679c441a431aae21c69f"
+    },
+    {
+      "name": "package",
+      "exit": 0,
+      "bytes": 1004,
+      "sha256": "cd2082e63bd416d8c3faa8dc0a8b4d949d1759d4fa41b833a850bc19507a8d2f"
+    },
+    {
+      "name": "package-smoke",
+      "exit": 0,
+      "bytes": 1156,
+      "sha256": "1e8eed1f4ec4d84e288c3539f62d23d1ef925ef7a082f75bbbb507a9525f97b2"
+    }
+  ],
+  "builtBundles": {
+    "build/cli/index.js": "83422fe7ad0b0e19aa50cf96967daf27788ed5eeff3be15d8ec49bc41237ad0f",
+    "build/github_action/index.js": "b2ffd1b815abd16b120608b4543aadca8ba60e31717e6922a8180587f8c54425",
+    "build/api/index.js": "22cf88aa71e14a216e9ac0aac487317bfa8af0d7ca90bc898401a6f0279579a3",
+    "build/deployment_recovery/index.js": "66654ce0fab52f9084a86555cb893be7f5cee6832058ef9a66751297f9c71d18"
+  }
+}
