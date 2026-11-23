@@ -2644,6 +2644,26 @@
           "test": "publisher immutable two-file planning publisher977-C106: matching manifest hashes cannot authorize empty required issue fields"
         }
       ]
+    },
+    {
+      "id": "publisher977-C107",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Required issue headings must be unique ignoring case while distinct custom labels remain supported; matching manifest hashes cannot authorize duplicate required headings.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C107: rejects case-insensitive duplicate required headings while preserving distinct custom labels"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C107: matching manifest hashes cannot authorize duplicate required headings"
+        }
+      ]
     }
   ]
 }

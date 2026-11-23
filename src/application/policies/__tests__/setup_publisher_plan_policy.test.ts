@@ -58,6 +58,22 @@ const pinWorkflow = (f: Fixture) => {
 };
 
 describe('publisher immutable two-file planning', () => {
+  it('publisher977-C107: matching manifest hashes cannot authorize duplicate required headings', () => {
+    for (const kind of ['feature', 'bugfix', 'chore', 'documentation', 'hotfix', 'release'] as const) {
+      for (const duplicate of ['Custom heading', 'CUSTOM HEADING']) {
+        const f = fixture();
+        const file = f.inspection.installation.guidance.find(file => file.path === REPOSITORY_AGENT_PROFILE_PATH)!;
+        const profile = JSON.parse(file.content);
+        const fields = profile.issueWorkflows.forms[kind].requiredFields;
+        profile.issueWorkflows.forms[kind].requiredFields = ['Custom heading', duplicate, ...fields.slice(2)];
+        file.content = JSON.stringify(profile);
+        f.manifest.profileDigest = hash(file.content);
+        f.manifest.artifacts[file.path].sha256 = hash(file.content);
+        f.syncManifest();
+        expect(() => plan(f)).toThrow(new SetupPublisherPlanError('installation-unsupported'));
+      }
+    }
+  });
   it('publisher977-C106: matching manifest hashes cannot authorize empty required issue fields', () => {
     for (const kind of ['feature', 'bugfix', 'help', 'chore', 'documentation', 'hotfix', 'release'] as const) {
       const f = fixture();

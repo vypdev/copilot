@@ -3340,7 +3340,7 @@
       "id": "repository-agent-collaboration",
       "title": "Repository agent collaboration contract",
       "status": "implemented",
-      "scope": "Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries; installed workflow required-field cardinality matches the canonical catalog while preserving custom heading labels",
+      "scope": "Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries; installed workflow required-field cardinality matches the canonical catalog while preserving custom heading labels Installed required issue headings must remain unique ignoring case before publisher planning.",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-23",
       "specs": [

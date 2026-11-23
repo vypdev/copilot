@@ -96,3 +96,9 @@ larger than 64 KiB and forms with more than 100 elements require local repair.
 For an already submitted issue, inspect the blocked run's Job Summary, correct the
 exact visible heading/value, and rerun. Rejected admission leaves the issue's
 configuration and branches unchanged; it does not create a diagnostic comment.
+
+
+Required issue headings must be distinct ignoring case. A repeated label cannot
+stand in for another required field, even when the profile and manifest hashes
+match. Regenerate guidance from the intended setup configuration and preserve
+existing changes; updating hashes alone does not make a malformed profile valid.

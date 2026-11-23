@@ -112943,6 +112943,7 @@ function validRepositoryAgentWorkflowFact(value, kind, formsEnabled, issueManage
         && isStringArray(value.requiredFields)
         && value.requiredFields.length === definition.requiredHeadings.length
         && value.requiredFields.every(isNonEmptyString)
+        && new Set(value.requiredFields.map(field => field.toLowerCase())).size === value.requiredFields.length
         && (value.workflow === null || isNonEmptyString(value.workflow));
 }
 function isRecord(value) {

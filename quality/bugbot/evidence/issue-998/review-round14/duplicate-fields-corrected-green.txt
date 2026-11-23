@@ -1,0 +1,6 @@
+Test Suites: 2 passed, 2 total
+Tests:       137 skipped, 2 passed, 139 total
+Snapshots:   0 total
+Time:        4.651 s, estimated 6 s
+Ran all test suites within paths "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts", "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts".
+Test results written to: ../copilot-goal-998-duplicate-fields-corrected-green-attempt1.json

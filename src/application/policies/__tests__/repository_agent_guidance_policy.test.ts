@@ -12,6 +12,22 @@ import {
 } from '../repository_agent_guidance_policy';
 
 describe('repository agent guidance policy', () => {
+  it('publisher977-C107: rejects case-insensitive duplicate required headings while preserving distinct custom labels', () => {
+    const profile = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
+    for (const kind of profile.issueWorkflows.enabled) {
+      const fact = profile.issueWorkflows.forms[kind]!;
+      const withFields = (requiredFields: readonly string[]) => JSON.stringify({ ...profile,
+        issueWorkflows: { ...profile.issueWorkflows,
+          forms: { ...profile.issueWorkflows.forms, [kind]: { ...fact, requiredFields } } } });
+      const labels = fact.requiredFields.map((_, index) => `Custom heading ${index}`);
+      expect(validRepositoryAgentProfile(withFields(labels))).toBe(true);
+      if (labels.length > 1) {
+        for (const duplicate of [labels[0], labels[0].toUpperCase()]) {
+          expect(validRepositoryAgentProfile(withFields([labels[0], duplicate, ...labels.slice(2)]))).toBe(false);
+        }
+      }
+    }
+  });
   it('publisher977-C106: rejects missing or excess required field counts while preserving custom labels', () => {
     const profile = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
     for (const kind of profile.issueWorkflows.enabled) {

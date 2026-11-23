@@ -368,6 +368,10 @@ heading labels remain supported at the catalog count. The immutable publisher
 planner consumes this pure-policy decision before preview or writes. The two
 causal controls are publisher977-C106 in the owning batch-setup appendix and
 acceptance ledger; renderer fallback behavior does not establish profile validity.
+Required headings MUST also be unique ignoring case, consistent with configured
+workflow-field mappings. C107 covers duplicate and case-variant labels at the
+canonical count, including actual planning with matching hashes; distinct custom
+labels remain supported.
 
 The manifest contains its schema version, generator package/contract version,
 profile digest, and an ordered map of setup-managed path to source role and

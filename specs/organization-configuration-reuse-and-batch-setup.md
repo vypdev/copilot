@@ -1341,3 +1341,29 @@ Traceability: C106 -> PU977-G01/G07 -> repository agent guidance policy and
 immutable publisher planner -> repository guidance troubleshooting. An unsupported
 profile requires regeneration with the intended setup configuration, preserving
 existing changes; manually replacing hashes does not repair semantic validity.
+
+
+### Reviewed publisher route: unique required issue headings
+
+An installed profile MUST retain case-insensitive uniqueness of required issue
+headings, matching the existing workflow-field mapping rule. Repeating one heading
+omits a semantic field even when the number of entries and all manifest hashes
+match. Distinct custom labels remain supported. This check belongs to the existing
+pure profile policy before publisher preview or effects; there is no new setting,
+schema, provider permission or recovery authority. Invalid profiles require
+regeneration from the intended configuration while preserving existing changes.
+
+| Case | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C107 | Read-only planning/freshness | PU977-G01, PU977-G07 | Required issue headings must be unique ignoring case while distinct custom labels remain supported; matching manifest hashes cannot authorize duplicate required headings. |
+
+The minimum is now **107 logical IDs / 103 mapped Jest cases plus four extracted
+package cases**. Preserve every C01–C106 ledger object and the selected companion.
+Two additional causal tests MUST fail on the prior policy and pass on the corrected
+policy: direct validation checks exact/case-variant duplicates and positive custom
+labels across all kinds; actual immutable planning rejects duplicates with matching
+manifest hashes for every multi-field kind. The one-field help form retains its
+positive case. Keep pure-policy100%, runtime95/90, all global and changed-line
+budgets, package/docs checks and exact-head native acceptance. No installation is
+established by these controls. Traceability: C107 -> PU977-G01/G07 -> profile policy
+and immutable planner -> repository guidance troubleshooting.
