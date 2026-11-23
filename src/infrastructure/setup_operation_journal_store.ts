@@ -3,6 +3,7 @@ import { lstat, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomBytes } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 import { setupBatchBranch } from '../application/policies/setup_batch_policy';
 
 /** Shared private UUID/store/lock primitives. Typed facades own their closed journal schemas. */
@@ -25,6 +26,11 @@ export class SetupOperationJournalStore {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
       throw error;
     }
+  }
+  /** Navigation only after the existing reader validates the exact saved ID. */
+  async location(id: string): Promise<string | undefined> {
+    const record = await this.load(id) as { readonly operationId?: unknown } | undefined;
+    return record?.operationId === id ? pathToFileURL(this.path(id)).href : undefined;
   }
   async save(id: string, value: unknown): Promise<void> {
     const serialized = JSON.stringify(value);

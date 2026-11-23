@@ -1,3 +1,5 @@
+import { distinctIssueWorkflowHeadings } from './issue_workflow_body';
+
 export type WorkflowFieldMappings<Kind extends string = string> = Readonly<Partial<Record<Kind, Readonly<Record<string, string>>>>>;
 export const ISSUE_FIELD_HEADING_MAX_BYTES = 128;
 type Definitions = Readonly<Record<string, {
@@ -27,8 +29,8 @@ export function normalizeWorkflowFieldMappings(value: unknown, definitions: Defi
             return [heading, target] as const;
         });
         const mapped = Object.fromEntries(entries);
-        const effective = headings.map(heading => (mapped[heading] ?? heading).toLowerCase());
-        if (new Set(effective).size !== effective.length)
+        const effective = headings.map(heading => mapped[heading] ?? heading);
+        if (!distinctIssueWorkflowHeadings(effective))
             throw new Error('Issue field mappings cannot make two semantic fields share a heading.');
         if (entries.length)
             mappings[kind] = Object.freeze(mapped);

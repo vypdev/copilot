@@ -32,6 +32,11 @@ export async function executeSetupPublisherCommand(input: SetupPublisherCommandI
   const catalog = resolveStaticSetupPublisherCatalog(setupPublisherEnvironmentLocale(process.env));
   const write = (text: string) => process.stdout.write(text);
   const presenter = new SetupPublisherInstallationPresenter(catalog, write);
+  let installation: ReturnType<typeof createSetupPublisherInstallationCompositionRoot> | undefined;
+  const operationLocation = async (id: string): Promise<string | undefined> => {
+    try { return await installation?.operationLocation?.(id); }
+    catch { return undefined; }
+  };
   let terminal: ReturnType<typeof createInteractiveTerminalDriver>, active = true;
   const stop = () => { active = false; terminal?.close(); };
   try {
@@ -59,8 +64,9 @@ export async function executeSetupPublisherCommand(input: SetupPublisherCommandI
     token = token.trim();
     process.on('SIGINT', stop);
     write(catalog.message('inspecting') + '\n');
-    const installation = createSetupPublisherInstallationCompositionRoot(token, {
-      present: async (plan, retained) => presenter.preview(plan, retained),
+    installation = createSetupPublisherInstallationCompositionRoot(token, {
+      present: async (plan, retained) => presenter.preview(plan, retained,
+        retained ? await operationLocation(retained.operationId) : undefined),
       active: () => active,
       confirm: async () => {
         const answer = await terminal!.readText(catalog.message('confirm', { approve: catalog.message('approve'), decline: catalog.message('decline') }));
@@ -74,7 +80,7 @@ export async function executeSetupPublisherCommand(input: SetupPublisherCommandI
     token = undefined;
     const result = await installation.execute({ proposal, operationId, dryRun, resume });
     if (result.stage === 'cancelled') process.exitCode = 130;
-    if (result.stage === 'apply') presenter.delivered(result.result);
+    if (result.stage === 'apply') presenter.delivered(result.result, await operationLocation(result.result.operationId));
     else write(catalog.message(result.stage === 'dry-run' ? 'dryRun' : result.stage === 'unchanged' ? 'unchanged'
       : result.stage === 'declined' ? 'declined' : 'cancelled') + '\n');
   } catch (error) {
@@ -90,7 +96,8 @@ export async function executeSetupPublisherCommand(input: SetupPublisherCommandI
       : error.reason === 'resume-required' ? 'resumeRequired' : error.reason === 'invalid' ? 'invalid' : 'blocked';
     else if (error instanceof SetupBatchProviderError && error.code === 'forbidden') message = 'authority';
     write(catalog.message(message) + '\n');
-    if (error instanceof SetupPublisherApplyError) presenter.operation(error.retained, error.reason === 'journal');
+    if (error instanceof SetupPublisherApplyError) presenter.operation(error.retained, error.reason === 'journal',
+      await operationLocation(error.retained.operationId));
     process.exitCode = message === 'cancelled' ? 130 : 1;
   } finally { process.off('SIGINT', stop); terminal?.close(); }
 }

@@ -1,4 +1,5 @@
 import { createDefaultSetupConfiguration } from '../setup_configuration_defaults';
+import { readIssueWorkflowFields } from '../../../domain/issue_workflow_body';
 import {
   buildRepositoryAgentProfile,
   parseRepositoryAgentGuidanceManifest,
@@ -12,6 +13,19 @@ import {
 } from '../repository_agent_guidance_policy';
 
 describe('repository agent guidance policy', () => {
+  it('publisher977-C108: profile heading uniqueness follows the parser Unicode equivalence', () => {
+    const profile = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
+    const withFields = (requiredFields: readonly string[]) => JSON.stringify({ ...profile,
+      issueWorkflows: { ...profile.issueWorkflows, forms: { ...profile.issueWorkflows.forms,
+        feature: { ...profile.issueWorkflows.forms.feature, requiredFields } } } });
+    expect(readIssueWorkflowFields('## S\nOne value\n', ['S', '\u017f']).map(field => field.count)).toEqual([1, 1]);
+    expect(validRepositoryAgentProfile(withFields(['S', '\u017f', 'Other']))).toBe(false);
+    expect(validRepositoryAgentProfile(withFields(['\u212a', 'K', 'Other']))).toBe(false);
+    expect(validRepositoryAgentProfile(withFields(['S ', 'S', 'Other']))).toBe(false);
+    expect(validRepositoryAgentProfile(withFields(['\u00df', 'SS', 'Other']))).toBe(true);
+    expect(readIssueWorkflowFields('## \u00df\nFirst\n## SS\nSecond\n', ['\u00df', 'SS']).map(field => field.value))
+      .toEqual(['First', 'Second']);
+  });
   it('publisher977-C107: rejects case-insensitive duplicate required headings while preserving distinct custom labels', () => {
     const profile = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
     for (const kind of profile.issueWorkflows.enabled) {

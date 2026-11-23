@@ -373,6 +373,14 @@ workflow-field mappings. C107 covers duplicate and case-variant labels at the
 canonical count, including actual planning with matching hashes; distinct custom
 labels remain supported.
 
+Required-heading uniqueness MUST use the same literal Unicode-insensitive
+matching as the issue-body parser, rather than lowercasing strings. For example,
+`S` and `ſ` cannot identify two roles because a single structural heading matches
+both; `ß` and `SS` remain distinct under that parser. The shared domain matcher
+owns this equivalence for configured mappings and installed-profile validation.
+C108 proves the original failure, corrected direct validation and immutable
+planning with matching manifest hashes. No schema or configuration is added.
+
 The manifest contains its schema version, generator package/contract version,
 profile digest, and an ordered map of setup-managed path to source role and
 content hash. It never claims arbitrary existing repository files. Backups and

@@ -1089,7 +1089,7 @@
       "id": "setup-and-doctor",
       "title": "Setup, configuration, credentials, and doctor",
       "status": "implemented",
-      "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials; publisher delivery isolates exact operation PRs and structurally verifies the single pinned source invocation, with cumulative baseline and owning-appendix acceptance; malformed asset inventory fails closed before blob reads or an absent-manifest baseline. File delivery rechecks cancellation after awaited freshness and retained intents; mandatory published acceptance rows cannot fall back to future-case checks. The live session also fences each actual file-write transport dispatch after adapter preflight, preserving prior effects on cancellation.; complete remote-action inventory uncertainty, Windows publisher markers and durable known-preparation cancellation recovery; unresolved opaque script behavior cannot prove publisher absence; invalid resume UUID messaging and executable delivery-port coverage registration; installed profile required-field counts match the workflow catalog before publisher preview, retaining custom heading labels",
+      "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials; publisher delivery isolates exact operation PRs and structurally verifies the single pinned source invocation, with cumulative baseline and owning-appendix acceptance; malformed asset inventory fails closed before blob reads or an absent-manifest baseline. File delivery rechecks cancellation after awaited freshness and retained intents; mandatory published acceptance rows cannot fall back to future-case checks. The live session also fences each actual file-write transport dispatch after adapter preflight, preserving prior effects on cancellation.; complete remote-action inventory uncertainty, Windows publisher markers and durable known-preparation cancellation recovery; unresolved opaque script behavior cannot prove publisher absence; invalid resume UUID messaging and executable delivery-port coverage registration; installed profile required-field counts match the workflow catalog before publisher preview, retaining custom heading labels Required-heading uniqueness follows actual Unicode parser equivalence. Retained publisher output links existing validated local operation records and known PRs without creating state or inventing native runs.",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-23",
       "specs": [
@@ -1322,7 +1322,9 @@
         "src/utils/repository_agent_guidance.ts",
         "scripts/smoke-packaged-setup-publisher.cjs",
         "scripts/smoke-test-npm-package.cjs",
-        "scripts/validate-setup-publisher-acceptance.cjs"
+        "scripts/validate-setup-publisher-acceptance.cjs",
+        "src/domain/issue_workflow_body.ts",
+        "src/domain/issue_workflow_field_mapping.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1481,7 +1483,8 @@
         "src/tooling/__tests__/setup_publisher_acceptance_validator.test.ts",
         "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
         "src/infrastructure/__tests__/fixtures/journal_io_diagnostics.cjs",
-        "src/infrastructure/__tests__/setup_operation_journal_store.test.ts"
+        "src/infrastructure/__tests__/setup_operation_journal_store.test.ts",
+        "src/domain/__tests__/issue_workflow_field_mappings.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -3340,7 +3343,7 @@
       "id": "repository-agent-collaboration",
       "title": "Repository agent collaboration contract",
       "status": "implemented",
-      "scope": "Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries; installed workflow required-field cardinality matches the canonical catalog while preserving custom heading labels Installed required issue headings must remain unique ignoring case before publisher planning.",
+      "scope": "Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries; installed workflow required-field cardinality matches the canonical catalog while preserving custom heading labels Installed required issue headings must remain unique ignoring case before publisher planning. Required-heading uniqueness follows actual Unicode parser equivalence.",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-23",
       "specs": [
@@ -3370,7 +3373,9 @@
         "scripts/smoke-test-npm-package.cjs",
         "scripts/install-git-hooks.cjs",
         "scripts/git-hooks/pre-commit.cjs",
-        "scripts/git-hooks/verification-environment.cjs"
+        "scripts/git-hooks/verification-environment.cjs",
+        "src/domain/issue_workflow_body.ts",
+        "src/domain/issue_workflow_field_mapping.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_configuration_policy.test.ts",
@@ -3386,7 +3391,8 @@
         "src/tooling/__tests__/mdx_frontmatter.test.ts",
         "src/utils/__tests__/setup_files.test.ts",
         "src/tooling/__tests__/install_git_hooks.test.ts",
-        "src/tooling/__tests__/git_hook_environment.test.ts"
+        "src/tooling/__tests__/git_hook_environment.test.ts",
+        "src/domain/__tests__/issue_workflow_field_mappings.test.ts"
       ],
       "documentation": [
         "README.md",

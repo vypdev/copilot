@@ -292,3 +292,5 @@ Round8 native Commit/Verification failed on nine newly named .json.gz report arc
 
 
 [Round14: unique required headings and maintain-role review](review-round14/README.md) retains two causal controls, all106 previous ledger objects, the selected companion and the107-ID acceptance floor. No installation or current-head global acceptance is inferred.
+
+[Round15 parser-equivalence and retained-navigation controls](./review-round15/README.md) preserve C53, the first107 ledger objects and the selected companion. Source-only validation does not establish installation.

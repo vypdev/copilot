@@ -554,6 +554,13 @@ instead of applying a previously audited permission set.
 Use the explicit `--publisher-manifest <path>` route for publisher operations.
 The ordinary batch route retains its own records and cannot adopt this purpose.
 
+Retained-state output includes the validated saved operation's local file URL
+and any known installation PR. Open that record on the machine that ran setup;
+it remains private and is not uploaded. Lookup never creates a missing journal
+or changes recovery authority. A missing, invalid or unreadable record has no
+link, and a link lookup failure does not replace the original operation error.
+The CLI cannot link a native run whose identity it has not observed.
+
 | Result | Next action |
 |---|---|
 | Invalid proposal/options | Use a regular nonsymlink UTF-8 closed-schema proposal no larger than 128 KiB. Remove generic setup, web, batch and automation options. No transport or generic setup has started. |

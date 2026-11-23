@@ -1,6 +1,7 @@
 import type { SetupBatchInstallationReceipt } from '../../domain/setup_batch';
 import { isSetupBatchInstallationReceipt } from './setup_batch_policy';
 import { escapeIssueFieldHeadingMarkdown } from '../../domain/issue_workflow_field_mapping';
+import { distinctIssueWorkflowHeadings } from '../../domain/issue_workflow_body';
 import type { SetupConfiguration } from '../../domain/setup';
 import {
   ISSUE_WORKFLOW_CATALOG,
@@ -366,7 +367,7 @@ function validRepositoryAgentWorkflowFact(
     && isStringArray(value.requiredFields)
     && value.requiredFields.length === definition.requiredHeadings.length
     && value.requiredFields.every(isNonEmptyString)
-    && new Set(value.requiredFields.map(field => field.toLowerCase())).size === value.requiredFields.length
+    && distinctIssueWorkflowHeadings(value.requiredFields)
     && (value.workflow === null || isNonEmptyString(value.workflow));
 }
 

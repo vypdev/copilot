@@ -15,4 +15,8 @@ export class SetupPublisherJournalAdapter {
     return this.store.save(validated.operationId, validated);
   }
   lock(id: string): Promise<() => Promise<void>> { return this.store.lock(id); }
+  async recordLocation(id: string): Promise<string | undefined> {
+    try { return await this.store.location(id); }
+    catch { return undefined; } // A missing navigation target never grants recovery or hides the main operation error.
+  }
 }

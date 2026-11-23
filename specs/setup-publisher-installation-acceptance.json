@@ -2664,6 +2664,94 @@
           "test": "publisher immutable two-file planning publisher977-C107: matching manifest hashes cannot authorize duplicate required headings"
         }
       ]
+    },
+    {
+      "id": "publisher977-C108",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Configured and installed required headings must be distinct under the actual issue-body parser Unicode equivalence; matching manifest hashes cannot authorize aliases for two roles.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C108: matching manifest hashes cannot authorize Unicode-equivalent required headings"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C108: profile heading uniqueness follows the parser Unicode equivalence"
+        },
+        {
+          "file": "src/domain/__tests__/issue_workflow_field_mappings.test.ts",
+          "test": "configured Issue Form headings (#725) publisher977-C108: configuration cannot assign parser-equivalent Unicode aliases to different fields"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C109",
+      "area": "CLI/content",
+      "requirements": [
+        "PU977-G06",
+        "PU977-G08"
+      ],
+      "assertion": "Retained states link only the existing validated local operation record and known PR; navigation creates no state or native run and preserves the original operation status and error.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: actual CLI forwards the read-only known operation target to its presenter"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: apply preserves operation status while resolving navigation independently"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: journal-error preserves operation status while resolving navigation independently"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: lookup-failure preserves operation status while resolving navigation independently"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: links only an existing exact publisher record without creating preview state"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: missing roots and mismatched saved IDs remain read-only and unlinked"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: a legacy or malformed record cannot become a publisher navigation target"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "publisher977-C109: composition resolves its own validated record location without provider effects"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: applying output links the known saved operation without inventing a run"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: partial output links the known saved operation without inventing a run"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: waiting-for-merge output links the known saved operation without inventing a run"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: verification-pending output links the known saved operation without inventing a run"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: absent or unsafe record targets never create a navigation promise"
+        }
+      ]
     }
   ]
 }

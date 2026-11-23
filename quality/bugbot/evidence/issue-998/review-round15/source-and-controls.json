@@ -1,0 +1,757 @@
+{
+  "at": "2026-11-23T06:52:15.875994+00:00",
+  "parent": "5b3a8631af59c99e9e34f757c8efd0c2065f4357",
+  "sourceSha256": {
+    "scripts/validate-setup-publisher-acceptance.cjs": "db66f2aafb6a2e87e81af0bf9edbc15ce72ec82f68787893214e6d02ce8f6d85",
+    "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts": "5cba8ff330e16f865e8c199ef3564eae53b8a505cbf6edf7c3eab4472859cef5",
+    "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts": "356638c72298c0d989ac7675bbc93a53a558561723b5f0b402320c3cc93e45ec",
+    "src/application/policies/repository_agent_guidance_policy.ts": "81c11d84de457f9c6e67f07f3b9858fcde42940179b3e296b38af82dc4150b8d",
+    "src/application/policies/setup_publisher_message_catalog.ts": "8f21abe23c75f63520f38b6992f670ef597d68db4985b7a925bc741819bfb12f",
+    "src/cli/__tests__/setup_publisher_installation_adapter.test.ts": "b2425575784e4d6f3fe22fd3df023fd1db1c0e28f35f934115200f35e19a1811",
+    "src/cli/__tests__/setup_publisher_installation_presenter.test.ts": "2f6cdc137ca943d987adae586429b00eeb984e3a4e98ac5249e84787ea19b937",
+    "src/cli/setup_publisher_installation_adapter.ts": "a771955f15f7da1ff81c6be6b9fc34728b73e293721a36794b345f1ba4bbeefd",
+    "src/cli/setup_publisher_installation_presenter.ts": "c63bc1453895803c84863273b980d8f5d47ccf8d1b154dc0b682c2759a0ce226",
+    "src/domain/__tests__/issue_workflow_field_mappings.test.ts": "32e49cd36b5c5b4b233155f6032825078b6a6eb044232109a09c23887056a61c",
+    "src/domain/issue_workflow_body.ts": "7803a198b2e1f9f594dacab593a280f157b6c9b173a36c9663376d626f9a5697",
+    "src/domain/issue_workflow_field_mapping.ts": "36f6a49b07cb00456e72e365a3f94238477a54f30dcc1d850bae65888ff1cdfb",
+    "src/infrastructure/__tests__/setup_publisher_composition.test.ts": "b14b28071681eac9bb3189803acb8e06c02a24a3af718a58e1349a200dcf916a",
+    "src/infrastructure/__tests__/setup_publisher_installation.test.ts": "ed516e5071bd304283b0edfad457a0703a235d0ff3c915514525a5bd5a7d153b",
+    "src/infrastructure/composition/setup_publisher_installation_composition_root.ts": "c3f228d34404307c79c9865a971a84d6a1063686ed11d6c67d729846293bcc50",
+    "src/infrastructure/setup_operation_journal_store.ts": "182a3184475c210bceffec0b52ccf75edafd593270e8371ae4e2d9d092563f31",
+    "src/infrastructure/setup_publisher_journal_adapter.ts": "dd710bcfc7eabb97f02038271a6a786d3fce4df60c5fdd3ffd353c26f4fc485b"
+  },
+  "prior107LedgerObjectsPreserved": true,
+  "originalC53Preserved": true,
+  "selectedCompanionSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "logicalIds": 109,
+  "mappedJestIds": 105,
+  "separatePackageCases": 4,
+  "originalReports": {
+    "copilot-goal-998-unicode-original-red-attempt1.json": {
+      "bytes": 78612,
+      "sha256": "acced891ea4e2870139db9d79fcf022869753b6ae251c81f6634760f01a25f10",
+      "results": {
+        "numPassedTests": 0,
+        "numFailedTests": 2,
+        "numPendingTests": 139,
+        "numPassedTestSuites": 0,
+        "numFailedTestSuites": 2
+      }
+    },
+    "copilot-goal-998-unicode-original-red-attempt2.json": {
+      "bytes": 91763,
+      "sha256": "278e3a4fc0654ea4c2a2956d67c798de69143547b6d2b9f796683a2d99405791",
+      "results": {
+        "numPassedTests": 0,
+        "numFailedTests": 3,
+        "numPendingTests": 159,
+        "numPassedTestSuites": 0,
+        "numFailedTestSuites": 3
+      }
+    },
+    "copilot-goal-998-unicode-corrected-green-attempt1.json": {
+      "bytes": 79708,
+      "sha256": "67c1e540015b56585950ef446c9b6f68de16ff5a3f03c48f2ccc1eb25e5aa013",
+      "results": {
+        "numPassedTests": 3,
+        "numFailedTests": 0,
+        "numPendingTests": 159,
+        "numPassedTestSuites": 3,
+        "numFailedTestSuites": 0
+      }
+    },
+    "copilot-goal-998-navigation-original-red-attempt1.json": {
+      "bytes": 95375,
+      "sha256": "c5dbc8cebb63629172d6fddb36df414087a18b80f571f8aa2cda4dfd352558d9",
+      "results": {
+        "numPassedTests": 2,
+        "numFailedTests": 6,
+        "numPendingTests": 143,
+        "numPassedTestSuites": 0,
+        "numFailedTestSuites": 3
+      }
+    },
+    "copilot-goal-998-navigation-original-red-attempt2.json": {
+      "bytes": 103057,
+      "sha256": "4206274ae8a1695afa098efac267e9f1e985b6127e7f70dbb9fa9ad56ad11a77",
+      "results": {
+        "numPassedTests": 2,
+        "numFailedTests": 7,
+        "numPendingTests": 155,
+        "numPassedTestSuites": 0,
+        "numFailedTestSuites": 4
+      }
+    },
+    "copilot-goal-998-navigation-corrected-green-attempt1.json": {
+      "bytes": 78610,
+      "sha256": "7666d4ee2d347c7d3603cb61931fc0096eed7d3bc412fe459ed80947039cdc83",
+      "results": {
+        "numPassedTests": 9,
+        "numFailedTests": 0,
+        "numPendingTests": 155,
+        "numPassedTestSuites": 4,
+        "numFailedTestSuites": 0
+      }
+    },
+    "copilot-goal-998-navigation-expanded-green-attempt1.json": {
+      "bytes": 106144,
+      "sha256": "009fd7b1b8c10caebb98f5dc4d7fa449ba72e641bb825607b18949c10b3c9fca",
+      "results": {
+        "numPassedTests": 165,
+        "numFailedTests": 3,
+        "numPendingTests": 0,
+        "numPassedTestSuites": 3,
+        "numFailedTestSuites": 1
+      }
+    },
+    "copilot-goal-998-navigation-expanded-green-attempt2.json": {
+      "bytes": 79868,
+      "sha256": "956e04e87532b415b8ed45890ab8839f24e953930c1c97e3d3fe51b6d2c6d1da",
+      "results": {
+        "numPassedTests": 168,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "numPassedTestSuites": 4,
+        "numFailedTestSuites": 0
+      }
+    },
+    "copilot-goal-998-round15-coherent-attempt1-results.json": {
+      "bytes": 10476288,
+      "sha256": "000faf85d9660574359cbcf4a983df81f29235852a492ce9ebfcc8af8e6bf232",
+      "results": {
+        "numPassedTests": 1487,
+        "numFailedTests": 8,
+        "numPendingTests": 0,
+        "numPassedTestSuites": 35,
+        "numFailedTestSuites": 1
+      }
+    },
+    "copilot-goal-998-round15-coherent-attempt2-results.json": {
+      "bytes": 10472566,
+      "sha256": "09169f8b779d6d972ee93aa6f385a959ee19d1f12613049b622ec90e0597fdb2",
+      "results": {
+        "numPassedTests": 1495,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "numPassedTestSuites": 36,
+        "numFailedTestSuites": 0
+      }
+    }
+  },
+  "causalAssertions": [
+    {
+      "attempt": "unicode-original-red-attempt2",
+      "assertions": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C108: matching manifest hashes cannot authorize Unicode-equivalent required headings",
+          "status": "failed"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C108: profile heading uniqueness follows the parser Unicode equivalence",
+          "status": "failed"
+        },
+        {
+          "file": "src/domain/__tests__/issue_workflow_field_mappings.test.ts",
+          "test": "configured Issue Form headings (#725) publisher977-C108: configuration cannot assign parser-equivalent Unicode aliases to different fields",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "attempt": "unicode-corrected-green-attempt1",
+      "assertions": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C108: matching manifest hashes cannot authorize Unicode-equivalent required headings",
+          "status": "passed"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C108: profile heading uniqueness follows the parser Unicode equivalence",
+          "status": "passed"
+        },
+        {
+          "file": "src/domain/__tests__/issue_workflow_field_mappings.test.ts",
+          "test": "configured Issue Form headings (#725) publisher977-C108: configuration cannot assign parser-equivalent Unicode aliases to different fields",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "attempt": "navigation-original-red-attempt2",
+      "assertions": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: actual CLI forwards the read-only known operation target to its presenter",
+          "status": "failed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: links only an existing exact publisher record without creating preview state",
+          "status": "failed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: a legacy or malformed record cannot become a publisher navigation target",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: applying output links the known saved operation without inventing a run",
+          "status": "failed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: partial output links the known saved operation without inventing a run",
+          "status": "failed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: waiting-for-merge output links the known saved operation without inventing a run",
+          "status": "failed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: verification-pending output links the known saved operation without inventing a run",
+          "status": "failed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: absent or unsafe record targets never create a navigation promise",
+          "status": "passed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "publisher977-C109: composition resolves its own validated record location without provider effects",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "attempt": "navigation-corrected-green-attempt1",
+      "assertions": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: actual CLI forwards the read-only known operation target to its presenter",
+          "status": "passed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "publisher977-C109: composition resolves its own validated record location without provider effects",
+          "status": "passed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: links only an existing exact publisher record without creating preview state",
+          "status": "passed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: a legacy or malformed record cannot become a publisher navigation target",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: applying output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: partial output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: waiting-for-merge output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: verification-pending output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: absent or unsafe record targets never create a navigation promise",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "attempt": "navigation-expanded-green-attempt1",
+      "assertions": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: actual CLI forwards the read-only known operation target to its presenter",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: apply preserves operation status while resolving navigation independently",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: journal-error preserves operation status while resolving navigation independently",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: lookup-failure preserves operation status while resolving navigation independently",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "a cancel during approval exits130 without a completed delivery",
+          "status": "failed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "a end-of-input during approval exits130 without a completed delivery",
+          "status": "failed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "preserves cancellation status from Apply and displays its retained effects",
+          "status": "failed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "publisher977-C109: composition resolves its own validated record location without provider effects",
+          "status": "passed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: links only an existing exact publisher record without creating preview state",
+          "status": "passed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: missing roots and mismatched saved IDs remain read-only and unlinked",
+          "status": "passed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: a legacy or malformed record cannot become a publisher navigation target",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: applying output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: partial output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: waiting-for-merge output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: verification-pending output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: absent or unsafe record targets never create a navigation promise",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "attempt": "navigation-expanded-green-attempt2",
+      "assertions": [
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: actual CLI forwards the read-only known operation target to its presenter",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: apply preserves operation status while resolving navigation independently",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: journal-error preserves operation status while resolving navigation independently",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
+          "test": "publisher977-C109: lookup-failure preserves operation status while resolving navigation independently",
+          "status": "passed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: links only an existing exact publisher record without creating preview state",
+          "status": "passed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: missing roots and mismatched saved IDs remain read-only and unlinked",
+          "status": "passed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "shared store with separate publisher and legacy schemas publisher977-C109: a legacy or malformed record cannot become a publisher navigation target",
+          "status": "passed"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_composition.test.ts",
+          "test": "publisher977-C109: composition resolves its own validated record location without provider effects",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: applying output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: partial output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: waiting-for-merge output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: verification-pending output links the known saved operation without inventing a run",
+          "status": "passed"
+        },
+        {
+          "file": "src/cli/__tests__/setup_publisher_installation_presenter.test.ts",
+          "test": "publisher977-C109: absent or unsafe record targets never create a navigation promise",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "focused": {
+    "suites": 36,
+    "passed": 1495,
+    "failed": 0,
+    "skipped": 0,
+    "validatorExit": 0,
+    "rawJestCommandExit": 1,
+    "limitation": "Focused collection fails unrelated global/web/specification-publication floors; this is not global acceptance.",
+    "originalAttempt1": "1487PASS8FAIL; all8 TCP/UDP loopback listen/bind EPERM in restricted tool sandbox; same unchanged cohort succeeds with loopback available.",
+    "budget": {
+      "budget": "Reviewed publisher installation",
+      "budgetPassed": true,
+      "pureModules": 6,
+      "runtimeModules": 20,
+      "metrics": {
+        "src/application/policies/repository_agent_guidance_policy.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/domain/issue_workflow_body.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/domain/issue_workflow_field_mapping.ts": {
+          "lines": 100,
+          "functions": 90.9,
+          "statements": 97.67,
+          "branches": 100
+        },
+        "src/application/policies/setup_installation_receipt_policy.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/application/policies/setup_installation_tree_policy.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/application/policies/setup_publisher_installation_policy.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/application/policies/setup_publisher_plan_policy.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/application/policies/setup_publisher_message_catalog.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/application/policies/setup_token_value_policy.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/application/usecases/setup/apply_setup_publisher_use_case.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/application/usecases/setup/deliver_setup_installation_use_case.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/application/ports/setup_installation_delivery_ports.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/application/usecases/setup/review_setup_publisher_use_case.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/cli/setup_publisher_proposal_file.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/infrastructure/setup_batch_journal_adapter.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/infrastructure/setup_installation_github_delivery_adapter.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/infrastructure/setup_operation_journal_store.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/infrastructure/setup_publisher_journal_adapter.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/infrastructure/setup_publisher_credentials.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/infrastructure/setup_batch_github_read_adapter.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/infrastructure/setup_publisher_git_reader.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/infrastructure/setup_publisher_github_source_adapter.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/infrastructure/setup_publisher_workflow_inventory.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/infrastructure/setup_publisher_github_read_adapter.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/application/usecases/setup/install_setup_publisher_use_case.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/infrastructure/composition/setup_publisher_installation_composition_root.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/cli/setup_publisher_installation_adapter.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/cli/setup_publisher_installation_presenter.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "src/domain/setup_publisher_installation.ts": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        }
+      },
+      "globalAcceptance": false
+    }
+  },
+  "delivery": {
+    "at": "2026-11-23T06:51:00.352396+00:00",
+    "steps": [
+      {
+        "name": "specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:specifications"
+        ],
+        "exit": 0,
+        "bytes": 2487,
+        "sha256": "d33b52963ff930267efd9d17153f3369ab7c29bad217642d47f9f69b5df9e94b"
+      },
+      {
+        "name": "documentation",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:documentation"
+        ],
+        "exit": 0,
+        "bytes": 319,
+        "sha256": "23dfee16bdd4387324aea08fac9577dc68e5bd41ee017c1a300a72cdf94ce0ab"
+      },
+      {
+        "name": "agent-docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:agent-docs"
+        ],
+        "exit": 0,
+        "bytes": 218,
+        "sha256": "c7cac2a12d0ff4ef07c5bc0b1404acc8f4569fa3b2c9b53e436622f418bff0d2"
+      },
+      {
+        "name": "docs-page",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:docs-page"
+        ],
+        "exit": 0,
+        "bytes": 208,
+        "sha256": "d0dd6e25d3529bfa8d4edc9f864d1262a292d16d3bdfff90960ce03caa24e76b"
+      },
+      {
+        "name": "workflows",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:workflows"
+        ],
+        "exit": 0,
+        "bytes": 215,
+        "sha256": "411d5670d7d68ba620c0d0a722f10d4df0015fb27ecb0451385be001ebb833b2"
+      },
+      {
+        "name": "graphify",
+        "command": [
+          "graphify",
+          "update",
+          "."
+        ],
+        "exit": 0,
+        "bytes": 3681,
+        "sha256": "a4b30322c5754d6c27052d2fe4b420b7ccb159ec5f5f4f3f4f26f8a71fd5ccc3"
+      },
+      {
+        "name": "build",
+        "command": [
+          "pnpm",
+          "run",
+          "build"
+        ],
+        "exit": 0,
+        "bytes": 442189,
+        "sha256": "84da017cfcd58e030fd7e88f0e7531ab01d0e7755bfc1647116218f184a225d2"
+      },
+      {
+        "name": "package",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:npm-package"
+        ],
+        "exit": 0,
+        "bytes": 1004,
+        "sha256": "cd2082e63bd416d8c3faa8dc0a8b4d949d1759d4fa41b833a850bc19507a8d2f"
+      },
+      {
+        "name": "package-smoke",
+        "command": [
+          "pnpm",
+          "run",
+          "smoke:npm-package"
+        ],
+        "exit": 0,
+        "bytes": 1156,
+        "sha256": "1e8eed1f4ec4d84e288c3539f62d23d1ef925ef7a082f75bbbb507a9525f97b2"
+      }
+    ],
+    "bundles": {
+      "build/cli/index.js": "5f87f86866592a00372a7c7314566b85260116a0b2c0275f362c479e1bb9d757",
+      "build/github_action/index.js": "f2945cb611e93225e64f08cb9147e14e285276a4afe4d69f31875cd0c1aa0d17",
+      "build/api/index.js": "22cf88aa71e14a216e9ac0aac487317bfa8af0d7ca90bc898401a6f0279579a3",
+      "build/deployment_recovery/index.js": "66654ce0fab52f9084a86555cb893be7f5cee6832058ef9a66751297f9c71d18"
+    },
+    "scientificCallsAdded": 0,
+    "installation": "NOT_EXECUTED",
+    "pilotWrites": 0,
+    "production": "disabled",
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "missingLeafReview": {
+    "decision": "REFUTED",
+    "source": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
+    "reason": "Existing fixture already supplies empty base and prepared tree containing approved newSha; unchanged named assertion passes."
+  },
+  "globalAcceptance": false,
+  "nativeAcceptance": false,
+  "installation": "NOT_EXECUTED",
+  "scientificCallsAdded": 0,
+  "pilotWrites": 0,
+  "production": "disabled"
+}

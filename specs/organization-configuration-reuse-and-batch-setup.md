@@ -1367,3 +1367,66 @@ positive case. Keep pure-policy100%, runtime95/90, all global and changed-line
 budgets, package/docs checks and exact-head native acceptance. No installation is
 established by these controls. Traceability: C107 -> PU977-G01/G07 -> profile policy
 and immutable planner -> repository guidance troubleshooting.
+
+
+### Reviewed publisher route: parser-equivalent headings and retained navigation
+
+Configured mappings and installed required headings MUST share the issue-body
+parser's literal Unicode-insensitive equivalence. A structural heading cannot
+satisfy two roles: S/long-s and K/Kelvin aliases are rejected; sharp-s/SS remain
+distinct. Domain matching owns this decision, reused by the mapping normalizer
+and installed-profile policy before immutable preview. There is no new setting,
+schema, grant or source of approval. Invalid profiles require regeneration from
+the intended configuration while preserving local changes.
+
+The original C53 contract remains intact. Pending/applying, partial, waiting-for-
+merge and verification-pending output MUST link an actual known saved operation
+and any known installation PR. The journal store resolves only an existing,
+validated record with the exact UUID into its local file URL; it MUST NOT mkdir,
+save, lock or contact a provider for navigation. Legacy, invalid, absent or
+mismatched records yield no link. An unsaved preview has no saved-record link.
+Composition supplies this narrow read-only capability; CLI/presentation own
+localized navigation and MUST reject remote/hosted file targets, controls, query,
+fragment or wrong operation IDs. A lookup failure MUST preserve the main status,
+original error and recovery copy. No native run URL is invented. The file remains
+private on the machine that ran setup; it is not uploaded or shared.
+
+```text
+Retained partial operation -> validate existing local record -> show saved-record link
+Known PR                 -> show neutral installation PR link
+Absent/invalid record    -> keep operation ID + recovery instructions, omit file link
+Delivered installation PR -> review/merge next; installation/native checks pending
+```
+
+Text equivalent: lookup is read-only and optional navigation; the existing
+operation and approval state machine continues to own recovery. Representative
+English copy is `Saved operation record: file:///private/setup-operations/<UUID>.json`
+and `Installation pull request: https://github.com/owner/project/pull/73`. These
+examples are illustrative, never configured destinations. All four static
+catalogs translate both labels; fallback remains atomic English. Cancelled or
+failed retained output uses a neutral known-PR link and does not claim a newly
+completed delivery.
+
+| Case | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C108 | Read-only planning/freshness | PU977-G01, PU977-G07 | Configured and installed required headings must be distinct under the actual issue-body parser Unicode equivalence; matching manifest hashes cannot authorize aliases for two roles. |
+| publisher977-C109 | CLI/content | PU977-G06, PU977-G08 | Retained states link only the existing validated local operation record and known PR; navigation creates no state or native run and preserves the original operation status and error. |
+
+The cumulative minimum is **109 logical IDs / 105 mapped Jest cases plus four
+extracted-package cases**. Preserve all C01–C107 ledger objects and the selected
+companion byte for byte, including C53. C108 has three causal tests: configured
+mappings, installed profiles with actual parser proof, and matching-hash planning.
+C109 adds 13 distinct assertions covering four retained states, unsafe/absent
+links, actual CLI preview/delivery/failure behavior, real-disk read-only identity
+and schema boundaries, and actual narrow composition. Existing four-locale tests
+also check the new labels. The original-source failures and corrected controls
+MUST be retained; no new tests substitute for installation or platform evidence.
+
+Keep pure-policy100%, existing runtime95/90, all global and changed-line gates,
+package/docs/architecture checks and exact-head native acceptance. Acceptance:
+a single S heading cannot fulfill S and long-s roles; a valid saved publisher
+record has one local link with unchanged bytes; missing/foreign records have no
+link or new directory; cancelled/failed operations preserve their original exit
+and recovery facts even when navigation fails. Traceability: C108 -> G01/G07 ->
+domain matcher/profile/planner -> configurable workflow guidance; C109 -> G06/G08
+-> journal/composition/CLI/presenter -> how-to and recovery documentation.

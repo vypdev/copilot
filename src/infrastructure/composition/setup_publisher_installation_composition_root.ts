@@ -13,9 +13,13 @@ import { SetupPublisherCredentials } from '../setup_publisher_credentials';
 import { SetupPublisherGithubReadAdapter } from '../setup_publisher_github_read_adapter';
 import { SetupPublisherJournalAdapter } from '../setup_publisher_journal_adapter';
 
+export type SetupPublisherInstallationRuntime = Pick<InstallSetupPublisherUseCase, 'execute'> & {
+  readonly operationLocation?: (operationId: string) => Promise<string | undefined>;
+};
+
 /** No Variables, Secret/grant inventories, label/type writers, probes or broad Setup renderer. */
 export function createSetupPublisherInstallationCompositionRoot(token: unknown, presentation: Omit<SetupPublisherReviewPorts, 'inspect'>,
-  locale: string = 'en-US') {
+  locale: string = 'en-US'): SetupPublisherInstallationRuntime {
   const catalog = resolveStaticSetupPublisherCatalog(locale);
   const credentials = new SetupPublisherCredentials(token);
   const transport = new SetupBatchGithubTransport({ getClient: value => getOctokitClient<GithubSetupBatchClient>(value) });
@@ -34,5 +38,7 @@ export function createSetupPublisherInstallationCompositionRoot(token: unknown, 
           catalog.message('prBody', { commit: plan.sourceCommit }),
           setupBatchMarker(plan.operationId, plan.target.id),
         ].join('\n\n') }, value, fresh, () => presentation.active())) });
-  return new InstallSetupPublisherUseCase(review, apply, journal);
+  const installation = new InstallSetupPublisherUseCase(review, apply, journal);
+  return Object.freeze({ execute: installation.execute.bind(installation),
+    operationLocation: (id: string) => journal.recordLocation(id) });
 }

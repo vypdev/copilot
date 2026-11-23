@@ -60069,6 +60069,7 @@ exports.parseRepositoryAgentGuidanceManifest = parseRepositoryAgentGuidanceManif
 exports.validRepositoryAgentProfile = validRepositoryAgentProfile;
 const setup_batch_policy_1 = __nccwpck_require__(52214);
 const issue_workflow_field_mapping_1 = __nccwpck_require__(14945);
+const issue_workflow_body_1 = __nccwpck_require__(99376);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const issue_start_policy_1 = __nccwpck_require__(90332);
@@ -60362,7 +60363,7 @@ function validRepositoryAgentWorkflowFact(value, kind, formsEnabled, issueManage
         && isStringArray(value.requiredFields)
         && value.requiredFields.length === definition.requiredHeadings.length
         && value.requiredFields.every(isNonEmptyString)
-        && new Set(value.requiredFields.map(field => field.toLowerCase())).size === value.requiredFields.length
+        && (0, issue_workflow_body_1.distinctIssueWorkflowHeadings)(value.requiredFields)
         && (value.workflow === null || isNonEmptyString(value.workflow));
 }
 function isRecord(value) {
@@ -65232,6 +65233,8 @@ const english = Object.freeze({
     retained: 'Previously retained effects: {effects}',
     uncertain: 'Unconfirmed effect: {effect}. Inspect the operation; do not repeat an unknown object creation.',
     journalUnconfirmed: 'The latest operation could not be saved. Preserve this report and inspect the existing receipt before resuming.',
+    operationRecord: 'Saved operation record: {url}',
+    knownPullRequest: 'Installation pull request: {url}',
     operation: 'Operation: {id}',
     source: 'Source: vypdev/copilot@{commit}',
     target: 'Target: {repository} · {branch}@{head}',
@@ -65279,6 +65282,8 @@ const spanish = Object.freeze({
     retained: 'Efectos conservados anteriormente: {effects}',
     uncertain: 'Efecto sin confirmar: {effect}. Inspecciona la operación; no repitas una creación de objetos de resultado desconocido.',
     journalUnconfirmed: 'No se ha podido guardar el último estado. Conserva este informe y revisa el recibo existente antes de reanudar.',
+    operationRecord: 'Registro guardado de la operación: {url}',
+    knownPullRequest: 'PR de instalación: {url}',
     operation: 'Operación: {id}', source: 'Fuente: vypdev/copilot@{commit}',
     target: 'Destino: {repository} · {branch}@{head}', actor: 'ID del actor autenticado: {id}',
     digest: 'Plan aprobado: {digest}', file: 'Archivo completo: {path} · {bytes} bytes · SHA-256 {hash}', object: '{effect}: {sha}',
@@ -65317,6 +65322,8 @@ const french = Object.freeze({
     retained: 'Effets précédemment conservés : {effects}',
     uncertain: 'Effet non confirmé : {effect}. Examinez l’opération ; ne répétez pas une création d’objet au résultat inconnu.',
     journalUnconfirmed: 'Le dernier état n’a pas pu être enregistré. Conservez ce rapport et examinez le reçu existant avant de reprendre.',
+    operationRecord: 'Enregistrement sauvegardé de l’opération : {url}',
+    knownPullRequest: 'Pull request d’installation : {url}',
     operation: 'Opération : {id}', source: 'Source : vypdev/copilot@{commit}',
     target: 'Destination : {repository} · {branch}@{head}', actor: 'ID de l’acteur authentifié : {id}',
     digest: 'Plan approuvé : {digest}', file: 'Fichier complet : {path} · {bytes} octets · SHA-256 {hash}', object: '{effect} : {sha}',
@@ -65355,6 +65362,8 @@ const portuguese = Object.freeze({
     retained: 'Efeitos preservados anteriormente: {effects}',
     uncertain: 'Efeito não confirmado: {effect}. Inspecione a operação; não repita a criação de um objeto com resultado desconhecido.',
     journalUnconfirmed: 'Não foi possível salvar o último estado. Preserve este relatório e revise o recibo existente antes de retomar.',
+    operationRecord: 'Registro salvo da operação: {url}',
+    knownPullRequest: 'Pull request de instalação: {url}',
     operation: 'Operação: {id}', source: 'Origem: vypdev/copilot@{commit}',
     target: 'Destino: {repository} · {branch}@{head}', actor: 'ID do ator autenticado: {id}',
     digest: 'Plano aprovado: {digest}', file: 'Arquivo completo: {path} · {bytes} bytes · SHA-256 {hash}', object: '{effect}: {sha}',
@@ -95685,6 +95694,15 @@ async function executeSetupPublisherCommand(input) {
     const catalog = (0, setup_publisher_message_catalog_1.resolveStaticSetupPublisherCatalog)((0, setup_publisher_message_catalog_1.setupPublisherEnvironmentLocale)(process.env));
     const write = (text) => process.stdout.write(text);
     const presenter = new setup_publisher_installation_presenter_1.SetupPublisherInstallationPresenter(catalog, write);
+    let installation;
+    const operationLocation = async (id) => {
+        try {
+            return await installation?.operationLocation?.(id);
+        }
+        catch {
+            return undefined;
+        }
+    };
     let terminal, active = true;
     const stop = () => { active = false; terminal?.close(); };
     try {
@@ -95730,8 +95748,8 @@ async function executeSetupPublisherCommand(input) {
         token = token.trim();
         process.on('SIGINT', stop);
         write(catalog.message('inspecting') + '\n');
-        const installation = (0, setup_publisher_installation_composition_root_1.createSetupPublisherInstallationCompositionRoot)(token, {
-            present: async (plan, retained) => presenter.preview(plan, retained),
+        installation = (0, setup_publisher_installation_composition_root_1.createSetupPublisherInstallationCompositionRoot)(token, {
+            present: async (plan, retained) => presenter.preview(plan, retained, retained ? await operationLocation(retained.operationId) : undefined),
             active: () => active,
             confirm: async () => {
                 const answer = await terminal.readText(catalog.message('confirm', { approve: catalog.message('approve'), decline: catalog.message('decline') }));
@@ -95751,7 +95769,7 @@ async function executeSetupPublisherCommand(input) {
         if (result.stage === 'cancelled')
             process.exitCode = 130;
         if (result.stage === 'apply')
-            presenter.delivered(result.result);
+            presenter.delivered(result.result, await operationLocation(result.result.operationId));
         else
             write(catalog.message(result.stage === 'dry-run' ? 'dryRun' : result.stage === 'unchanged' ? 'unchanged'
                 : result.stage === 'declined' ? 'declined' : 'cancelled') + '\n');
@@ -95778,7 +95796,7 @@ async function executeSetupPublisherCommand(input) {
             message = 'authority';
         write(catalog.message(message) + '\n');
         if (error instanceof apply_setup_publisher_use_case_1.SetupPublisherApplyError)
-            presenter.operation(error.retained, error.reason === 'journal');
+            presenter.operation(error.retained, error.reason === 'journal', await operationLocation(error.retained.operationId));
         process.exitCode = message === 'cancelled' ? 130 : 1;
     }
     finally {
@@ -95810,14 +95828,14 @@ class SetupPublisherInstallationPresenter {
         this.write = write;
     }
     line(text) { this.write(setupPublisherInertText(text) + '\n'); }
-    preview(plan, retained) {
+    preview(plan, retained, recordLocation) {
         const repository = `${plan.target.owner}/${plan.target.name}`;
         this.line(this.catalog.message('title', { repository }));
         this.line(this.catalog.message(plan.status === 'unchanged' ? 'unchanged' : 'preview'));
         if (plan.status === 'review')
             this.line(this.catalog.message('effects'));
         if (retained)
-            this.operation(retained);
+            this.operation(retained, false, recordLocation);
         this.line(this.catalog.message('operation', { id: plan.operationId }));
         this.line(this.catalog.message('target', { repository, branch: plan.target.defaultBranch, head: plan.target.baseSha }));
         this.line(this.catalog.message('source', { commit: plan.sourceCommit }));
@@ -95833,8 +95851,13 @@ class SetupPublisherInstallationPresenter {
         this.line(this.catalog.message('nativePending'));
         this.line(this.catalog.message('production'));
     }
-    operation(operation, journalUnconfirmed = false) {
+    operation(operation, journalUnconfirmed = false, recordLocation) {
         this.line(this.catalog.message('operation', { id: operation.operationId }));
+        const location = this.localRecordLocation(recordLocation, operation.operationId);
+        if (location)
+            this.line(this.catalog.message('operationRecord', { url: location }));
+        if (operation.pullRequestNumber)
+            this.line(this.catalog.message('knownPullRequest', { url: `https://github.com/${operation.repository}/pull/${operation.pullRequestNumber}` }));
         this.line(operation.effects.length ? this.catalog.message('retained', {
             effects: operation.effects.map(effect => this.catalog.message(`effect.${effect}`)).join(', '),
         }) : this.catalog.message('noEffects'));
@@ -95848,13 +95871,26 @@ class SetupPublisherInstallationPresenter {
             this.line(this.catalog.message('journalUnconfirmed'));
         this.line(this.catalog.message('recovery'));
     }
-    delivered(operation) {
-        this.operation(operation);
-        const url = `https://github.com/${operation.repository}/pull/${operation.pullRequestNumber}`;
-        this.line(this.catalog.message('waitingMerge', { url }));
+    delivered(operation, recordLocation) {
+        this.operation(operation, false, recordLocation);
+        this.line(this.catalog.message('waitingMerge', {
+            url: `https://github.com/${operation.repository}/pull/${operation.pullRequestNumber}`,
+        }));
         this.line(this.catalog.message('nextMerge'));
         this.line(this.catalog.message('nativePending'));
         this.line(this.catalog.message('production'));
+    }
+    localRecordLocation(value, operationId) {
+        if (!value || /[\p{Cc}\p{Cf}]/u.test(value))
+            return undefined;
+        try {
+            const url = new URL(value);
+            return url.protocol === 'file:' && !url.host && !url.search && !url.hash
+                && url.pathname.endsWith(`/${operationId}.json`) ? url.href : undefined;
+        }
+        catch {
+            return undefined;
+        }
     }
 }
 exports.SetupPublisherInstallationPresenter = SetupPublisherInstallationPresenter;
@@ -113782,16 +113818,25 @@ function branchIsReady(input) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.distinctIssueWorkflowHeadings = distinctIssueWorkflowHeadings;
 exports.readIssueWorkflowFields = readIssueWorkflowFields;
 const markdown_visibility_1 = __nccwpck_require__(43591);
+function headingPattern(heading) {
+    const escaped = heading.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    return new RegExp(`^#{1,6}[ \t]+${escaped}[ \t]*$`, 'iu');
+}
+/** A single structural heading must never satisfy two configured roles. */
+function distinctIssueWorkflowHeadings(headings) {
+    const patterns = headings.map(headingPattern);
+    return headings.every((heading, index) => headings.slice(0, index).every((other, otherIndex) => !patterns[otherIndex].test('## ' + heading) && !patterns[index].test('## ' + other)));
+}
 /** Examples and hidden comments cannot supply or duplicate structural form headings. */
 function readIssueWorkflowFields(body, headings) {
     const { structural, uncommented } = (0, markdown_visibility_1.projectMarkdownVisibility)(body);
     const sections = structural.map((line, index) => ({ line, index })).filter(({ line }) => /^#{1,6}[ \t]+/u.test(line));
     return Object.freeze(headings.map(heading => {
-        const escaped = heading.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-        const headingPattern = new RegExp(`^#{1,6}[ \t]+${escaped}[ \t]*$`, 'iu');
-        const matches = sections.filter(({ line }) => headingPattern.test(line));
+        const pattern = headingPattern(heading);
+        const matches = sections.filter(({ line }) => pattern.test(line));
         if (matches.length !== 1)
             return Object.freeze({ heading, count: matches.length, value: '' });
         const start = matches[0].index;
@@ -113863,7 +113908,7 @@ function issueWorkflowDiagnosticPresentation(facts) {
 /***/ }),
 
 /***/ 14945:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -113872,6 +113917,7 @@ exports.ISSUE_FIELD_HEADING_MAX_BYTES = void 0;
 exports.normalizeWorkflowFieldMappings = normalizeWorkflowFieldMappings;
 exports.isIssueFieldHeading = isIssueFieldHeading;
 exports.escapeIssueFieldHeadingMarkdown = escapeIssueFieldHeadingMarkdown;
+const issue_workflow_body_1 = __nccwpck_require__(99376);
 exports.ISSUE_FIELD_HEADING_MAX_BYTES = 128;
 /** One explicit replacement per canonical semantic field; never guesses an alias from an issue body. */
 function normalizeWorkflowFieldMappings(value, definitions, enabled) {
@@ -113897,8 +113943,8 @@ function normalizeWorkflowFieldMappings(value, definitions, enabled) {
             return [heading, target];
         });
         const mapped = Object.fromEntries(entries);
-        const effective = headings.map(heading => (mapped[heading] ?? heading).toLowerCase());
-        if (new Set(effective).size !== effective.length)
+        const effective = headings.map(heading => mapped[heading] ?? heading);
+        if (!(0, issue_workflow_body_1.distinctIssueWorkflowHeadings)(effective))
             throw new Error('Issue field mappings cannot make two semantic fields share a heading.');
         if (entries.length)
             mappings[kind] = Object.freeze(mapped);
@@ -123226,7 +123272,9 @@ function createSetupPublisherInstallationCompositionRoot(token, presentation, lo
                 catalog.message('prBody', { commit: plan.sourceCommit }),
                 (0, setup_batch_policy_1.setupBatchMarker)(plan.operationId, plan.target.id),
             ].join('\n\n') }, value, fresh, () => presentation.active())) });
-    return new install_setup_publisher_use_case_1.InstallSetupPublisherUseCase(review, apply, journal);
+    const installation = new install_setup_publisher_use_case_1.InstallSetupPublisherUseCase(review, apply, journal);
+    return Object.freeze({ execute: installation.execute.bind(installation),
+        operationLocation: (id) => journal.recordLocation(id) });
 }
 
 
@@ -127185,6 +127233,7 @@ const promises_1 = __nccwpck_require__(93977);
 const node_path_1 = __nccwpck_require__(49411);
 const node_os_1 = __nccwpck_require__(70612);
 const node_crypto_1 = __nccwpck_require__(6005);
+const node_url_1 = __nccwpck_require__(41041);
 const setup_batch_policy_1 = __nccwpck_require__(52214);
 /** Shared private UUID/store/lock primitives. Typed facades own their closed journal schemas. */
 class SetupOperationJournalStore {
@@ -127212,6 +127261,11 @@ class SetupOperationJournalStore {
                 return undefined;
             throw error;
         }
+    }
+    /** Navigation only after the existing reader validates the exact saved ID. */
+    async location(id) {
+        const record = await this.load(id);
+        return record?.operationId === id ? (0, node_url_1.pathToFileURL)(this.path(id)).href : undefined;
     }
     async save(id, value) {
         const serialized = JSON.stringify(value);
@@ -129618,6 +129672,14 @@ class SetupPublisherJournalAdapter {
         return this.store.save(validated.operationId, validated);
     }
     lock(id) { return this.store.lock(id); }
+    async recordLocation(id) {
+        try {
+            return await this.store.location(id);
+        }
+        catch {
+            return undefined;
+        } // A missing navigation target never grants recovery or hides the main operation error.
+    }
 }
 exports.SetupPublisherJournalAdapter = SetupPublisherJournalAdapter;
 

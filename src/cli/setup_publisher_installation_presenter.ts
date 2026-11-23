@@ -12,12 +12,12 @@ export class SetupPublisherInstallationPresenter {
   constructor(private readonly catalog: SetupPublisherMessageCatalog, private readonly write: (text: string) => void) {}
   private line(text: string): void { this.write(setupPublisherInertText(text) + '\n'); }
 
-  preview(plan: SetupPublisherPlan, retained?: SetupPublisherOperation): void {
+  preview(plan: SetupPublisherPlan, retained?: SetupPublisherOperation, recordLocation?: string): void {
     const repository = `${plan.target.owner}/${plan.target.name}`;
     this.line(this.catalog.message('title', { repository }));
     this.line(this.catalog.message(plan.status === 'unchanged' ? 'unchanged' : 'preview'));
     if (plan.status === 'review') this.line(this.catalog.message('effects'));
-    if (retained) this.operation(retained);
+    if (retained) this.operation(retained, false, recordLocation);
     this.line(this.catalog.message('operation', { id: plan.operationId }));
     this.line(this.catalog.message('target', { repository, branch: plan.target.defaultBranch, head: plan.target.baseSha }));
     this.line(this.catalog.message('source', { commit: plan.sourceCommit }));
@@ -32,8 +32,12 @@ export class SetupPublisherInstallationPresenter {
     this.line(this.catalog.message('nativePending')); this.line(this.catalog.message('production'));
   }
 
-  operation(operation: SetupPublisherOperation, journalUnconfirmed = false): void {
+  operation(operation: SetupPublisherOperation, journalUnconfirmed = false, recordLocation?: string): void {
     this.line(this.catalog.message('operation', { id: operation.operationId }));
+    const location = this.localRecordLocation(recordLocation, operation.operationId);
+    if (location) this.line(this.catalog.message('operationRecord', { url: location }));
+    if (operation.pullRequestNumber) this.line(this.catalog.message('knownPullRequest',
+      { url: `https://github.com/${operation.repository}/pull/${operation.pullRequestNumber}` }));
     this.line(operation.effects.length ? this.catalog.message('retained', {
       effects: operation.effects.map(effect => this.catalog.message(`effect.${effect}`)).join(', '),
     }) : this.catalog.message('noEffects'));
@@ -44,10 +48,21 @@ export class SetupPublisherInstallationPresenter {
     this.line(this.catalog.message('recovery'));
   }
 
-  delivered(operation: SetupPublisherOperation): void {
-    this.operation(operation);
-    const url = `https://github.com/${operation.repository}/pull/${operation.pullRequestNumber!}`;
-    this.line(this.catalog.message('waitingMerge', { url })); this.line(this.catalog.message('nextMerge'));
+  delivered(operation: SetupPublisherOperation, recordLocation?: string): void {
+    this.operation(operation, false, recordLocation);
+    this.line(this.catalog.message('waitingMerge', {
+      url: `https://github.com/${operation.repository}/pull/${operation.pullRequestNumber!}`,
+    }));
+    this.line(this.catalog.message('nextMerge'));
     this.line(this.catalog.message('nativePending')); this.line(this.catalog.message('production'));
+  }
+
+  private localRecordLocation(value: string | undefined, operationId: string): string | undefined {
+    if (!value || /[\p{Cc}\p{Cf}]/u.test(value)) return undefined;
+    try {
+      const url = new URL(value);
+      return url.protocol === 'file:' && !url.host && !url.search && !url.hash
+        && url.pathname.endsWith(`/${operationId}.json`) ? url.href : undefined;
+    } catch { return undefined; }
   }
 }

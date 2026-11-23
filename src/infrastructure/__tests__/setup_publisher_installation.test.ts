@@ -1,6 +1,7 @@
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
 import type { SetupPublisherOperation } from '../../domain/setup_publisher_installation';
 import type { SetupBatchOperation } from '../../domain/setup_batch';
 import { SetupPublisherJournalAdapter } from '../setup_publisher_journal_adapter';
@@ -27,6 +28,35 @@ describe('shared store with separate publisher and legacy schemas', () => {
   let root: string;
   beforeEach(async () => { root = await mkdtemp(join(tmpdir(), 'copilot-publisher-store-')); });
   afterEach(async () => { await rm(root, { recursive: true, force: true }); });
+  it('publisher977-C109: links only an existing exact publisher record without creating preview state', async () => {
+    const journal = new SetupPublisherJournalAdapter(root);
+    const navigation = journal as unknown as { recordLocation?: (id: string) => Promise<string | undefined> };
+    expect(await navigation.recordLocation?.(operation.operationId)).toBeUndefined();
+    expect(await readdir(root)).toEqual([]);
+    await journal.save(operation);
+    const file = join(root, `${operation.operationId}.json`), before = await readFile(file);
+    expect(await navigation.recordLocation?.(operation.operationId)).toBe(pathToFileURL(file).href);
+    expect(await readFile(file)).toEqual(before);
+  });
+  it('publisher977-C109: missing roots and mismatched saved IDs remain read-only and unlinked', async () => {
+    const absent = join(root, 'not-created'), missing = new SetupPublisherJournalAdapter(absent);
+    expect(await missing.recordLocation(operation.operationId)).toBeUndefined();
+    expect(await readdir(root)).toEqual([]);
+    const file = join(root, `${operation.operationId}.json`);
+    const content = JSON.stringify({ ...operation, operationId: '22222222-2222-4222-8222-222222222222' });
+    await writeFile(file, content);
+    expect(await new SetupPublisherJournalAdapter(root).recordLocation(operation.operationId)).toBeUndefined();
+    expect(await readFile(file, 'utf8')).toBe(content);
+  });
+  it('publisher977-C109: a legacy or malformed record cannot become a publisher navigation target', async () => {
+    const batch = new SetupBatchJournalAdapter(root); await batch.save(legacy);
+    const publisher = new SetupPublisherJournalAdapter(root);
+    const navigation = publisher as unknown as { recordLocation?: (id: string) => Promise<string | undefined> };
+    const file = join(root, `${operation.operationId}.json`), before = await readFile(file);
+    expect(await navigation.recordLocation?.(operation.operationId)).toBeUndefined();
+    expect(await navigation.recordLocation?.('../escape')).toBeUndefined();
+    expect(await readFile(file)).toEqual(before);
+  });
   it('stores only the closed publisher metadata and reloads it', async () => {
     const journal = new SetupPublisherJournalAdapter(root);
     expect(await journal.load(operation.operationId)).toBeUndefined();

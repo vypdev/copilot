@@ -56,6 +56,41 @@ function fixture() {
   const text = () => output.mock.calls.map(call => String(call[0])).join('');
   return { ...data, plan, operation, input, run, execute, terminal, readText, readSecret, close, text, confirmed: () => confirmed };
 }
+it('publisher977-C109: actual CLI forwards the read-only known operation target to its presenter', async () => {
+  const f = fixture(), url = `file:///owned/setup-operations/${f.operation.operationId}.json`;
+  const factory = jest.mocked(createSetupPublisherInstallationCompositionRoot).getMockImplementation()!;
+  const operationLocation = jest.fn(async () => url);
+  jest.mocked(createSetupPublisherInstallationCompositionRoot).mockImplementation((...args) =>
+    Object.assign(factory(...args), { operationLocation }));
+  await f.run();
+  expect(operationLocation).toHaveBeenCalledWith(f.operation.operationId);
+  expect(f.text()).toContain(url);
+  expect(f.text()).not.toContain('/actions/runs/');
+});
+it.each(['apply', 'journal-error', 'lookup-failure'] as const)(
+  'publisher977-C109: %s preserves operation status while resolving navigation independently', async stage => {
+    const f = fixture(), url = `file:///owned/${f.operation.operationId}.json`;
+    jest.mocked(createInteractiveTerminalDriver).mockReturnValue(f.terminal);
+    const operationLocation = jest.fn(async () => {
+      if (stage === 'lookup-failure') throw new Error('private-navigation-error');
+      return url;
+    });
+    jest.mocked(createSetupPublisherInstallationCompositionRoot).mockReturnValue({ operationLocation,
+      execute: async () => {
+        if (stage !== 'apply') throw new SetupPublisherApplyError('journal', f.operation, undefined);
+        return { plan: f.plan, stage: 'apply', result: f.operation };
+      } });
+    await f.run({ dryRun: false });
+    expect(operationLocation).toHaveBeenCalledWith(f.operation.operationId);
+    expect(f.text()).toContain(f.operation.preparedCommit!);
+    expect(f.text()).toContain('https://github.com/owner/project/pull/73');
+    expect(f.text()).not.toContain('private-navigation-error');
+    expect(f.text()).not.toContain('/actions/runs/');
+    if (stage === 'lookup-failure') expect(f.text()).not.toContain(url);
+    else expect(f.text()).toContain(url);
+    expect(process.exitCode ?? 0).toBe(stage === 'apply' ? 0 : 1);
+    if (stage !== 'apply') expect(f.text()).toContain('could not be saved');
+  });
 it('a noninteractive dry-run shows the complete preview and no token or approval prompt', async () => {
   const f = fixture(); await f.run(); expect(f.text()).toContain('Complete file:'); expect(f.text()).toContain('Preview complete.');
   expect(f.readText).not.toHaveBeenCalled(); expect(f.readSecret).not.toHaveBeenCalled();

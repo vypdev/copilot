@@ -65,6 +65,11 @@ separate; this command preserves production settings. See
 [publisher provisioning](/security-operations/operations/provisioning#reviewed-bugbot-publisher-proposals)
 for credentials, proposal constraints and recovery.
 
+For retained operations, the CLI links the existing validated local operation
+record and any known installation PR. An unsaved preview has no record link.
+If reading the link fails, the operation status and recovery instructions remain
+visible. A local record or PR link does not prove installation or a native run.
+
 For interactive onboarding, follow [Set up with the web assistant](/setup-web).
 It covers pairing, capability choices, the two PAT roles, plan approval, Apply,
 installation of generated files and runtime verification. The terminal remains

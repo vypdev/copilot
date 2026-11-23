@@ -1,6 +1,7 @@
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { createSetupPublisherInstallationCompositionRoot } from '../composition/setup_publisher_installation_composition_root';
 import { getOctokitClient } from '../github/octokit_client_resolver';
@@ -31,6 +32,18 @@ function fixture(locale = 'en-US') {
   const execute = (dryRun = true, resume = false) => install.execute({ proposal: f.proposal, operationId: operation, dryRun, resume });
   return { ...f, present, confirm, active, install, execute };
 }
+it('publisher977-C109: composition resolves its own validated record location without provider effects', async () => {
+  const f = fixture();
+  const navigation = f.install as unknown as { operationLocation?: (id: string) => Promise<string | undefined> };
+  expect(await navigation.operationLocation?.(operation)).toBeUndefined();
+  expect(await readdir(mockJournalRoot)).toEqual([]);
+  await new SetupPublisherJournalAdapter(mockJournalRoot).save({ schemaVersion: 2, purpose: 'bugbot-status-publisher',
+    operationId: operation, repositoryId: 42, repository: 'owner/project', defaultBranch: 'main',
+    baseSha: 'a'.repeat(40), sourceCommit: 'b'.repeat(40), planDigest: 'c'.repeat(64),
+    approvalDigest: 'd'.repeat(64), actorId: 7, status: 'ready', effects: [] });
+  expect(await navigation.operationLocation?.(operation)).toBe(pathToFileURL(join(mockJournalRoot, `${operation}.json`)).href);
+  expect(f.request).not.toHaveBeenCalled();
+});
 
 it.each(['dry-run', 'decline', 'cancel'] as const)('uses the actual narrow source/destination composition for %s with no write or journal effects', async action => {
   const f = fixture(); if (action === 'cancel') f.confirm.mockResolvedValue('cancel');
