@@ -99773,6 +99773,7 @@ function buildCodexExecutionPolicy(input) {
         }] : [];
     const argv = [
         'exec',
+        ...(input.runtimeToolEvidence ? ['--json'] : []),
         '--strict-config',
         '--ignore-user-config',
         '--ignore-rules',
@@ -99810,7 +99811,7 @@ function buildCodexExecutionPolicy(input) {
     return {
         argv,
         promptMode: 'stdin',
-        outputProtocol: 'plain-text',
+        outputProtocol: input.runtimeToolEvidence ? 'codex-json-events' : 'plain-text',
         workspaceMode,
         output: outputSchemaPath ? 'native-and-local-json-schema' : 'text',
         environment: { PSModuleAnalysisCachePath: moduleCache },
@@ -140358,7 +140359,10 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
                 }
                 catch { /* Diagnostic observers cannot change execution semantics. */ }
             }
-            finishResolve(decodeAgentCliOutput(plan.outputProtocol, Buffer.concat(stdoutChunks).toString('utf8')));
+            const stdout = Buffer.concat(stdoutChunks).toString('utf8');
+            if (contained)
+                (0, qualification_operation_scope_1.recordQualificationRuntimeCliEvidence)(plan, signal, stdout);
+            finishResolve(decodeAgentCliOutput(plan.outputProtocol, stdout));
         }
         catch (error) {
             finishReject(error instanceof agent_cli_contracts_1.AgentCliError
@@ -140387,7 +140391,34 @@ function decodeAgentCliOutput(protocol, raw) {
     }
     if (protocol === 'json-lines-text-events')
         return decodeJsonLinesTextEvents(raw);
+    if (protocol === 'codex-json-events')
+        return decodeCodexJsonEvents(raw);
     return assertNeverOutputProtocol(protocol);
+}
+function decodeCodexJsonEvents(raw) {
+    if (!raw.endsWith('\n'))
+        throw outputFailure('Agent CLI returned incomplete JSON event output.', 'malformed-json-event');
+    let output, completed = 0;
+    for (const line of raw.split(/\r?\n/u).filter(line => line.trim())) {
+        let event;
+        try {
+            event = JSON.parse(line);
+        }
+        catch {
+            throw outputFailure('Agent CLI returned malformed JSON event output.', 'malformed-json-event');
+        }
+        if (!event || typeof event !== 'object' || Array.isArray(event) || typeof event.type !== 'string'
+            || event.type === 'error' || event.type === 'turn.failed' || completed) {
+            throw outputFailure('Agent CLI returned an invalid JSON event.', 'invalid-json-event');
+        }
+        if (event.type === 'item.completed' && event.item?.type === 'agent_message' && typeof event.item.text === 'string')
+            output = event.item.text;
+        if (event.type === 'turn.completed')
+            completed++;
+    }
+    if (completed !== 1 || !output?.trim())
+        throw outputFailure('Agent CLI returned no text completion events.', 'missing-text-events');
+    return output.trim();
 }
 function decodeJsonLinesTextEvents(raw) {
     const lines = raw.split(/\r?\n/u).map(line => line.trim()).filter(Boolean);
@@ -158958,7 +158989,11 @@ class AgentExecutionPlanner {
         catch {
             throw new agent_cli_contracts_1.AgentCliError('Qualification investigation requires its exact live owned operation scope.', 'configuration');
         }
-        const plan = this.preparePlan(request);
+        const runtimeToolEvidence = (0, qualification_operation_scope_1.qualificationRuntimeCliEvidenceMode)(request.signal);
+        if (runtimeToolEvidence && request.configuration.provider !== 'codex') {
+            throw new agent_cli_contracts_1.AgentCliError('Runtime tool evidence requires the admitted Codex provider.', 'configuration');
+        }
+        const plan = this.preparePlan(request, undefined, runtimeToolEvidence);
         try {
             return (0, qualification_investigation_admission_1.admitQualificationInvestigationPlan)({ ...plan, qualificationInvestigation: true }, request.signal);
         }
@@ -158974,7 +159009,7 @@ class AgentExecutionPlanner {
         }
         return this.preparePlan(request, workspace);
     }
-    preparePlan(request, brokeredWorkspace) {
+    preparePlan(request, brokeredWorkspace, runtimeToolEvidence = false) {
         const startedAt = performance.now();
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
@@ -159030,6 +159065,7 @@ class AgentExecutionPlanner {
                 runtimeDirectory,
                 ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
                 ...(brokeredWorkspace ? { brokeredVerification: true } : {}),
+                ...(runtimeToolEvidence ? { runtimeToolEvidence: true } : {}),
             });
             stage = 'artifacts';
             const artifacts = materializeArtifacts([
@@ -160266,6 +160302,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.withQualificationOperationScope = withQualificationOperationScope;
 exports.requireQualificationOperationScope = requireQualificationOperationScope;
 exports.bindQualificationOperationPlan = bindQualificationOperationPlan;
+exports.withQualificationRuntimeCliEvidence = withQualificationRuntimeCliEvidence;
+exports.qualificationRuntimeCliEvidenceMode = qualificationRuntimeCliEvidenceMode;
+exports.recordQualificationRuntimeCliEvidence = recordQualificationRuntimeCliEvidence;
 exports.hasQualificationOperationPlan = hasQualificationOperationPlan;
 exports.qualificationOperationTermination = qualificationOperationTermination;
 exports.stopQualificationOperationPlan = stopQualificationOperationPlan;
@@ -160273,6 +160312,8 @@ const node_async_hooks_1 = __nccwpck_require__(92761);
 const qualification_operation_scope_policy_1 = __nccwpck_require__(79148);
 const current = new node_async_hooks_1.AsyncLocalStorage();
 const plans = new WeakMap();
+const runtimeCliCapture = new node_async_hooks_1.AsyncLocalStorage();
+const capturedPlans = new WeakMap();
 // The bootstrap gives one complete operation its own namespace. Neither a new
 // async context nor a copied port can make that operation/namespace reusable.
 const consumedIdentities = new Set();
@@ -160347,6 +160388,48 @@ function bindQualificationOperationPlan(plan, signal) {
     if (plans.has(plan))
         throw unavailable();
     plans.set(plan, current.getStore());
+    const capture = runtimeCliCapture.getStore();
+    if (capture && capture.active && capture.live === current.getStore())
+        capturedPlans.set(plan, capture);
+}
+/** Private runtime-control evidence only: no request field, environment switch or JSON grants this capture. */
+async function withQualificationRuntimeCliEvidence(signal, record, execute) {
+    requireQualificationOperationScope(signal);
+    const live = current.getStore();
+    if (live.port.identity.purpose !== 'runtime-admission' || runtimeCliCapture.getStore()
+        || typeof record !== 'function')
+        throw unavailable();
+    const capture = { live, record, active: true };
+    try {
+        return await runtimeCliCapture.run(capture, execute);
+    }
+    finally {
+        capture.active = false;
+    }
+}
+/** Select framing before any version probe; ordinary purposes retain their existing protocol. */
+function qualificationRuntimeCliEvidenceMode(signal) {
+    requireQualificationOperationScope(signal);
+    const live = current.getStore();
+    if (live.port.identity.purpose !== 'runtime-admission')
+        return false;
+    const capture = runtimeCliCapture.getStore();
+    if (!capture?.active || capture.live !== live)
+        throw unavailable();
+    return true;
+}
+/** Called on actual successful child close, before decoding model text. Critical recording cannot be swallowed. */
+function recordQualificationRuntimeCliEvidence(plan, signal, stdout) {
+    const live = plans.get(plan);
+    if (!matchesPlan(live, signal) || live.stopping)
+        throw unavailable();
+    if (live.port.identity.purpose !== 'runtime-admission')
+        return;
+    const capture = capturedPlans.get(plan);
+    if (!capture?.active || capture.live !== live || plan.provider !== 'codex' || plan.outputProtocol !== 'codex-json-events')
+        throw unavailable();
+    if (capture.record({ provider: plan.provider, protocol: plan.outputProtocol, stdout }) !== undefined)
+        throw unavailable();
 }
 function hasQualificationOperationPlan(plan, signal) {
     const live = plans.get(plan);

@@ -15,7 +15,7 @@ import { sourceSnapshotFixture } from './source_snapshot_fixture';
 import * as providerPolicies from '../../../application/policies/agent_execution/agent_execution_policy_dispatcher';
 import type { QualificationOperationIdentity, QualificationOperationRecord, QualificationOperationScope, QualificationOperationStopped } from '../../../application/ports/qualification_operation_scope_ports';
 import { qualificationOperationIdentity, requireCompleteQualificationOperations, requireQualificationOperationStopped, sameQualificationOperation } from '../../../application/policies/qualification_operation_scope_policy';
-import { bindQualificationOperationPlan, hasQualificationOperationPlan, qualificationOperationTermination, requireQualificationOperationScope, stopQualificationOperationPlan, withQualificationOperationScope } from '../qualification_operation_scope';
+import { bindQualificationOperationPlan, hasQualificationOperationPlan, qualificationOperationTermination, requireQualificationOperationScope, stopQualificationOperationPlan, withQualificationOperationScope, withQualificationRuntimeCliEvidence, recordQualificationRuntimeCliEvidence } from '../qualification_operation_scope';
 
 let f: ReturnType<typeof sourceSnapshotFixture>;
 const owned: string[] = [];
@@ -26,11 +26,11 @@ const leases: { release(): void; done: Promise<unknown> }[] = [];
 const stopHooks = new Map<AbortSignal, () => Promise<void>>();
 const completedFixtureStops = new Set<AbortSignal>();
 let leaseId = 0;
-function inFixtureScope<T>(signal: AbortSignal, execute: () => T): T {
+function inFixtureScope<T>(signal: AbortSignal, execute: () => T, purpose: QualificationOperationIdentity['purpose'] = 'native-control'): T {
     if (signal.aborted) return execute();
     const number = ++leaseId, scopeId = number.toString(16).padStart(64, '0');
     const identity: QualificationOperationIdentity = { ownerId: 'a'.repeat(64), operationId: 'sdk-fixture-' + number,
-        planSha256: 'b'.repeat(64), implementation: 'c'.repeat(40), imageSha256: 'd'.repeat(64), purpose: 'native-control' };
+        planSha256: 'b'.repeat(64), implementation: 'c'.repeat(40), imageSha256: 'd'.repeat(64), purpose };
     let release!: () => void, confirm!: (value: QualificationOperationStopped) => void, fail!: (error: unknown) => void;
     const held = new Promise<void>(resolve => { release = resolve; });
     const stopped = new Promise<QualificationOperationStopped>((resolve, reject) => { confirm = resolve; fail = reject; });
@@ -642,5 +642,69 @@ fs.writeFileSync(${JSON.stringify(promptCapture)}, Buffer.concat(chunks));proces
       await Promise.allSettled([body, terminal]);
       f.cleanup();
     }
+  });
+});
+
+// Actual SDK framing/lifecycle; process and stop ports are controlled, no model.
+describe('ev974-C26 private runtime CLI evidence authority', () => {
+  const raw = [
+    { type: 'thread.started', thread_id: 'controlled' }, { type: 'turn.started' },
+    { type: 'item.completed', item: { id: 'answer', type: 'agent_message', text: '{"controlled":true}' } },
+    { type: 'turn.completed', usage: {} },
+  ].map(row => JSON.stringify(row)).join('\n') + '\n';
+  const prepareRuntime = (signal: AbortSignal) => {
+    const p = f.planner().prepareQualificationInvestigation(request(signal)); owned.push(p.runtimeDirectory); return p;
+  };
+  it('refuses unauthenticated or model-free capture before invoking the callback', async () => {
+    const c = controller(), execute = jest.fn(), record = jest.fn();
+    await expect(withQualificationRuntimeCliEvidence(c.signal, record, execute)).rejects.toThrow(/exact live/);
+    await inFixtureScope(c.signal, () => expect(withQualificationRuntimeCliEvidence(c.signal, record, execute)).rejects.toThrow(/exact live/));
+    expect(record).not.toHaveBeenCalled(); expect(execute).not.toHaveBeenCalled();
+  });
+  it('requires runtime capture and Codex before any executable probe', async () => {
+    const c = controller(), readVersion = jest.fn(), resolveExecutable = jest.fn(), resolveWorkspace = jest.fn();
+    const planner = new AgentExecutionPlanner({ readVersion, resolveExecutable, resolveWorkspace });
+    await inFixtureScope(c.signal, async () => {
+      expect(() => planner.prepareQualificationInvestigation(request(c.signal))).toThrow(/exact live/);
+      await withQualificationRuntimeCliEvidence(c.signal, () => undefined, async () => {
+        expect(() => planner.prepareQualificationInvestigation({ ...request(c.signal), configuration: { provider: 'opencode', model: 'controlled' } })).toThrow(/Codex provider/);
+      });
+    }, 'runtime-admission');
+    expect(readVersion).not.toHaveBeenCalled(); expect(resolveExecutable).not.toHaveBeenCalled(); expect(resolveWorkspace).not.toHaveBeenCalled();
+  });
+  it('captures actual lifecycle stdout before decoding while ordinary planner output stays unchanged', async () => {
+    const c = controller(), record = jest.fn(), resolved = jest.fn(), rejected = jest.fn();
+    await inFixtureScope(c.signal, () => withQualificationRuntimeCliEvidence(c.signal, record, async () => {
+      const p = prepareRuntime(c.signal), ordinary = f.planner().prepare(request(c.signal)); owned.push(ordinary.runtimeDirectory);
+      expect(p.outputProtocol).toBe('codex-json-events'); expect(p.argv).toContain('--json');
+      expect(ordinary.outputProtocol).toBe('plain-text'); expect(ordinary.argv).not.toContain('--json');
+      const lifecycle = createAgentProcessLifecycle({ exitCode: 0 } as never, p, c.signal, resolved, rejected);
+      lifecycle.appendStdout(Buffer.from(raw.slice(0, 23))); lifecycle.appendStdout(Buffer.from(raw.slice(23))); lifecycle.onClose(0);
+      expect(record).toHaveBeenCalledTimes(1); expect(record).toHaveBeenCalledWith({ provider: 'codex', protocol: 'codex-json-events', stdout: raw });
+      expect(resolved).toHaveBeenCalledWith('{"controlled":true}'); expect(rejected).not.toHaveBeenCalled();
+    }), 'runtime-admission');
+  });
+  it.each(['throw', 'async'] as const)('critical capture %s failure prevents a successful result', async mode => {
+    const c = controller(), resolved = jest.fn(), rejected = jest.fn();
+    const record = mode === 'throw' ? () => { throw new Error('durable evidence unavailable'); }
+      : (() => Promise.resolve()) as unknown as () => undefined;
+    await inFixtureScope(c.signal, () => withQualificationRuntimeCliEvidence(c.signal, record, async () => {
+      const lifecycle = createAgentProcessLifecycle({ exitCode: 0 } as never, prepareRuntime(c.signal), c.signal, resolved, rejected);
+      lifecycle.appendStdout(Buffer.from(raw)); lifecycle.onClose(0);
+      expect(resolved).not.toHaveBeenCalled(); expect(rejected).toHaveBeenCalledTimes(1);
+    }), 'runtime-admission');
+  });
+  it('rejects copied plans foreign signals nested captures and expired capture leases', async () => {
+    const c = controller(), record = jest.fn(); let p!: AgentExecutionPlan;
+    await inFixtureScope(c.signal, async () => {
+      await withQualificationRuntimeCliEvidence(c.signal, record, async () => {
+        p = prepareRuntime(c.signal);
+        expect(() => recordQualificationRuntimeCliEvidence({ ...p }, c.signal, raw)).toThrow(/exact live/);
+        expect(() => recordQualificationRuntimeCliEvidence(p, controller().signal, raw)).toThrow(/exact live/);
+        await expect(withQualificationRuntimeCliEvidence(c.signal, record, async () => undefined)).rejects.toThrow(/exact live/);
+      });
+      expect(() => recordQualificationRuntimeCliEvidence(p, c.signal, raw)).toThrow(/exact live/);
+    }, 'runtime-admission');
+    expect(record).not.toHaveBeenCalled();
   });
 });

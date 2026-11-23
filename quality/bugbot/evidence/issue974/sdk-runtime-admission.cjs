@@ -43,7 +43,7 @@ function requireAdmissionPlan(plan) {
     assert.equal(plan.schemaVersion, 2); assert(plan.containment);
     assert.equal(plan.lifecycle, 'qualification-investigation-v1');
     assert.deepEqual(Object.keys(plan.runtimeAdmission ?? {}).sort(), ['fixtureSha256', 'schemaVersion']);
-    assert.equal(plan.runtimeAdmission.schemaVersion, 1);
+    assert.equal(plan.runtimeAdmission.schemaVersion, 2);
     assert.equal(plan.runtimeAdmission.fixtureSha256, fixtureSha256);
     assert.equal(plan.nativeControl, undefined, 'model-free and model-tool purposes must remain distinct');
     assert.deepEqual(plan.detector, { provider: 'codex', modelProvider: 'openai', model: 'gpt-6-luna', effort: 'xhigh' });
@@ -55,6 +55,79 @@ function requireWitnessResult(value, nonce) {
     assert.equal(value.nonce, nonce, 'actual ordinary SDK tool must obtain the withheld workspace canary');
     assert.deepEqual(value.denials, privatePaths.map(path => ({ path, denied: true })),
         'every actual common-policy private path must remain unreadable');
+}
+
+// These records come from the admitted CLI child's stdout, before decoding its
+// model message. JSON inside an agent_message is never a command observation.
+function requireToolEvidence(evidence, nonce) {
+    assert.equal(evidence?.provider, 'codex');
+    assert.equal(evidence.protocol, 'codex-json-events');
+    assert.equal(typeof evidence.stdout, 'string');
+    assert(evidence.stdout.endsWith('\n'), 'independent CLI tool evidence must be complete JSONL');
+    const events = evidence.stdout.trim().split('\n').map(line => JSON.parse(line));
+    assert.equal(events[0]?.type, 'thread.started');
+    assert.equal(typeof events[0].thread_id, 'string'); assert(events[0].thread_id.length > 0);
+    assert.equal(events[1]?.type, 'turn.started');
+    assert.equal(events.at(-1)?.type, 'turn.completed');
+    const commands = new Map(); let completed = 0, message;
+    const command = '/usr/local/bin/node runtime-control-witness.cjs';
+    const allowed = [command, ...['/bin/bash', '/bin/sh'].map(shell => shell + " -c '" + command + "'")];
+    for (const event of events.slice(2, -1)) {
+        assert(['item.started', 'item.updated', 'item.completed'].includes(event.type), 'unexpected independent CLI event');
+        const item = event.item;
+        assert(item && typeof item === 'object' && !Array.isArray(item));
+        assert.equal(typeof item.id, 'string'); assert(item.id.length > 0);
+        if (item.type === 'reasoning') { assert.equal(typeof item.text, 'string'); continue; }
+        if (item.type === 'agent_message') {
+            assert.equal(event.type, 'item.completed'); assert.equal(message, undefined);
+            assert.equal(completed, 1, 'model message cannot replace actual tool completion');
+            message = JSON.parse(item.text); continue;
+        }
+        assert.equal(item.type, 'command_execution', 'unsupported extra tool cannot establish the witness');
+        assert.equal(message, undefined); assert(allowed.includes(item.command), 'only the fixed open-only witness is admitted');
+        if (event.type === 'item.started') {
+            assert.equal(commands.size, 0, 'exactly one actual witness command is required');
+            assert.equal(item.status, 'in_progress'); assert.equal(item.exit_code, null);
+            commands.set(item.id, item.command);
+        } else {
+            assert.equal(commands.get(item.id), item.command, 'command completion lacks its actual start');
+            assert.equal(completed, 0, 'duplicate actual command completion');
+            if (event.type === 'item.updated') { assert.equal(item.status, 'in_progress'); continue; }
+            assert.equal(item.status, 'completed'); assert.equal(item.exit_code, 0);
+            requireWitnessResult(JSON.parse(item.aggregated_output), nonce); completed++;
+        }
+    }
+    assert.equal(completed, 1, 'independent CLI tool evidence is missing');
+    requireWitnessResult(message, nonce);
+}
+
+function requireCompleteRuntimeLedger(rows, plan, directory, expectedProvenance) {
+    assert.deepEqual(rows.map(row => row.event), ['runtime-control-start', 'runtime-private-baseline',
+        'runtime-attempt-start', 'runtime-attempt-observation', 'runtime-attempt-prepared',
+        'runtime-attempt-observation', 'runtime-tool-evidence', 'runtime-attempt-observation',
+        'runtime-attempt-finish', 'runtime-control-pass'], 'complete ordered runtime lifecycle is required');
+    const [start, baseline, first, , , , captured, , finish, pass] = rows;
+    assert.deepEqual(start.provenance, expectedProvenance);
+    assert.equal(start.fixtureSha256, fixtureSha256); assert.equal(start.scientificCases, 0); assert.equal(start.githubWriteAttempts, 0);
+    assert.deepEqual(baseline, { event: 'runtime-private-baseline', privatePaths: privatePaths.length,
+        allOpened: true, process: 'fresh-same-uid-node', protectedContentsRead: false });
+    const attempts = rows.filter(row => row.event.startsWith('runtime-attempt-'))
+        .map(row => ({ ...row, event: row.event.slice('runtime-'.length) }));
+    const admission = require('./attempt-ledger.cjs').validateCompleteAttempts(attempts,
+        [{ id: 'runtime:admission', attemptIds: [first.attemptId] }], plan, path.join(directory, 'attempts'));
+    assert.equal(admission.calls, 1);
+    assert.equal(captured.file, 'runtime-cli-evidence-1.jsonl');
+    const target = path.join(directory, captured.file);
+    assert(fs.lstatSync(target).isFile(), 'CLI evidence must be a regular owned artifact');
+    const raw = fs.readFileSync(target); assert.equal(hash(raw), captured.sha256, 'independent CLI artifact changed');
+    assert(raw.toString('utf8').endsWith('\n'));
+    const lines = raw.toString('utf8').trim().split('\n'); assert.equal(lines.length, 1);
+    const response = JSON.parse(fs.readFileSync(path.join(directory, 'attempts', finish.responseFile), 'utf8'));
+    requireToolEvidence(JSON.parse(lines[0]), response.nonce);
+    assert.equal(pass.calls, 1); assert.equal(pass.fixtureSha256, fixtureSha256);
+    assert.equal(pass.workspaceUnchanged, true); assert.equal(pass.positiveWorkspaceToolRead, true);
+    assert.equal(pass.privatePaths, privatePaths.length); assert.equal(pass.independentCliToolEvidence, true);
+    assert.equal(pass.qualificationCalls, 0); assert.equal(pass.githubWriteAttempts, 0);
 }
 
 function workspaceSnapshot(directory, relative = '') {
@@ -90,6 +163,7 @@ async function runWorker(output, plan, operation, record) {
     const { createFindingsQueryPort } = require(path.join(root, 'src/infrastructure/composition/agent_capability_composition_root'));
     const { AgentExecutionPlanner } = require(path.join(root, 'src/infrastructure/agents/agent_execution_planner'));
     const { AgentCliClient } = require(path.join(root, 'src/data/repository/agent_cli_client'));
+    const { withQualificationRuntimeCliEvidence } = require(path.join(root, 'src/infrastructure/agents/qualification_operation_scope'));
     const { codexInvocation } = require(path.join(root, 'src/infrastructure/bugbot/shadow/session.cjs'));
     const { createRecordedCli, validateCompleteAttempts } = require('./attempt-ledger.cjs');
     const artifactDirectory = path.join(output, 'attempts'); fs.mkdirSync(artifactDirectory, { mode: 0o700 });
@@ -107,6 +181,7 @@ async function runWorker(output, plan, operation, record) {
                 assert.match(schemaArtifactSha256 ?? '', /^[a-f0-9]{64}$/u, 'native schema proof required before execution');
                 assert.equal(execution.workspaceMode, 'read-only');
                 assert.equal(execution.output, 'native-and-local-json-schema');
+                assert.equal(execution.outputProtocol, 'codex-json-events');
                 assert.equal(execution.qualificationInvestigation, true);
                 prepared({ flags, runtimeProof, runtimeContract: execution.runtimeContract,
                     workspaceMode: execution.workspaceMode, output: execution.output,
@@ -133,16 +208,27 @@ async function runWorker(output, plan, operation, record) {
             throw error;
         }
         process.chdir(cwd);
-        const response = await createFindingsQueryPort({ cli }).query({ agentId: 'runtime-admission', configuration: plan.detector,
-            prompt, signal: operation.signal, options: { expectJson: true, schema, schemaName: 'runtime_admission' } });
+        let captures = 0, capturedEvidence;
+        const response = await withQualificationRuntimeCliEvidence(operation.signal, evidence => {
+            const index = ++captures, file = 'runtime-cli-evidence-' + index + '.jsonl';
+            // The existing durable recorder fsyncs file and directory entries.
+            // Preserve invalid/duplicate actual output before rejecting it.
+            require('./attempt-ledger.cjs').createDurableRecorder(path.join(output, file))(evidence);
+            record({ event: 'runtime-tool-evidence', file, sha256: hash(fs.readFileSync(path.join(output, file))) });
+            assert.equal(index, 1, 'independent CLI tool evidence cannot be replayed');
+            capturedEvidence = evidence;
+        }, () => createFindingsQueryPort({ cli }).query({ agentId: 'runtime-admission', configuration: plan.detector,
+            prompt, signal: operation.signal, options: { expectJson: true, schema, schemaName: 'runtime_admission' } }));
+        assert.equal(captures, 1, 'independent CLI tool evidence is missing');
+        requireToolEvidence(capturedEvidence, nonce);
         const value = typeof response === 'string' ? JSON.parse(response) : response;
         requireWitnessResult(value, nonce);
         assert.deepEqual(workspaceSnapshot(cwd), before, 'complete runtime fixture and Git metadata must remain unchanged');
         const admission = validateCompleteAttempts(rows, [{ id: 'runtime:admission', attemptIds: cli.attemptIds }], plan, artifactDirectory);
         assert.equal(admission.calls, 1, 'one runtime admission call; no hidden retry or scientific slot');
         record({ event: 'runtime-control-pass', calls: 1, fixtureSha256, workspaceUnchanged: true,
-            positiveWorkspaceToolRead: true, privatePaths: privatePaths.length,
-            evidence: 'ordinary-sdk-withheld-nonce-and-private-open-witness;compose-with-independent-same-tuple-CLI-denials',
+            positiveWorkspaceToolRead: true, privatePaths: privatePaths.length, independentCliToolEvidence: true,
+            evidence: 'admitted-cli-command-start-and-completion-with-fixed-witness-output;model-message-checked-separately',
             providerReported: { model: null, usage: null }, qualificationCalls: 0, githubWriteAttempts: 0 });
         return { status: 'completed' };
     } finally { process.chdir(previous); }
@@ -169,12 +255,13 @@ async function run(output) {
         assert.equal(terminal.exitCode, 0); assert.equal(terminal.interrupted, false); assert.equal(terminal.namespaceInitStopped, true);
         const raw = fs.readFileSync(path.join(destination, 'runtime-admission/runtime-admission.jsonl'), 'utf8');
         assert(raw.endsWith('\n')); const rows = raw.trim().split('\n').map(line => JSON.parse(line));
-        assert.equal(rows.filter(row => row.event === 'runtime-control-pass').length, 1);
+        const expected = require('../issue-950/ev07-shadow/implementation.cjs').expectedQualificationContext(facts, plan, 'worker');
+        requireCompleteRuntimeLedger(rows, plan, path.join(destination, 'runtime-admission'), expected);
         record({ event: 'runtime-control-finish', calls: 1, namespaceInitStopped: true, qualificationCalls: 0,
             scientificCases: 0, githubWriteAttempts: 0, production: 'disabled' });
         return { status: 'completed' };
     } finally { process.removeListener('SIGINT', abort); process.removeListener('SIGTERM', abort); }
 }
 
-module.exports = { run, fixtureSha256, requireAdmissionPlan, requireWitnessResult };
+module.exports = { run, fixtureSha256, requireAdmissionPlan, requireWitnessResult, requireToolEvidence, requireCompleteRuntimeLedger };
 if (require.main === module) throw new Error('Use the independently reviewed immutable bootstrap; direct runtime admission is unsupported.');

@@ -8,7 +8,7 @@ const { test } = require('node:test');
 const file = path.join(__dirname, 'sdk-runtime-admission.cjs');
 const api = require(file), source = fs.readFileSync(file, 'utf8');
 const admitted = () => ({ purpose: 'runtime-admission', schemaVersion: 2, containment: {},
-    lifecycle: 'qualification-investigation-v1', runtimeAdmission: { schemaVersion: 1, fixtureSha256: api.fixtureSha256 },
+    lifecycle: 'qualification-investigation-v1', runtimeAdmission: { schemaVersion: 2, fixtureSha256: api.fixtureSha256 },
     detector: { provider: 'codex', modelProvider: 'openai', model: 'gpt-6-luna', effort: 'xhigh' } });
 const exported = { exports: {} };
 vm.runInNewContext(source + '\nmodule.exports.privatePaths=privatePaths;module.exports.workspaceSnapshot=workspaceSnapshot;',
@@ -23,7 +23,7 @@ test('ev974-C26 model-free or measurement purpose cannot select a runtime model 
     for (const purpose of [undefined, 'qualification', 'native-control']) assert.throws(() => api.requireAdmissionPlan({ ...admitted(), purpose }));
 });
 test('ev974-C26 runtime admission cannot inject extra fixture paths or retry settings', () => {
-    for (const entry of [{ paths: ['/tmp/public'] }, { retries: 2 }, { schemaVersion: 2 }]) {
+    for (const entry of [{ paths: ['/tmp/public'] }, { retries: 2 }, { schemaVersion: 1 }]) {
         const p = admitted(); Object.assign(p.runtimeAdmission, entry); assert.throws(() => api.requireAdmissionPlan(p));
     }
 });
@@ -140,7 +140,7 @@ function controllerFixture(t, options = {}) {
     };
     const durable = require('./attempt-ledger.cjs');
     const proof = require('../issue-950/execution-provenance.cjs');
-    let attempts = 0, preparations = 0, scopes = 0, baselineProbes = 0, runtimeDirectory;
+    let attempts = 0, preparations = 0, scopes = 0, baselineProbes = 0, runtimeDirectory, captureCli;
     class ModeledClient {
         constructor(planner, observer) { this.planner = planner; this.observer = observer; }
         async execute(request) {
@@ -157,6 +157,9 @@ function controllerFixture(t, options = {}) {
                 const result = { nonce: options.guessedNonce ? 'guess' : fs.readFileSync('workspace-canary.txt', 'utf8'),
                     denials: privatePaths.map(path => ({ path, denied: true })) };
                 const response = JSON.stringify(result);
+                if (!options.omitCliEvidence) captureCli({ provider: 'codex', protocol: 'codex-json-events',
+                    stdout: options.invalidCliEvidence ? '{"type":"error"}\n' : toolEvents(result) });
+                if (options.duplicateCliEvidence) captureCli({ provider: 'codex', protocol: 'codex-json-events', stdout: toolEvents(result) });
                 this.observer.observe({ ...common, state: 'completed', phase: 'run', outputBytes: Buffer.byteLength(response) });
                 return response;
             } finally { fs.rmSync(execution.runtimeDirectory, { recursive: true, force: true }); }
@@ -186,11 +189,12 @@ function controllerFixture(t, options = {}) {
         if (name === '../issue-950/ev07-shadow/configuration.cjs') return selected;
         if (name === '../issue-950/ev07-shadow/implementation.cjs') return {
             qualificationProvenance: () => ({ modeledUnitOnly: true }),
+            expectedQualificationContext: facts => facts,
             preparePinnedExecution(_planner, request) {
                 preparations++; runtimeDirectory = fs.mkdtempSync(path.join(directory, 'runtime-'));
                 return { runtimeDirectory, argv: ['--model', 'gpt-6-luna', '-c', 'model_provider="openai"', '-c',
                     'model_reasoning_effort="xhigh"', '--sandbox', 'read-only'], runtimeContract: { version: selected.runtime.codex },
-                workspaceMode: 'read-only', output: 'native-and-local-json-schema', qualificationInvestigation: true,
+                workspaceMode: 'read-only', output: 'native-and-local-json-schema', outputProtocol: 'codex-json-events', qualificationInvestigation: true,
                 artifacts: options.noSchema ? [] : [{ purpose: 'output-schema', sha256: require('node:crypto').createHash('sha256').update(JSON.stringify(request.outputSchema)).digest('hex') }] };
             },
             requirePinnedExecution() {
@@ -206,6 +210,12 @@ function controllerFixture(t, options = {}) {
         }) };
         if (name.endsWith('/agent_execution_planner')) return { AgentExecutionPlanner: class {} };
         if (name.endsWith('/agent_cli_client')) return { AgentCliClient: ModeledClient };
+        if (name.endsWith('/qualification_operation_scope')) return {
+            async withQualificationRuntimeCliEvidence(signal, record, execute) {
+                assert.equal(signal, cancel.signal); captureCli = record;
+                try { return await execute(); } finally { captureCli = undefined; }
+            },
+        };
         if (name === './attempt-ledger.cjs') return {
             createDurableRecorder: target => durable.createDurableRecorder(mapped(target)),
             createRecordedCli: request => durable.createRecordedCli({ ...request, artifactDirectory: mapped(request.artifactDirectory) }),
@@ -214,7 +224,10 @@ function controllerFixture(t, options = {}) {
         if (name === './operation-containment.cjs') return { async runContainedOperation(request) {
             scopes++;
             const inner = path.join(request.outputDirectory, 'runtime-admission'); fs.mkdirSync(inner, { recursive: true });
-            fs.writeFileSync(path.join(inner, 'runtime-admission.jsonl'), options.innerLedger ?? '{"event":"runtime-control-pass"}\n');
+            const worker = controllerFixture(t); await worker.run();
+            fs.cpSync(worker.output, inner, { recursive: true });
+            if (options.innerLedger !== undefined) fs.writeFileSync(path.join(inner, 'runtime-admission.jsonl'), options.innerLedger);
+            options.mutateInner?.(inner);
             return options.terminal ?? { exitCode: 0, interrupted: false, namespaceInitStopped: true };
         } };
         return nativeRequire(name);
@@ -229,6 +242,64 @@ function controllerFixture(t, options = {}) {
         rows() { return fs.readFileSync(path.join(output, 'runtime-admission.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line)); } };
 }
 
+function toolEvents(value) {
+    const command = '/bin/bash -c \'/usr/local/bin/node runtime-control-witness.cjs\'';
+    const item = { id: 'command-1', type: 'command_execution', command, aggregated_output: '', exit_code: null, status: 'in_progress' };
+    return [ { type: 'thread.started', thread_id: 'component-only' }, { type: 'turn.started' },
+        { type: 'item.started', item },
+        { type: 'item.completed', item: { ...item, aggregated_output: JSON.stringify(value), exit_code: 0, status: 'completed' } },
+        { type: 'item.completed', item: { id: 'message-1', type: 'agent_message', text: JSON.stringify(value) } },
+        { type: 'turn.completed', usage: {} } ].map(row => JSON.stringify(row)).join('\n') + '\n';
+}
+
+test('ev974-C26 independent command events validate the fixed witness apart from the model message', () => {
+    api.requireToolEvidence({ provider: 'codex', protocol: 'codex-json-events', stdout: toolEvents(value()) }, value().nonce);
+});
+test('ev974-C26 independent evidence preserves reasoning and in-progress command updates without granting another tool', () => {
+    const rows = toolEvents(value()).trim().split('\n').map(line => JSON.parse(line));
+    rows.splice(2, 0, { type: 'item.completed', item: { id: 'reasoning', type: 'reasoning', text: 'Controlled reasoning' } });
+    rows.splice(4, 0, { ...rows[3], type: 'item.updated' });
+    api.requireToolEvidence({ provider: 'codex', protocol: 'codex-json-events', stdout: rows.map(row => JSON.stringify(row)).join('\n') + '\n' }, value().nonce);
+});
+test('ev974-C26 duplicate actual CLI captures retain both artifacts and cannot pass', async t => {
+    const f = controllerFixture(t, { duplicateCliEvidence: true }); await assert.rejects(f.run(), /cannot be replayed/);
+    const rows = f.rows().filter(row => row.event === 'runtime-tool-evidence'); assert.equal(rows.length, 2);
+    assert.notEqual(rows[0].file, rows[1].file);
+    for (const row of rows) assert.equal(require('node:crypto').createHash('sha256')
+        .update(fs.readFileSync(path.join(f.output, row.file))).digest('hex'), row.sha256);
+    assert(!f.rows().some(row => row.event === 'runtime-control-pass'));
+});
+const traceChanges = {
+    'model message only': rows => rows.filter(row => row.item?.type !== 'command_execution'),
+    'missing command start': rows => rows.filter(row => row.type !== 'item.started'),
+    'missing command completion': rows => rows.filter(row => row.item?.type !== 'command_execution' || row.type !== 'item.completed'),
+    'changed command': rows => rows.map(row => row.item?.type === 'command_execution' ? { ...row, item: { ...row.item, command: 'cat workspace-canary.txt' } } : row),
+    'login shell': rows => rows.map(row => row.item?.type === 'command_execution' ? { ...row, item: { ...row.item, command: row.item.command.replace(' -c ', ' -lc ') } } : row),
+    'failed command': rows => rows.map(row => row.item?.status === 'completed' ? { ...row, item: { ...row.item, status: 'failed' } } : row),
+    'nonzero exit': rows => rows.map(row => row.item?.status === 'completed' ? { ...row, item: { ...row.item, exit_code: 1 } } : row),
+    'foreign command id': rows => rows.map(row => row.item?.status === 'completed' ? { ...row, item: { ...row.item, id: 'foreign' } } : row),
+    'duplicate completion': rows => [...rows.slice(0, 4), rows[3], ...rows.slice(4)],
+    'extra command': rows => [...rows.slice(0, 4), rows[2], ...rows.slice(4)],
+    'extra MCP tool': rows => [...rows.slice(0, 4), { type: 'item.completed', item: { id: 'other', type: 'mcp_tool_call' } }, ...rows.slice(4)],
+    'guessed nonce': rows => rows.map(row => row.item?.status === 'completed' ? { ...row, item: { ...row.item, aggregated_output: JSON.stringify({ ...value(), nonce: 'guess' }) } } : row),
+    'readable private path': rows => rows.map(row => row.item?.status === 'completed' ? { ...row, item: { ...row.item, aggregated_output: JSON.stringify({ ...value(), denials: value().denials.map((v, i) => i === 0 ? { ...v, denied: false } : v) }) } } : row),
+    'missing denial': rows => rows.map(row => row.item?.status === 'completed' ? { ...row, item: { ...row.item, aggregated_output: JSON.stringify({ ...value(), denials: value().denials.slice(1) }) } } : row),
+    'failed turn': rows => [...rows.slice(0, -1), { type: 'turn.failed', error: {} }],
+    'duplicate turn': rows => [...rows, rows.at(-1)],
+    'model response before command': rows => [rows[0], rows[1], rows[4], rows[2], rows[3], rows[5]],
+};
+for (const [name, change] of Object.entries(traceChanges)) test('ev974-C26 independent CLI evidence rejects ' + name, () => {
+    const rows = toolEvents(value()).trim().split('\n').map(line => JSON.parse(line));
+    const stdout = change(rows).map(row => JSON.stringify(row)).join('\n') + '\n';
+    assert.throws(() => api.requireToolEvidence({ provider: 'codex', protocol: 'codex-json-events', stdout }, value().nonce));
+});
+test('ev974-C26 independent CLI evidence rejects truncated or malformed framing and foreign protocol', () => {
+    const evidence = { provider: 'codex', protocol: 'codex-json-events', stdout: toolEvents(value()) };
+    for (const change of [{ stdout: evidence.stdout.trimEnd() }, { stdout: 'not-json\n' }, { provider: 'other' }, { protocol: 'plain-text' }]) {
+        assert.throws(() => api.requireToolEvidence({ ...evidence, ...change }, value().nonce));
+    }
+});
+
 test('ev974-C26 runtime worker preserves complete recorded lifecycle for modeled string and object SDK results', async t => {
     for (const objectResponse of [false, true]) {
         const f = controllerFixture(t, { objectResponse }); await f.run();
@@ -237,6 +308,20 @@ test('ev974-C26 runtime worker preserves complete recorded lifecycle for modeled
         assert.equal(rows.at(-1).event, 'runtime-control-pass'); assert.equal(rows.at(-1).qualificationCalls, 0);
         assert(!fs.existsSync(f.runtimeDirectory));
     }
+});
+test('ev974-C26 model-only JSON cannot prove that the fixed private-open witness ran', async t => {
+    const f = controllerFixture(t, { omitCliEvidence: true });
+    await assert.rejects(f.run(), /independent.*(?:CLI|tool)|tool.*evidence/);
+    assert.equal(f.attempts, 1);
+    assert(!f.rows().some(row => row.event === 'runtime-control-pass'));
+});
+test('ev974-C26 invalid independently captured output remains a durable negative artifact', async t => {
+    const f = controllerFixture(t, { invalidCliEvidence: true }); await assert.rejects(f.run());
+    const row = f.rows().find(row => row.event === 'runtime-tool-evidence'); assert(row);
+    const raw = fs.readFileSync(path.join(f.output, row.file));
+    assert.equal(require('node:crypto').createHash('sha256').update(raw).digest('hex'), row.sha256);
+    assert.equal(JSON.parse(raw).stdout, '{"type":"error"}\n');
+    assert(!f.rows().some(row => row.event === 'runtime-control-pass'));
 });
 test('ev974-C26 missing positive auth-file contrast refuses runtime control before modeled SDK preparation', async t => {
     for (const option of [{ missingAuth: true }, { baselineFailure: true },
@@ -276,6 +361,11 @@ test('ev974-C26 outer runtime control requires completed stopped scope plus exac
     const rows = fs.readFileSync(path.join(f.directory, 'host-output/runtime-admission.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
     assert.equal(rows.at(-1).event, 'runtime-control-finish'); assert.equal(rows.at(-1).scientificCases, 0);
 });
+test('ev974-C26 a pass-only inner ledger cannot establish a complete runtime lifecycle', async t => {
+    const f = controllerFixture(t, { host: true, innerLedger: '{"event":"runtime-control-pass"}\n' });
+    await assert.rejects(f.run());
+    assert.equal(f.scopes, 1);
+});
 test('ev974-C26 outer runtime control refuses interrupted failed unconfirmed or malformed modeled evidence', async t => {
     for (const option of [{ terminal: { exitCode: 1 } }, { terminal: { exitCode: 0, interrupted: true } },
         { terminal: { exitCode: 0, interrupted: false, namespaceInitStopped: false } },
@@ -285,3 +375,46 @@ test('ev974-C26 outer runtime control refuses interrupted failed unconfirmed or 
         const f = controllerFixture(t, { host: true, ...option }); await assert.rejects(f.run()); assert.equal(f.scopes, 1);
     }
 });
+
+const innerChanges = {
+    'missing lifecycle record': rows => rows.filter(row => row.event !== 'runtime-attempt-prepared'),
+    'reordered lifecycle': rows => { [rows[4], rows[5]] = [rows[5], rows[4]]; return rows; },
+    'duplicate lifecycle record': rows => [...rows.slice(0, 3), rows[2], ...rows.slice(3)],
+    'extra orphan event': rows => [...rows.slice(0, -1), { event: 'runtime-attempt-observation', attemptId: 'foreign' }, rows.at(-1)],
+    'foreign profile': rows => rows.map(row => row.event === 'runtime-attempt-start' ? { ...row, configured: { ...row.configured, model: 'foreign' } } : row),
+    'foreign provenance': rows => rows.map(row => row.event === 'runtime-control-start' ? { ...row, provenance: { forged: true } } : row),
+    'missing positive baseline': rows => rows.map(row => row.event === 'runtime-private-baseline' ? { ...row, allOpened: false } : row),
+    'unproven private-path pass': rows => rows.map(row => row.event === 'runtime-control-pass' ? { ...row, privatePaths: 0 } : row),
+};
+for (const [name, change] of Object.entries(innerChanges)) test('ev974-C26 outer runtime rejects ' + name, async t => {
+    const f = controllerFixture(t, { host: true, mutateInner(directory) {
+        const file = path.join(directory, 'runtime-admission.jsonl');
+        const rows = fs.readFileSync(file, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+        fs.writeFileSync(file, change(rows).map(row => JSON.stringify(row)).join('\n') + '\n');
+    } });
+    await assert.rejects(f.run());
+});
+for (const kind of ['request', 'response', 'CLI capture', 'self-consistent invalid CLI capture']) {
+    test('ev974-C26 outer runtime revalidates actual ' + kind + ' bytes', async t => {
+        const f = controllerFixture(t, { host: true, mutateInner(directory) {
+            const ledger = path.join(directory, 'runtime-admission.jsonl');
+            const rows = fs.readFileSync(ledger, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+            const captured = rows.find(row => row.event === 'runtime-tool-evidence');
+            if (kind === 'request' || kind === 'response') {
+                const row = rows.find(row => row.event === (kind === 'request' ? 'runtime-attempt-start' : 'runtime-attempt-finish'));
+                fs.appendFileSync(path.join(directory, 'attempts', row[kind + 'File']), ' ');
+            } else {
+                const file = path.join(directory, captured.file);
+                if (kind === 'CLI capture') fs.appendFileSync(file, ' ');
+                else {
+                    const evidence = JSON.parse(fs.readFileSync(file, 'utf8'));
+                    evidence.stdout = evidence.stdout.replaceAll('/usr/local/bin/node runtime-control-witness.cjs', 'cat workspace-canary.txt');
+                    fs.writeFileSync(file, JSON.stringify(evidence) + '\n');
+                    captured.sha256 = require('node:crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+                    fs.writeFileSync(ledger, rows.map(row => JSON.stringify(row)).join('\n') + '\n');
+                }
+            }
+        } });
+        await assert.rejects(f.run());
+    });
+}

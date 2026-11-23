@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "kind": "current retrieval locations only; no scientific or execution authority",
+  "root": "quality/bugbot/evidence/issue-974",
+  "artifacts": [
+    {
+      "immutableReceipt": "campaigns/093fd141/result.json",
+      "recordedPath": "canonical141.md",
+      "currentPath": "campaigns/093fd141/canonical141-historical.md",
+      "originalBytes": 65495,
+      "originalSha256": "a821cf4cef12827db77605419a6541640646c60fd098f510b91c2f2856f5632f"
+    }
+  ],
+  "immutableReceiptsChanged": false,
+  "historicalBytesChanged": false,
+  "hostedOriginalPurgeVerified": false
+}

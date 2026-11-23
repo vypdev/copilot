@@ -145,6 +145,10 @@ function reviewedPlan(repository, revision, planPath, planSha256, bootstrapSha25
     assert.equal(sha256(bytes), planSha256, 'reviewed committed plan differs');
     assert(fs.readFileSync(physical(root, planPath)).equals(bytes), 'working plan differs from reviewed commit');
     const plan = JSON.parse(bytes);
+    // A legacy/unknown plan must not reach a helper omitted from its inventory.
+    // Reject before loading any checkout module, even if later policy rejects it.
+    assert(plan.schemaVersion === 2 || !Object.hasOwn(plan, 'containment'),
+        'containment requires schemaVersion 2 before helper imports');
     assert(mode === 'native-control' ? plan.purpose === 'native-control' && plan.containment
         : plan.purpose !== 'native-control', 'native controls cannot authorize measurement');
     assert(mode === 'runtime-admission' ? plan.purpose === 'runtime-admission' && plan.containment

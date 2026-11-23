@@ -14,7 +14,7 @@ import { agentExecutionTempParent } from '../../infrastructure/agents/agent_priv
 import { SddSourceContextFailure } from '../../domain/agent_source_snapshot';
 import { AGENT_EXECUTION_TIMEOUT_MAX_MS } from '../../domain/agent_execution_plan';
 import { isAdmittedQualificationInvestigation } from '../../infrastructure/agents/qualification_investigation_admission';
-import { stopQualificationOperationPlan } from '../../infrastructure/agents/qualification_operation_scope';
+import { recordQualificationRuntimeCliEvidence, stopQualificationOperationPlan } from '../../infrastructure/agents/qualification_operation_scope';
 
 const MAX_STDERR_BYTES = 8 * 1024;
 
@@ -208,7 +208,9 @@ export function createAgentProcessLifecycle(
                 try { onToolDiagnostic?.(toolDiagnostic); }
                 catch { /* Diagnostic observers cannot change execution semantics. */ }
             }
-            finishResolve(decodeAgentCliOutput(plan.outputProtocol, Buffer.concat(stdoutChunks).toString('utf8')));
+            const stdout = Buffer.concat(stdoutChunks).toString('utf8');
+            if (contained) recordQualificationRuntimeCliEvidence(plan, signal, stdout);
+            finishResolve(decodeAgentCliOutput(plan.outputProtocol, stdout));
         } catch (error) {
             finishReject(error instanceof AgentCliError
                 ? error
@@ -236,7 +238,26 @@ export function decodeAgentCliOutput(protocol: AgentOutputProtocol, raw: string)
         return output;
     }
     if (protocol === 'json-lines-text-events') return decodeJsonLinesTextEvents(raw);
+    if (protocol === 'codex-json-events') return decodeCodexJsonEvents(raw);
     return assertNeverOutputProtocol(protocol);
+}
+
+function decodeCodexJsonEvents(raw: string): string {
+    if (!raw.endsWith('\n')) throw outputFailure('Agent CLI returned incomplete JSON event output.', 'malformed-json-event');
+    let output: string | undefined, completed = 0;
+    for (const line of raw.split(/\r?\n/u).filter(line => line.trim())) {
+        let event: { type?: unknown; item?: { type?: unknown; text?: unknown } };
+        try { event = JSON.parse(line); }
+        catch { throw outputFailure('Agent CLI returned malformed JSON event output.', 'malformed-json-event'); }
+        if (!event || typeof event !== 'object' || Array.isArray(event) || typeof event.type !== 'string'
+            || event.type === 'error' || event.type === 'turn.failed' || completed) {
+            throw outputFailure('Agent CLI returned an invalid JSON event.', 'invalid-json-event');
+        }
+        if (event.type === 'item.completed' && event.item?.type === 'agent_message' && typeof event.item.text === 'string') output = event.item.text;
+        if (event.type === 'turn.completed') completed++;
+    }
+    if (completed !== 1 || !output?.trim()) throw outputFailure('Agent CLI returned no text completion events.', 'missing-text-events');
+    return output.trim();
 }
 
 function decodeJsonLinesTextEvents(raw: string): string {

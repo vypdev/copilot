@@ -1099,3 +1099,21 @@ and coordinated execution-contract/quality-observability documentation. New SDK 
 bundle identities require fresh final-head/native and exact-tuple qualification
 admission; no old native result accepts them. No production activation, installation,
 permission expansion, model call or campaign result follows from these source tests.
+
+
+#### Source5327 review: independent CLI evidence
+
+A live runtime-admission capture is process-local authority, never a serialized
+claim. Bind it to the actual plan identity and exact abort signal; nested,
+expired, copied, foreign-provider and model-free scopes cannot use it. The
+actual successful child close MUST invoke the critical synchronous recorder
+before decoding the model response. Persistence errors cannot be swallowed as
+telemetry. The Bugbot owner then verifies the CLI's separate fixed command
+start/completion and raw output, and the host verifies the entire ordered
+attempt and artifact chain. Pass-only ledgers and model-reported denials are
+insufficient. The [owning amendment](./bugbot-analysis-publication-and-autofix.md#source5327-review-independent-cli-evidence)
+requires protocol2 and55 additional model-free assertions, including the six SDK
+scope cases, twelve decoder cases and schema1 helper-import refusal. No deadline,
+output limit, UID/capability, credential, native/scientific slot or production
+boundary changes. A new source must pass actual same-tuple controls before any
+new genuine runtime admission; none is executed or claimed by this amendment.

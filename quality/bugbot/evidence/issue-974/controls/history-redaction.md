@@ -43,3 +43,21 @@ See [GitHub’s removal procedure](https://docs.github.com/en/authentication/kee
 Production remains disabled, pilot write attempts0, installation NOT_EXECUTED
 and qualified profile NONE. Protected main checkout and its17 stashes remain
 unchanged. This privacy operation changes no publication or installation gate.
+
+
+## Complete current-descriptor locator minimization
+
+Current native-control descriptors and their retention index also omit the
+original commit/blob/path lookup associations. The full exact pre-minimization
+bytes are privately retained with the size/SHA recorded by each descriptor.
+The scientific implementation and private preregistration commit identities
+remain required historical facts; the private plan path is omitted. A private
+preregistration identity is not a claim that its Git object was ever hosted.
+The gzip index retains current sanitized retrieval revisions and exact encoded
+and decoded digests, while original revision associations remain private.
+Earlier hosted versions may still expose locators; GitHub Support purge remains
+pending and this normal forward change does not rewrite them.
+
+The current [artifact locator map](artifact-locators.json) resolves the immutable
+result receipt's canonical141 path to its exact historical file without editing
+that receipt or the archived bytes. This is retrieval metadata only.

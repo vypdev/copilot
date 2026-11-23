@@ -145,12 +145,16 @@
   "historicalPublicDescriptor": {
     "executable": false,
     "reason": "Historical observation descriptor only; private original is required for any source-pinned execution. This public copy grants no execution authority.",
-    "originalCommit": "f173e4c724bf21d398ec4586f2dfde0a092f482e",
-    "originalGitBlob": "da0c18fdddb50e3a0a5653aec55838d182034237",
     "originalBytes": 6075,
     "originalSha256": "84051336de4545610d55c78a340a85f3fbeff0f0b356f73c91ca50c5521d1a74",
     "endpointSha256": "f14e53644c8d76dd46de4d5fdee0c1799e7cabbcbedf77ec0aa9ef95f662e140",
     "privateArchive": "historical20-native-plan-private-originals.zip",
-    "privateArchiveSha256": "bcd062574be4b7477f118b11dabb78a93c8e1a6ffcb03200cd4f89b13ca8c902"
+    "privateArchiveSha256": "bcd062574be4b7477f118b11dabb78a93c8e1a6ffcb03200cd4f89b13ca8c902",
+    "privateLocatorRetention": {
+      "privateOriginalsFile": "source5327-native-descriptor-original-associations-private.json",
+      "bytes": 185695,
+      "sha256": "954ac09304e41c7f0895c8362f3e7eef9b301a6175ec1f47ea64e29f6d8ddb2b",
+      "gitLocatorAssociationsPublic": false
+    }
   }
 }

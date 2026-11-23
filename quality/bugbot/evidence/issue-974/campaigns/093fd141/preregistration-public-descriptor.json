@@ -1,8 +1,6 @@
 {
   "schemaVersion": 1,
   "kind": "Public descriptor of an already committed and executed private scientific plan; never an execution grant",
-  "originalPlanCommit": "07f21a4cadbd1dbaf03566c57a8033f85e9ff760",
-  "originalPlanPath": "quality/bugbot/evidence/issue974/plan.json",
   "originalPlanSha256": "312c4501082d97fbb5acd7c1f3801f179d085c553f2bd6d15c47bcd373a00db1",
   "redactions": [
     {
@@ -674,5 +672,13 @@
     }
   },
   "actualExecutionStartedAt": "2026-11-23T03:22:04.581217+00:00",
-  "originalPreregistrationCommittedBeforeAnyScientificCall": true
+  "originalPreregistrationCommittedBeforeAnyScientificCall": true,
+  "privatePreregistrationCommit": "07f21a4cadbd1dbaf03566c57a8033f85e9ff760",
+  "preregistrationVisibility": "private original; identity retained without a public original path/blob lookup",
+  "privateHistoricalLocatorRetention": {
+    "privateOriginalsFile": "source5327-current-descriptor-original-associations-private.json",
+    "bytes": 174658,
+    "sha256": "a7158a2fd7ccbc5b2296b9e6e64c23349761c3acf0df6f07282e0d27ef955e10",
+    "gitLocatorAssociationsPublic": false
+  }
 }

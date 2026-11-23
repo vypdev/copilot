@@ -1,0 +1,514 @@
+{
+  "schemaVersion": 1,
+  "kind": "Current source correction and model-free evidence; historical measurement and technical tuples unchanged",
+  "publishedParent": "5327d533045ab10dff1ca6969317c12e93b88cf8",
+  "localParent": "2629515a3b16e141fb7bfdcf6d3fd47dc7c0abcc",
+  "sourceSha256": {
+    "build/cli/index.js": "20aa48a885d1b198a1a30706d0dd92501a6cec9e5e3f4fddd6d3b679698c7a1f",
+    "build/github_action/index.js": "05bcc2cd1a90051816979a96f41d0e2471c73fe0f5cae7158cc241d4c298a784",
+    "docs/agents/execution-contract.mdx": "88d636f027606edf9a65e2795ecfa2baa6d83aeaf75c8d37fab0a737b3df84f5",
+    "docs/bugbot/quality-observability.mdx": "f06eb5a92ad05c43506c8a4fcf0552da094fb92306116caf4ff541bce28f2b81",
+    "quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs": "848e53eab45a126d5f8cf7d38aea7800d1706e902f705fa29e99c12132a3def4",
+    "quality/bugbot/evidence/issue-974/campaigns/093fd141/canonical141.md": "bc8f4656bb2f765e9777c77cb4ecd531ed7be7e4f4950fa8204b2787d0fb8260",
+    "quality/bugbot/evidence/issue-974/campaigns/093fd141/preregistration-public-descriptor.json": "deb5a2e3ab2ce51e021e951d241eab95053ce406592ff28bf80f793dcb228cc2",
+    "quality/bugbot/evidence/issue-974/controls/artifact-locators.json": "f172cf5189f66f129c786b4e5efe6fd0ca6b879be99b087cdf2b1d959c323d04",
+    "quality/bugbot/evidence/issue-974/controls/historical-gzip-archive.json": "f00831b3be69ceb685631edcf0c2bebc001baa718d77e6bf6d8c433bac90abcc",
+    "quality/bugbot/evidence/issue-974/controls/history-redaction.md": "332d8a02ebcd68ca024555a674b37287a25c117e8d31ed2a46f6595698987eb5",
+    "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C32.json": "9fa3a82b1881fbc5be52d15edafd54ec9cb7a5ae39b125734ec3c9ed3b02ee0b",
+    "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C33.json": "d3760655d8c5bcaf6c555f6ace95fef1328fecde7efdfdf17e3234f34793113a",
+    "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C34.json": "9fbfa558a31606841c3f75d0451561f8ea8219b3773bd155a9033cd5071d68c6",
+    "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C35.json": "e45c4d1ded6768367c08cc8f2dc9f2d4d06fa9972947be5ccdb7bb72dd599f01",
+    "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C32.json": "54534abddb295ebc1c2c6695a23b1d6f210477f7f1c160920ff3f26d6651d221",
+    "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C33.json": "5317b057cc31ef7daa4eca44114f6987c947eb3f490841ba64d8e3c6fb531c4c",
+    "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C34.json": "5052e9b4dc0f2f2dda1846decd5ca6bc7767376afbbfc5fd9851d0892baccbbd",
+    "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C35.json": "0e098a39f7e0841e835f5d34fed030a1a47586104d1287de406cd4f0805ada48",
+    "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C32.json": "601019fa8dca492818d5659ce1e855dc6a6f7de3cf71d57254a599d3182f0887",
+    "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C33.json": "d3a9c888e6e4d860e47fae01e754a9e2b888ae53164ecb914486edd5f4b37bd2",
+    "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C34.json": "446a3ff92bd5f4697bcd6615cc9290c72f68817baacb387ca1d2634903958ca3",
+    "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C35.json": "cf5a513302cb85f1182ed42ff17d0ff1350b831578518bddb4fbea78753a75fa",
+    "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C32.json": "08d52d1f38de3f588601956a0df1aec09a4b499effb3f9ffc55f170e77d7a542",
+    "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C33.json": "63e53b013f678a12637550cc7d3c67a00f3762309b7291db16aaab1b28c8f20e",
+    "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C34.json": "db52a0f78227567d02325ff2ec61f021e78fbb6812f65686c6aacd36238db803",
+    "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C35.json": "6c5ba8d22c6b478037c4d96ebdb6620dd0130a0dfd093cc118c27da5437ac1f6",
+    "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C32.json": "ab0bc44136c7c533942c8a54bc677d53ae2dcd74ba33b788097195040a4d2f85",
+    "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C33.json": "0e0eb80f6429a02610463e7d8b4be536c13db0aaa2330835cccd59ba18f87c79",
+    "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C34.json": "e7e51c50d24d98d777903c8c799b1b288551af8dec84cf35c2e9a21a11b51941",
+    "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C35.json": "613aaccad61ecf62e6216a5ac2e87bfa4279fc43508913af9feeee2bf430ab28",
+    "quality/bugbot/evidence/issue-974/native-controls/private-originals-retention.json": "04d7b3d12c622e3083677e673607c00acfd67ab4bef2cf09b5918fa40b07e722",
+    "quality/bugbot/evidence/issue974/README.md": "9c324080280750d1049e72a89491efe3198c3bf5e9138b081c76ae9ae97eff22",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "a724a72890e4c6cd31cd2f295418efcb58febea9ffb4d8d721a0dca05e110c93",
+    "quality/bugbot/evidence/issue974/sdk-runtime-admission-components.cjs": "938363b3243cb0b910ef6e1ce1654f32f00e3b69df447fd734172eb2b81b8cc9",
+    "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs": "3a9d287ccecf02080ad335055b8b769d590da7d3847029f755b08d71e1ddc49f",
+    "specs/CATALOG.md": "a5489d6b01c9401181163dd1789edbb2dcc5e75fa73566e94bc419aedc06ff9d",
+    "specs/agent-execution-policy-hardening.md": "dd8ce3e68985fdde8297c1f82d743a7ae770cc0e8d958debba06c7b64af6a0bc",
+    "specs/agent-runtime-provider-and-model-routing.md": "e29b4ce01850778524c47fc402310e5b054d41fa50a15c9b3f3d2a2ce7a711f5",
+    "specs/bugbot-analysis-publication-and-autofix.md": "1cee23ec294b85e67101ba3bc41f9af08127f1ecc4381f3938fc12e73c6849b4",
+    "specs/catalog.json": "5070b6f4004c4b96064713d8fa3cced09a91284a1c2287467fd20653fe542952",
+    "src/application/policies/agent_execution/codex_execution_plan_policy.ts": "ed0d35e25ac1a8c007fe4fb03c874307850aac4aa2b97bac40848158c7897d3d",
+    "src/application/policies/agent_execution/provider_execution_policy.ts": "103fc51083ff151d8e4b55acc35ae513b4e32d0582d0ec5a600fad9840ac808c",
+    "src/data/repository/__tests__/agent_cli_client.test.ts": "1b55121b9c7c531f1ba94df81a34018338263565b963b1064aea0367297739c9",
+    "src/data/repository/agent_cli_execution.ts": "e80a87ed5f71f554ba466107855cdb11ab72986dbef0e0fdce2e408b2d13d1db",
+    "src/domain/agent_execution_plan.ts": "8ca425645c432ffb47019964dd8d7b3a800a0dd7f8b2371d9389d1b2062a57f0",
+    "src/infrastructure/agents/__tests__/qualification_investigation.test.ts": "a82c3fed9fcf4fc56b8e4843a19ee21367085a4195884cde6774376718718544",
+    "src/infrastructure/agents/agent_execution_planner.ts": "333f9fc9012e07b7aade9c453f8829b26c721712d5ca5f357491d71503861f10",
+    "src/infrastructure/agents/qualification_operation_scope.ts": "65c02a980e0729c54fc6ee58502839991a95e83ce1558fccbbfe0d4c5a86c9bc"
+  },
+  "causal": {
+    "runtimeEvidence": "Two identical semantic assertion bodies fail original0/2 and pass corrected2/2; fixtures now model actual CLI events separately from model text",
+    "bootstrap": "Same refined helper-sentinel assertion fails original and passes corrected before imports; first less-specific assertion negative retained",
+    "realModels": 0,
+    "realContainers": 0,
+    "controlledPorts": true,
+    "actualFilesystemGitDurableArtifacts": true
+  },
+  "currentRuntimeComponents": {
+    "passed": 58,
+    "failed": 0,
+    "pending": 0,
+    "coverage": {
+      "file": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs",
+      "sourceSha256": "3a9d287ccecf02080ad335055b8b769d590da7d3847029f755b08d71e1ddc49f",
+      "summary": {
+        "lines": {
+          "total": 179,
+          "covered": 179,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 25,
+          "covered": 24,
+          "skipped": 0,
+          "pct": 96
+        },
+        "statements": {
+          "total": 228,
+          "covered": 226,
+          "skipped": 0,
+          "pct": 99.12
+        },
+        "branches": {
+          "total": 38,
+          "covered": 36,
+          "skipped": 0,
+          "pct": 94.73
+        }
+      },
+      "gate": true
+    },
+    "additionalDeterministicBudget": {
+      "cjs": 36,
+      "sdk": 18,
+      "bootstrap": 1,
+      "total": 55
+    }
+  },
+  "sdkCohort": {
+    "suites": 7,
+    "passed": 200,
+    "failed": 0,
+    "historicalPlatformOmissions": 24,
+    "rawScopedJestExit": 1,
+    "rawExitScope": "Unexecuted global/publication/web coverage floors, not acceptance",
+    "changedCoverage": {
+      "codex_execution_plan_policy.ts": {
+        "lines": {
+          "total": 14,
+          "covered": 14,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 15,
+          "covered": 15,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 20,
+          "covered": 20,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "agent_cli_execution.ts": {
+        "lines": {
+          "total": 233,
+          "covered": 231,
+          "skipped": 0,
+          "pct": 99.14
+        },
+        "functions": {
+          "total": 33,
+          "covered": 33,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 276,
+          "covered": 270,
+          "skipped": 0,
+          "pct": 97.82
+        },
+        "branches": {
+          "total": 218,
+          "covered": 205,
+          "skipped": 0,
+          "pct": 94.03
+        }
+      },
+      "agent_execution_planner.ts": {
+        "lines": {
+          "total": 132,
+          "covered": 132,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 16,
+          "covered": 16,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 143,
+          "covered": 141,
+          "skipped": 0,
+          "pct": 98.6
+        },
+        "branches": {
+          "total": 98,
+          "covered": 92,
+          "skipped": 0,
+          "pct": 93.87
+        }
+      },
+      "qualification_operation_scope.ts": {
+        "lines": {
+          "total": 90,
+          "covered": 90,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 20,
+          "covered": 20,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 119,
+          "covered": 119,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 82,
+          "covered": 82,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    }
+  },
+  "precommitShadowRegression": {
+    "total": 639,
+    "passed": 616,
+    "failed": 23,
+    "pending": 0,
+    "cause": "All23 fail exact source/HEAD attestation before their scenario; SDK changes are not committed yet",
+    "sourceUnchangedDuringRun": true,
+    "cleanCommitFollowupRequired": true,
+    "attestationRelaxed": false
+  },
+  "privacy": {
+    "nativeDescriptorAssociationsMinimized": 20,
+    "originalNativePlanSemanticsUnchanged": true,
+    "actualGzipRetrievals": 114,
+    "scientificImmutableBytes": [
+      {
+        "path": "campaigns/093fd141/result.json",
+        "bytes": 4722,
+        "sha256": "084a4a80110984b1ce901e453bdfec8191410b6f39f206775194f065c2f17fa1"
+      },
+      {
+        "path": "campaigns/093fd141/results.md",
+        "bytes": 5933,
+        "sha256": "3cd1dc8638e5d176c7f30166d204d27aad432dce1aac819686260c8679686670"
+      },
+      {
+        "path": "campaigns/093fd141/canonical141-historical.md",
+        "bytes": 65495,
+        "sha256": "a821cf4cef12827db77605419a6541640646c60fd098f510b91c2f2856f5632f"
+      },
+      {
+        "path": "campaigns/093fd141/canonical150-historical.md",
+        "bytes": 56524,
+        "sha256": "f7988998aa2c4b459805dedfa552d8a4dcada7a4708201b717f43f066dbcb35b"
+      },
+      {
+        "path": "campaigns/093fd141/sdk-control-receipt.json",
+        "bytes": 3213,
+        "sha256": "89f24af1c7d7a7f0da7e6c684e93f84cd6fdb3e6171107b1d318ed8c587185a4"
+      }
+    ],
+    "canonicalAliasVerified": true,
+    "hostedPurgeVerified": false,
+    "historyRewrittenThisDelivery": false
+  },
+  "refuted": {
+    "finalTerminatorClaim": {
+      "actualUnchangedPolicySourceSha256": "ca66510188a10557aba6bc0192ffbd95742eedbee07b42cfa9a76d559d408236",
+      "node": "v24.20.0",
+      "nodeExecutableSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+      "validBaselines": 2,
+      "adversariesRejected": 24
+    },
+    "C32C33Cancellation": "Outer execute observes sdk-ready, records native-ready and aborts before awaiting running; original native4PASS belongs to5327, no replay"
+  },
+  "privateOriginalReceiptReferences": [
+    {
+      "file": "bootstrap-green-receipt.json",
+      "bytes": 372,
+      "sha256": "c05ef1ee28545e97a493b7bfc5da216e76a1bcd31647f35f23b6003c51ba9b01"
+    },
+    {
+      "file": "bootstrap-green2-receipt.json",
+      "bytes": 491,
+      "sha256": "b63a10a5bfbe9494cb46c04bab927ae9da9497099f2527edf88616715fc87fa7"
+    },
+    {
+      "file": "bootstrap-red-receipt.json",
+      "bytes": 373,
+      "sha256": "c181c155fc6ca2052fb6bfd8b3af39b66b7b9489a4c07eb01c9d4e812ea61c82"
+    },
+    {
+      "file": "bootstrap-red2-receipt.json",
+      "bytes": 457,
+      "sha256": "bce747e3493f1c3024acc7bf88bb1bc1a1db170c5742290fe385e7dfe40458c7"
+    },
+    {
+      "file": "current-privacy-map-audit-receipt.json",
+      "bytes": 1400,
+      "sha256": "b032ab50c9c1188103a1c45878c798d0a9a852a2f28af966dd458c76a9b87aaf"
+    },
+    {
+      "file": "policy-terminators-control-receipt.json",
+      "bytes": 530,
+      "sha256": "b8aa6e9eb074fb3f0170b9265ceb5653bd537a8ad9036034bdaedc120c591871"
+    },
+    {
+      "file": "runtime-components-attempt1-receipt.json",
+      "bytes": 805,
+      "sha256": "0bae90905221cfae93e9bb1fb302d32baa625ac7f4a1a2ae78f81c70f1d8f104"
+    },
+    {
+      "file": "runtime-components-attempt2-receipt.json",
+      "bytes": 805,
+      "sha256": "d1d101041dc7eccd63aa26c3529c25a4576b41403e0f7b387d3353361fe14e2f"
+    },
+    {
+      "file": "runtime-controller-coverage-attempt2/receipt.json",
+      "bytes": 9534,
+      "sha256": "be1c4332ccfb83ec78113208c1d1f32c9a1ab270a46024bd2f55643e4ee14e0b"
+    },
+    {
+      "file": "runtime-controller-coverage-attempt3/receipt.json",
+      "bytes": 9669,
+      "sha256": "be3e21153e3e7c479f37259e4fe2cfef1f0f3866e02b8067c0eebed3232f140a"
+    },
+    {
+      "file": "runtime-evidence-green1-receipt.json",
+      "bytes": 303,
+      "sha256": "d728de899999d955bde402fe8f7a1a7ba5aa0a441b698b4146b42043e103f6aa"
+    },
+    {
+      "file": "runtime-evidence-red1-receipt.json",
+      "bytes": 303,
+      "sha256": "bdf58ed768581c0cf3d264814988a9337a71baeac61f99c8b9134d055c4558d2"
+    },
+    {
+      "file": "sdk-coverage-attempt1-receipt.json",
+      "bytes": 4061,
+      "sha256": "55fa6963dd475c090c5f34153a0df94551a94529678b89d2ce04b1e4e411c62a"
+    },
+    {
+      "file": "sdk-coverage-attempt2-receipt.json",
+      "bytes": 4507,
+      "sha256": "5e7401a90b32fc3c4cdf8bdc35494bc627157612075730029f1913d5b7244f0f"
+    },
+    {
+      "file": "sdk-source-check-attempt1-receipt.json",
+      "bytes": 426,
+      "sha256": "f28afbba6975d8862e63275578600ad2f37311d82f5bfa58f690c569cb265856"
+    },
+    {
+      "file": "shadow-coherent-attempt1-receipt.json",
+      "bytes": 6650,
+      "sha256": "4dfee67c9a140ed34bc122dc52b5061b23aa9ede288be8f14017554ca7bdbd57"
+    }
+  ],
+  "deliveryValidation": {
+    "at": "2026-11-23T16:01:44.395290+00:00",
+    "steps": [
+      {
+        "name": "types",
+        "command": [
+          "pnpm",
+          "exec",
+          "tsc",
+          "--noEmit"
+        ],
+        "exit": 0,
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "lint",
+        "command": [
+          "pnpm",
+          "exec",
+          "eslint",
+          "src/domain/agent_execution_plan.ts",
+          "src/application/policies/agent_execution/provider_execution_policy.ts",
+          "src/application/policies/agent_execution/codex_execution_plan_policy.ts",
+          "src/infrastructure/agents/qualification_operation_scope.ts",
+          "src/infrastructure/agents/agent_execution_planner.ts",
+          "src/data/repository/agent_cli_execution.ts",
+          "src/infrastructure/agents/__tests__/qualification_investigation.test.ts",
+          "src/data/repository/__tests__/agent_cli_client.test.ts"
+        ],
+        "exit": 0,
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "generate-specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "generate:specifications"
+        ],
+        "exit": 0,
+        "bytes": 2502,
+        "sha256": "e4a722aa7c8f2a5b60af3d1fb0be57e67be1ccb47f7fab8663709019626d1e52"
+      },
+      {
+        "name": "specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:specifications"
+        ],
+        "exit": 0,
+        "bytes": 2490,
+        "sha256": "ecd068a0543edd12a6029d69e238286bbb68712a6ef3a538b1da3749e6a0ba39"
+      },
+      {
+        "name": "documentation",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:documentation"
+        ],
+        "exit": 0,
+        "bytes": 323,
+        "sha256": "ba86a3bc3e17d55ab4ac0f5896a05f637d0773a9fcc164da9573c0ca813a34c5"
+      },
+      {
+        "name": "agent-docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:agent-docs"
+        ],
+        "exit": 0,
+        "bytes": 222,
+        "sha256": "81934e9d1ed714a62a12d252845e2b9a26040888af5387b86d8ec7afdc423608"
+      },
+      {
+        "name": "docs-page",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:docs-page"
+        ],
+        "exit": 0,
+        "bytes": 212,
+        "sha256": "e2c8d557fef6846b41bc998c59ae00e596fab587da20b0979cb6d219ab7d8482"
+      },
+      {
+        "name": "workflows",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:workflows"
+        ],
+        "exit": 0,
+        "bytes": 219,
+        "sha256": "f7fe3bf2347d3490e24d9f574522c62e0aa40fa9751c68dc4179378e96982612"
+      },
+      {
+        "name": "graphify",
+        "command": [
+          "graphify",
+          "update",
+          "."
+        ],
+        "exit": 0,
+        "bytes": 3743,
+        "sha256": "e44f94d9ec56464ec30f4ca4918bafbb970671a0b901a1eb27e71fa12bc0cf66"
+      },
+      {
+        "name": "build",
+        "command": [
+          "pnpm",
+          "run",
+          "build"
+        ],
+        "exit": 0,
+        "bytes": 434553,
+        "sha256": "ce50ebac974451096bd2453329b31f3d3c800ef17c589f52d1b29f154efa0aeb"
+      },
+      {
+        "name": "package",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:npm-package"
+        ],
+        "exit": 0,
+        "bytes": 799,
+        "sha256": "6de5c9e01f249e5a9bf116718695603a4680e738c8bc419e8763be8f58ef6042"
+      }
+    ],
+    "bundles": {
+      "build/cli/index.js": "20aa48a885d1b198a1a30706d0dd92501a6cec9e5e3f4fddd6d3b679698c7a1f",
+      "build/github_action/index.js": "05bcc2cd1a90051816979a96f41d0e2471c73fe0f5cae7158cc241d4c298a784",
+      "build/api/index.js": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "build/deployment_recovery/index.js": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    },
+    "scientificCallsAdded": 0,
+    "installation": "NOT_EXECUTED",
+    "pilotWrites": 0,
+    "production": "disabled",
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "runtimeAdmissionProtocol": 2,
+  "currentSourceRealRuntimeModelQuery": "NOT_EXECUTED_NOT_ADMITTED",
+  "currentSourceNativeSdkAdmission": "NOT_EXECUTED",
+  "historicalRuntimeInterpretation": "Workspace nonce read established; nine private-open attempts were model-reported without independent tool-event capture; original receipt preserved",
+  "actual174": "COMPLETE_NEGATIVE_UNCHANGED",
+  "actual42": "UNSTARTED_NOT_ADMITTED",
+  "qualifiedProfiles": [],
+  "newModelCalls": 0,
+  "pilotWrites": 0,
+  "installation": "NOT_EXECUTED",
+  "production": "disabled"
+}

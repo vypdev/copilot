@@ -5823,3 +5823,93 @@ with all negatives. Catalog test ownership and Graphify are updated together.
 Traceability: EV974-S04/S06 -> Engine adapter/failed-KILL controls; EV974-S01/S04/S05
 -> image/supervisor/bootstrap init-parent controls and native process contrast;
 EV974-S06/S07 -> historical archive framing and private-original retention.
+
+
+#### Source5327 review: independent CLI evidence
+
+Observed defects: a correct withheld nonce plus model-authored denial JSON was
+accepted without independently retaining the witness command; the host accepted
+a pass-only inner ledger. The historical093fd141 technical receipt is immutable.
+It proves the ordinary workspace nonce read, while the nine private-open results
+are model-reported and do not independently establish all nine witness attempts.
+The174 negative, its tuple,200 scientific SDK invocations and one separate
+historical technical invocation are not altered or repeated. No new genuine
+query or scientific campaign is authorized by this operational correction.
+
+Current runtime admission MUST use protocol2 in its exact committed private plan;
+protocol1 cannot be reused. The live runtime-admission scope additionally binds a
+private, process-local evidence callback to the actual admitted plan and signal.
+Only this composition selects Codex --json framing. Ordinary consumers, native
+controls and scientific slots retain their existing output framing. No public
+request field, environment option, receipt JSON or copied plan grants capture.
+Capture MUST run on successful actual child close before decoding model text.
+A failed or asynchronous recorder, expired/nested lease, copied plan, foreign
+signal or other provider cannot produce an accepted result. Existing output-size,
+cancellation, UID/capability, namespace and credential boundaries are unchanged.
+
+The fixed CLI protocol distinguishes command_execution from agent_message in
+[the pinned CLI event schema](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/exec/src/exec_events.rs).
+The controller MUST independently require one started/completed fixed open-only
+witness command, matching ID/command, exit0, completed status, exact withheld
+nonce and all nine denials in the command's actual aggregated output. A model
+message, guessed nonce, missing/extra tool, failed command or incomplete event
+stream cannot replace that observation. Direct fixed command or its reviewed
+/bin/bash or /bin/sh non-login -c wrapper is accepted; other shell expressions
+remain unavailable. The final model JSON is checked separately. This observes
+CLI tool events, not independent kernel syscall tracing. The new protocol has
+not yet been executed with a real model and cannot be reported as native PASS.
+
+The raw CLI evidence is a private, fsynced artifact, not public model input.
+Retain invalid or duplicate captured stdout before rejecting it, so a negative
+cannot silently lose its actual observed output. The
+host MUST validate the exact ordered start, positive baseline, six ordinary
+attempt records, independent CLI artifact event and terminal pass. It repeats
+worker-context provenance, all request/response artifact digest and ordinary
+lifecycle checks, exactly one configured call, actual captured-event validation,
+unchanged workspace and zero scientific/GitHub effects. Missing, duplicate,
+reordered, tampered, foreign or pass-only records are unavailable, never a PASS.
+Operators keep the original negative and reconcile its source/plan/image tuple;
+there is no automatic retry, deadline increase or model substitution.
+
+```mermaid
+sequenceDiagram
+  participant B as Reviewed bootstrap
+  participant S as Live SDK scope
+  participant C as Actual CLI child
+  participant H as Host verifier
+  B->>S: Protocol2 and exact private callback
+  S->>C: Fixed read-only findings query with JSON events
+  C-->>S: Command start/completion and distinct model text
+  S->>S: Validate and fsync independent tool artifact
+  S-->>H: Complete inner ledger and actual artifacts
+  H->>H: Revalidate order, provenance, hashes and witness
+```
+
+Textual equivalent: bootstrap binds the private scope, the actual CLI emits its
+own tool records, critical capture validates and persists them, then the host
+revalidates the complete result. Any missing stage remains unavailable.
+
+The additional numeric budget is55 model-free assertions:36 CJS controls
+(two causal worker/host negatives, one positive independent trace,17 trace
+adversaries, one framing/protocol group, eight inner-sequence adversaries,
+four artifact-byte adversaries, one durable invalid-output negative, one
+reasoning/command-update positive and one durable duplicate-capture negative);18 SDK controls (six private capture/planner/
+executor cases and twelve Codex decoder cases); one public-bootstrap schema1
+containment/import adversary. The runtime component file now has58 controls,
+preserving its22 original controls. Logical35 qualification IDs and174/42
+inventories remain frozen. Pure/capture policy retains100% all metrics; changed
+runtime modules retain95% statements/lines and90% branches/functions, plus
+source-global, build, documentation, architecture, normal hooks and final-head
+native review gates. Real model-tool validation is a separate unmet prerequisite.
+
+The bootstrap MUST reject schema1 plus containment before importing any helper,
+including a checkout-supplied helper absent from that schema's admitted inventory.
+Current public historical descriptors omit unnecessary original commit/blob/path
+lookup associations; exact originals remain private. Current sanitized gzip
+locators, measured scientific identities, bytes and digests remain retrievable.
+The canonical artifact map resolves immutable result.json's recorded canonical141
+path to its exact historical bytes without rewriting that receipt. GitHub-hosted
+purge remains pending; current minimization is no claim that caches are deleted.
+Documentation updates cover execution, quality observation, immutable retrieval
+and current operational limitations; catalog evidence remains tied to these
+actual source/test paths. No new configuration or migration authority is added.

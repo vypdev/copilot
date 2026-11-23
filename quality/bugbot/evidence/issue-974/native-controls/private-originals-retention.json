@@ -1,7 +1,6 @@
 {
   "at": "2026-11-23T04:31:52.535411+00:00",
   "kind": "historical-native-plan-public-descriptor-retention",
-  "originalSource": "f173e4c724bf21d398ec4586f2dfde0a092f482e",
   "privateArchive": "historical20-native-plan-private-originals.zip",
   "privateArchiveBytes": 58971,
   "privateArchiveSha256": "bcd062574be4b7477f118b11dabb78a93c8e1a6ffcb03200cd4f89b13ca8c902",
@@ -13,141 +12,121 @@
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C32.json",
       "originalBytes": 6075,
       "originalSha256": "734f11730774760cfb14702ddb709d9f3039386354ab3349ab5f595cfea7f6ec",
-      "originalGitBlob": "a40b05ca3b7299ba72a7e2f5eb8b40cdc9ac773a",
-      "publicDescriptorSha256": "5a318089ad06ae29e7759b372a852225084ba0fee7ac07d6c0f413585a0249d8"
+      "publicDescriptorSha256": "54534abddb295ebc1c2c6695a23b1d6f210477f7f1c160920ff3f26d6651d221"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C33.json",
       "originalBytes": 6075,
       "originalSha256": "6335086880a05d1e17f696bba40b2f665c28cd0f63e095b679020cf68e23610a",
-      "originalGitBlob": "d3a23e9e811dcd0e4c99a88b142ee8ff964e7128",
-      "publicDescriptorSha256": "c1e4ba8ecdcc995fe1474aff796d7c73b567c66b66aaa69b54029deaac6cfb09"
+      "publicDescriptorSha256": "5317b057cc31ef7daa4eca44114f6987c947eb3f490841ba64d8e3c6fb531c4c"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C34.json",
       "originalBytes": 6075,
       "originalSha256": "0256eb177172cc4b4c33f7871dc702f8e57027cf2164dc193fb6cc2fb95b4019",
-      "originalGitBlob": "76dfba9d42b4717d1f4fbda448f91f2059f56d6b",
-      "publicDescriptorSha256": "bb0cd3fbda579112668e463cb0bed8e793000103a4b4ba363f5dd2987fea5b80"
+      "publicDescriptorSha256": "5052e9b4dc0f2f2dda1846decd5ca6bc7767376afbbfc5fd9851d0892baccbbd"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C35.json",
       "originalBytes": 6075,
       "originalSha256": "0d3cfff6b0f3b2520f462b9f482aa15c471a879e557fceb7b63949d833904643",
-      "originalGitBlob": "a185e7c92ffc450272f4494ce107156fd7bf652b",
-      "publicDescriptorSha256": "a6493051d04799b9e0353b5df35e4feae0d8209b64cb98e3973a063367fa5b19"
+      "publicDescriptorSha256": "0e098a39f7e0841e835f5d34fed030a1a47586104d1287de406cd4f0805ada48"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C32.json",
       "originalBytes": 6075,
       "originalSha256": "f3d64f632c253d4d9f7c51f25882e8070b6d84e82ce5be8672b6d461870153be",
-      "originalGitBlob": "dcf48aab27fc65ad4ba1a9fcbd71cbfe0d7c895f",
-      "publicDescriptorSha256": "040234843900b691911f1a459bfbaa9c8981b87b27e9198147166432db01475a"
+      "publicDescriptorSha256": "9fa3a82b1881fbc5be52d15edafd54ec9cb7a5ae39b125734ec3c9ed3b02ee0b"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C33.json",
       "originalBytes": 6075,
       "originalSha256": "5dfaf456bc7f9be09b99c2334751a000fb54dd1e87059230da934a3159152039",
-      "originalGitBlob": "25ece483ed3d4222675d51f7047619cb264a8fd2",
-      "publicDescriptorSha256": "cbebb2d797a8e85a429233ceba5cf8ed0887aed588aacd6dd4401491c8a5a3c9"
+      "publicDescriptorSha256": "d3760655d8c5bcaf6c555f6ace95fef1328fecde7efdfdf17e3234f34793113a"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C34.json",
       "originalBytes": 6075,
       "originalSha256": "a94c44644235302d36bfde37b3b2635a84b504f743a7409d1eec9137e986f830",
-      "originalGitBlob": "8bd831b65b18c9a94bb14606a3d2cebfad203310",
-      "publicDescriptorSha256": "c0f0becf627b3c6963d7b14854196d2bac0fb68772ea96eb756ca0c2761b2da3"
+      "publicDescriptorSha256": "9fbfa558a31606841c3f75d0451561f8ea8219b3773bd155a9033cd5071d68c6"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C35.json",
       "originalBytes": 6075,
       "originalSha256": "d5088da6c03694233d84c7add2f52bdfa2ed801d0969622834c069b15c249f7c",
-      "originalGitBlob": "c81a9792d5505facc1080a60fd3416d5802ae968",
-      "publicDescriptorSha256": "8dd628f906eca8dfff11d1362076256236f7a6c5aa04334cb64714d165da5612"
+      "publicDescriptorSha256": "e45c4d1ded6768367c08cc8f2dc9f2d4d06fa9972947be5ccdb7bb72dd599f01"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C32.json",
       "originalBytes": 6075,
       "originalSha256": "57eae549b5205c6ea52554e31699e8f23934d8fe4612896bb39c4d1bcd2a20f3",
-      "originalGitBlob": "e9dd5e318580566bf1e42204effb8b441e6324a9",
-      "publicDescriptorSha256": "71522d266ccf3e656a4fe02947ec605f7223d7d00934e55c68f7da5aab96dd0c"
+      "publicDescriptorSha256": "601019fa8dca492818d5659ce1e855dc6a6f7de3cf71d57254a599d3182f0887"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C33.json",
       "originalBytes": 6075,
       "originalSha256": "ac0003288b1900a16702b7ea668326fe2876c45d1d42343529a494f8565d9b5f",
-      "originalGitBlob": "919b4843cc03b4153dffaefb6747b20a5b6eb854",
-      "publicDescriptorSha256": "763e4d67a8b1379acc05a55cf25b3f5e79dff487a4dbfeb87f7c330c2ffc64ae"
+      "publicDescriptorSha256": "d3a9c888e6e4d860e47fae01e754a9e2b888ae53164ecb914486edd5f4b37bd2"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C34.json",
       "originalBytes": 6075,
       "originalSha256": "3e045b9d86a3dd40046badd13eb52c2fd74a4fcc15282dd6e4170da00ad0be16",
-      "originalGitBlob": "bf56399ce034f2907e64fd651f7be63cd66875fa",
-      "publicDescriptorSha256": "050558eb24f88ee6c782df8d46f547641628fc310d085f954c9ff45acfa0026e"
+      "publicDescriptorSha256": "446a3ff92bd5f4697bcd6615cc9290c72f68817baacb387ca1d2634903958ca3"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C35.json",
       "originalBytes": 6075,
       "originalSha256": "2459f555921282394652967f87f68ed4cf85345f2c9785c7ca15dba21e25ddc9",
-      "originalGitBlob": "c251953ea6828e299e471f90e48e643839c86232",
-      "publicDescriptorSha256": "20f91a804fd9cdebaa8f70390bf402b06a6bacc179b4e526dbd6935f9c7783b8"
+      "publicDescriptorSha256": "cf5a513302cb85f1182ed42ff17d0ff1350b831578518bddb4fbea78753a75fa"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C32.json",
       "originalBytes": 6075,
       "originalSha256": "8a010f27ddcfbbb38e6db0cd79429f572af0378fa451567890d4706c69e8b316",
-      "originalGitBlob": "0943971b1a2e204b71c3b7aa2e975090bd9b1875",
-      "publicDescriptorSha256": "d8d9b0280a010ef2d848f356cef5a651be24cdc9fdd3a88c498f2b339401858a"
+      "publicDescriptorSha256": "08d52d1f38de3f588601956a0df1aec09a4b499effb3f9ffc55f170e77d7a542"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C33.json",
       "originalBytes": 6075,
       "originalSha256": "897ef6410b299baf0f9e336144112c3fd1ade927c5739d2b4739f89f6537e307",
-      "originalGitBlob": "4e32f4056addc755ca17c577b5c34a77c4b4bf54",
-      "publicDescriptorSha256": "0c5ef7fb0499781c4bd2429aeb4a8cc3f309f9cea3209ae4b41b740a041433d5"
+      "publicDescriptorSha256": "63e53b013f678a12637550cc7d3c67a00f3762309b7291db16aaab1b28c8f20e"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C34.json",
       "originalBytes": 6075,
       "originalSha256": "811588031c386c3049e5c006bd6dbab97dd4e2964df49949008e1899d29f21d2",
-      "originalGitBlob": "b46c11ba3ce922fbbd734287783d93e09d035d09",
-      "publicDescriptorSha256": "7579be09751589628d7e79609dc15763cffdfe003dbbbfd486de1e08a75a974c"
+      "publicDescriptorSha256": "db52a0f78227567d02325ff2ec61f021e78fbb6812f65686c6aacd36238db803"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C35.json",
       "originalBytes": 6075,
       "originalSha256": "660c1c63a7649e3e0b0476196c5cc92f100c7e860fa5992ca8dd6a2dfe7f359d",
-      "originalGitBlob": "a52a9d71778b91677967227396f080558c66ceb8",
-      "publicDescriptorSha256": "52b6ba9aaf6c2c08303c928badf4db5f78b4c4af8d41fa455c2a3d1a6e47e20e"
+      "publicDescriptorSha256": "6c5ba8d22c6b478037c4d96ebdb6620dd0130a0dfd093cc118c27da5437ac1f6"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C32.json",
       "originalBytes": 6075,
       "originalSha256": "9e48b8103cf7c4f9c85892fd47acd66b7c97d9f7b380147d7881fba8afcbbffd",
-      "originalGitBlob": "689ba726d24cbffd9ef70f52cd69174686698977",
-      "publicDescriptorSha256": "58763fed85d361cd4ceed03790b45a78b5cbe78f2030cbcafc6b08eb04f31e3b"
+      "publicDescriptorSha256": "ab0bc44136c7c533942c8a54bc677d53ae2dcd74ba33b788097195040a4d2f85"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C33.json",
       "originalBytes": 6075,
       "originalSha256": "184327934c30de5b6ec7af24bf19bfa049adc220cf6e521197d244fa52b874cf",
-      "originalGitBlob": "ad526ce173c61a0604355ba0c8d5ab0b9d9184b4",
-      "publicDescriptorSha256": "7981d1bf5f7bf442ade2ef86bc7bcacbbdc1d80dccdc0bb29c63a2625f3f0f82"
+      "publicDescriptorSha256": "0e0eb80f6429a02610463e7d8b4be536c13db0aaa2330835cccd59ba18f87c79"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C34.json",
       "originalBytes": 6075,
       "originalSha256": "3354ad8a702292741f69c75f30c79dc3502e128fc4a04022a0fc08d39e845837",
-      "originalGitBlob": "197dc4aa6cd459f27acb4b979e9d05e637a4bd67",
-      "publicDescriptorSha256": "40bf1171fab4880a3305f46c28a65d4b0264ee3805944956eed7bede5243da70"
+      "publicDescriptorSha256": "e7e51c50d24d98d777903c8c799b1b288551af8dec84cf35c2e9a21a11b51941"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C35.json",
       "originalBytes": 6075,
       "originalSha256": "84051336de4545610d55c78a340a85f3fbeff0f0b356f73c91ca50c5521d1a74",
-      "originalGitBlob": "da0c18fdddb50e3a0a5653aec55838d182034237",
-      "publicDescriptorSha256": "6de60eb76676bd6e900ee359fa8fbb7f335a4e47f6652efddd617ba6e607eddc"
+      "publicDescriptorSha256": "613aaccad61ecf62e6216a5ac2e87bfa4279fc43508913af9feeee2bf430ab28"
     }
   ],
   "measured174Source": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
@@ -160,5 +139,19 @@
   "redactedPublicMirrorSource": "188ed25bdb2fea743a0d471a544f42c8f581bf4d",
   "githubCachedOriginalsStillPublicAtReadback": true,
   "githubPurgeStatus": "PENDING_GITHUB_SUPPORT; old raw revision HTTP200 and21 review-comment diff hunks remain; branch redaction is complete, total deletion is not claimed",
-  "historyRedactionManifest": "quality/bugbot/evidence/issue-974/controls/history-redaction.json"
+  "historyRedactionManifest": "quality/bugbot/evidence/issue-974/controls/history-redaction.json",
+  "privateHistoricalLocatorRetention": {
+    "privateOriginalsFile": "source5327-current-descriptor-original-associations-private.json",
+    "bytes": 174658,
+    "sha256": "a7158a2fd7ccbc5b2296b9e6e64c23349761c3acf0df6f07282e0d27ef955e10",
+    "gitLocatorAssociationsPublic": false
+  },
+  "currentNativeDescriptorLocatorRetention": {
+    "privateOriginalsFile": "source5327-native-descriptor-original-associations-private.json",
+    "bytes": 185695,
+    "sha256": "954ac09304e41c7f0895c8362f3e7eef9b301a6175ec1f47ea64e29f6d8ddb2b",
+    "gitLocatorAssociationsPublic": false
+  },
+  "currentDescriptorHashesUpdated": true,
+  "originalPlanBytesChanged": false
 }

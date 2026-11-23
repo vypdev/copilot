@@ -14,6 +14,13 @@ interface LiveScope {
 }
 const current = new AsyncLocalStorage<LiveScope>();
 const plans = new WeakMap<AgentExecutionPlan, LiveScope>();
+interface RuntimeCliCapture {
+  readonly live: LiveScope;
+  readonly record: (evidence: { provider: AgentExecutionPlan['provider']; protocol: AgentExecutionPlan['outputProtocol']; stdout: string }) => undefined;
+  active: boolean;
+}
+const runtimeCliCapture = new AsyncLocalStorage<RuntimeCliCapture>();
+const capturedPlans = new WeakMap<AgentExecutionPlan, RuntimeCliCapture>();
 // The bootstrap gives one complete operation its own namespace. Neither a new
 // async context nor a copied port can make that operation/namespace reusable.
 const consumedIdentities = new Set<string>();
@@ -78,6 +85,40 @@ export function bindQualificationOperationPlan(plan: AgentExecutionPlan, signal:
   requireQualificationOperationScope(signal);
   if (plans.has(plan)) throw unavailable();
   plans.set(plan, current.getStore()!);
+  const capture = runtimeCliCapture.getStore();
+  if (capture && capture.active && capture.live === current.getStore()) capturedPlans.set(plan, capture);
+}
+
+/** Private runtime-control evidence only: no request field, environment switch or JSON grants this capture. */
+export async function withQualificationRuntimeCliEvidence<T>(signal: AbortSignal,
+  record: RuntimeCliCapture['record'], execute: () => Promise<T>): Promise<T> {
+  requireQualificationOperationScope(signal);
+  const live = current.getStore()!;
+  if (live.port.identity.purpose !== 'runtime-admission' || runtimeCliCapture.getStore()
+    || typeof record !== 'function') throw unavailable();
+  const capture: RuntimeCliCapture = { live, record, active: true };
+  try { return await runtimeCliCapture.run(capture, execute); }
+  finally { capture.active = false; }
+}
+
+/** Select framing before any version probe; ordinary purposes retain their existing protocol. */
+export function qualificationRuntimeCliEvidenceMode(signal: AbortSignal): boolean {
+  requireQualificationOperationScope(signal);
+  const live = current.getStore()!;
+  if (live.port.identity.purpose !== 'runtime-admission') return false;
+  const capture = runtimeCliCapture.getStore();
+  if (!capture?.active || capture.live !== live) throw unavailable();
+  return true;
+}
+
+/** Called on actual successful child close, before decoding model text. Critical recording cannot be swallowed. */
+export function recordQualificationRuntimeCliEvidence(plan: AgentExecutionPlan, signal: AbortSignal | undefined, stdout: string): void {
+  const live = plans.get(plan);
+  if (!matchesPlan(live, signal) || live.stopping) throw unavailable();
+  if (live.port.identity.purpose !== 'runtime-admission') return;
+  const capture = capturedPlans.get(plan);
+  if (!capture?.active || capture.live !== live || plan.provider !== 'codex' || plan.outputProtocol !== 'codex-json-events') throw unavailable();
+  if (capture.record({ provider: plan.provider, protocol: plan.outputProtocol, stdout }) !== undefined) throw unavailable();
 }
 
 export function hasQualificationOperationPlan(plan: AgentExecutionPlan, signal?: AbortSignal): boolean {

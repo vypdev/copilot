@@ -205,6 +205,18 @@ function publicBootstrapFixture(t, moduleFence = false, containment) {
     return { project, directory, marker, probe, bootstrap, prefix, launch, write };
 }
 
+test('ev974-C13 non-v2 containment rejects before an unadmitted containment helper can execute', t => {
+    const f = publicBootstrapFixture(t, false, p => { p.schemaVersion = 1; });
+    const sentinel = path.join(f.directory, 'unadmitted-helper-entered');
+    const helper = path.join(f.project, f.prefix, '../issue974/operation-containment.cjs');
+    fs.writeFileSync(helper, `require('node:fs').writeFileSync(${JSON.stringify(sentinel)}, 'unadmitted helper executed');\n`
+        + fs.readFileSync(helper, 'utf8'));
+    const result = f.launch();
+    assert(!fs.existsSync(sentinel), 'unadmitted containment helper executed before rejection');
+    assert.notEqual(result.status, 0);
+    assert(!fs.existsSync(f.marker) && !fs.existsSync(f.probe));
+});
+
 test('ev974-C13 actual v2 public bootstrap rejects foreign source/runtime before modules and probes', t => {
     const f = publicBootstrapFixture(t), valid = f.launch(); assert.equal(valid.status, 0, valid.stderr);
     assert(fs.existsSync(f.marker) && fs.existsSync(f.probe)); fs.rmSync(f.marker); fs.rmSync(f.probe);
@@ -227,7 +239,7 @@ function containmentProfile() {
 test('ev974-C26 actual public bootstrap refuses runtime plans as scientific entries before application imports', t => {
     const f = publicBootstrapFixture(t, false, p => {
         p.purpose = 'runtime-admission';
-        p.runtimeAdmission = { schemaVersion: 1, fixtureSha256: require('./sdk-runtime-admission.cjs').fixtureSha256 };
+        p.runtimeAdmission = { schemaVersion: 2, fixtureSha256: require('./sdk-runtime-admission.cjs').fixtureSha256 };
     });
     for (const mode of ['corpus', 'full-review', 'full-review-runner', 'normal-flow']) {
         const result = f.launch(mode); assert.notEqual(result.status, 0);

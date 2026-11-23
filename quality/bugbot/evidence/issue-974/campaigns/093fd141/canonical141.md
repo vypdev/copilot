@@ -16,3 +16,8 @@ The42 reviews remain UNSTARTED_NOT_ADMITTED; qualified profiles NONE, pilot
 write attempts0 and production disabled. Operational corrections do not repeat
 or relabel that measurement. The [live canonical index](https://github.com/vypdev/copilot/issues/950#issuecomment-7015916845)
 tracks subsequent source, review, installation and external pending work.
+
+Machine readers can resolve the immutable receipt's original relative path via
+[the current artifact locator map](../../controls/artifact-locators.json). The
+receipt and historical bytes remain unchanged; the map grants no new evidence
+or execution authority.

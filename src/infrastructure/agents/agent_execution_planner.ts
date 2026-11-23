@@ -32,7 +32,7 @@ import { SddSourceContextFailure, type AgentSourceSnapshot } from '../../domain/
 import { prepareSourceSnapshotWorkspace } from './agent_source_snapshot_workspace';
 import { createPrivateAgentExecutionRoot } from './agent_private_install_root';
 import { admitQualificationInvestigationPlan } from './qualification_investigation_admission';
-import { requireQualificationOperationScope } from './qualification_operation_scope';
+import { qualificationRuntimeCliEvidenceMode, requireQualificationOperationScope } from './qualification_operation_scope';
 
 export interface AgentExecutionPlanningRequest {
     readonly configuration: AgentConfiguration;
@@ -99,7 +99,11 @@ export class AgentExecutionPlanner {
         if (request.signal.aborted) throw new AgentCliError('Agent CLI execution was cancelled.', 'cancelled');
         try { requireQualificationOperationScope(request.signal); }
         catch { throw new AgentCliError('Qualification investigation requires its exact live owned operation scope.', 'configuration'); }
-        const plan = this.preparePlan(request);
+        const runtimeToolEvidence = qualificationRuntimeCliEvidenceMode(request.signal);
+        if (runtimeToolEvidence && request.configuration.provider !== 'codex') {
+            throw new AgentCliError('Runtime tool evidence requires the admitted Codex provider.', 'configuration');
+        }
+        const plan = this.preparePlan(request, undefined, runtimeToolEvidence);
         try {
             return admitQualificationInvestigationPlan({ ...plan, qualificationInvestigation: true }, request.signal);
         } catch (error) {
@@ -116,7 +120,7 @@ export class AgentExecutionPlanner {
         return this.preparePlan(request, workspace);
     }
 
-    private preparePlan(request: AgentExecutionPlanningRequest, brokeredWorkspace?: string): AgentExecutionPlan {
+    private preparePlan(request: AgentExecutionPlanningRequest, brokeredWorkspace?: string, runtimeToolEvidence = false): AgentExecutionPlan {
         const startedAt = performance.now();
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
@@ -180,6 +184,7 @@ export class AgentExecutionPlanner {
                 runtimeDirectory,
                 ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
                 ...(brokeredWorkspace ? { brokeredVerification: true as const } : {}),
+                ...(runtimeToolEvidence ? { runtimeToolEvidence: true as const } : {}),
             });
             stage = 'artifacts';
             const artifacts = materializeArtifacts([
