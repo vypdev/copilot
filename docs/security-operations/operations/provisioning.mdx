@@ -226,3 +226,12 @@ does not consume the operation's scan. Closed, duplicate, foreign or base-moved
 results remain blocked; an unterminated provider response still cannot prove
 absence or authorize another POST. Keep the existing operation/receipt for
 inspection rather than starting a new operation to bypass uncertain effects.
+
+
+When no exact owned PR is found, setup checks open operation-marker claims on
+all heads before creating one. Both reads share ten requests of100results; an
+exhausted, malformed or incomplete scan stays unknown and blocks the write.
+Reconcile a conflicting marker and retry inspection; do not erase retained
+intent or approve an old preview. An existing independently verified exact PR
+can be recovered without creating another one. Cancellation and freshness are
+checked again after that inspection and immediately before POST.

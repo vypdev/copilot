@@ -60358,8 +60358,8 @@ function validRepositoryAgentWorkflowFact(value, kind, formsEnabled, issueManage
         return false;
     const definition = issue_workflow_profile_1.ISSUE_WORKFLOW_CATALOG[kind];
     return (formsEnabled ? value.template === definition.formFile : value.template === null)
-        && isStringArray(value.labels) && value.labels.every(isNonEmptyString)
-        && isStringArray(value.formLabels) && value.formLabels.every(isNonEmptyString)
+        && isStringArray(value.labels) && value.labels.length === definition.labels.length && value.labels.every(isNonEmptyString)
+        && isStringArray(value.formLabels) && value.formLabels.length === definition.labels.length + 1 && value.formLabels.every(isNonEmptyString)
         && value.nativeIssueType === definition.nativeIssueType
         && value.createsManagedBranch === (definition.branchManaged && issueManagedBranches)
         && (definition.branchManaged ? isNonEmptyString(value.branchPrefix) : value.branchPrefix === null)
@@ -60367,6 +60367,7 @@ function validRepositoryAgentWorkflowFact(value, kind, formsEnabled, issueManage
         && value.requiredFields.length === definition.requiredHeadings.length
         && value.requiredFields.every(issue_workflow_field_mapping_1.isIssueFieldHeading)
         && (0, issue_workflow_body_1.distinctIssueWorkflowHeadings)(value.requiredFields)
+        && ((kind === 'hotfix' || kind === 'release') || value.workflow === null)
         && (value.workflow === null || isNonEmptyString(value.workflow));
 }
 function isRecord(value) {
@@ -126936,7 +126937,7 @@ class SetupInstallationGithubDeliveryAdapter {
         if (await this.branchSha() !== commit)
             throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
         await this.assertPrepared(commit);
-        let number = await this.inspectPullRequest(commit);
+        let number = await this.inspectPullRequest(commit, !inspectOnly);
         if (!number) {
             if (inspectOnly)
                 throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
@@ -127041,7 +127042,7 @@ class SetupInstallationGithubDeliveryAdapter {
             throw error;
         }
     }
-    async inspectPullRequest(commit) {
+    async inspectPullRequest(commit, beforeCreate = false) {
         let match;
         const branch = (0, setup_batch_policy_1.setupBatchBranch)(this.plan.operationId);
         for (let page = 1; page <= 10; page += 1) {
@@ -127064,10 +127065,36 @@ class SetupInstallationGithubDeliveryAdapter {
                     throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
                 match = pull.number;
             }
-            if (response.length < 100)
+            if (response.length < 100) {
+                // A scoped absence cannot rule out this operation's marker on another
+                // head. Before a new write, inspect open claims with the SAME remaining
+                // ten-request budget; exhausted or incomplete evidence stays unknown.
+                if (match === undefined && beforeCreate)
+                    await this.assertNoOpenOperationClaim(10 - page);
                 return match;
+            }
         }
         throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+    }
+    async assertNoOpenOperationClaim(maximumPages) {
+        const seen = new Set(), marker = (0, setup_batch_policy_1.setupBatchMarker)(this.plan.operationId, this.plan.target.id);
+        for (let page = 1; page <= maximumPages; page += 1) {
+            const response = await this.call('GET /repos/{owner}/{repo}/pulls', { state: 'open', per_page: 100, page });
+            if (!Array.isArray(response) || response.length > 100)
+                throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+            for (const value of response) {
+                const pull = (0, setup_batch_github_read_adapter_1.batchObject)(value);
+                if (!(0, setup_batch_github_read_adapter_1.batchPositive)(pull?.number) || seen.has(pull.number) || pull.state !== 'open'
+                    || !(pull.body === null || typeof pull.body === 'string'))
+                    throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('malformed');
+                seen.add(pull.number);
+                if (typeof pull.body === 'string' && pull.body.includes(marker))
+                    throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
+            }
+            if (response.length < 100)
+                return;
+        }
+        throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
     }
     /** GitHub recommends complete non-recursive reads when recursive trees truncate. */
     async assertTrees(baseSha, preparedSha) {

@@ -3020,6 +3020,10 @@
         {
           "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
           "test": "publisher independently read snapshot admission publisher977-C21 blocks a changed or unavailable destination: base"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C114: authenticated ref SHA drift with the same default branch rejects the stale proposal"
         }
       ]
     },
@@ -3160,6 +3164,130 @@
         {
           "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
           "test": "actual shared Git delivery composition with controlled provider publisher977-C119: scoped recovery beyond1000 unrelated PRs preserves foreign repository identity checks"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C120",
+      "area": "Pure/installed profile compatibility",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Only generator-supported routing cardinalities and workflow kinds are compatible, retaining custom label values and supported workflow names.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects labels routing cardinality empty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects labels routing cardinality short"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects labels routing cardinality extra"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects formLabels routing cardinality empty"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects formLabels routing cardinality short"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects formLabels routing cardinality extra"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects an unsupported workflow name for feature"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects an unsupported workflow name for bugfix"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects an unsupported workflow name for documentation"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects an unsupported workflow name for chore"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: rejects an unsupported workflow name for help"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C120: preserves custom routing values and supported hotfix/release workflow names"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C121",
+      "area": "Runtime/recovery and cancellation",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "A new PR requires complete open-marker conflict absence within the original shared ten-query budget; malformed, exhausted, cancelled or stale reads cannot authorize POST.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: incomplete full bounded inventory cannot authorize a new PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: incomplete missing marker text cannot authorize a new PR"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: complete unrelated open operations do not block one owned PR creation"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: a complete null-body open PR does not invent a marker conflict"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: scoped reads cannot reset the shared ten-query absence budget"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: not an array"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: too many rows"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: null row"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: duplicate number"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: closed row"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: rejects malformed open-claim evidence: non-text body"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: cancellation during open-claim inspection prevents POST"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C121: stale snapshot during open-claim inspection prevents POST"
         }
       ]
     }

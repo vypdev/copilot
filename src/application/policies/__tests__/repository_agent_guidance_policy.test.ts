@@ -13,6 +13,32 @@ import {
 } from '../repository_agent_guidance_policy';
 
 describe('repository agent guidance policy', () => {
+  it.each([
+    ['labels', 'empty'], ['labels', 'short'], ['labels', 'extra'],
+    ['formLabels', 'empty'], ['formLabels', 'short'], ['formLabels', 'extra'],
+  ] as const)('publisher977-C120: rejects %s routing cardinality %s', (field, change) => {
+    const profile = structuredClone(buildRepositoryAgentProfile(createDefaultSetupConfiguration()));
+    const fact = profile.issueWorkflows.forms.feature!;
+    (fact as unknown as Record<string, unknown>)[field] = change === 'empty' ? []
+      : change === 'short' ? fact[field].slice(1) : [...fact[field], 'Extra routing label'];
+    expect(validRepositoryAgentProfile(JSON.stringify(profile))).toBe(false);
+  });
+  it.each(['feature', 'bugfix', 'documentation', 'chore', 'help'] as const)(
+    'publisher977-C120: rejects an unsupported workflow name for %s', kind => {
+      const profile = structuredClone(buildRepositoryAgentProfile(createDefaultSetupConfiguration()));
+      (profile.issueWorkflows.forms[kind] as { workflow: string | null }).workflow = 'invented-workflow.yml';
+      expect(validRepositoryAgentProfile(JSON.stringify(profile))).toBe(false);
+    });
+  it('publisher977-C120: preserves custom routing values and supported hotfix/release workflow names', () => {
+    const profile = structuredClone(buildRepositoryAgentProfile(createDefaultSetupConfiguration()));
+    for (const kind of profile.issueWorkflows.enabled) {
+      const fact = profile.issueWorkflows.forms[kind]!;
+      (fact as { labels: readonly string[] }).labels = fact.labels.map((_, index) => `Custom routing ${index}`);
+      (fact as { formLabels: readonly string[] }).formLabels = fact.formLabels.map((_, index) => `Custom form ${index}`);
+      if (kind === 'hotfix' || kind === 'release') (fact as { workflow: string | null }).workflow = `custom-${kind}.yml`;
+    }
+    expect(validRepositoryAgentProfile(JSON.stringify(profile))).toBe(true);
+  });
   it('publisher977-C111: installed required headings obey the configured single-line UTF-8 constraints', () => {
     const profile = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
     const withHeading = (heading: string) => JSON.stringify({ ...profile,

@@ -1676,3 +1676,90 @@ architecture, normal hooks, extracted-package and fresh final-head native gates.
 Traceability: C44/C119 -> G03/G04 -> shared Git delivery adapter -> retained
 operation recovery documentation. This source correction establishes no actual
 installation, native runtime qualification or new174/42/model campaign.
+
+
+### Round20: generated profile facts and conflict absence before a new PR
+
+The installed profile must preserve the generator-supported cardinalities: each
+kind has exactly its catalog routing-label count, and form labels add exactly
+one priority label. Custom nonempty label values remain supported. Feature,
+bugfix, documentation, chore and help have no named workflow (`workflow:null`);
+only hotfix/release may carry nullable or configured nonempty workflow names.
+This shared pure validation governs doctor and publisher compatibility. Invalid
+installed facts use the existing compatibility warning; reconcile the profile
+and guidance through the reviewed setup route before retrying. No new option,
+profile field, credential grant or fallback is introduced.
+
+A head-scoped empty PR lookup is insufficient authority for a new PR. Reuse of
+an independently verified exact owned PR stays scoped and creates no new PR.
+Before creating a missing PR, the common delivery adapter must also inspect all
+open PR bodies for this operation marker, regardless of head. A matching marker
+(including a human/foreign/missing head), malformed row, repeated number,
+unterminated page set or exhausted budget blocks before POST. This applies to
+both ordinary batch and publisher delivery. Unrelated complete open operations
+and null bodies do not invent conflicts. Closed unrelated history does not
+consume the open-claim scan. An unknown result is retained, never replayed as
+absence.
+
+Both pre-write lookups share the existing maximum of **ten requests**, with
+**100 rows per request** and at most1000 inspected rows. The open scan uses only
+the requests remaining after the exact lookup; it never resets or increases
+the ceiling. Complete exact recovery remains possible beyond1000 unrelated
+historical PRs. A new PR can remain blocked when unrelated open history exceeds
+the remaining bounded scan. Current session, cancellation, branch identity and
+snapshot freshness are checked again before the single POST. Post-response
+recovery keeps the existing independently bounded exact lookup and no-replay
+contract. No endpoint search index, caller allowlist or UNKNOWN override grants
+absence authority.
+
+```mermaid
+flowchart LR
+  A[Exact operation-head lookup] --> B{Owned exact PR?}
+  B -->|yes| C[Verify identity and reuse]
+  B -->|no| D{Inspection only?}
+  D -->|yes| E[Retain unknown]
+  D -->|no| F[Open-marker scan within remaining budget]
+  F -->|conflict or incomplete| E
+  F -->|complete absence| G[Fresh session and cancellation fence]
+  G --> H[One POST and exact recovery]
+```
+
+The textual flow is exact recovery first; a missing operation requires complete
+open-marker absence within the same budget and fresh authority before one POST.
+Otherwise it remains blocked. Operator guidance continues to show retained
+effects and inspection/reconciliation, never installation completion.
+
+Evidence strengthens the existing C34 and C114 contracts. C34's mapped journal
+load/resume body now includes schemaVersion3, in addition to legacy1, another
+purpose and malformed data, and must reject before inspection/preview. C114
+retains its original pure assertion and adds actual authenticated read-adapter
+plus planner composition: a coherent new provider commit SHA with the SAME
+default branch rejects the stale proposal. The control first plans a valid
+baseline, then changes only that authenticated ref identity. Its extra evidence
+object is appended; no historical evidence is removed or reclassified.
+
+**Additional numeric budget:** C120 has12 policy cases (six routing-cardinality
+negatives, five unsupported-kind workflow negatives and one custom-value
+positive). C121 has13 new runtime cases for incomplete/malformed/duplicate
+open-claim data, shared-budget exhaustion, cancellation/staleness and legitimate
+creation; existing C89's three foreign-marker bodies now model the provider's
+head filter. C34 adds one future-journal input and C114 one authenticated ref
+composition assertion. Existing119 IDs are retained; only C114 appends required
+evidence. The cumulative gate is **121 IDs/117 mapped Jest plus four extracted
+package cases**, preserving the selected64-case companion and every old
+evidence entry. Six pure modules retain100% coverage,20 runtime modules retain
+95/90 floors; no threshold, request limit or retry allowance increases.
+
+| Case | Area | Requirements | Observable acceptance |
+|---|---|---|---|
+| publisher977-C120 | Pure/installed profile compatibility | PU977-G01, PU977-G07 | Only generator-supported routing cardinalities and workflow kinds are compatible, retaining custom label values and supported workflow names. |
+| publisher977-C121 | Runtime/recovery and cancellation | PU977-G04, PU977-G07 | A new PR requires complete open-marker conflict absence within the original shared ten-query budget; malformed, exhausted, cancelled or stale reads cannot authorize POST. |
+
+Required documentation: provisioning/recovery explains the shared bounded open
+scan, and installed-guidance troubleshooting explains cardinalities and supported
+workflow kinds. Definition of Done: full121/117 mapping, coherent execution,
+unchanged coverage floors, documentation/specification/catalog/workflow checks,
+Graphify, build/extracted-package smoke, normal hooks/audit and final-head native
+CI/review with all valid findings addressed. Merge and an installation preview
+remain distinct; installation still requires its specific authorization. The
+original174 negative and inadmissible42 remain unchanged.

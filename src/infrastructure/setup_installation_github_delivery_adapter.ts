@@ -84,7 +84,7 @@ export class SetupInstallationGithubDeliveryAdapter {
   async pullRequest(commit: string, inspectOnly = false): Promise<number> {
     if (await this.branchSha() !== commit) throw new SetupBatchProviderError('unknown');
     await this.assertPrepared(commit);
-    let number = await this.inspectPullRequest(commit);
+    let number = await this.inspectPullRequest(commit, !inspectOnly);
     if (!number) {
       if (inspectOnly) throw new SetupBatchProviderError('unknown');
       await this.fresh();
@@ -161,7 +161,7 @@ export class SetupInstallationGithubDeliveryAdapter {
       return value;
     } catch (error) { if (error instanceof SetupBatchProviderError && error.code === 'not-found') return undefined; throw error; }
   }
-  private async inspectPullRequest(commit: string): Promise<number | undefined> {
+  private async inspectPullRequest(commit: string, beforeCreate = false): Promise<number | undefined> {
     let match: number | undefined;
     const branch = setupBatchBranch(this.plan.operationId);
     for (let page = 1; page <= 10; page += 1) {
@@ -181,9 +181,31 @@ export class SetupInstallationGithubDeliveryAdapter {
           || match !== undefined) throw new SetupBatchProviderError('unknown');
         match = pull.number;
       }
-      if (response.length < 100) return match;
+      if (response.length < 100) {
+        // A scoped absence cannot rule out this operation's marker on another
+        // head. Before a new write, inspect open claims with the SAME remaining
+        // ten-request budget; exhausted or incomplete evidence stays unknown.
+        if (match === undefined && beforeCreate) await this.assertNoOpenOperationClaim(10 - page);
+        return match;
+      }
     }
     throw new SetupBatchProviderError('malformed');
+  }
+  private async assertNoOpenOperationClaim(maximumPages: number): Promise<void> {
+    const seen = new Set<number>(), marker = setupBatchMarker(this.plan.operationId, this.plan.target.id);
+    for (let page = 1; page <= maximumPages; page += 1) {
+      const response = await this.call('GET /repos/{owner}/{repo}/pulls', { state: 'open', per_page: 100, page });
+      if (!Array.isArray(response) || response.length > 100) throw new SetupBatchProviderError('malformed');
+      for (const value of response) {
+        const pull = batchObject(value);
+        if (!batchPositive(pull?.number) || seen.has(pull.number) || pull.state !== 'open'
+          || !(pull.body === null || typeof pull.body === 'string')) throw new SetupBatchProviderError('malformed');
+        seen.add(pull.number);
+        if (typeof pull.body === 'string' && pull.body.includes(marker)) throw new SetupBatchProviderError('unknown');
+      }
+      if (response.length < 100) return;
+    }
+    throw new SetupBatchProviderError('unknown');
   }
   /** GitHub recommends complete non-recursive reads when recursive trees truncate. */
   private async assertTrees(baseSha: string, preparedSha: string): Promise<void> {

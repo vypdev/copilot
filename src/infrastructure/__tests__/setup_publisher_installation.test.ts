@@ -11,7 +11,7 @@ import { SetupInstallationGithubDeliveryAdapter } from '../setup_installation_gi
 import { setupInstallationTreeFixture } from './fixtures/setup_installation_tree_fixture';
 import { setupBatchBranch, setupBatchMarker } from '../../application/policies/setup_batch_policy';
 import { SetupBatchProviderError } from '../setup_batch_github_read_adapter';
-import { SetupInstallationSnapshotChanged } from '../../application/ports/setup_installation_delivery_ports';
+import { SetupInstallationDeliveryCancelled, SetupInstallationSnapshotChanged } from '../../application/ports/setup_installation_delivery_ports';
 import type { SetupInstallationDeliveryPlan } from '../../application/contracts/setup_installation_delivery';
 import { SETUP_PUBLISHER_WORKFLOW_PATH } from '../../domain/setup_publisher_installation';
 import { parseSetupPublisherOperation } from '../../application/policies/setup_publisher_installation_policy';
@@ -126,7 +126,8 @@ function deliveryFixture(publisherInstalled = false) {
     else if (route === 'GET /repos/{owner}/{repo}/git/ref/{ref}') {
       if (!branch) throw new SetupBatchProviderError('not-found'); data = { object: { sha: branch } };
     } else if (route === 'POST /repos/{owner}/{repo}/git/refs') { branch = String(parameters.sha); data = {}; }
-    else if (route === 'GET /repos/{owner}/{repo}/pulls') data = pulls;
+    else if (route === 'GET /repos/{owner}/{repo}/pulls') data = parameters.state === 'open'
+      ? pulls.filter(pull => (pull as { state?: unknown } | null)?.state !== 'closed') : pulls;
     else if (route === 'POST /repos/{owner}/{repo}/pulls') { const created = pull(); pulls = [...pulls, created]; data = created; }
     else throw new Error('Unexpected fixed file-delivery route');
     return transform(route, data, parameters);
@@ -162,9 +163,77 @@ describe('actual shared Git delivery composition with controlled provider', () =
     const f = deliveryFixture(); f.setBranch(f.commit);
     f.setPulls([{ ...f.pull(), head: kind === 'missing head' ? undefined
       : { ...f.pull().head, ref: kind === 'human ref' ? 'human/work' : setupBatchBranch(otherOperation) } }]);
+    f.transform((route, data, parameters) => route === 'GET /repos/{owner}/{repo}/pulls' && typeof parameters.head === 'string'
+      ? (data as ReturnType<typeof f.pull>[]).filter(pull => `${f.plan.target.owner}:${pull.head?.ref}` === parameters.head) : data);
     await expect(f.writer.pullRequest(f.commit)).rejects.toThrow('unknown');
     expect(f.posts()).toEqual([]);
   });
+  it.each(['full bounded inventory', 'missing marker text'] as const)(
+    'publisher977-C121: incomplete %s cannot authorize a new PR', async kind => {
+      const f = deliveryFixture(); f.setBranch(f.commit);
+      f.transform((route, data, parameters) => {
+        if (route !== 'GET /repos/{owner}/{repo}/pulls') return data;
+        if (typeof parameters.head === 'string') return [];
+        return kind === 'missing marker text' ? [{ number: 100, state: 'open' }]
+          : Array.from({ length: 100 }, (_, n) => ({ number: 100 * Number(parameters.page) + n,
+            state: 'open', body: 'Unrelated human discussion.' }));
+      });
+      await expect(f.writer.pullRequest(f.commit)).rejects.toBeDefined();
+      expect(f.posts()).toEqual([]);
+      const reads = f.transport.call.mock.calls.filter(([, route]) => route === 'GET /repos/{owner}/{repo}/pulls');
+      expect(reads.length).toBeLessThanOrEqual(10);
+    });
+  it('publisher977-C121: complete unrelated open operations do not block one owned PR creation', async () => {
+    const f = deliveryFixture(); f.setBranch(f.commit);
+    f.setPulls([{ ...f.pull(), number: 91, body: setupBatchMarker(otherOperation, 42),
+      head: { ...f.pull().head, ref: setupBatchBranch(otherOperation) } }]);
+    f.transform((route, data, parameters) => route === 'GET /repos/{owner}/{repo}/pulls' && typeof parameters.head === 'string'
+      ? (data as ReturnType<typeof f.pull>[]).filter(pull => `${f.plan.target.owner}:${pull.head?.ref}` === parameters.head) : data);
+    await expect(f.writer.pullRequest(f.commit)).resolves.toBe(73);
+    expect(f.posts().map(([, route]) => route)).toEqual(['POST /repos/{owner}/{repo}/pulls']);
+  });
+  it.each(['not an array', 'too many rows', 'null row', 'duplicate number', 'closed row', 'non-text body'] as const)(
+    'publisher977-C121: rejects malformed open-claim evidence: %s', async kind => {
+      const f = deliveryFixture(); f.setBranch(f.commit);
+      const row = { number: 100, state: 'open', body: null };
+      const response = kind === 'not an array' ? null : kind === 'too many rows'
+        ? Array.from({ length: 101 }, (_, n) => ({ ...row, number: n + 100 })) : kind === 'null row' ? [null]
+          : kind === 'duplicate number' ? [row, row] : kind === 'closed row' ? [{ ...row, state: 'closed' }]
+            : [{ ...row, body: 42 }];
+      f.transform((route, data, p) => route !== 'GET /repos/{owner}/{repo}/pulls' ? data
+        : typeof p.head === 'string' ? [] : response);
+      await expect(f.writer.pullRequest(f.commit)).rejects.toThrow('malformed'); expect(f.posts()).toEqual([]);
+    });
+  it('publisher977-C121: a complete null-body open PR does not invent a marker conflict', async () => {
+    const f = deliveryFixture(); f.setBranch(f.commit); f.setPulls([{ number: 91, state: 'open', body: null }]);
+    f.transform((route, data, p) => route === 'GET /repos/{owner}/{repo}/pulls' && typeof p.head === 'string'
+      ? (data as ReturnType<typeof f.pull>[]).filter(pull => pull.head?.ref === setupBatchBranch(operation.operationId)) : data);
+    await expect(f.writer.pullRequest(f.commit)).resolves.toBe(73); expect(f.posts()).toHaveLength(1);
+  });
+  it('publisher977-C121: scoped reads cannot reset the shared ten-query absence budget', async () => {
+    const f = deliveryFixture(); f.setBranch(f.commit);
+    f.transform((route, data, p) => route !== 'GET /repos/{owner}/{repo}/pulls' ? data : Number(p.page) === 10 ? []
+      : Array.from({ length: 100 }, (_, n) => ({ number: 100 * Number(p.page) + n, state: 'closed',
+        body: '', head: { ref: 'unrelated/history' } })));
+    await expect(f.writer.pullRequest(f.commit)).rejects.toThrow('unknown');
+    const reads = f.transport.call.mock.calls.filter(([, route]) => route === 'GET /repos/{owner}/{repo}/pulls');
+    expect(reads).toHaveLength(10); expect(reads.every(([, , p]) => typeof p.head === 'string')).toBe(true);
+    expect(f.posts()).toEqual([]);
+  });
+  it.each(['cancellation', 'stale snapshot'] as const)(
+    'publisher977-C121: %s during open-claim inspection prevents POST', async kind => {
+      const f = deliveryFixture(); f.setBranch(f.commit); let active = true;
+      const writer = new SetupInstallationGithubDeliveryAdapter(f.transport, f.plan, 'private-fixture-token', f.fresh, () => active);
+      f.transform((route, data, p) => {
+        if (route === 'GET /repos/{owner}/{repo}/pulls' && p.state === 'open') {
+          if (kind === 'cancellation') active = false; else f.fresh.mockResolvedValue(false);
+        }
+        return data;
+      });
+      await expect(writer.pullRequest(f.commit)).rejects.toBeInstanceOf(kind === 'cancellation'
+        ? SetupInstallationDeliveryCancelled : SetupInstallationSnapshotChanged);
+      expect(f.posts()).toEqual([]);
+    });
   it.each(['exact', 'missing', 'duplicate', 'foreign', 'unterminated'] as const)(
     'publisher977-C44: complete PR pagination handles %s evidence without creating a duplicate', async outcome => {
       const f = deliveryFixture(); f.setBranch(f.commit);

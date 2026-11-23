@@ -321,3 +321,12 @@ The selected64-case baseline and all118 prior objects remain exact. Recovery
 queries the exact operation owner/head across all states while preserving the
 100/page,10-page bound and all conflict/no-replay checks. See
 [Round19](review-round19/README.md); source controls are not installation.
+
+
+## Current Round20 work
+
+Parent8026 native CI/Commit/Verification pass; its complete28-partition review
+adds five observations. Local correction validates generated profile facts and
+proves open-marker conflict absence before a new PR within the same ten-query
+budget. Existing C34/C114 evidence is strengthened; current floor121IDs/117mapped
+plus four package cases. Delivery/native gates are not claimed before execution.

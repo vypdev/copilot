@@ -361,8 +361,8 @@ function validRepositoryAgentWorkflowFact(
   ])) return false;
   const definition = ISSUE_WORKFLOW_CATALOG[kind];
   return (formsEnabled ? value.template === definition.formFile : value.template === null)
-    && isStringArray(value.labels) && value.labels.every(isNonEmptyString)
-    && isStringArray(value.formLabels) && value.formLabels.every(isNonEmptyString)
+    && isStringArray(value.labels) && value.labels.length === definition.labels.length && value.labels.every(isNonEmptyString)
+    && isStringArray(value.formLabels) && value.formLabels.length === definition.labels.length + 1 && value.formLabels.every(isNonEmptyString)
     && value.nativeIssueType === definition.nativeIssueType
     && value.createsManagedBranch === (definition.branchManaged && issueManagedBranches)
     && (definition.branchManaged ? isNonEmptyString(value.branchPrefix) : value.branchPrefix === null)
@@ -370,6 +370,7 @@ function validRepositoryAgentWorkflowFact(
     && value.requiredFields.length === definition.requiredHeadings.length
     && value.requiredFields.every(isIssueFieldHeading)
     && distinctIssueWorkflowHeadings(value.requiredFields)
+    && ((kind === 'hotfix' || kind === 'release') || value.workflow === null)
     && (value.workflow === null || isNonEmptyString(value.workflow));
 }
 

@@ -53,7 +53,7 @@ it.each([{ operationId: 'bad' }, { dryRun: undefined }, { resume: 'yes' }, { pro
   const f = fixture(); await expect(f.useCase.execute({ proposal: f.proposal, operationId: id, dryRun: true, resume: false, ...change } as Parameters<InstallSetupPublisherUseCase['execute']>[0])).rejects.toMatchObject({ reason: 'invalid' });
   expect(f.load).not.toHaveBeenCalled(); expect(f.inspect).not.toHaveBeenCalled();
 });
-it.each([{ schemaVersion: 1 }, { purpose: 'another-purpose' }, { extra: true }])('rejects legacy, cross-purpose and malformed retained records before preview', async change => {
+it.each([{ schemaVersion: 1 }, { schemaVersion: 3 }, { purpose: 'another-purpose' }, { extra: true }])('rejects legacy, cross-purpose and malformed retained records before preview', async change => {
   const f = fixture(); f.load.mockResolvedValue({ ...f.retained, ...change } as SetupPublisherOperation);
   await expect(f.execute(true)).rejects.toMatchObject({ reason: 'journal' }); expect(f.inspect).not.toHaveBeenCalled();
 });

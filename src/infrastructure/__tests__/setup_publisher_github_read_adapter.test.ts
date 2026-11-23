@@ -96,6 +96,30 @@ it('reports actual default drift rather than copying the proposal head into insp
   const snapshot = await f.reader.inspect(f.proposal); expect(snapshot.inspection.target.defaultBranch).toBe('new-main');
   expect(() => planSetupPublisherInstallation(f.proposal, snapshot.inspection, operation)).toThrow('destination-changed');
 });
+it('publisher977-C114: authenticated ref SHA drift with the same default branch rejects the stale proposal', async () => {
+  const f = fixture(), original = f.request.getMockImplementation()!;
+  // The provider returns a coherent new commit with the same file tree. Only
+  // the authenticated ref identity changes; the proposal remains pinned.
+  f.request.mockImplementation(async (route, parameters) => {
+    const result = await original(route, parameters);
+    return parameters.owner === 'owner' && route.endsWith('/git/commits/{commit_sha}')
+      ? { ...result, data: { ...(result.data as Record<string, unknown>), sha: parameters.commit_sha } } : result;
+  });
+  const before = await f.reader.inspect(f.proposal);
+  f.proposal.source.actionManifestSha256 = before.inspection.source.actionManifestSha256;
+  f.proposal.source.actionBundleSha256 = before.inspection.source.actionBundleSha256;
+  expect(planSetupPublisherInstallation(f.proposal, before.inspection, operation).status).toBe('review');
+  const changed = 'd'.repeat(40); expect(changed).not.toBe(f.proposal.destination.head);
+  f.ref.object = { type: 'commit', sha: changed };
+  const after = await f.reader.inspect(f.proposal);
+  expect(after.inspection.target.defaultBranch).toBe(before.inspection.target.defaultBranch);
+  expect(after.inspection.target.baseSha).toBe(changed);
+  expect(f.proposal.destination.head).toBe(before.inspection.target.baseSha);
+  expect(f.request.mock.calls).toContainEqual(['GET /repos/{owner}/{repo}/git/commits/{commit_sha}',
+    expect.objectContaining({ owner: 'owner', commit_sha: changed })]);
+  expect(() => planSetupPublisherInstallation(f.proposal, after.inspection, operation)).toThrow('destination-changed');
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+});
 it.each(['setup-manifest.json', 'AGENT_GUIDE.md'])('rejects missing required manifest or declared guidance rather than inventing files', async name => {
   const f = fixture(); for (const t of Object.values(f.trees)) t.tree = t.tree.filter(e => e.path !== name);
   await expect(f.reader.inspect(f.proposal)).rejects.toMatchObject({ code: 'malformed' });
