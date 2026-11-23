@@ -354,3 +354,23 @@ suite gains the existing bounded I/O observer without changing outcomes, timers,
 retries, assertions, skips or acceptance floors. No identical native job is
 rerun. No model campaign or installation is performed; production disabled and
 pilotwrites0.
+
+
+## Round22: final resource checkpoint and stronger receipt/resume evidence
+
+The b24d review has three valid observations. The final resource-save failure
+now retains proven pre-delivery state using the existing v1 preflight reason;
+unknown legacy preparation stays blocked. The existing forged/future receipt
+fixture now reaches the real receipt matcher, with a failing matcher-removal
+counterfactual. Valid publisher resume explicitly proves fresh confirmation and
+reinspection; decline/cancel stop before Apply. Five physical controls are added.
+C40 appends two evidence refs, C52 appends three, and C124 adds three required
+checkpoint/legacy controls. All other first123 objects and the selected64-case
+companion remain exact. Current floor124 IDs/120mapped+four package cases; no
+bounds, schemas, privileges, installation or model calls change.
+
+The64-case completion-cap claim is refuted by the normative cumulative contract
+and both executable64-only counterfactuals. GitHub renders the exact documented
+heading permalink. Both review threads were replied to and resolved; neither
+requires changing the selected companion. Final source-bound cohort, normal
+hooks and native review/CI remain separate gates. See [Round22](review-round22/README.md).

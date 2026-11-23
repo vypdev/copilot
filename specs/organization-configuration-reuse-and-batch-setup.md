@@ -1848,3 +1848,65 @@ configuration branch/workflow rule -> guidance troubleshooting. The same pure100
 runtime95/90, complete mapping, source/build/package/documentation and final
 native gates apply. No new schema, user setting, state, migration or installation
 authorization is introduced.
+
+
+### Round22: durable final resource checkpoint and fresh resume proof
+
+The completed b24d29-partition review reproduces a recovery defect: after all
+four resource effects finish, a failed journal save occurs before the file
+delivery coordinator starts. A catch can retain all four effects but classify
+the next resume as unknown object preparation, permanently blocking file work.
+Inference MUST use only the retained receipt before the current invocation adds
+effects. If that retained state proves no unknown preparation and the coordinator
+has not started, a failure after the fourth resource effect MUST retain the
+existing v1 `preflight` reason. The coordinator entry is the authority boundary;
+after it starts, only its existing typed no-object proof permits that reason.
+An unknown legacy preparation MUST remain unknown across a later read failure.
+If the proof save itself fails, uncertainty remains; no absent-object claim is
+invented and no tree/commit is replayed automatically.
+
+| Starting proof / interruption | Durable result | Fresh reviewed resume |
+|---|---|---|
+| No unknown preparation; final resource save fails before or after persistence; coordinator not entered | v1 partial/preflight, four completed effects | Reuse effects; prepare the remaining files once |
+| Retained unknown preparation; current read fails before coordinator entry | v1 partial/provider, unknown preparation retained | Block Git object creation |
+| Coordinator entered | Existing coordinator proof and uncertainty | Existing exact-object recovery rules |
+
+The same operator flow applies: retain the private receipt, enter current
+credentials, inspect the retained effects, review again and confirm. Completed
+resources are not repeated. Publisher-purpose resume MUST display retained state,
+obtain one fresh explicit confirmation, re-inspect and only then call Apply.
+Decline or cancel MUST stop before Apply, journal writes, locks or delivery.
+No schema, configuration option, retry allowance, timeout, privilege or
+installation authority changes; v1 records remain v1 and publisher v2 stays
+separate. Existing public messages and troubleshooting links remain sufficient.
+
+Round22 adds five physical controls: before-save and after-save failure through
+the real v1 filesystem journal and concrete GitHub delivery adapter, one unknown
+legacy-preparation negative, and valid publisher-resume decline/cancel. The
+existing approved-resume control additionally asserts present/confirm/reinspect/
+Apply order. The two existing forged/future-receipt controls now return the bad
+receipt only from the contents read, keeping the approved tree valid; both MUST
+prove that read was reached. Removing the actual receipt matcher makes both
+repaired tests fail, whereas the old fixture incorrectly passed both. C40 adds
+those two evidence references and C52 adds the three fresh-confirmation refs;
+their original contracts and evidence remain. All other first123 objects and
+the entire selected64-case companion remain exact.
+
+Current cumulative floor is **124 IDs/120 mapped Jest cases plus four separate
+extracted-package cases**. The five added controls extend the existing36-suite
+cohort; all prior controls remain mandatory. Six pure policies retain100% all
+metrics and20 runtime modules retain95% lines/statements/functions and90%
+branches, including the changed batch use case. Complete mapping, normal global,
+source/build/package/docs and final native gates remain required. Documentation
+MUST explain the final-resource save recovery and fresh resume confirmation.
+
+| Case ID | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C124 | Provider/delivery contracts | PU977-G04, PU977-G07 | A failed final resource checkpoint before delivery resumes from durable v1 proof without repeating resources, while unknown prior preparation remains blocked. |
+
+Traceability: C124 -> G04/G07 -> batch use case retained-proof boundary -> real
+journal/concrete delivery recovery -> provisioning recovery instructions. C40
+and C52 retain their published assertions with stronger executable evidence.
+The64-case baseline remains necessary alongside every owning appendix; the
+existing two validator counterfactuals reject a64-only completion gate. The
+reviewed GitHub heading permalink is valid and requires no source change.

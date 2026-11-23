@@ -66,8 +66,13 @@ it('refuses a stale retained identity before displaying a misleading current pre
   await expect(f.execute(true)).rejects.toMatchObject({ reason: 'stale' }); expect(f.present).not.toHaveBeenCalled(); expect(f.applyCall).not.toHaveBeenCalled();
 });
 it('only invokes Apply after fresh explicit confirmation and passes the independently frozen journal snapshot', async () => {
-  const f = fixture(); f.load.mockResolvedValue(f.retained); f.confirm.mockResolvedValue('approve');
+  const f = fixture(); f.load.mockResolvedValue(f.retained);
+  f.confirm.mockImplementation(async () => { f.events.push('confirm'); return 'approve'; });
+  f.applyCall.mockImplementation(async () => { f.events.push('apply'); return f.retained; });
   expect(await f.execute(true, false)).toMatchObject({ stage: 'apply', result: f.retained });
+  expect(f.events).toEqual(['load', 'inspect', 'present', 'confirm', 'inspect', 'apply']);
+  expect(f.present).toHaveBeenCalledWith(f.plan, expect.objectContaining(f.retained));
+  expect(f.confirm).toHaveBeenCalledTimes(1); expect(f.confirm).toHaveBeenCalledWith(f.plan);
   const [plan, session, fresh, reviewed] = f.applyCall.mock.calls[0];
   expect(plan).toEqual(f.plan); expect(session).toEqual({}); expect(fresh).toEqual(expect.any(Function));
   expect(reviewed).toEqual(f.retained); expect(reviewed).not.toBe(f.retained); expect(Object.isFrozen(reviewed)).toBe(true);
@@ -88,4 +93,16 @@ it('validates an explicitly supplied retained review shape before any source ins
   const f = fixture(); const review = new ReviewSetupPublisherUseCase({ inspect: f.inspect, present: f.present, confirm: f.confirm, active: () => true });
   await expect(review.execute({ proposal: f.proposal, operationId: id, dryRun: true, reviewedOperation: { ...f.retained, schemaVersion: 9 } as unknown as SetupPublisherOperation }, async () => undefined)).rejects.toMatchObject({ reason: 'invalid' });
   expect(f.inspect).not.toHaveBeenCalled();
+});
+
+
+it.each(['decline', 'cancel'] as const)('publisher977-C52 a valid retained resume with fresh %s never reaches Apply', async answer => {
+  const f = fixture(); f.load.mockResolvedValue(f.retained);
+  f.confirm.mockImplementation(async () => { f.events.push('confirm'); return answer; });
+  expect(await f.execute(true, false)).toMatchObject({ stage: answer === 'decline' ? 'declined' : 'cancelled' });
+  expect(f.events).toEqual(['load', 'inspect', 'present', 'confirm']);
+  expect(f.present).toHaveBeenCalledWith(f.plan, expect.objectContaining(f.retained));
+  expect(f.confirm).toHaveBeenCalledTimes(1); expect(f.confirm).toHaveBeenCalledWith(f.plan);
+  expect(f.inspect).toHaveBeenCalledTimes(1); expect(f.applyCall).not.toHaveBeenCalled();
+  expect(f.journal.save).not.toHaveBeenCalled(); expect(f.journal.lock).not.toHaveBeenCalled(); expect(f.delivery).not.toHaveBeenCalled();
 });

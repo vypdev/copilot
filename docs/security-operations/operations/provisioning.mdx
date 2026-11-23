@@ -58,7 +58,11 @@ questionnaire or rendered files are offered for approval.
 
 If preparation stops before any Git object is submitted, resume can retry the
 remaining file work after a new review and permission audit. Completed resource
-effects stay retained. A known commit is re-proved rather than recreated. For an
+effects stay retained. If the final resource checkpoint save fails before file
+delivery starts, the retained preflight proof lets a freshly reviewed resume
+continue file delivery without repeating those resources. A failed proof save
+or previously unknown object preparation still needs inspection. A known commit
+is re-proved rather than recreated. For an
 unfinished ref or PR, recovery checks the exact owned identity and complete PR
 inventory first; a fresh approved attempt can create a confirmed absent target.
 An unknown tree or commit creation without its object ID remains blocked. A
@@ -175,7 +179,9 @@ Resume needs current credentials and fresh review of the same purpose, actor,
 repository/default/base, source and approved bytes. An invalid resume UUID is a local input error: correct the ID before inspecting
 repository access or retained effects. Bare `--resume-operation`
 still selects ordinary batch recovery. Legacy v1 records cannot become publisher
-v2 authority. Completed facts and uncertainty appear before approval. If a
+v2 authority. Completed facts and uncertainty appear before approval. Resume
+asks for a fresh explicit confirmation; decline or cancel returns before Apply
+or any journal, lock or delivery write. If a
 tree/commit POST may have succeeded without returning its identity, preserve and
 inspect that uncertainty; Setup does not blindly replay it or invent an object
 to adopt. Known prepared objects/refs/PRs are reused only after exact proof.

@@ -976,6 +976,14 @@
         {
           "file": "src/application/policies/__tests__/setup_publisher_installation.test.ts",
           "test": "complete approved Setup file scope rejects a executable approved leaf"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "installer-owned GitHub write boundaries rejects a forged or future installation receipt {\"schemaVersion\":2}"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "installer-owned GitHub write boundaries rejects a forged or future installation receipt {\"schemaVersion\":1,\"operationId\":\"a67c8e40-93be-43ed-a7ed-e07378c7e773\",\"repositoryId\":8,\"baseSha\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"planDigest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}"
         }
       ]
     },
@@ -1258,6 +1266,18 @@
         {
           "file": "src/cli/__tests__/setup_publisher_installation_adapter.test.ts",
           "test": "validates explicit resume identity before transport and passes a valid selection through"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/install_setup_publisher_use_case.test.ts",
+          "test": "only invokes Apply after fresh explicit confirmation and passes the independently frozen journal snapshot"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/install_setup_publisher_use_case.test.ts",
+          "test": "publisher977-C52 a valid retained resume with fresh decline never reaches Apply"
+        },
+        {
+          "file": "src/application/usecases/setup/__tests__/install_setup_publisher_use_case.test.ts",
+          "test": "publisher977-C52 a valid retained resume with fresh cancel never reaches Apply"
         }
       ]
     },
@@ -3352,6 +3372,30 @@
         {
           "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
           "test": "repository agent guidance policy publisher977-C123: preserves manual-only workflow profiles when forms=false"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C124",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G04",
+        "PU977-G07"
+      ],
+      "assertion": "A failed final resource checkpoint before delivery resumes from durable v1 proof without repeating resources, while unknown prior preparation remains blocked.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "publisher977-C124 durable resource checkpoint before delivery publisher977-C124 resumes after the final resource journal failure at before-save without repeating effects"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "publisher977-C124 durable resource checkpoint before delivery publisher977-C124 resumes after the final resource journal failure at after-save without repeating effects"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+          "test": "publisher977-C124 durable resource checkpoint before delivery publisher977-C124 preserves unknown legacy preparation across a new pre-delivery read failure"
         }
       ]
     }

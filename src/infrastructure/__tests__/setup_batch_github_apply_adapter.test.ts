@@ -1,7 +1,7 @@
 import { DeliverSetupInstallationUseCase } from '../../application/usecases/setup/deliver_setup_installation_use_case';
 import { SetupBatchGithubApplyAdapter } from '../setup_batch_github_apply_adapter';
 import { SetupBatchGithubReadAdapter, SetupBatchGithubTransport, SetupBatchProviderError } from '../setup_batch_github_read_adapter';
-import { setupBatchBranch, setupBatchMarker } from '../../application/policies/setup_batch_policy';
+import { beginSetupBatchOperation, setupBatchBranch, setupBatchMarker } from '../../application/policies/setup_batch_policy';
 import { createDefaultSetupConfiguration } from '../../application/policies/setup_configuration_defaults';
 import type { SetupBatchOperation, SetupBatchTargetPlan } from '../../domain/setup_batch';
 import type { SetupRemoteConfiguration } from '../../domain/setup';
@@ -30,7 +30,7 @@ function fixture() {
     organizationSecretsAccess: 'available', organizationAccess: 'available' };
   const plan: SetupBatchTargetPlan = { target, remote, configuration: createDefaultSetupConfiguration(), digest: 'b'.repeat(64),
     blocked: [], files: [{ path: 'AGENTS.md', content: 'generated guidance' }], repositoryVariables: [], grants: [], sharedSnapshot: [] };
-  let branch: string | undefined; let pulls: unknown[] = [];
+  let branch: string | undefined; let pulls: unknown[] = []; let returnedReceiptManifest: string | undefined;
   const installation = { schemaVersion: 1, operationId: operation, repositoryId: 7, baseSha: base, planDigest: plan.digest };
   const baseFiles = new Map([['.github/workflows/obsolete.yml', 'old fixture']]);
   const preparedFiles = new Map([...baseFiles, ['AGENTS.md', plan.files[0].content!], ['.copilot/setup-manifest.json', JSON.stringify({ schemaVersion: 2,
@@ -42,7 +42,7 @@ function fixture() {
     if (route === 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}') return { data: baseTree.trees.get(String(parameters.tree_sha))
       ?? setupInstallationTreeFixture(preparedFiles).trees.get(String(parameters.tree_sha)) };
     if (route === 'GET /repos/{owner}/{repo}/contents/{path}') return { data: { encoding: 'base64',
-      content: Buffer.from(preparedFiles.get('.copilot/setup-manifest.json')!).toString('base64') } };
+      content: Buffer.from(returnedReceiptManifest ?? preparedFiles.get('.copilot/setup-manifest.json')!).toString('base64') } };
     if (route === 'POST /repos/{owner}/{repo}/git/trees') {
       for (const file of parameters.tree as { path: string; content?: string; sha?: null }[]) {
         if (file.sha === null) preparedFiles.delete(file.path); else preparedFiles.set(file.path, file.content!);
@@ -71,7 +71,7 @@ function fixture() {
     head: { ref: setupBatchBranch(operation), sha: prepared, repo: { id: 7 } }, base: { ref: 'master', repo: { id: 7 } } }; }
   return { plan, writer, request, read, shared, variableWriter, resources, pull, baseTree,
     setBranch: (sha: string | undefined) => { branch = sha; }, setPulls: (values: unknown[]) => { pulls = values; },
-    setReceipt: (value: unknown) => { preparedFiles.set('.copilot/setup-manifest.json', JSON.stringify({ installation: value })); } };
+    setReceipt: (value: unknown) => { returnedReceiptManifest = JSON.stringify({ installation: value }); } };
 }
 async function recoveryFixture(options: { active?: () => boolean; writer?: (writer: SetupBatchGithubApplyAdapter) => void } = {}) {
   const f = fixture(), directory = await mkdtemp(join(tmpdir(), 'batch-reviewed-recovery-'));
@@ -439,6 +439,8 @@ describe('installer-owned GitHub write boundaries', () => {
   it.each([{ schemaVersion: 2 }, { schemaVersion: 1, operationId: operation, repositoryId: 8, baseSha: base, planDigest: 'b'.repeat(64) }])('rejects a forged or future installation receipt %j', async receipt => {
     const f = fixture(); f.setReceipt(receipt);
     await expect(f.writer.branch(f.plan, operation, prepared, 'fixture')).rejects.toThrow();
+    expect(f.request).toHaveBeenCalledWith('GET /repos/{owner}/{repo}/contents/{path}',
+      expect.objectContaining({ path: '.copilot/setup-manifest.json', ref: prepared }));
     expect(f.request.mock.calls.some(([route]) => !route.startsWith('GET '))).toBe(false);
   });
   it('inspects an uncertain PR response and reuses its exact marker without another creation', async () => {
@@ -637,4 +639,53 @@ test('real namespace parsing includes the selected runner registry for Apply fre
   expect(await f.writer.revalidate({ ...f.plan, configuration }, 'fixture', [])).toBe(true);
   expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
   expect(f.variableWriter.createMissing).not.toHaveBeenCalled(); expect(f.resources.labels).not.toHaveBeenCalled();
+});
+
+
+describe('publisher977-C124 durable resource checkpoint before delivery', () => {
+  it.each(['before-save', 'after-save'] as const)('publisher977-C124 resumes after the final resource journal failure at %s without repeating effects', async boundary => {
+    const f = await recoveryFixture();
+    try {
+      const save = f.journal.save.bind(f.journal); let failed = false;
+      jest.spyOn(f.journal, 'save').mockImplementation(async state => {
+        const target = state.targets[0];
+        if (!failed && target.status === 'applying' && target.effects.length === 4 && target.reason === undefined) {
+          failed = true;
+          if (boundary === 'after-save') await save(state);
+          throw new Error('controlled final resource checkpoint failure');
+        }
+        await save(state);
+      });
+      const first = await f.execute();
+      expect(failed).toBe(true); expect(first.targets[0]).toMatchObject({ status: 'partial', effects: ['access', 'variables', 'labels', 'issue-types'] });
+      expect(f.request.mock.calls.some(([route]) => route.startsWith('POST '))).toBe(false);
+      expect(await f.receipt()).toEqual(JSON.parse(JSON.stringify(first)));
+      const second = await f.execute();
+      console.info('ROUND22_RESOURCE_SAVE_OBSERVATION', JSON.stringify({ boundary, first: first.targets[0], second: second.targets[0],
+        posts: f.request.mock.calls.filter(([route]) => route.startsWith('POST ')).map(([route]) => route), reviews: f.review.mock.calls.length }));
+      expect(second.targets[0]).toMatchObject({ status: 'waiting-for-merge', preparedCommit: prepared, pullRequestNumber: 31 });
+      expect(first.targets[0].reason).toBe('preflight'); expect(f.review).toHaveBeenCalledTimes(2);
+      expect(f.resources.labels).toHaveBeenCalledTimes(1); expect(f.resources.issueTypes).toHaveBeenCalledTimes(1);
+      expect(f.variableWriter.createMissing).not.toHaveBeenCalled();
+      for (const route of ['git/trees', 'git/commits', 'git/refs', 'pulls']) expect(f.posts(route)).toHaveLength(1);
+      expect(await f.receipt()).toEqual(JSON.parse(JSON.stringify(second)));
+    } finally { await f.cleanup(); }
+  });
+  it('publisher977-C124 preserves unknown legacy preparation across a new pre-delivery read failure', async () => {
+    let failed = false;
+    const f = await recoveryFixture({ writer: writer => {
+      if (!failed) jest.spyOn(writer, 'revalidate').mockImplementationOnce(async () => { failed = true; throw new Error('controlled read failure'); });
+    } });
+    try {
+      const initial = beginSetupBatchOperation({ operationId: operation, organization: 'acme', targets: [f.plan] });
+      await f.journal.save({ ...initial, targets: [{ ...initial.targets[0], status: 'partial', reason: 'provider',
+        effects: ['access', 'variables', 'labels', 'issue-types'] }] });
+      const first = await f.execute(); expect(first.targets[0]).toMatchObject({ status: 'partial', reason: 'provider' });
+      const second = await f.execute(); expect(second.targets[0]).toMatchObject({ status: 'partial', reason: 'provider' });
+      expect(f.review).toHaveBeenCalledTimes(2); expect(failed).toBe(true);
+      expect(f.resources.labels).not.toHaveBeenCalled(); expect(f.resources.issueTypes).not.toHaveBeenCalled();
+      expect(f.request.mock.calls.some(([route]) => route.startsWith('POST '))).toBe(false);
+      expect(await f.receipt()).toEqual(JSON.parse(JSON.stringify(second)));
+    } finally { await f.cleanup(); }
+  });
 });

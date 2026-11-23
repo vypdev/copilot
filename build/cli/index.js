@@ -78798,6 +78798,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplySetupBatchUseCase = void 0;
 const setup_batch_policy_1 = __nccwpck_require__(52214);
 const deliver_setup_installation_use_case_1 = __nccwpck_require__(32789);
+const resourceEffects = ['access', 'variables', 'labels', 'issue-types'];
 class ApplySetupBatchUseCase {
     constructor(ports) {
         this.ports = ports;
@@ -78836,6 +78837,14 @@ class ApplySetupBatchUseCase {
                 }
                 receipt = { ...receipt, status: 'applying', reason: receipt.reason === 'preflight' ? 'preflight' : undefined };
                 await update(index, receipt);
+                // Infer only from the retained state, before this invocation adds
+                // resources. A prior unknown preparation must never become preflight.
+                const interrupted = ['partial', 'applying', 'cancelled'].includes(retainedReceipt.status) && retainedReceipt.reason !== 'preflight';
+                const uncertain = interrupted && !retainedReceipt.preparedCommit
+                    && resourceEffects.every(name => retainedReceipt.effects.includes(name))
+                    ? 'prepared-objects' : interrupted && retainedReceipt.preparedCommit
+                    ? !retainedReceipt.effects.includes('branch') ? 'branch' : !retainedReceipt.effects.includes('pull-request') ? 'pull-request' : undefined : undefined;
+                let deliveryStarted = false;
                 const effect = async (name, work) => {
                     if (receipt.effects.includes(name))
                         return;
@@ -78864,13 +78873,7 @@ class ApplySetupBatchUseCase {
                         await update(index, { ...receipt, status: 'verification-pending' });
                         continue;
                     }
-                    // The existing v1 preflight reason records a confirmed stop before
-                    // object creation. Other interrupted receipts stay conservative.
-                    const interrupted = ['partial', 'applying', 'cancelled'].includes(retainedReceipt.status) && retainedReceipt.reason !== 'preflight';
-                    const uncertain = interrupted && !retainedReceipt.preparedCommit
-                        && ['access', 'variables', 'labels', 'issue-types'].every(name => retainedReceipt.effects.includes(name))
-                        ? 'prepared-objects' : interrupted && retainedReceipt.preparedCommit
-                        ? !retainedReceipt.effects.includes('branch') ? 'branch' : !retainedReceipt.effects.includes('pull-request') ? 'pull-request' : undefined : undefined;
+                    deliveryStarted = true;
                     await this.ports.coordinator.execute({
                         prepareCommit: observe => this.ports.writer.prepareCommit(targetPlan, plan.operationId, token, observe, () => this.ports.presentation.active()),
                         branch: (commit, inspectOnly) => this.ports.writer.branch(targetPlan, plan.operationId, commit, token, inspectOnly, () => this.ports.presentation.active()),
@@ -78892,7 +78895,8 @@ class ApplySetupBatchUseCase {
                 catch (error) {
                     const stale = error instanceof StaleSetupApply || error instanceof deliver_setup_installation_use_case_1.SetupInstallationDeliveryError && error.reason === 'drift';
                     const cancelled = error instanceof CancelledSetupApply || error instanceof deliver_setup_installation_use_case_1.SetupInstallationDeliveryError && error.reason === 'cancelled';
-                    const beforePreparation = !receipt.preparedCommit && (receipt.reason === 'preflight'
+                    const beforePreparation = !receipt.preparedCommit && ((!deliveryStarted && uncertain === undefined
+                        && resourceEffects.every(name => receipt.effects.includes(name))) || receipt.reason === 'preflight'
                         || error instanceof deliver_setup_installation_use_case_1.SetupInstallationDeliveryError && !error.retained.preparedCommit && error.retained.uncertain === undefined);
                     await update(index, { ...receipt, status: stale ? 'blocked' : cancelled ? 'cancelled' : 'partial',
                         reason: stale ? 'drift' : beforePreparation ? 'preflight' : cancelled ? 'cancelled' : 'provider' });

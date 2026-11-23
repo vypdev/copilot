@@ -4,6 +4,8 @@ import type { SetupBatchApplyPort, SetupBatchJournalPort, SetupBatchPresentation
 import { beginSetupBatchOperation, parseSetupBatchOperation, assertSetupBatchOperationMatchesPlan } from '../../policies/setup_batch_policy';
 import { SetupInstallationDeliveryError } from './deliver_setup_installation_use_case';
 
+const resourceEffects = ['access', 'variables', 'labels', 'issue-types'] as const;
+
 export class ApplySetupBatchUseCase {
   private applying = false;
   constructor(private readonly ports: { readonly coordinator: SetupInstallationDeliveryCoordinator; readonly writer: SetupBatchApplyPort; readonly journal: SetupBatchJournalPort;
@@ -37,6 +39,14 @@ export class ApplySetupBatchUseCase {
         }
         receipt = { ...receipt, status: 'applying', reason: receipt.reason === 'preflight' ? 'preflight' : undefined };
         await update(index, receipt);
+        // Infer only from the retained state, before this invocation adds
+        // resources. A prior unknown preparation must never become preflight.
+        const interrupted = ['partial', 'applying', 'cancelled'].includes(retainedReceipt.status) && retainedReceipt.reason !== 'preflight';
+        const uncertain = interrupted && !retainedReceipt.preparedCommit
+          && resourceEffects.every(name => retainedReceipt.effects.includes(name))
+          ? 'prepared-objects' as const : interrupted && retainedReceipt.preparedCommit
+            ? !retainedReceipt.effects.includes('branch') ? 'branch' as const : !retainedReceipt.effects.includes('pull-request') ? 'pull-request' as const : undefined : undefined;
+        let deliveryStarted = false;
         const effect = async (name: SetupBatchTargetReceipt['effects'][number], work: () => Promise<void>): Promise<void> => {
           if (receipt.effects.includes(name)) return;
           if (!this.ports.presentation.active()) throw new CancelledSetupApply();
@@ -59,13 +69,7 @@ export class ApplySetupBatchUseCase {
           if (!targetPlan.files.length) {
             await update(index, { ...receipt, status: 'verification-pending' }); continue;
           }
-          // The existing v1 preflight reason records a confirmed stop before
-          // object creation. Other interrupted receipts stay conservative.
-          const interrupted = ['partial', 'applying', 'cancelled'].includes(retainedReceipt.status) && retainedReceipt.reason !== 'preflight';
-          const uncertain = interrupted && !retainedReceipt.preparedCommit
-            && ['access', 'variables', 'labels', 'issue-types'].every(name => retainedReceipt.effects.includes(name as SetupBatchTargetReceipt['effects'][number]))
-            ? 'prepared-objects' as const : interrupted && retainedReceipt.preparedCommit
-              ? !retainedReceipt.effects.includes('branch') ? 'branch' as const : !retainedReceipt.effects.includes('pull-request') ? 'pull-request' as const : undefined : undefined;
+          deliveryStarted = true;
           await this.ports.coordinator.execute({
             prepareCommit: observe => this.ports.writer.prepareCommit(targetPlan, plan.operationId, token, observe, () => this.ports.presentation.active()),
             branch: (commit, inspectOnly) => this.ports.writer.branch(targetPlan, plan.operationId, commit, token, inspectOnly, () => this.ports.presentation.active()),
@@ -86,7 +90,8 @@ export class ApplySetupBatchUseCase {
         } catch (error) {
           const stale = error instanceof StaleSetupApply || error instanceof SetupInstallationDeliveryError && error.reason === 'drift';
           const cancelled = error instanceof CancelledSetupApply || error instanceof SetupInstallationDeliveryError && error.reason === 'cancelled';
-          const beforePreparation = !receipt.preparedCommit && (receipt.reason === 'preflight'
+          const beforePreparation = !receipt.preparedCommit && ((!deliveryStarted && uncertain === undefined
+            && resourceEffects.every(name => receipt.effects.includes(name))) || receipt.reason === 'preflight'
             || error instanceof SetupInstallationDeliveryError && !error.retained.preparedCommit && error.retained.uncertain === undefined);
           await update(index, { ...receipt, status: stale ? 'blocked' : cancelled ? 'cancelled' : 'partial',
           reason: stale ? 'drift' : beforePreparation ? 'preflight' : cancelled ? 'cancelled' : 'provider' });
