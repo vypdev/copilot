@@ -4,7 +4,7 @@
   "host": {
     "pid": 92423,
     "uid": 502,
-    "argv": "/host-account-redacted/.nvm/versions/node/v24.20.0/bin/node /private/tmp/copilot-goal-974-native-fixture-64da6ec-2drqklp0/reviewed-bootstrap.cjs /private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/frozen-host df779284840992fffe55bbad65fbdf74142af9ca quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C34.json 3e045b9d86a3dd40046badd13eb52c2fd74a4fcc15282dd6e4170da00ad0be16 36a2ffa685a6dca9be0930c9386cf9a4ac11553e14a0f24d67597ff53b9b3be2 native-control /private/tmp/copilot-goal-974-native-fixture-64da6ec-2drqklp0/native-controls-attempt4-tmp/ev974-native-unrelated-sentinel-MNVwyK/output"
+    "argv": "<private-node-runtime> /private/tmp/copilot-goal-974-native-fixture-64da6ec-2drqklp0/reviewed-bootstrap.cjs /private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/frozen-host df779284840992fffe55bbad65fbdf74142af9ca quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C34.json 3e045b9d86a3dd40046badd13eb52c2fd74a4fcc15282dd6e4170da00ad0be16 36a2ffa685a6dca9be0930c9386cf9a4ac11553e14a0f24d67597ff53b9b3be2 native-control /private/tmp/copilot-goal-974-native-fixture-64da6ec-2drqklp0/native-controls-attempt4-tmp/ev974-native-unrelated-sentinel-MNVwyK/output"
   },
   "scope": {
     "event": "scope-created",
@@ -36,5 +36,16 @@
   },
   "signal": "SIGTERM",
   "modelCalls": 0,
-  "acceptanceEvidence": false
+  "acceptanceEvidence": false,
+  "historicalPublicDiagnostic": {
+    "kind": "derived-public-copy-with-private-runtime-path",
+    "executable": false,
+    "originalBytes": 1867,
+    "originalSha256": "1fb49985b9c7b26e310759db5b9a97e824601da91159516dc9797af5e59b6da5",
+    "originalGitSource": "97525e17d8ce6092a7195a925eeff08eed537459",
+    "originalGitBlob": "1929b3275e758a1a797d63a28229ee4a9bd88974",
+    "privateRetainedName": "native4-sentinel-diagnostic-private-original.json",
+    "historyRewritten": false,
+    "acceptanceGranted": false
+  }
 }

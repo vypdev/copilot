@@ -85,7 +85,256 @@
   },
   "globalAcceptanceCurrentHead": false,
   "priorGlobalAppliesToMeasured093": true,
-  "fullSourceDriverCoverage": "PENDING_EXACT_COMMITTED_SOURCE",
+  "fullSourceDriverCoverage": {
+    "source": "97525e17d8ce6092a7195a925eeff08eed537459",
+    "shadow": {
+      "started": "2026-11-23T05:26:12.747934+00:00",
+      "finished": "2026-11-23T05:34:58.465374+00:00",
+      "implementation": "97525e17d8ce6092a7195a925eeff08eed537459",
+      "exitCode": 0,
+      "tests": 597,
+      "pass": 597,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "headAfter": "97525e17d8ce6092a7195a925eeff08eed537459",
+      "cleanAfter": true,
+      "logBytes": 68169,
+      "logSha256": "3460def2ed245ce001e770bce1eb08bf8174f5c06986673d185e717229441fb7",
+      "actualSdkModelCalls": 0,
+      "scientificCallsAdded": 0,
+      "nativeAcceptance": false,
+      "production": "disabled",
+      "DONE_DO_NOT_REPEAT": true
+    },
+    "astModuleMeasurements": [
+      {
+        "file": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+        "sourceSha256": "fd6e2183cc4b06f126a7b83bdb22dbc5a959c6754331e00def61aa8f0b971162",
+        "summary": {
+          "lines": {
+            "total": 407,
+            "covered": 405,
+            "skipped": 0,
+            "pct": 99.5
+          },
+          "functions": {
+            "total": 82,
+            "covered": 78,
+            "skipped": 0,
+            "pct": 95.12
+          },
+          "statements": {
+            "total": 594,
+            "covered": 569,
+            "skipped": 0,
+            "pct": 95.79
+          },
+          "branches": {
+            "total": 266,
+            "covered": 241,
+            "skipped": 0,
+            "pct": 90.6
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue974/qualification-seccomp.cjs",
+        "sourceSha256": "7c77f4881d061f754725791460faebfec35da5edccb2181d75fb8a31b7970688",
+        "summary": {
+          "lines": {
+            "total": 1,
+            "covered": 1,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 0,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 1,
+            "covered": 1,
+            "skipped": 0,
+            "pct": 100
+          },
+          "branches": {
+            "total": 0,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 100
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs",
+        "sourceSha256": "a3f378fe6b90228e8d9a0d37e9be407705d73c4409bae6841a1ac25dd22da4d6",
+        "summary": {
+          "lines": {
+            "total": 95,
+            "covered": 94,
+            "skipped": 0,
+            "pct": 98.94
+          },
+          "functions": {
+            "total": 23,
+            "covered": 23,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 119,
+            "covered": 118,
+            "skipped": 0,
+            "pct": 99.15
+          },
+          "branches": {
+            "total": 49,
+            "covered": 47,
+            "skipped": 0,
+            "pct": 95.91
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue974/attempt-ledger.cjs",
+        "sourceSha256": "ab1d15b4a1ecca01bbf589856fd07fec41d74c95815c15d35453ecd430dbd573",
+        "summary": {
+          "lines": {
+            "total": 169,
+            "covered": 169,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 42,
+            "covered": 42,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 212,
+            "covered": 211,
+            "skipped": 0,
+            "pct": 99.52
+          },
+          "branches": {
+            "total": 80,
+            "covered": 79,
+            "skipped": 0,
+            "pct": 98.75
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+        "sourceSha256": "065e283c2d400c1b461c35b70caebbcc10565b6d10bbf3a42166e6eb3e49dfb9",
+        "summary": {
+          "lines": {
+            "total": 232,
+            "covered": 230,
+            "skipped": 0,
+            "pct": 99.13
+          },
+          "functions": {
+            "total": 38,
+            "covered": 37,
+            "skipped": 0,
+            "pct": 97.36
+          },
+          "statements": {
+            "total": 291,
+            "covered": 288,
+            "skipped": 0,
+            "pct": 98.96
+          },
+          "branches": {
+            "total": 136,
+            "covered": 124,
+            "skipped": 0,
+            "pct": 91.17
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs",
+        "sourceSha256": "4cccd4eb3c3ec399daf6ef0714713b7a5fab79041f4151c944a8b815e4b74e38",
+        "summary": {
+          "lines": {
+            "total": 158,
+            "covered": 158,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 40,
+            "covered": 38,
+            "skipped": 0,
+            "pct": 95
+          },
+          "statements": {
+            "total": 190,
+            "covered": 187,
+            "skipped": 0,
+            "pct": 98.42
+          },
+          "branches": {
+            "total": 63,
+            "covered": 60,
+            "skipped": 0,
+            "pct": 95.23
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs",
+        "sourceSha256": "304977e6a3229f2c58ec8998f27dba07953be6b4b13b93f4f92e3cbbfb597200",
+        "summary": {
+          "lines": {
+            "total": 111,
+            "covered": 111,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 17,
+            "covered": 16,
+            "skipped": 0,
+            "pct": 94.11
+          },
+          "statements": {
+            "total": 135,
+            "covered": 133,
+            "skipped": 0,
+            "pct": 98.51
+          },
+          "branches": {
+            "total": 27,
+            "covered": 26,
+            "skipped": 0,
+            "pct": 96.29
+          }
+        },
+        "gate": true
+      }
+    ],
+    "initialEngineSelection": {
+      "passedComponentAssertions": 42,
+      "moduleGateFailed": true,
+      "statements": 94.61,
+      "branches": 88.72,
+      "cause": "Selection omitted existing stop-record/startup/late-cancellation controls. Same source with broader existing selection passes95/90; no threshold or source changes."
+    },
+    "globalAcceptance": false
+  },
   "finalNativeAcceptance": false,
   "measured174Source": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
   "actual174": "COMPLETE_NEGATIVE",
@@ -95,5 +344,23 @@
   "actual42": "UNSTARTED_NOT_ADMITTED",
   "qualifiedProfiles": [],
   "pilotWrites": 0,
-  "production": "disabled"
+  "production": "disabled",
+  "finalSourceCommit": "97525e17d8ce6092a7195a925eeff08eed537459",
+  "normalHooks": {
+    "exitCode": 0,
+    "summaries": [
+      "Test Suites: 947 passed, 947 total",
+      "Tests:       35 skipped, 18789 passed, 18824 total"
+    ],
+    "bundlesUnchanged": true,
+    "protectedMainUnchanged": true,
+    "logSha256": "2b5b05417b27d5bd653d38a71e9f5d46274c2f2ad274b526744605505c2743a6"
+  },
+  "privateFinalVerificationRetention": {
+    "name": "predispatch-final-source-verification-attempt1.zip",
+    "bytes": 165191,
+    "sha256": "b4159c01d3278809514b6d7732bbe6bc4f2c5ff207231f743a4fdb7e1a33efe1",
+    "verifiedOriginalMembers": 26,
+    "negativeSelectionPreserved": true
+  }
 }
