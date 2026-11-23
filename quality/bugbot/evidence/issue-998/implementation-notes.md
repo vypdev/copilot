@@ -22,7 +22,7 @@ that refinement of the selected Clean Architecture contract.
 
 The current file map and executable acceptance registration follow.
 
-Current Round17 acceptance has114 logical IDs /110 mapped Jest cases plus the
+Round17 acceptance had114 logical IDs /110 mapped Jest cases plus the
 same four extracted-package cases. Source executable entrypoints are bound to
 the hashed bundle; unrelated YAML-named directories are ignored without accepting
 fixed-target collisions or symlinks. C03/C102 tests now directly observe their
@@ -399,3 +399,14 @@ file phase and through ordinary batch Apply. All prior93 ledger objects and the
 selected companion remain unchanged. Baseline publication rows are mandatory; only
 at that snapshot contiguous additions above C94 may use the generic future-case checks. Its execution
 results and the separate final-head native acceptance belong in review-round8.
+
+
+Current Round18 acceptance requires118 logical IDs /114 mapped Jest cases plus
+the same four extracted-package cases. All first114 ledger objects and the
+selected64-case companion remain exact. C115 prevents incomplete manifest/doctor
+health; C116 covers actual local DNS dispatch across callback/promise Resolver
+surfaces; C117 preserves planning with unrelated gitlinks and rejects fixed-path
+collisions; C118 observes required guidance access failure. C23 is strengthened
+in place. The114-stage and64-case baseline do not cap current completion.
+Full source/coverage, package, normal hooks and fresh final-head native gates
+still apply; no source or package result demonstrates installation.

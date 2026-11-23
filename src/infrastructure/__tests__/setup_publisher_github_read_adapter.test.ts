@@ -73,8 +73,22 @@ it.each([
   { header: 'public_repo,workflow', privateRepo: true, expected: ['denied', 'denied', 'denied'] },
 ])('uses actual granted scopes together with relevant repository access without probing writes', async ({ header, privateRepo, expected }) => {
   const f = fixture(); f.identity.headers = { 'x-oauth-scopes': header, 'x-accepted-github-permissions': 'contents=write,pull_requests=write,workflows=write' }; f.repository.private = privateRepo;
-  const { authority } = (await f.reader.inspect(f.proposal)).inspection;
+  const { authority, installation } = (await f.reader.inspect(f.proposal)).inspection;
   expect([authority.contents, authority.pullRequests, authority.workflows]).toEqual(expected);
+  expect(installation.guidance).toEqual(f.baseline.inspection.installation.guidance);
+  expect(f.request.mock.calls.some(([route]) => /\/orgs\/|\/secrets|\/variables|\/labels|\/issue-types/u.test(route))).toBe(false);
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+});
+it.each([403, 404])('publisher977-C118: unavailable required guidance with HTTP %s cannot produce a fabricated planning snapshot', async status => {
+  const f = fixture(), original = f.request.getMockImplementation()!;
+  const guidance = f.entries().find(entry => entry.path === 'AGENT_GUIDE.md')!;
+  f.request.mockImplementation(async (route, parameters) => {
+    if (parameters.owner === 'owner' && route.endsWith('/git/blobs/{file_sha}') && parameters.file_sha === guidance.sha) throw { status };
+    return original(route, parameters);
+  });
+  await expect(f.reader.inspect(f.proposal)).rejects.toMatchObject({ code: status === 403 ? 'forbidden' : 'not-found' });
+  expect(f.request.mock.calls.some(([route, p]) => route.endsWith('/git/blobs/{file_sha}') && p.file_sha === guidance.sha)).toBe(true);
+  expect(f.request.mock.calls.some(([route]) => /\/orgs\/|\/secrets|\/variables|\/labels|\/issue-types/u.test(route))).toBe(false);
   expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
 });
 it('reports actual default drift rather than copying the proposal head into inspected facts', async () => {
@@ -139,6 +153,28 @@ it('publisher977-C113 rejects a directory colliding with the fixed publisher des
   const f = fixture(), directory = Object.values(f.trees).find(t => t.tree.some(e => e.path === 'ci.yml'))!;
   const collision = 'e'.repeat(40);
   directory.tree.push({ path: SETUP_PUBLISHER_WORKFLOW_PATH.split('/').at(-1)!, mode: '040000', type: 'tree', sha: collision });
+  await expect(f.reader.inspect(f.proposal)).rejects.toMatchObject({ code: 'malformed' });
+  expect(f.request.mock.calls.some(([, p]) => p.tree_sha === collision || p.file_sha === collision)).toBe(false);
+});
+
+it('publisher977-C117 ignores an unrelated YAML-named gitlink in actual immutable publisher planning', async () => {
+  const f = fixture(), first = (await f.reader.inspect(f.proposal)).inspection;
+  f.proposal.source.actionManifestSha256 = first.source.actionManifestSha256;
+  f.proposal.source.actionBundleSha256 = first.source.actionBundleSha256;
+  expect(planSetupPublisherInstallation(f.proposal, first, operation).status).toBe('review');
+  const directory = Object.values(f.trees).find(t => t.tree.some(e => e.path === 'ci.yml'))!;
+  const irrelevant = 'f'.repeat(40);
+  directory.tree.push({ path: 'archive.yml', mode: '160000', type: 'commit', sha: irrelevant });
+  const snapshot = (await f.reader.inspect(f.proposal)).inspection;
+  expect(snapshot.installation.workflows.map(file => file.path)).toEqual(['.github/workflows/ci.yml']);
+  expect(planSetupPublisherInstallation(f.proposal, snapshot, operation).status).toBe('review');
+  expect(f.request.mock.calls.some(([, p]) => p.tree_sha === irrelevant || p.file_sha === irrelevant)).toBe(false);
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+});
+it('publisher977-C117 rejects a gitlink at the fixed publisher path before fetching it', async () => {
+  const f = fixture(), directory = Object.values(f.trees).find(t => t.tree.some(e => e.path === 'ci.yml'))!;
+  const collision = 'e'.repeat(40);
+  directory.tree.push({ path: SETUP_PUBLISHER_WORKFLOW_PATH.split('/').at(-1)!, mode: '160000', type: 'commit', sha: collision });
   await expect(f.reader.inspect(f.proposal)).rejects.toMatchObject({ code: 'malformed' });
   expect(f.request.mock.calls.some(([, p]) => p.tree_sha === collision || p.file_sha === collision)).toBe(false);
 });

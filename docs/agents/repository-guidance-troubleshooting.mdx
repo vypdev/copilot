@@ -105,3 +105,15 @@ existing changes; updating hashes alone does not make a malformed profile valid.
 
 
 Installed required issue headings follow the same constraints as field mappings: trimmed single-line text, no line/control separators and at most128UTF-8 bytes per heading. A label containing a newline cannot be satisfied by an issue. Regenerate unsupported guidance using the intended setup configuration while preserving existing changes; changing manifest hashes alone cannot repair it.
+
+
+### A manifest is present but core guidance is missing
+
+A supported schema2 setup manifest must declare the repository profile, agent
+guide and workflow skill. An empty or partial inventory is unsupported, even if
+its profile digest matches. Doctor reports a missing/unsupported manifest rather
+than healthy schema/parity. Reconcile guidance from the intended setup
+configuration while preserving existing changes; editing hashes cannot restore
+missing ownership or semantic evidence. The optional AGENTS.md navigation block
+is separate from those three required records. Publisher preview also blocks
+when declared guidance cannot be read; unavailable access is not an empty file.

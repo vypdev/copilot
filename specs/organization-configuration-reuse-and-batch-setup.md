@@ -1526,3 +1526,91 @@ actual installation, native canary and174/42 qualification remain separate;
 production disabled, evaluated-pilot writes0. Traceability: C112 -> G01/G05/G07 ->
 pure manifest policy/source adapter; C113 -> G01/G07 -> complete read adapter;
 C114 -> G01/G02/G07 -> cumulative validator and actual drift assertions.
+
+
+### Complete guidance, DNS fences and irrelevant Git links — issue #998, Round18
+
+**Cumulative contract.** The Action-selected companion retains its approved64-case
+baseline byte for byte. That baseline is not a completion cap. Every subsequent
+owning appendix is mandatory, including the existing114-case floor and this
+118-case floor. The cumulative validator and final DoD require all published
+cases, mapped assertions and four separate extracted-package controls. Already
+on397b, a64-only ledger or removal of both matching appendix rows and ledger
+cases fails independently. Preserve that negative proof and all first114 ledger
+objects; do not relabel baseline64 as current complete acceptance or weaken it.
+
+**Observed defects and intended behavior.** The shared schema2 manifest parser
+MUST require the three core profile, guide and workflow-skill inventory records.
+The existing reconciler only publishes a complete manifest; AGENTS.md navigation
+remains optional. A hand-edited empty/partial manifest cannot establish ownership,
+semantic validity or healthy doctor parity even with a matching profile digest.
+Preserve the existing warning/recovery flow: `No valid setup-owned agent guidance manifest was found.`; regenerate/reconcile the intended guidance while preserving human
+changes. No profile default, new schema, setting or permissive repair is added.
+The pure parser owns validity, filesystem adapters observe actual files and the
+existing doctor presenter owns the resulting warning.
+
+Native DNS can bypass JS socket hooks. The test-process package guard MUST deny
+all public lookup/lookupService, resolve-family and reverse operations in callback
+and promise modules and their Resolver prototypes, before native dispatch, and
+record only a closed operation label. Synchronize builtin named exports for later
+ESM imports. Resolver configuration remains available; no network authority is
+inferred from it. This is a test instrumentation boundary, not a security sandbox
+or public runtime feature. The package under test starts after preload. Retain
+native HTTP/Undici, UDP, listener, child-process and filesystem fences. Controlled
+UDP DNS positive arms use only the test-owned loopback server with NXDOMAIN;
+they do not contact upstream DNS. The original guard's leaked queries and empty
+network report are retained as negatives. Primary API reference:
+[Node DNS](https://nodejs.org/docs/latest-v24.x/api/dns.html); no Node upgrade.
+
+The provider reader MUST ignore unrelated tree or commit/gitlink entries whose
+names end in YAML. It does not descend into/fetch/count them as workflows. A
+non-blob entry colliding with the fixed publisher target still blocks, as do
+malformed entries, symlinks and size/count violations. Source identity, read
+ceilings, immutable planning, UNKNOWN inventory and installation permissions
+retain their existing contracts. No independent-inventory channel is added.
+Required guidance returning403/404 MUST reject the snapshot; do not invent empty
+facts or query unrelated org resources. C23 continues to use actual credential
+scope/repository observations, now asserting the real fixture guidance and no
+unrelated organization/secret/variable/label/type endpoints. C118 supplies the
+separate unavailable-guidance contract without narrowing C23.
+
+```text
+Complete core manifest -> observe files/profile -> report actual doctor state
+Missing core record   -> unsupported manifest warning -> reconcile intended guidance
+Unrelated YAML gitlink -> ignore -> same immutable publisher preview
+Required guidance403/404 -> reject snapshot -> no approval or writes
+Guarded DNS query      -> record denied operation -> no native packet
+```
+Text equivalent: incomplete evidence stops healthy/planning claims before effects;
+irrelevant entries leave supported planning unchanged; package instrumentation
+observes an attempted DNS operation while blocking its transport.
+
+| Case ID | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C115 | Read-only planning/freshness | PU977-G01, PU977-G07 | Supported schema2 guidance requires the profile, guide and workflow skill records; empty or partial inventories cannot make the actual doctor report healthy. |
+| publisher977-C116 | Provider/delivery contracts | PU977-G05, PU977-G07 | The package effect guard intercepts native DNS callback, promise and Resolver query APIs before dispatch, with real local positive controls and recorded denied attempts. |
+| publisher977-C117 | Provider/delivery contracts | PU977-G01, PU977-G07 | Workflow inventory ignores unrelated YAML-named gitlinks without fetching their targets while rejecting a gitlink at the fixed publisher destination. |
+| publisher977-C118 | Read-only planning/freshness | PU977-G05, PU977-G07 | Unavailable declared guidance rejects the read-only snapshot without inventing source facts or unrelated organization resources. |
+
+The cumulative minimum is **118 logical IDs /114 mapped Jest cases plus four
+extracted-package cases**. Budget at most24 new Jest cases; this change uses16:
+four actual parser/filesystem/doctor compositions, eight DNS cases (four real
+public surfaces, guarded/unprotected), two gitlink controls and two unavailable
+guidance responses. Strengthen existing C23, without duplicating its evidence.
+The same five core adversaries and four guarded DNS bodies MUST fail against
+original production bytes and pass corrected bytes. Retain all attempts,
+including a correction that initially missed numeric resolve4/resolve6 names.
+The baseline64 counterexamples are parser fixtures, never feature executions.
+
+Keep pure-policy100%, runtime95/90, global/changed-path and six-pure/20-runtime
+budgets, complete cumulative mapping, architecture, normal build/test/lint,
+extracted package smoke, docs/specification/catalog/Graphify and fresh final-head
+native checks/review. Update guidance recovery, implementation notes, current
+floor and a bounded Round18 evidence packet together. There is no new UI locale,
+credential, installation/ref-write permission or migration of valid manifests.
+No new human/platform observation is needed for this source correction. Normal
+merge, trusted-default preview, authorized installation, native canary and model
+qualification remain independent gates. Traceability: C115 -> G01/G07 -> shared
+parser/filesystem doctor -> guidance troubleshooting; C116 -> G05/G07 -> package
+guard/local DNS -> evidence packet; C117 -> G01/G07 -> Git reader/planner; C118 ->
+G05/G07 -> actual read adapter and existing unavailable-response handling.

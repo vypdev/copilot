@@ -71,7 +71,7 @@ export class SetupPublisherGithubReadAdapter {
       const workflows: SetupPublisherObservedFile[] = [];
       for (const entry of directory ? await reader.tree(directory.sha) : []) {
         const path = `.github/workflows/${entry.path}`;
-        if (entry.type === 'tree' && path !== SETUP_PUBLISHER_WORKFLOW_PATH || !/\.ya?ml$/iu.test(entry.path)) continue;
+        if ((entry.type === 'tree' || entry.type === 'commit') && path !== SETUP_PUBLISHER_WORKFLOW_PATH || !/\.ya?ml$/iu.test(entry.path)) continue;
         workflows.push(await load(path, entry));
       }
       return { session, inspection: { target, authority, source, installation: { complete: true, manifest,

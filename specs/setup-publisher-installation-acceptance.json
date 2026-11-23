@@ -3022,6 +3022,118 @@
           "test": "publisher independently read snapshot admission publisher977-C21 blocks a changed or unavailable destination: base"
         }
       ]
+    },
+    {
+      "id": "publisher977-C115",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Supported schema2 guidance requires the profile, guide and workflow skill records; empty or partial inventories cannot make the actual doctor report healthy.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/utils/__tests__/setup_files.test.ts",
+          "test": "setup_files publisher977-C115: incomplete guidance inventory .copilot/repository-profile.json cannot make the actual doctor report healthy"
+        },
+        {
+          "file": "src/utils/__tests__/setup_files.test.ts",
+          "test": "setup_files publisher977-C115: incomplete guidance inventory .copilot/AGENT_GUIDE.md cannot make the actual doctor report healthy"
+        },
+        {
+          "file": "src/utils/__tests__/setup_files.test.ts",
+          "test": "setup_files publisher977-C115: incomplete guidance inventory .agents/skills/copilot-repository-workflow/SKILL.md cannot make the actual doctor report healthy"
+        },
+        {
+          "file": "src/utils/__tests__/setup_files.test.ts",
+          "test": "setup_files publisher977-C115: incomplete guidance inventory all cannot make the actual doctor report healthy"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C116",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G05",
+        "PU977-G07"
+      ],
+      "assertion": "The package effect guard intercepts native DNS callback, promise and Resolver query APIs before dispatch, with real local positive controls and recorded denied attempts.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences callback guarded=false observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences callback guarded=true observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences promise guarded=false observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences promise guarded=true observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences callback-resolver guarded=false observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences callback-resolver guarded=true observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences promise-resolver guarded=false observes a real local DNS query and denies dispatch through the guard"
+        },
+        {
+          "file": "src/tooling/__tests__/setup_publisher_package_guard.test.ts",
+          "test": "publisher977-C116: native DNS package transport fences promise-resolver guarded=true observes a real local DNS query and denies dispatch through the guard"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C117",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Workflow inventory ignores unrelated YAML-named gitlinks without fetching their targets while rejecting a gitlink at the fixed publisher destination.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C117 ignores an unrelated YAML-named gitlink in actual immutable publisher planning"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C117 rejects a gitlink at the fixed publisher path before fetching it"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C118",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G05",
+        "PU977-G07"
+      ],
+      "assertion": "Unavailable declared guidance rejects the read-only snapshot without inventing source facts or unrelated organization resources.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C118: unavailable required guidance with HTTP 403 cannot produce a fabricated planning snapshot"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts",
+          "test": "publisher977-C118: unavailable required guidance with HTTP 404 cannot produce a fabricated planning snapshot"
+        }
+      ]
     }
   ]
 }

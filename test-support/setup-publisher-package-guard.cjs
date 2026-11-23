@@ -29,6 +29,18 @@ require('node:dgram').Socket.prototype.bind = () => deny('listeners', 'datagram.
 require('node:net').Socket.prototype.connect = () => deny('networkAttempts', 'socket.connect');
 require('node:tls').connect = () => deny('networkAttempts', 'tls.connect');
 require('node:net').Server.prototype.listen = () => deny('listeners', 'listen');
+// c-ares and OS resolution bypass JS net/dgram hooks. Fence both public
+// callback/promise APIs and Resolver instances, including version-added records.
+const dns = require('node:dns');
+const dnsPromises = require('node:dns/promises');
+for (const [target, surface] of [[dns, 'callback'], [dnsPromises, 'promise'],
+  [dns.Resolver.prototype, 'callback-resolver'], [dnsPromises.Resolver.prototype, 'promise-resolver']]) {
+  for (const operation of Object.getOwnPropertyNames(target)) {
+    if (/^(?:lookup(?:Service)?|resolve.*|reverse)$/.test(operation) && typeof target[operation] === 'function') {
+      target[operation] = () => deny('networkAttempts', 'dns.' + surface + '.' + operation);
+    }
+  }
+}
 for (const operation of ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork']) {
   require('node:child_process')[operation] = () => deny('childProcesses', operation);
 }
@@ -51,4 +63,5 @@ for (const [target, name] of [[fs, 'open'], [fs, 'openSync'], [fs.promises, 'ope
     return original.apply(this, arguments);
   };
 }
+require('node:module').syncBuiltinESMExports();
 process.on('exit', exitCode => persist(reportDescriptor, JSON.stringify({ ...observations, exitCode }) + '\n'));

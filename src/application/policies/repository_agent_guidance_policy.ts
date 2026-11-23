@@ -277,6 +277,8 @@ export function parseRepositoryAgentGuidanceManifest(content: string): Repositor
       if (record.role !== expectedManagedRole(relativePath)) return undefined;
       records[relativePath] = { role: record.role as ManagedRole, sha256: record.sha256 as string };
     }
+    if ([REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_SKILL_PATH]
+      .some(relativePath => !Object.prototype.hasOwnProperty.call(records, relativePath))) return undefined;
     return {
       schemaVersion: 2,
       generator: { name: '@vypdev/copilot', contractVersion: 1 },

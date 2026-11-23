@@ -297,7 +297,7 @@ Round8 native Commit/Verification failed on nine newly named .json.gz report arc
 
 [Round16 required-heading and cumulative negative-evidence controls](./review-round16/README.md) preserve all109 prior ledger objects and the companion, with111IDs/107mapped plus four package cases.
 
-## Current Round17 source and evidence closure
+## Round17 source and evidence closure (historical114-case stage)
 
 The cumulative floor is114 logical IDs /110 mapped Jest cases plus four
 extracted-package cases. C112 binds the Action’s declared executable entrypoints
@@ -306,3 +306,9 @@ from fixed-target collisions and unsafe blobs. Existing C03/C102 controls are
 strengthened in place, and C114 requires the existing authenticated base-drift
 assertion. All111 prior ledger objects and the selected companion remain exact.
 [Round17 controls and current validation limits](./review-round17/README.md).
+
+
+Round18 retains the selected64-case baseline and requires the cumulative118-case
+floor (114 mapped Jest plus four extracted-package cases). See the
+[Round18 source and control packet](../issue-998/review-round18/README.md).
+Source correction and package transport controls do not establish installation.

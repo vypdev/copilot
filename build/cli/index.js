@@ -60275,6 +60275,9 @@ function parseRepositoryAgentGuidanceManifest(content) {
                 return undefined;
             records[relativePath] = { role: record.role, sha256: record.sha256 };
         }
+        if ([exports.REPOSITORY_AGENT_PROFILE_PATH, exports.REPOSITORY_AGENT_GUIDE_PATH, exports.REPOSITORY_AGENT_SKILL_PATH]
+            .some(relativePath => !Object.prototype.hasOwnProperty.call(records, relativePath)))
+            return undefined;
         return {
             schemaVersion: 2,
             generator: { name: '@vypdev/copilot', contractVersion: 1 },
@@ -129578,7 +129581,7 @@ class SetupPublisherGithubReadAdapter {
             const workflows = [];
             for (const entry of directory ? await reader.tree(directory.sha) : []) {
                 const path = `.github/workflows/${entry.path}`;
-                if (entry.type === 'tree' && path !== setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH || !/\.ya?ml$/iu.test(entry.path))
+                if ((entry.type === 'tree' || entry.type === 'commit') && path !== setup_publisher_installation_1.SETUP_PUBLISHER_WORKFLOW_PATH || !/\.ya?ml$/iu.test(entry.path))
                     continue;
                 workflows.push(await load(path, entry));
             }
