@@ -312,3 +312,12 @@ Round18 retains the selected64-case baseline and requires the cumulative118-case
 floor (114 mapped Jest plus four extracted-package cases). See the
 [Round18 source and control packet](../issue-998/review-round18/README.md).
 Source correction and package transport controls do not establish installation.
+
+
+## Current Round19 PR recovery scope
+
+The cumulative floor is119 IDs /115 mapped Jest plus four package cases.
+The selected64-case baseline and all118 prior objects remain exact. Recovery
+queries the exact operation owner/head across all states while preserving the
+100/page,10-page bound and all conflict/no-replay checks. See
+[Round19](review-round19/README.md); source controls are not installation.

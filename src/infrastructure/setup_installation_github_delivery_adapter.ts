@@ -165,7 +165,11 @@ export class SetupInstallationGithubDeliveryAdapter {
     let match: number | undefined;
     const branch = setupBatchBranch(this.plan.operationId);
     for (let page = 1; page <= 10; page += 1) {
-      const response = await this.call('GET /repos/{owner}/{repo}/pulls', { state: 'all', per_page: 100, page });
+      // The fixed-head POST can only create this operation's owned branch PR.
+      // Keep all states and omit base so human base drift remains observable.
+      const response = await this.call('GET /repos/{owner}/{repo}/pulls', {
+        state: 'all', head: `${this.plan.target.owner}:${branch}`, per_page: 100, page,
+      });
       if (!Array.isArray(response) || response.length > 100) throw new SetupBatchProviderError('malformed');
       for (const value of response) {
         const pull = batchObject(value), head = batchObject(pull?.head), base = batchObject(pull?.base);

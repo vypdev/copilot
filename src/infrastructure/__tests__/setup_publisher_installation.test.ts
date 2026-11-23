@@ -182,6 +182,38 @@ describe('actual shared Git delivery composition with controlled provider', () =
       else await expect(f.writer.pullRequest(f.commit, true)).rejects.toBeDefined();
       const pages = f.transport.call.mock.calls.filter(([, route]) => route === 'GET /repos/{owner}/{repo}/pulls').map(([, , p]) => p.page);
       expect(pages).toEqual(outcome === 'unterminated' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2]);
+      expect(f.transport.call.mock.calls.filter(([, route]) => route === 'GET /repos/{owner}/{repo}/pulls')
+        .every(([, , p]) => p.head === `${f.plan.target.owner}:${setupBatchBranch(f.plan.operationId)}` && !('base' in p))).toBe(true);
+      expect(f.posts()).toEqual([]);
+    });
+
+  it.each(['exact', 'duplicate', 'foreign base', 'foreign repository'] as const)(
+    'publisher977-C119: scoped recovery beyond1000 unrelated PRs preserves %s identity checks', async outcome => {
+      const f = deliveryFixture(); f.setBranch(f.commit);
+      // Prove the real adapter's complete approved-tree/receipt preconditions,
+      // independently of the pagination response under investigation.
+      await expect(f.writer.assertPrepared(f.commit)).resolves.toBeUndefined();
+      const exact = f.pull();
+      const candidates = outcome === 'duplicate' ? [exact, { ...exact, number: 74 }]
+        : outcome === 'foreign base' ? [{ ...exact, base: { ...exact.base, ref: 'human-moved-base' } }]
+          : outcome === 'foreign repository' ? [{ ...exact, head: { ...exact.head, repo: { id: 43 } } }] : [exact];
+      const history = [...Array.from({ length: 1000 }, (_, n) => ({ ...exact, number: n + 100,
+        body: 'Unrelated human discussion.', head: { ...exact.head, ref: `human/history-${n}` } })), ...candidates];
+      f.transform((route, data, parameters) => {
+        if (route !== 'GET /repos/{owner}/{repo}/pulls') return data;
+        // Model GitHub's documented owner:head filter. Without it, the same
+        // bounded reader consumes ten full unrelated pages and cannot recover.
+        const selected = typeof parameters.head === 'string'
+          ? history.filter(p => `${f.plan.target.owner}:${p.head.ref}` === parameters.head) : history;
+        const start = (Number(parameters.page) - 1) * 100;
+        return selected.slice(start, start + 100);
+      });
+      if (outcome === 'exact') await expect(f.writer.pullRequest(f.commit, true)).resolves.toBe(73);
+      else await expect(f.writer.pullRequest(f.commit, true)).rejects.toThrow('unknown');
+      const reads = f.transport.call.mock.calls.filter(([, route]) => route === 'GET /repos/{owner}/{repo}/pulls');
+      expect(reads.map(([, , p]) => p.page)).toEqual([1]);
+      expect(reads[0][2]).toMatchObject({ head: `${f.plan.target.owner}:${setupBatchBranch(f.plan.operationId)}`, state: 'all', per_page: 100 });
+      expect(reads[0][2]).not.toHaveProperty('base');
       expect(f.posts()).toEqual([]);
     });
 

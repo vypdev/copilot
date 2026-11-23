@@ -401,7 +401,7 @@ at that snapshot contiguous additions above C94 may use the generic future-case 
 results and the separate final-head native acceptance belong in review-round8.
 
 
-Current Round18 acceptance requires118 logical IDs /114 mapped Jest cases plus
+Round18 acceptance required118 logical IDs /114 mapped Jest cases plus
 the same four extracted-package cases. All first114 ledger objects and the
 selected64-case companion remain exact. C115 prevents incomplete manifest/doctor
 health; C116 covers actual local DNS dispatch across callback/promise Resolver
@@ -410,3 +410,11 @@ collisions; C118 observes required guidance access failure. C23 is strengthened
 in place. The114-stage and64-case baseline do not cap current completion.
 Full source/coverage, package, normal hooks and fresh final-head native gates
 still apply; no source or package result demonstrates installation.
+
+
+Current Round19 requires119 IDs /115 mapped Jest plus four package cases. All
+first118 objects and the selected64-case companion remain exact. C119 binds
+operation-scoped owner/head PR inspection with the same100/page and10-page
+bound, all-state/identity/conflict checks and0blind POST. C44's mandatory
+unterminated and foreign/duplicate controls remain and observe the scoped query.
+Source/normal/package/final-head native gates remain independent of installation.

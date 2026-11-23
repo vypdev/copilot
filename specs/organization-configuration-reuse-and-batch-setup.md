@@ -1614,3 +1614,65 @@ qualification remain independent gates. Traceability: C115 -> G01/G07 -> shared
 parser/filesystem doctor -> guidance troubleshooting; C116 -> G05/G07 -> package
 guard/local DNS -> evidence packet; C117 -> G01/G07 -> Git reader/planner; C118 ->
 G05/G07 -> actual read adapter and existing unavailable-response handling.
+
+
+### Operation-scoped PR recovery within existing provider bounds — #998 Round19
+
+**Observed defect and ownership.** The common Git delivery adapter scans all
+repository PRs before recovering this operation. Ten full pages of unrelated
+history exhaust its fixed bound before an older exact match can be observed.
+C44 requires complete, safe inspection of the operation; it does not require
+reading every unrelated repository PR. The fixed-head POST can only create a PR
+from this operation's setup/copilot/UUID branch. Copies of its marker on other
+branches are untrusted text and cannot be adopted as that POST's result.
+
+The existing adapter MUST query state=all with GitHub's owner:head filter for the
+exact target owner and operation branch. It MUST NOT filter by base: a human
+base change remains a conflict to detect. Every returned candidate still requires
+open state, exact head/commit/repository, exact base/repository and exact operation
+marker; duplicates or contradictions block. A foreign row returned despite the
+filter also remains rejected. No predicate, approval, prepared-tree proof or
+uncertain-effect rule is relaxed. Provider guidance:
+[GitHub list pull requests](https://docs.github.com/en/rest/pulls/pulls#list-pull-requests).
+
+**Bounds and architecture.** Preserve100 results/page, ten pages, existing
+read-retry/deadline rules and one-attempt writes. An unterminated or oversized
+response still rejects; a full bound cannot establish absence or authorize a
+second PR. No higher cap, additional endpoint, index/search eventual-consistency
+assumption, public option, credential grant, journal/schema or installer exists.
+The adapter owns query mapping; the application retains purpose-bound recovery
+and the synchronous active-session write fence. Shared batch/publisher delivery
+uses the same operation branch and unchanged verified receipt contract.
+
+```text
+Known operation -> read exact owner/head, all states -> check every returned match
+One exact match -> adopt existing PR -> no POST
+Duplicate/foreign/base drift -> retain blocked recovery -> no POST
+Unterminated10 pages -> incomplete inspection -> no POST or replay
+```
+Text equivalent: unrelated repository history is excluded before pagination;
+actual candidate identity and uncertainty rules still decide adoption. Existing
+blocked/recovery copy and known-operation/PR links remain; no new locale or UI
+state is introduced. Valid retained operations need no migration. Operators
+inspect the retained operation on conflicts; restarting or editing the receipt
+cannot authorize a duplicate. Update current evidence and provisioning/recovery
+documentation, catalog and Graphify together.
+
+| Case ID | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C119 | Provider/delivery contracts | PU977-G03, PU977-G04 | PR recovery filters all-state reads to the exact operation owner/head while retaining complete bounded pagination and duplicate, base, commit, repository and marker checks; unrelated history cannot exhaust the scan. |
+
+The cumulative minimum is **119 logical IDs /115 mapped Jest cases plus four
+extracted-package cases**. Preserve every first118 ledger object and the selected
+64-case companion exactly. Budget four new causal adapter cases with1,000
+unrelated PRs before the operation: exact recovery, duplicate, moved base and
+foreign head repository. Each first proves the actual approved-tree/receipt
+precondition and observes0POST. All four identical bodies MUST fail on4806 and
+pass with the query correction. Strengthen existing C44 to require the head query
+and absent base filter while retaining its ten-page unterminated-response test
+and all exact/missing/duplicate/foreign assertions. No threshold or provider bound
+is increased. Keep pure100%, runtime95/90, global/changed-path, complete mapping,
+architecture, normal hooks, extracted-package and fresh final-head native gates.
+Traceability: C44/C119 -> G03/G04 -> shared Git delivery adapter -> retained
+operation recovery documentation. This source correction establishes no actual
+installation, native runtime qualification or new174/42/model campaign.

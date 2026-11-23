@@ -3134,6 +3134,34 @@
           "test": "publisher977-C118: unavailable required guidance with HTTP 404 cannot produce a fabricated planning snapshot"
         }
       ]
+    },
+    {
+      "id": "publisher977-C119",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G04"
+      ],
+      "assertion": "PR recovery filters all-state reads to the exact operation owner/head while retaining complete bounded pagination and duplicate, base, commit, repository and marker checks; unrelated history cannot exhaust the scan.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C119: scoped recovery beyond1000 unrelated PRs preserves exact identity checks"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C119: scoped recovery beyond1000 unrelated PRs preserves duplicate identity checks"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C119: scoped recovery beyond1000 unrelated PRs preserves foreign base identity checks"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_installation.test.ts",
+          "test": "actual shared Git delivery composition with controlled provider publisher977-C119: scoped recovery beyond1000 unrelated PRs preserves foreign repository identity checks"
+        }
+      ]
     }
   ]
 }
