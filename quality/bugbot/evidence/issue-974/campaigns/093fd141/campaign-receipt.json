@@ -1,0 +1,94 @@
+{
+  "startedAt": "2026-11-23T03:22:04.581217+00:00",
+  "implementation": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "planRevision": "07f21a4cadbd1dbaf03566c57a8033f85e9ff760",
+  "scientificPlanSha256": "312c4501082d97fbb5acd7c1f3801f179d085c553f2bd6d15c47bcd373a00db1",
+  "image": "sha256:c5d0f155dd148f617be6417ffa5967ee3b1cde3f08bfcb04f29096b8e951c2a9",
+  "profileSha256": "fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b",
+  "runtimeAuthorizationReviewSha256": "55471224cb95a77b0d53033077dfd2d048cb2db6795f11236c2306082a72b050",
+  "args": [
+    "node",
+    "/private/tmp/copilot-goal-974-macos48-runtime-attempt1/proc-open-runtime-attempt1/reviewed-bootstrap.cjs",
+    "/private/tmp/copilot-goal-974-macos48-runtime-attempt1/proc-open-runtime-attempt1/frozen-host",
+    "07f21a4cadbd1dbaf03566c57a8033f85e9ff760",
+    "quality/bugbot/evidence/issue974/plan.json",
+    "312c4501082d97fbb5acd7c1f3801f179d085c553f2bd6d15c47bcd373a00db1",
+    "05f8507de1ccef7e5e93deabfe3e0727eb6b163bf24a551120dfb7c618c44191",
+    "corpus",
+    "/private/tmp/copilot-goal-974-macos48-runtime-attempt1/proc-open-runtime-attempt1/scientific-campaign-attempt1/corpus-v3"
+  ],
+  "campaign": "/private/tmp/copilot-goal-974-macos48-runtime-attempt1/proc-open-runtime-attempt1/scientific-campaign-attempt1",
+  "actualHost": "localphysicalDarwinARM64selfhostedlistenerhost",
+  "actualGitHubWorkflowJob": false,
+  "detector": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "effort": "xhigh"
+  },
+  "verifier": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6.1-sol",
+    "effort": "xhigh"
+  },
+  "plannedCases": 174,
+  "concurrency": 6,
+  "outerAttemptsPerCase": 1,
+  "automaticCampaignRetry": false,
+  "initialPromptHashes": "3a3b05111e8edc934c7b482e3ed7e9eb24b4d1fc2e3d3d2d7bea13cb3ee79b83",
+  "actualSdkControlApplicationCallsBeforeCampaign": 1,
+  "actual42": "UNSTARTED",
+  "pilotWrites": 0,
+  "production": "disabled",
+  "noResearchDeadlineOrTokenCutoffAdded": true,
+  "automaticModelFreeContainedPlannerPreflight": true,
+  "gates": {
+    "source590": "7e8a42f530b76c6881255d715542128922167e50ffe1325fc51d5586c7884265",
+    "global": "e4ba12a3f17cbd474c90465c88a72e54b3774a3769dd821e3d234d8f25ddf122",
+    "cli14": "8e30454a10336300359056488cf95d8145f6f4ef1091274dfaa4219648e943ef",
+    "native4": "ced5f9924b543c9da6f5a83c55aa97361b63caebf4ef57c059ef4dbfeb6ad5f0",
+    "actualSdkControl": "89f24af1c7d7a7f0da7e6c684e93f84cd6fdb3e6171107b1d318ed8c587185a4"
+  },
+  "finishedAt": "2026-11-23T03:39:23.748719+00:00",
+  "exitCode": 1,
+  "passed": false,
+  "decision": {
+    "complete": true,
+    "completed": 174,
+    "attemptsComplete": true,
+    "containmentComplete": true,
+    "passed": false,
+    "githubWriteAttempts": 0,
+    "workspaceUnchanged": true,
+    "score": {
+      "metrics": {
+        "expected": 80,
+        "actual": 84,
+        "matched": 74,
+        "precision": 0.8809523809523809,
+        "recall": 0.925,
+        "locationAccuracy": 0.9324324324324325,
+        "severityAccuracy": 0.918918918918919,
+        "categoryAccuracy": 1,
+        "f1": 0.9024390243902439,
+        "falsePositives": 10,
+        "falseNegatives": 6,
+        "meanLineDistance": 0.0945945945945946,
+        "confidenceBrierScore": 0.11320833333333326
+      },
+      "violations": [
+        "precision 0.881 is below 0.900"
+      ],
+      "missingCases": []
+    }
+  },
+  "durableOuterDispatches": 174,
+  "recordedApplicationAttemptStarts": 200,
+  "actual42Admitted": false,
+  "log": "/private/tmp/copilot-goal-974-macos48-runtime-attempt1/proc-open-runtime-attempt1/scientific-174-attempt1.log",
+  "logBytes": 0,
+  "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "qualifiedProfiles": [],
+  "DONE_DO_NOT_REPEAT": true
+}

@@ -1,0 +1,43 @@
+{
+  "startedAt": "2026-11-23T03:16:54.679331+00:00",
+  "implementation": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "planRevision": "07f21a4cadbd1dbaf03566c57a8033f85e9ff760",
+  "image": "sha256:c5d0f155dd148f617be6417ffa5967ee3b1cde3f08bfcb04f29096b8e951c2a9",
+  "args": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "/private/tmp/copilot-goal-974-macos48-runtime-attempt1/proc-open-runtime-attempt1/independent-harness/quality/bugbot/evidence/issue974/containment-native.test.cjs"
+  ],
+  "planInventory": "/private/tmp/copilot-goal-974-macos48-runtime-attempt1/proc-open-runtime-attempt1/native-control-plan-inventory-attempt1.json",
+  "actualHost": "DarwinARM64 host ofapple-silicon-runner-1/2;localexecution",
+  "actualGitHubWorkflowJob": false,
+  "modelCalls": 0,
+  "qualificationCalls": 0,
+  "pilotWrites": 0,
+  "production": "disabled",
+  "currentCLISandboxAdmission": "14actualCLIcanariesPASS;actualordinarySDKmodel-tooladmissionstillseparate",
+  "profileSha256": "fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b",
+  "runtimeAuthorizationReviewSha256": "55471224cb95a77b0d53033077dfd2d048cb2db6795f11236c2306082a72b050",
+  "finishedAt": "2026-11-23T03:19:41.206786+00:00",
+  "exitCode": 0,
+  "logBytes": 1052,
+  "logSha256": "8d20ed372049484fc9d66cba4946e469edb497e704d14585eeced28b10f9a884",
+  "log": "/private/tmp/copilot-goal-974-macos48-runtime-attempt1/proc-open-runtime-attempt1/native-controls-attempt1.log",
+  "summaries": [
+    "ok 1 - ev974-C32 actual contained SDK cancels escaped descendants",
+    "ok 2 - ev974-C33 actual contained SDK cancels escaped descendants",
+    "ok 3 - ev974-C34 actual outer SIGKILL independently removes its namespace and retains incomplete evidence",
+    "ok 4 - ev974-C35 actual completion/cancel races preserve identity and leave an unrelated owned scope running",
+    "# tests 4",
+    "# pass 4",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0",
+    "# duration_ms 166477.792417"
+  ],
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualifiedProfiles": [],
+  "DONE_DO_NOT_REPEAT": true
+}

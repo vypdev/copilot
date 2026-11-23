@@ -631,3 +631,7 @@ PR1003 diagnostics. Restricted socket introspection can cause ordinary Node
 streams to discard output. Raw witness success does not claim Node stream or
 ordinary SDK/model-tool compatibility. The initial TOML reader, missing-stream
 marker and refuted helper-home hypothesis remain separate retained negatives.
+
+## Measured independent174 result on093fd141
+
+The complete campaign is **not qualified**:174/174 complete, precision88.0952%below90%; recall92.50%,F190.2439%,location93.2432%,severity91.8919%,category100%and Brier0.11320833 pass their unchanged gates.200ordinary SDK invocations include26source-pinned follow-ups and one outer attempt per case. The separate genuine SDK control adds1 invocation; provider-internal request counts remain unknown. All174initial prompt/schema identities and dispatch order match the committed preregistration;175scopes are freshly404 after stopped confirmation, workspace integrity holds and pilotwrites0. **42remainUNSTARTED,Solcalls0,productiondisabled.** See [full negative result](../issue-974/campaigns/093fd141/results.md).

@@ -2665,7 +2665,8 @@
         "quality/bugbot/evidence/issue-985/README.md",
         "quality/bugbot/evidence/issue974/README.md",
         "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/README.md",
-        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/proc-open-correction/manifest.json"
+        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/proc-open-correction/manifest.json",
+        "quality/bugbot/evidence/issue-974/campaigns/093fd141/results.md"
       ]
     },
     {
@@ -3120,7 +3121,8 @@
         "docs/security-operations/operations/smoke-tests.mdx",
         "docs/development/testing.mdx",
         "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/README.md",
-        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/proc-open-correction/manifest.json"
+        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/proc-open-correction/manifest.json",
+        "quality/bugbot/evidence/issue-974/campaigns/093fd141/results.md"
       ]
     },
     {

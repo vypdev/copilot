@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "Private durable retention metadata; no prompt/response or credential content published",
+  "attemptBundle": {
+    "name": "completed174-private-attempts-and-controls.zip",
+    "bytes": 8705056,
+    "sha256": "7411656908984586cded444c923e917ac574fc91e6b599a47d221fcc79dd9f42",
+    "members": 1556,
+    "allOriginalMemberBytesVerified": true
+  },
+  "sourceAndPreregistrationGitBundle": {
+    "name": "completed174-private-sources-and-preregistrations.bundle",
+    "bytes": 477199,
+    "sha256": "21f74672081645f0e8cd9e60e4db94066c81bb707c81fd0186b5b43b8c7b033a",
+    "verified": true,
+    "publishedPrerequisite": "a74613e95927dae5a0d327b31ced436e22ba8259",
+    "privateCommits": [
+      "07f21a4cadbd1dbaf03566c57a8033f85e9ff760",
+      "838a203388ff744683df6f69bbe6db3efbd6d901",
+      "6d5bc7ee91c64d60f6d13d1c30281e52ccfbc316"
+    ]
+  },
+  "authFilesExcluded": true,
+  "rawModelDataRetainedPrivately": true
+}

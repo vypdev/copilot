@@ -1,0 +1,44 @@
+{
+  "started": "2026-11-23T03:08:32.677543+00:00",
+  "finished": "2026-11-23T03:14:57.068976+00:00",
+  "exitCode": 0,
+  "parent": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "headAfter": "07f21a4cadbd1dbaf03566c57a8033f85e9ff760",
+  "branch": "feature/974-proc-open-scientific-preregistration",
+  "statusAfter": "",
+  "files": [
+    "quality/bugbot/evidence/issue-974/native-controls/macos-sdk-proc-baseline-cli171/ev974-C32.json",
+    "quality/bugbot/evidence/issue-974/native-controls/macos-sdk-proc-baseline-cli171/ev974-C33.json",
+    "quality/bugbot/evidence/issue-974/native-controls/macos-sdk-proc-baseline-cli171/ev974-C34.json",
+    "quality/bugbot/evidence/issue-974/native-controls/macos-sdk-proc-baseline-cli171/ev974-C35.json",
+    "quality/bugbot/evidence/issue-974/native-controls/macos-sdk-proc-baseline-cli171/runtime-admission.json",
+    "quality/bugbot/evidence/issue974/plan.json",
+    "quality/bugbot/evidence/issue-974/native-controls/macos-sdk-proc-baseline-cli171/README.md",
+    "quality/bugbot/evidence/issue974/preregistration-initial-prompts.json"
+  ],
+  "log": "/private/tmp/copilot-goal-974-macos48-runtime-attempt1/proc-open-runtime-attempt1/native-plan-normal-commit.log",
+  "logBytes": 536730,
+  "logSha256": "81344514de257c9c5be8736d8e497aba7a82cb9902fcde1104d2f0983813cb9b",
+  "suites": [
+    "Test Suites: 947 passed, 947 total"
+  ],
+  "tests": [
+    "Tests:       35 skipped, 18786 passed, 18821 total"
+  ],
+  "bundlesUnchanged": true,
+  "bundleHashes": {
+    "build/cli/index.js": "7153eb4f728a9944f2f7ec75a7e1b0fa2a654d6e1ca070207e2eea932c3ccf5c",
+    "build/github_action/index.js": "64a2f5ebf580299183b9f56fe9dc3d6aad12677625a3856dfd2eb639af370f18",
+    "build/api/index.js": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+    "build/deployment_recovery/index.js": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+  },
+  "pushed": false,
+  "qualificationCalls": 0,
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "nativeControls": "NOT_RUN",
+  "actualSdkControl": "NOT_RUN",
+  "production": "disabled",
+  "pilotWrites": 0,
+  "DONE_DO_NOT_REPEAT": true
+}
