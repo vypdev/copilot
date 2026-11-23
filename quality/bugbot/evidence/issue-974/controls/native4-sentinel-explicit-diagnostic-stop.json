@@ -42,10 +42,11 @@
     "executable": false,
     "originalBytes": 1867,
     "originalSha256": "1fb49985b9c7b26e310759db5b9a97e824601da91159516dc9797af5e59b6da5",
-    "originalGitSource": "97525e17d8ce6092a7195a925eeff08eed537459",
-    "originalGitBlob": "1929b3275e758a1a797d63a28229ee4a9bd88974",
     "privateRetainedName": "native4-sentinel-diagnostic-private-original.json",
-    "historyRewritten": false,
-    "acceptanceGranted": false
+    "historyRewritten": true,
+    "acceptanceGranted": false,
+    "historyRedactionSummary": "history-redaction.json",
+    "hostedOriginalPurgeVerified": false,
+    "supportCase": 5044568
   }
 }

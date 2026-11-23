@@ -5,8 +5,11 @@ Docker host paths. The public branch now replaces that exact prefix in21 JSON
 blobs. Every other entry remains byte-identical in each historical snapshot;
 44 of53 commit IDs change through content or ancestry. No invalidated signatures
 were present. The sanitized tip was byte-identical to89db before this locator
-and provenance follow-up. The full [commit/blob mapping](history-redaction.json)
-records the controlled exception and privately retained originals.
+and provenance follow-up. The [public retention summary](history-redaction.json) records the controlled
+exception and sanitized mirror IDs. The exact original commit/blob/path mapping
+is retained privately with its byte count and SHA-256; current public descriptors
+do not repeat the original locator associations. Earlier Git versions still
+contain them, so this minimization does not establish hosted erasure.
 
 An isolated scan of1,068 introduced reachable blobs, including365 decoded gzip
 objects, found zero remaining target prefixes. All21 modified JSON documents
@@ -21,7 +24,7 @@ The mirror of that source is82235ac53e8c9477bdc8041112e8ccb9e56d3ccc. The frozen
 174-case negative result,200 scientific SDK invocations and one technical
 control remain unchanged. There is no new qualification, Sol call or42-case
 execution. The original graph and21 original blobs are retained privately in a
-verified4,517,856-byte Git bundle and61,904-byte ZIP, named/hashed in the mapping.
+verified4,517,856-byte Git bundle and61,904-byte ZIP, named/hashed in the public retention summary.
 
 Retrieval-only archive revisions now point at reachable sanitized mirrors.
 The114-entry index and129-entry source093 index retain every original Git blob,

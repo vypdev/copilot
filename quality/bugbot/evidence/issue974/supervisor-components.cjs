@@ -11,14 +11,18 @@ const nonce = 'a'.repeat(64), sourceSha256 = digest(raw);
 function fixture(options = {}) {
     const processModel = new EventEmitter(), worker = new EventEmitter(), exits = [], sends = [], forks = [];
     const stdout = [], stderr = [];
-    Object.assign(processModel, { platform: 'linux', pid: 1, execPath: '/usr/local/bin/node', argv: ['node', file, '1000', '1001'],
+    Object.assign(processModel, { platform: 'linux', pid: 6, ppid: 1, execPath: '/usr/local/bin/node', argv: ['node', file, '1000', '1001'],
         getuid: () => 0, stdin: new EventEmitter(), stdout: new PassThrough(), stderr: new PassThrough(),
         exit: code => { exits.push(code); }, ...options.process });
     processModel.stdin.resume = () => { processModel.stdinResumed = true; };
     Object.assign(worker, { stdout: new PassThrough(), stderr: new PassThrough(), send: value => { sends.push(JSON.parse(JSON.stringify(value))); } });
     processModel.stdout.on('data', bytes => stdout.push(bytes.toString())); processModel.stderr.on('data', bytes => stderr.push(bytes.toString()));
     const moduleModel = { exports: {} };
-    const load = name => name === 'node:child_process' ? { fork: (...args) => {
+    const load = name => name === 'node:fs' ? { readFileSync(name, encoding) {
+        assert.equal(name, '/proc/1/cmdline'); assert.equal(encoding, 'utf8');
+        if (options.initReadFailure) throw Error('modeled init observation unavailable');
+        return (options.initArgv ?? ['/usr/bin/tini', '--', '/usr/local/bin/node', '/qualification-supervisor.cjs', processModel.argv[2], processModel.argv[3]]).join('\0') + '\0';
+    } } : name === 'node:child_process' ? { fork: (...args) => {
         forks.push(args); if (options.forkFailure) throw new Error('modeled fork failure'); return worker;
     } } : require(name);
     load.main = options.main ? moduleModel : undefined;
@@ -51,10 +55,14 @@ function runSupervisorComponents() {
         assert.equal(f.stderr.join(''), 'modeled diagnostic');
     });
     for (const [name, process] of [
-        ['nonLinux', { platform: 'darwin' }], ['notPID1', { pid: 2 }], ['wrongSupervisorUID', { getuid: () => 1000 }],
+        ['nonLinux', { platform: 'darwin' }], ['missingImageInit', { pid: 1 }], ['notInitPrimaryChild', { ppid: 9 }], ['wrongSupervisorUID', { getuid: () => 1000 }],
         ['wrongNode', { execPath: '/usr/bin/node' }], ['missingArg', { argv: ['node', file, '1000'] }],
         ['extraArg', { argv: ['node', file, '1000', '1001', 'extra'] }],
     ]) check(`refuse ${name} before fork`, f => { assert.throws(f.run); assert.equal(f.forks.length, 0); }, { process });
+    for (const options of [{ initReadFailure: true }, { initArgv: ['/usr/local/bin/node', '/qualification-supervisor.cjs', '1000', '1001'] },
+        { initArgv: ['/usr/bin/tini', '--', '/usr/local/bin/node', '/foreign.cjs', '1000', '1001'] }]) {
+        check('reject unavailable or mismatched image init before fork ' + JSON.stringify(options), f => { assert.throws(f.run); assert.equal(f.forks.length, 0); }, options);
+    }
     for (const index of [2, 3]) for (const value of ['0', '-1', '1.5', 'NaN', String(Number.MAX_SAFE_INTEGER + 1)]) {
         const argv = ['node', file, '1000', '1001']; argv[index] = value;
         check(`refuse identity argument${index}=${value}`, f => { assert.throws(f.run); assert.equal(f.forks.length, 0); }, { process: { argv } });
@@ -98,7 +106,7 @@ function runSupervisorComponents() {
         });
     }
     check('executable entrypoint invokes the same owner protocol', f => { assert.equal(f.forks.length, 1); assert.equal(f.process.exitCode, undefined); }, { main: true });
-    check('entrypoint failure is nonzero without importing the worker', f => { assert.equal(f.process.exitCode, 1); assert.equal(f.forks.length, 0); }, { main: true, process: { pid: 2 } });
+    check('entrypoint failure is nonzero without importing the worker', f => { assert.equal(f.process.exitCode, 1); assert.equal(f.forks.length, 0); }, { main: true, process: { pid: 1 } });
     check('fork failure is nonzero at executable entrypoint', f => { assert.equal(f.process.exitCode, 1); assert.equal(f.forks.length, 1); }, { main: true, forkFailure: true });
     assert.equal(digest(fs.readFileSync(file)), sourceSha256, 'source changed during protocol controls');
     const result = { kind: 'modeled exact-source supervisor IPC components', source: path.relative(root, file), sourceSha256,

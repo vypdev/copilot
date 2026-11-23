@@ -76,12 +76,12 @@ function fixedConfiguration(profile, identity, inputDirectory, outputDirectory, 
         && /^(?:PATH|NODE_VERSION|YARN_VERSION)=.+$/u.test(value)), 'only immutable image runtime metadata is admitted');
     assert.equal(new Set(imageEnvironment.map(value => value.slice(0, value.indexOf('=')))).size, imageEnvironment.length);
     return {
-        Image: profile.image, Entrypoint: ['/usr/local/bin/node', '/qualification-supervisor.cjs'],
+        Image: profile.image, Entrypoint: ['/usr/bin/tini', '--', '/usr/local/bin/node', '/qualification-supervisor.cjs'],
         Cmd: [String(profile.workerUid), String(profile.workerGid)],
         WorkingDir: '/sdk', User: '0:0', Env: [...imageEnvironment], Labels: labels(identity),
         AttachStdin: true, AttachStdout: false, AttachStderr: false, OpenStdin: true, StdinOnce: true, Tty: false,
         HostConfig: {
-            ReadonlyRootfs: true, Privileged: false, AutoRemove: true, RestartPolicy: { Name: 'no', MaximumRetryCount: 0 },
+            ReadonlyRootfs: true, Privileged: false, Init: false, AutoRemove: true, RestartPolicy: { Name: 'no', MaximumRetryCount: 0 },
             PidMode: '', IpcMode: 'private', NetworkMode: 'bridge',
             CapDrop: ['ALL'], CapAdd: ['SETUID', 'SETGID'],
             SecurityOpt: ['no-new-privileges:true', 'seccomp=' + qualificationSeccomp],
@@ -316,7 +316,7 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
         assert(isDeepStrictEqual(actual.Config.Cmd, config.Cmd), 'scope worker identity changed');
         assert(isDeepStrictEqual(actual.Config.Env, config.Env), 'scope environment changed');
         requireFixedMountConfiguration(actual.HostConfig.Mounts, actual.Mounts, config.HostConfig.Mounts);
-        for (const key of ['AutoRemove', 'RestartPolicy', 'IpcMode', 'NetworkMode', 'CapDrop', 'CapAdd', 'SecurityOpt', 'Tmpfs']) {
+        for (const key of ['Init', 'AutoRemove', 'RestartPolicy', 'IpcMode', 'NetworkMode', 'CapDrop', 'CapAdd', 'SecurityOpt', 'Tmpfs']) {
             assert(isDeepStrictEqual(actual.HostConfig[key], config.HostConfig[key]), 'scope configuration changed: ' + key);
         }
         return actual;
@@ -400,6 +400,9 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
                 attachment.abort(); lifetime?.end(); startCancellation.abort();
                 let escalation, failure, answer;
                 const retain = cause => { failure ??= { cause }; };
+                let failEscalation;
+                const escalationFailure = new Promise((_resolve, reject) => { failEscalation = reject; });
+                void escalationFailure.catch(() => undefined);
                 const observe = async () => {
                     try {
                         const actual = await inspect();
@@ -416,7 +419,9 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
                 const force = setTimeout(() => {
                     escalation = observe().then(actual => actual?.State.Running
                         ? api('POST', '/containers/' + id + '/kill?signal=SIGKILL') : undefined);
-                    void escalation.catch(() => undefined);
+                    // A known failed kill cannot leave the registered exit wait pending.
+                    // No stopped/removal proof is inferred; finally drains owned observers.
+                    void escalation.catch(cause => { retain(cause); failEscalation(cause); });
                 }, 5_000);
                 try {
                     await observe();
@@ -424,7 +429,7 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
                     catch (cause) { retain(cause); }
                     if (startRequest) await startRequest.catch(() => undefined);
                     lifetime?.end();
-                    try { answer = await confirmStopped(); } catch (cause) { retain(cause); }
+                    try { answer = await Promise.race([confirmStopped(), escalationFailure]); } catch (cause) { retain(cause); }
                 } catch (cause) { retain(cause); }
                 finally {
                     clearTimeout(force); lifetime?.destroy();

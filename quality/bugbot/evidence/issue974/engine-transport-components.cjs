@@ -125,6 +125,7 @@ async function fixture(options = {}) {
                 return;
             }
             if (route === '/containers/' + id + '/kill?signal=SIGKILL') {
+                if (options.lostKillReply) { response.destroy(); return; }
                 stopped();
                 response.writeHead(204);
                 response.end();

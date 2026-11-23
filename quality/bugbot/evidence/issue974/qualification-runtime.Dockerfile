@@ -13,7 +13,7 @@ ARG QUALIFICATION_WORKER_UID
 ARG QUALIFICATION_WORKER_GID
 RUN node -e 'if (process.env.CODEX_VERSION !== "0.171.0") process.exit(1)'
 RUN node -e 'for (const name of ["QUALIFICATION_WORKER_UID", "QUALIFICATION_WORKER_GID"]) { const value=process.env[name]; if (!/^\d+$/.test(value || "") || !Number.isSafeInteger(Number(value)) || Number(value)<=0) process.exit(1); }'
-RUN apt-get update && apt-get install --no-install-recommends -y git ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install --no-install-recommends -y git ca-certificates tini && rm -rf /var/lib/apt/lists/*
 RUN npm install --global --no-audit --no-fund pnpm@10.12.4
 RUN npm install --prefix /opt/codex --no-audit --no-fund "@openai/codex@${CODEX_VERSION}"
 
@@ -24,9 +24,9 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 RUN chown -R "$QUALIFICATION_WORKER_UID:$QUALIFICATION_WORKER_GID" /sdk
 RUN cp quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs /qualification-bootstrap.cjs && cp quality/bugbot/evidence/issue974/qualification-supervisor.cjs /qualification-supervisor.cjs
 
-# The host API supplies only the two reviewed positive uid/gid values. PID1
-# retains only SETUID/SETGID, drops the worker's supplementary groups/gid/uid,
-# and owns the private child IPC; native children get no engine/socket mount.
+# The image-bound tini is PID1 and reaps adopted children. The Node supervisor
+# is its direct child, owns private IPC/lifetime and drops the worker identity.
+# Only the same SETUID/SETGID capabilities remain; no engine/socket mount.
 ENV PATH="/opt/codex/node_modules/.bin:/usr/local/bin:/usr/bin:/bin"
 USER 0:0
-ENTRYPOINT ["/usr/local/bin/node", "/qualification-supervisor.cjs"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/node", "/qualification-supervisor.cjs"]

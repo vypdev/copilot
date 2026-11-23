@@ -1,0 +1,101 @@
+'use strict';
+// One credential-free runtime admission. Never a scientific/model workload.
+const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
+const cp = require('node:child_process'), net = require('node:net'), crypto = require('node:crypto');
+const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
+const base = '/tmp/bugbot-contained-worker';
+const workspace = base + '/workspace', home = base + '/home';
+const cli = '/opt/codex/node_modules/@openai/codex/bin/codex.js';
+const env = { PATH: '/usr/local/bin:/usr/bin:/bin', HOME: home, CODEX_HOME: home + '/.codex' };
+const readRoots = [
+    ['sdk', '/sdk/package.json'], ['controller-source', base + '/source/canary.txt'],
+    ['auth-canary', home + '/.codex/auth.json'], ['private-credentials', '/qualification-input/private-credentials.json'],
+    ['invocation', '/qualification-input/invocation.json'], ['plan-bundle', '/qualification-input/plan.bundle'],
+    ['oracle', '/qualification-input/campaign/corpus-v3/canary.txt'],
+    ['output', '/qualification-output/canary.txt'], ['proc', '/proc/self/status'],
+];
+const expectedRoots = ['/proc', '/sdk', '/tmp/bugbot-contained-worker/source',
+    '/tmp/bugbot-contained-worker/home/.codex/auth.json', '/qualification-input/private-credentials.json',
+    '/qualification-input/invocation.json', '/qualification-input/plan.bundle',
+    '/qualification-input/campaign/corpus-v3', '/qualification-output'];
+
+async function main() {
+    assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'arm64');
+    assert.equal(process.getuid(), 502); assert.equal(process.getgid(), 20);
+    assert.deepEqual(Object.keys(process.env).filter(key => /TOKEN|API_KEY|CREDENTIAL|SECRET/u.test(key)), []);
+    const profileModule = '/sdk/quality/bugbot/evidence/issue974/qualification-seccomp.cjs';
+    const exported = require(profileModule);
+    assert.equal(hash(exported), 'fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b');
+    const policyFile = '/etc/codex/requirements.toml', policy = fs.readFileSync(policyFile, 'utf8');
+    assert.equal(hash(policy), '7862fc5acbefd63808622919479abb2e1073f052add56e71f807d783f1c22c5b');
+    const metadata = fs.lstatSync(policyFile); assert.equal(metadata.uid, 0); assert.equal(metadata.mode & 0o777, 0o444);
+    const policyBody = policy.split('\n').filter(line => !line.startsWith('#')).join('\n').trim();
+    assert(policyBody.startsWith('[permissions.filesystem]\ndeny_read = '));
+    assert.deepEqual(JSON.parse(policyBody.slice(policyBody.indexOf('=') + 1)), expectedRoots);
+    for (const dir of [workspace, home + '/.codex', base + '/source']) fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    for (const [id, file] of readRoots) {
+        if (['sdk', 'proc'].includes(id)) { assert(fs.readFileSync(file).length > 0); continue; }
+        fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+        // Empty auth storage is a logged-out fixture, never a usable credential.
+        const contents = id === 'auth-canary' ? {} : { fixtureCanary: 'RUNTIME_DUMMY_' + id };
+        fs.writeFileSync(file, JSON.stringify(contents) + '\n', { flag: 'wx', mode: 0o600 });
+    }
+    const positive = workspace + '/positive.txt', positiveBytes = 'RUNTIME_PUBLIC_WORKSPACE_CANARY';
+    fs.writeFileSync(positive, positiveBytes, { flag: 'wx', mode: 0o600 });
+    const alias = workspace + '/private-alias'; fs.symlinkSync('/qualification-input/private-credentials.json', alias);
+    assert(fs.readFileSync(alias, 'utf8').includes('RUNTIME_DUMMY_private-credentials'));
+    const outsideProc = fs.readFileSync('/proc/self/status', 'utf8').split('\n')
+        .filter(line => /^(Uid|Gid|CapInh|CapPrm|CapEff|CapBnd|NoNewPrivs|Seccomp):/u.test(line));
+    assert(outsideProc.some(line => /^CapEff:\s+0+$/u.test(line)));
+    const version = cp.spawnSync(cli, ['--version'], { cwd: workspace, env, encoding: 'utf8', timeout: 15000, killSignal: 'SIGKILL' });
+    assert.equal(version.status, 0, version.stderr); assert.equal(version.stdout.trim(), 'codex-cli 0.171.0');
+    const rows = [], errors = [];
+    const marker = 'FIXED_SANDBOX_CANARY_ENTERED';
+    function command(id, body) {
+        const script = `const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,${JSON.stringify(marker + '\n')});` + body;
+        const argv = ['--config', 'sandbox_mode="read-only"', 'sandbox', '--', '/usr/local/bin/node', '-e', script];
+        const r = cp.spawnSync(cli, argv, { cwd: workspace, env, encoding: 'utf8', timeout: 20000,
+            killSignal: 'SIGKILL', maxBuffer: 1024 * 1024 });
+        const entered = r.stdout?.split('\n').includes(marker) ?? false;
+        const passed = r.status === 0 && entered;
+        rows.push({ id, argv, exitCode: r.status, signal: r.signal, errorCode: r.error?.code ?? null,
+            entered, passed, stdout: r.stdout, stderr: r.stderr });
+        if (!passed) errors.push(id);
+        return passed;
+    }
+    if (!command('workspace-positive', `assert.equal(fs.readFileSync(${JSON.stringify(positive)},'utf8'),${JSON.stringify(positiveBytes)});`)) {
+        console.log(JSON.stringify({ schemaVersion: 1, kind: 'actual-cli-model-free-exclusion', version,
+            rows, planned: 14, unstarted: 13, passed: 0, actualOrdinarySdkModelToolAdmission: false,
+            modelCalls: 0, qualificationCalls: 0, pilotWrites: 0, production: 'disabled' }));
+        process.exitCode = 1; return;
+    }
+    const deniedRead = file => `let denied=false;try{fs.readFileSync(${JSON.stringify(file)});}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));denied=true;}assert(denied,'private read unexpectedly succeeded');`;
+    for (const [id, file] of readRoots) command('deny-read-' + id, deniedRead(file));
+    const controllerDirectory = base + '/source';
+    assert(fs.readdirSync(controllerDirectory).includes('canary.txt'));
+    command('deny-controller-directory-enumeration', `try{const entries=fs.readdirSync(${JSON.stringify(controllerDirectory)});assert.equal(entries.length,0,'original controller directory entries visible');}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));}`);
+    command('deny-symlink-alias', deniedRead(alias));
+    const writeTarget = workspace + '/must-not-write.txt';
+    command('deny-write', `let denied=false;try{fs.writeFileSync(${JSON.stringify(writeTarget)},'MUST_NOT_EXIST',{flag:'wx'});}catch(e){assert(['EACCES','EPERM','EROFS'].includes(e.code),String(e));denied=true;}assert(denied,'read-only write unexpectedly succeeded');`);
+    if (fs.existsSync(writeTarget)) errors.push('outside-write-detected');
+    let accepted = 0;
+    const server = net.createServer(socket => { accepted++; socket.end('RUNTIME_LOOPBACK_POSITIVE'); });
+    await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+    const port = server.address().port;
+    try {
+        await new Promise((resolve, reject) => {
+            const socket = net.connect({ host: '127.0.0.1', port }); socket.once('error', reject);
+            socket.once('data', data => { assert.equal(data.toString(), 'RUNTIME_LOOPBACK_POSITIVE'); socket.destroy(); resolve(); });
+        });
+        assert.equal(accepted, 1);
+        command('deny-network', `const net=require('node:net');const s=net.connect({host:'127.0.0.1',port:${port}});const timer=setTimeout(()=>{s.destroy();throw Error('loopback denial was not observed');},1500);s.once('connect',()=>{clearTimeout(timer);s.destroy();throw Error('sandbox reached outside loopback listener');});s.once('error',e=>{clearTimeout(timer);assert(['EACCES','EPERM','ECONNREFUSED','ENETUNREACH','EHOSTUNREACH'].includes(e.code),String(e));});`);
+    } finally { await new Promise(resolve => server.close(resolve)); }
+    assert.equal(accepted, 1, 'sandbox must not reach the independently checked listener');
+    assert.equal(rows.length, 14);
+    console.log(JSON.stringify({ schemaVersion: 1, kind: 'actual-cli-model-free-exclusion', version, outsideProc,
+        profileSha256: hash(exported), managedPolicySha256: hash(policy), rows, planned: 14, unstarted: 0,
+        passed: rows.filter(row => row.passed).length, failed: errors, externalLoopbackConnections: accepted,
+        actualOrdinarySdkModelToolAdmission: false, payloadOutputTransport: 'node-fd-write-sync', nodeStreamCompatibility: 'not-measured', modelCalls: 0, qualificationCalls: 0, pilotWrites: 0, production: 'disabled' }));
+    if (errors.length) process.exitCode = 1;
+}
+main().catch(error => { console.error(error.stack); process.exitCode = 1; });

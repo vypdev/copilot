@@ -688,3 +688,23 @@ privately preserved; public mirrors are explicitly derived. Archive retrieval
 locators use the reachable mirrors without changing any gzip bytes. GitHub
 cached originals and historical review diff hunks still require hosted removal.
 [Mapping, verification and limits](../issue-974/controls/history-redaction.md).
+
+
+## Post-de62 review: failed KILL, reaping and historical evidence
+
+The next source correction races stopped-state confirmation against failed KILL,
+retaining unconfirmed ownership on HTTP500 or lost replies. Image-bound tini is
+PID1; the private Node supervisor is its direct child and the bootstrap checks
+both parents before identity drop. Engine Init=false, fixed capabilities and
+approved13-rule filter remain unchanged. This requires new image/tuple admission;
+it grants no scientific retry. Exact model-free evidence and verification are
+recorded in [the review correction packet](../issue-974/controls/review-de62/README.md).
+
+The [original CLI14 source association](../issue-974/campaigns/093fd141/cli14-executed-source-association.json)
+proves that the actual archived source awaited a live listener and positive TCP
+roundtrip before the network-denial canary. The receipt is unchanged and no
+canary was rerun. Historical snapshot141 is now explicitly framed as an archive;
+its65,495 original bytes are retained exactly. The [privacy summary](../issue-974/controls/history-redaction.md)
+retains the complete original locator mapping privately and keeps hosted purge
+pending Support.174 remains COMPLETE_NEGATIVE,42 UNSTARTED_NOT_ADMITTED,
+qualified profiles NONE, pilot writes0 and production disabled.

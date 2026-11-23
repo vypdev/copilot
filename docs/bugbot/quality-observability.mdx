@@ -1381,3 +1381,25 @@ reconciliation; do not replay creation, assume the namespace stopped or delete a
 resource by a broad search. Modeled Engine/namespace fixtures and local shell
 controls establish their own failure boundary, not actual native or model
 admission. The completed174negative result remains unchanged;42is not admitted.
+
+
+## Unconfirmed force-stop and process reaping
+
+A failed Engine KILL request no longer leaves a stopped-state wait hanging. The
+operation rejects with its original failure, drains owned channels and retains
+an unconfirmed scope. Inspect that exact ownership record before recovery;
+a failed request does not prove stopped state or authorize deletion/replay.
+
+Future qualification images include tini inside the pinned image, with the Node
+supervisor as its direct child. Init reaps orphaned descendants during execution;
+namespace shutdown and outer stop confirmation still precede accepted cleanup.
+No daemon-injected init, new capabilities, filter rules or runner privileges are
+used. Changed source/image bytes require new committed technical admission.
+The two-arm inert Linux process proof establishes reaping only; it does not
+establish a new SDK, CLI or model runtime. The completed174 negative result and
+inadmissible42 remain unchanged.
+
+Historical canonical snapshots retain their exact bytes behind an archive label.
+Current public privacy summaries avoid repeating original blob/path associations;
+private retention preserves the complete mapping. GitHub Support purge remains
+pending for cached history and review hunks, so hosted erasure is unverified.

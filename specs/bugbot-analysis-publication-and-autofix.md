@@ -5735,3 +5735,91 @@ controls; C31 -> EV974-S03/S04/S08 -> actual corpus source with modeled CLI port
 real private ledgers and two-revision retrieval. Operator documentation records
 context layout, durable failure, unsupported ABI and the unchanged negative
 scientific result. No new case identity or scientific observation is inferred.
+
+
+### Failed force-stop and image-bound orphan reaping — #997 review of de62ed
+
+**Scope and evidence.** This is an operational correction to EV974-S01/S04/S05/S06,
+not a detector correction or a new campaign. The complete original174 result on
+093fd141/07f21a4/c5d0 remains negative;42 remains not admitted. Two actual Unix-HTTP
+components reproduce a hanging stop when Engine KILL returns500 or loses its
+response. A credential-free Linux process experiment, using the same inert
+20-orphan worker in both arms, observes20 unreaped zombies with the former Node
+PID1 and zero with image-bundled tini. Its worker stays root and imports no SDK;
+it proves reaping only, not UID-drop, native SDK or scientific admission.
+
+**Lifecycle and architecture.** The Engine adapter MUST race pending stopped-state
+confirmation against a known failed force-stop. On that failure it rejects with
+the retained cause, closes/drains its owned channels and leaves stopped/removal
+unconfirmed. It MUST NOT DELETE a running scope or emit stopped/removed evidence.
+The existing technical escalation follows a real stop request; there is no new
+research deadline, retry, generic cleanup or ownership authority.
+
+The admitted immutable image MUST include /usr/bin/tini as PID1 with the fixed
+argv `tini -- /usr/local/bin/node /qualification-supervisor.cjs <uid> <gid>`.
+The Node supervisor is its direct primary child and retains private IPC and
+owned-stdin lifetime. Tini reaps adopted children while work is active. Primary
+supervisor exit ends tini; Linux then kills the remaining PID namespace. Outer
+Engine stopped confirmation is still required. The worker bootstrap verifies
+both PID1 argv and its unchanged direct supervisor parent before identity drop
+or application import. Trust derives from the admitted image digest and closed
+source checks; proc observations alone are not byte attestation.
+
+```mermaid
+flowchart LR
+ O[Outer owned lifetime] --> I[Image-bound tini PID1]
+ I --> S[Private Node supervisor]
+ S --> W[Verified bootstrap and ordinary worker]
+ W --> D[Descendants adopted and reaped by init]
+ S --> X[Primary exit ends namespace]
+ X --> C[Outer stop confirmation before acceptance]
+```
+Text equivalent: the outer lifetime controls the private supervisor under the
+image init; init reaps orphans during execution and exits with its primary child;
+outer confirmation still owns accepted cleanup. Model stdout never grants IPC
+authority. Pure selection/authority policies retain their boundaries; OS reaping
+belongs to the image/supervisor and failure propagation to the Engine adapter.
+
+**Configuration and migration.** Engine HostConfig.Init is explicitly false and
+inspected: no daemon-injected executable is accepted outside the image digest.
+The existing nine-field containment profile, two mounts, SETUID/SETGID capability
+set, network policy, fixed13-rule seccomp bytes/SHAfb324 and closed scientific
+driver inventory remain unchanged. No user flag, schema, privilege or runner
+change is added. The initializer bytes are pinned by the new image identity.
+Changed image/source/driver bytes require a fresh common committed tuple and
+C32–C35 admission before any future measurement; old admission never transfers.
+Rollback selects a preceding immutable tuple and cannot reuse its scientific
+result for changed bytes. No new model campaign is authorized by this correction.
+
+**Operator and privacy UX.** Retain the existing unconfirmed-state copy: `Owned-scope
+state is unconfirmed. Automatic replay and cleanup are blocked.` The operator
+inspects the exact owned ID and first failure; no elapsed-time retry or broad
+container search is prescribed. Successful reaping has no separate success
+notification and cannot turn an incomplete operation into completed research.
+Historical snapshots MUST lead with archive framing and preserve exact original
+bytes/digests. Original scientific execution identities stay explicit. Public
+privacy summaries omit unnecessary old blob/path and commit-graph associations;
+the exact mapping is retained privately. Earlier hosted versions/caches remain
+pending GitHub Support purge and MUST NOT be described as fully erased.
+
+**Numeric test budget and acceptance.** Preserve35 logical control IDs and all
+previous controls. Extend C27 with16 distinct deterministic cases: two failed
+KILL outcomes, ten exact bootstrap/init/parent admission cases and four new
+supervisor init/parent cases. Retain one additional native process experiment
+with two implementation arms and the identical20-orphan worker; do not count
+its two arms as two independent feature cases. Required acceptance: HTTP500 or
+lost KILL response rejects without pending owned waits or DELETE; valid init and
+parent pass while mismatches/reparenting/proc failure reject; the old Linux arm
+exposes zombies and corrected arm reaps them while the worker remains active.
+A failed setup attempt is retained and does not count as either experimental arm.
+
+Run the complete deterministic shadow command without skips and exact-source
+Engine/supervisor component95/90 gates. Keep pure100%, existing global/changed-path,
+normal build/test/lint, package/docs/specification and final-head native gates.
+Fresh actual native SDK C32–C35 and runtime admission are separate pending gates,
+never inferred from these model-free fixtures. Documentation deliverables are
+quality operations, driver execution guidance and a bounded source/control packet
+with all negatives. Catalog test ownership and Graphify are updated together.
+Traceability: EV974-S04/S06 -> Engine adapter/failed-KILL controls; EV974-S01/S04/S05
+-> image/supervisor/bootstrap init-parent controls and native process contrast;
+EV974-S06/S07 -> historical archive framing and private-original retention.

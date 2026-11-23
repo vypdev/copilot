@@ -1,6 +1,6 @@
 # Native SDK plans after the fixed mount correction
 
-> Historical public descriptors: account-bearing socket endpoints are held only in the exact private originals. These tip JSON copies are non-executable and do not grant admission. See [original retention and descriptor limits](../README.md). Existing Git history remains unchanged.
+> Historical public descriptors: account-bearing socket endpoints are held only in the exact private originals. These tip JSON copies are non-executable and do not grant admission. See [original retention and descriptor limits](../README.md). The original scientific execution identities and results remain unchanged. Public history is a privacy-redacted mirror; [retention and hosted-purge limits](../../controls/history-redaction.md) distinguish it from the privately retained originals.
 
 Implementation `e4bade2` passes all239 deterministic Node controls with no failure,
 skip or cancellation. Its normal hook passes build/lint and944SDKsuites with

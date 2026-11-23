@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "kind": "retrospective association of unchanged original execution artifacts; not a new run",
+  "executedSource": {
+    "file": "cli14-executed-source.cjs.txt",
+    "bytes": 8659,
+    "sha256": "4adf86d0d09d31e91305ff00217f94d7a1b748a26383cc605d2aa57832c02c70",
+    "nonExecutableArchive": true
+  },
+  "originalPrivateIntent": {
+    "file": "actual-cli-canaries-attempt1-intent.json",
+    "bytes": 11075,
+    "sha256": "39d1cf73903356445b718a6b6b76fd74cb30ca25e2749a56d095209fb472bde5",
+    "scriptSha256MatchesSource": true,
+    "exactEvalArgumentMatchesSource": true
+  },
+  "receipt": {
+    "file": "cli14-receipt.json",
+    "privateOriginalSha256": "8e30454a10336300359056488cf95d8145f6f4ef1091274dfaa4219648e943ef",
+    "publicJsonSemanticallyIdenticalToFullPrivateReceipt": true,
+    "originalExternalLoopbackConnections": 1,
+    "originalRowsPassed": 14
+  },
+  "networkProof": "Source awaits server.listen; completes a TCP connection with expected payload and accepted=1 before the CLI call; listener remains open until finally after the synchronous call. Sandbox child fails on any connect event independently of the blocked parent event loop. Source asserts accepted still1 after server close. ECONNREFUSED is interpreted only within this independently checked listener composition.",
+  "newExecutions": 0,
+  "newModelCalls": 0,
+  "newQualificationCalls": 0,
+  "originalReceiptModified": false,
+  "acceptanceScope": "Original14 CLI canaries only; not new SDK admission or a new scientific campaign."
+}

@@ -1,25 +1,29 @@
 'use strict';
 
-// This immutable image entrypoint is namespace PID1. Only its outer owner's
-// attached stdin controls lifetime; worker/model stdout is never authority.
+// The image-bound init reaps adopted children; its direct Node child owns the
+// outer lifetime/IPC. Worker/model stdout is never authority.
 const assert = require('node:assert/strict');
 const { fork } = require('node:child_process');
+const fs = require('node:fs');
 
 function runSupervisor() {
     assert.equal(process.platform, 'linux');
-    assert.equal(process.pid, 1, 'qualification supervisor must own its PID namespace');
+    assert(process.pid > 1, 'qualification supervisor requires the image-bound init');
+    assert.equal(process.ppid, 1, 'qualification supervisor must be the init primary child');
     assert.equal(process.getuid(), 0, 'supervisor identity must be separate from the worker');
     assert.equal(process.execPath, '/usr/local/bin/node');
     assert.equal(process.argv.length, 4);
     const workerUid = Number(process.argv[2]), workerGid = Number(process.argv[3]);
     assert(Number.isSafeInteger(workerUid) && workerUid > 0 && Number.isSafeInteger(workerGid) && workerGid > 0);
+    assert.deepEqual(fs.readFileSync('/proc/1/cmdline', 'utf8').split('\0').filter(Boolean),
+        ['/usr/bin/tini', '--', '/usr/local/bin/node', '/qualification-supervisor.cjs', String(workerUid), String(workerGid)]);
     let terminal = false, ready;
     const end = code => {
         if (terminal) return;
         terminal = true;
-        // Linux terminates EVERY member when namespace init exits, including
-        // setsid/double-fork/reparented children with inherited or ignored pipes.
-        // The outer owner still has to inspect/wait for stopped confirmation.
+        // Exiting its primary child makes the image-bound tini exit; Linux then
+        // terminates EVERY namespace member, including escaped descendants.
+        // The outer owner still requires actual init-exit/stop confirmation.
         process.exit(code);
     };
     process.stdin.once('end', () => end(143));

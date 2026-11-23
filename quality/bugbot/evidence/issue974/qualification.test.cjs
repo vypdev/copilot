@@ -264,6 +264,8 @@ test('ev974-C26 immutable public bootstrap rejects closed profile and CLI byte m
 
 test('ev974-C27 closed containment refuses ambient grants, mutable images, arbitrary mounts/flags and unsafe namespace configuration', async t => {
     await require('./engine-transport-components.cjs').exerciseEngineTransportFaults();
+    await require('./kill-failure-components.cjs').exerciseKillFailure();
+    require('./init-parent-components.cjs').exerciseInitParent();
     const { requireProfile, fixedConfiguration, createOperationContainment, requireFixedMountConfiguration } = require('./operation-containment.cjs');
     const profile = containmentProfile(), directory = fs.realpathSync(temporary(t));
     const input = path.join(directory, 'input'), output = path.join(directory, 'output');
@@ -272,6 +274,8 @@ test('ev974-C27 closed containment refuses ambient grants, mutable images, arbit
         implementation: 'd'.repeat(40), imageSha256: profile.image.slice(7), purpose: 'native-control' };
     const config = fixedConfiguration(profile, identity, input, output, ['PATH=/usr/local/bin:/usr/bin:/bin']);
     assert.equal(config.HostConfig.Privileged, false); assert.equal(config.HostConfig.PidMode, '');
+    assert.equal(config.HostConfig.Init, false);
+    assert.deepEqual(config.Entrypoint, ['/usr/bin/tini', '--', '/usr/local/bin/node', '/qualification-supervisor.cjs']);
     assert.equal(config.HostConfig.Mounts.length, 2); assert.equal(config.Tty, false);
     assert.equal(config.OpenStdin, true); assert.equal(config.StdinOnce, true); assert.equal(config.HostConfig.AutoRemove, true);
     for (const delta of [{ image: 'node:latest' }, { flags: ['--privileged'] }, { hostPid: true }, { socketMount: '/var/run/docker.sock' },
@@ -364,7 +368,7 @@ test('ev974-C28 private live capability binds only the exact immutable plan/sign
             { identity: { ...identity, ...delta }, scopeId, namespaceInitStopped: true }));
     }
     const supervisor = require('./supervisor-components.cjs').runSupervisorComponents();
-    assert.equal(supervisor.cases, 49); assert.equal(supervisor.failed, 0);
+    assert.equal(supervisor.cases, 53); assert.equal(supervisor.failed, 0);
 });
 
 test('ev974-C29 durable planned174/42 inventories reject orphan, missing and incomplete owned-scope prefixes', () => {

@@ -350,8 +350,8 @@ function operationSlot(plan, mode, identity, slot, root) {
     return ['/qualification-output/native'];
 }
 
-/** Not exported and not a public CLI mode. Only the immutable image's PID1
- * may fork this exact external bootstrap over a private inherited IPC fd. */
+/** Not exported and not a public CLI mode. Only the immutable image supervisor,
+ * under its image-bound init, may fork this bootstrap over private inherited IPC. */
 function createContainedWorkerScratch() {
     // Each complete operation has its own fresh PID namespace and /tmp tmpfs.
     // Literal deny_read roots mask directories; Codex's glob scan returns files only.
@@ -362,16 +362,24 @@ function createContainedWorkerScratch() {
     return scratch;
 }
 
+function admitContainedWorkerParent(owner) {
+    const supervisorPid = process.ppid;
+    assert(supervisorPid > 1, 'image supervisor parent required');
+    const supervisorArgv = ['/usr/local/bin/node', '/qualification-supervisor.cjs', String(owner.workerUid), String(owner.workerGid)];
+    assert.deepEqual(fs.readFileSync('/proc/1/cmdline', 'utf8').split('\0').filter(Boolean), ['/usr/bin/tini', '--', ...supervisorArgv]);
+    assert.deepEqual(fs.readFileSync('/proc/' + supervisorPid + '/cmdline', 'utf8').split('\0').filter(Boolean), supervisorArgv);
+    assert.equal(process.ppid, supervisorPid, 'worker supervisor changed during admission');
+}
+
 async function launchContainedWorker() {
     assert(process.channel && process.connected && process.argv.length === 2, 'private image worker unavailable');
-    assert.equal(process.platform, 'linux'); assert.equal(process.ppid, 1);
+    assert.equal(process.platform, 'linux'); assert(process.ppid > 1, 'image supervisor parent required');
     assert.equal(process.getuid(), 0); assert.equal(process.execPath, '/usr/local/bin/node');
     assert.equal(fs.realpathSync(__filename), '/qualification-bootstrap.cjs');
     const owner = await privateMessage();
     assert(owner && Object.keys(owner).length === 3 && owner.kind === 'scope-owner');
     for (const key of ['workerUid', 'workerGid']) assert(Number.isSafeInteger(owner[key]) && owner[key] > 0);
-    assert.deepEqual(fs.readFileSync('/proc/1/cmdline', 'utf8').split('\0').filter(Boolean),
-        ['/usr/local/bin/node', '/qualification-supervisor.cjs', String(owner.workerUid), String(owner.workerGid)]);
+    admitContainedWorkerParent(owner);
     process.setgroups([]); process.setgid(owner.workerGid); process.setuid(owner.workerUid);
     assert.equal(process.getuid(), owner.workerUid); assert.equal(process.geteuid(), owner.workerUid);
     assert.equal(process.getgid(), owner.workerGid); assert(process.getgroups().every(group => group === owner.workerGid));
@@ -469,7 +477,7 @@ if (require.main === module) {
         // Keep an early private worker failure after UID drop, including source
         // or CLI admission errors, before the stopped container is removed.
         // This file is diagnostic evidence, never an admission/stop receipt.
-        if (process.channel && process.platform === 'linux' && process.ppid === 1 && process.getuid() > 0
+        if (process.channel && process.platform === 'linux' && process.ppid > 1 && process.getuid() > 0
             && __filename === '/qualification-bootstrap.cjs') {
             try {
                 const directory = '/qualification-output', stat = fs.lstatSync(directory);
