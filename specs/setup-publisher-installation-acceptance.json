@@ -2752,6 +2752,138 @@
           "test": "publisher977-C109: absent or unsafe record targets never create a navigation promise"
         }
       ]
+    },
+    {
+      "id": "publisher977-C110",
+      "area": "Provider/delivery contracts",
+      "requirements": [
+        "PU977-G03",
+        "PU977-G07"
+      ],
+      "assertion": "Every malformed-entry and unsafe-lookup negative control is individually required by the cumulative gate for C99 rejection guarantees.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 0)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 1)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 2)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 3)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 4)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 5)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 6)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 7)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 8)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 9)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 10)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 11)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 12)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 13)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 14)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "checks every tree entry even when the selected path is absent (case 15)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 0)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 1)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 2)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 3)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 4)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 5)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 6)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 7)"
+        },
+        {
+          "file": "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts",
+          "test": "rejects unsafe lookup paths before transport (case 8)"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C111",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Installed required headings obey configured mappings: trimmed single-line text within128UTF-8 bytes, rejecting Cc/Zl/Zp characters; matching hashes cannot authorize malformed labels.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C111: matching manifest hashes cannot authorize invalid required heading text"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C111: installed required headings obey the configured single-line UTF-8 constraints"
+        }
+      ]
     }
   ]
 }

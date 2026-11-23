@@ -1430,3 +1430,41 @@ link or new directory; cancelled/failed operations preserve their original exit
 and recovery facts even when navigation fails. Traceability: C108 -> G01/G07 ->
 domain matcher/profile/planner -> configurable workflow guidance; C109 -> G06/G08
 -> journal/composition/CLI/presenter -> how-to and recovery documentation.
+
+
+### Reviewed publisher route: complete negative evidence and valid heading text
+
+C99's original positive and rejection contract remains unchanged. The cumulative
+acceptance gate MUST additionally require every malformed-Git-entry and unsafe
+lookup-path control. C110 binds25 existing assertions with unique parameterized
+names, so omitting, failing or skipping one cannot leave that guarantee satisfied
+by the two positive backslash-name reads alone. Preserve all109 prior ledger
+objects and the selected companion byte for byte; no assertion is narrowed.
+
+Installed required headings MUST use the configured mapping validator's same
+trimmed, single-line128-UTF-8-byte bound without Cc/Zl/Zp characters before Unicode-equivalence
+checks. A multi-line label cannot match the issue-body parser and cannot establish
+manifest compatibility, even with matching hashes. Exact128-byte custom labels
+and32four-byte characters remain valid. No schema, setting, permission or trust
+channel changes. Invalid guidance requires regeneration with the intended config,
+preserving existing changes; a manually updated hash cannot repair its meaning.
+
+| Case | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C110 | Provider/delivery contracts | PU977-G03, PU977-G07 | Every malformed-entry and unsafe-lookup negative control is individually required by the cumulative gate for C99 rejection guarantees. |
+| publisher977-C111 | Read-only planning/freshness | PU977-G01, PU977-G07 | Installed required headings obey configured mappings: trimmed single-line text within128UTF-8 bytes, rejecting Cc/Zl/Zp characters; matching hashes cannot authorize malformed labels. |
+
+The cumulative minimum is **111 logical IDs /107 mapped Jest cases plus four
+extracted-package cases**. C110 binds16 malformed-entry and9 unsafe-path rows,
+without adding duplicate feature tests. A report counterfactual MUST show the old
+gate accepts a failed/omitted/skipped negative row and the corrected cumulative
+gate rejects it; the unmodified actual report must pass. C111 has two new causal
+controls: direct profile validity and actual immutable planning with matching
+manifest hashes. Both MUST fail before and pass after the source correction.
+Keep pure100%, runtime95/90, global/changed-line, package/docs/architecture and
+exact-head native gates. No installation or scientific qualification is inferred.
+
+Traceability: C110 -> G03/G07 -> existing Git reader/adversarial assertions and
+cumulative validator -> evidence packet; C111 -> G01/G07 -> shared heading
+validator/profile/planner -> repository guidance troubleshooting. Source failures
+retain current bounded error copy; arbitrary malformed label text is not echoed.

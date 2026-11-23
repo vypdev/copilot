@@ -60362,7 +60362,7 @@ function validRepositoryAgentWorkflowFact(value, kind, formsEnabled, issueManage
         && (definition.branchManaged ? isNonEmptyString(value.branchPrefix) : value.branchPrefix === null)
         && isStringArray(value.requiredFields)
         && value.requiredFields.length === definition.requiredHeadings.length
-        && value.requiredFields.every(isNonEmptyString)
+        && value.requiredFields.every(issue_workflow_field_mapping_1.isIssueFieldHeading)
         && (0, issue_workflow_body_1.distinctIssueWorkflowHeadings)(value.requiredFields)
         && (value.workflow === null || isNonEmptyString(value.workflow));
 }

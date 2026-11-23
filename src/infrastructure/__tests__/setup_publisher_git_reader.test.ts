@@ -62,13 +62,13 @@ it.each([null, {}, { ...treeEntry, path: '' }, { ...treeEntry, path: '.' }, { ..
   { ...treeEntry, sha: 'bad' }, { ...treeEntry, type: 'blob' }, { ...treeEntry, mode: '100644' },
   { ...treeEntry, type: 'unknown' }, { path: 'f', type: 'blob', mode: '100644', sha: nested, size: -1 },
   { path: 'f', type: 'blob', mode: '100644', sha: nested, size: 1.5 }, { path: 'f', type: 'commit', mode: '100644', sha: nested }])(
-  'checks every tree entry even when the selected path is absent', async invalid => {
+  'checks every tree entry even when the selected path is absent (case %#)', async invalid => {
     const f = fixture(); f.trees[root].tree = [treeEntry, invalid]; await expect(f.reader.find(root, 'absent')).rejects.toMatchObject({ code: 'malformed' });
   });
 it('rejects duplicate sibling names instead of choosing a convenient entry', async () => {
   const f = fixture(); f.trees[root].tree = [treeEntry, treeEntry]; await expect(f.reader.tree(root)).rejects.toMatchObject({ code: 'malformed' });
 });
-it.each(['', '/a', 'a/', 'a//b', '.', '..', 'a/../b', 'a\\b', 'a/\u202e'])('rejects unsafe lookup paths before transport', async path => {
+it.each(['', '/a', 'a/', 'a//b', '.', '..', 'a/../b', 'a\\b', 'a/\u202e'])('rejects unsafe lookup paths before transport (case %#)', async path => {
   const f = fixture(); await expect(f.reader.find(root, path)).rejects.toMatchObject({ code: 'malformed' }); expect(f.request).not.toHaveBeenCalled();
 });
 it('distinguishes complete absence of an ancestor and leaf from an unavailable read', async () => {

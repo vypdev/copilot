@@ -13,6 +13,20 @@ import {
 } from '../repository_agent_guidance_policy';
 
 describe('repository agent guidance policy', () => {
+  it('publisher977-C111: installed required headings obey the configured single-line UTF-8 constraints', () => {
+    const profile = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
+    const withHeading = (heading: string) => JSON.stringify({ ...profile,
+      issueWorkflows: { ...profile.issueWorkflows, forms: { ...profile.issueWorkflows.forms,
+        feature: { ...profile.issueWorkflows.forms.feature, requiredFields: [heading, 'Second', 'Third'] } } } });
+    for (const heading of ['Description\nExtra', 'Description\rExtra', 'A\u2028B', 'A\u2029B', 'A\0B',
+      ' Padded', 'Padded ', 'A'.repeat(129), '😀'.repeat(33)]) {
+      expect(validRepositoryAgentProfile(withHeading(heading))).toBe(false);
+    }
+    for (const heading of ['Custom label', 'A'.repeat(128), '😀'.repeat(32)]) {
+      expect(validRepositoryAgentProfile(withHeading(heading))).toBe(true);
+    }
+    expect(readIssueWorkflowFields('## Description\nExtra\nValue\n', ['Description\nExtra'])[0].count).toBe(0);
+  });
   it('publisher977-C108: profile heading uniqueness follows the parser Unicode equivalence', () => {
     const profile = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
     const withFields = (requiredFields: readonly string[]) => JSON.stringify({ ...profile,

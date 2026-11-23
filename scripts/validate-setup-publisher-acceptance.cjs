@@ -31,7 +31,7 @@ for (const suite of report?.testResults ?? []) {
   }
 }
 const errors = [...publicationErrors], evidenceOwners = new Map();
-const baselineCount = 109;
+const baselineCount = 111;
 if (ledger.schemaVersion !== 1 || !Array.isArray(ledger.cases) || ledger.cases.length < baselineCount) errors.push(`Expected v1 ledger with at least ${baselineCount} cases.`);
 for (let index = 1; index <= baselineCount; index += 1) {
   const id = `publisher977-C${String(index).padStart(2, '0')}`;

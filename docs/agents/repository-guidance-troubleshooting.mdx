@@ -102,3 +102,6 @@ Required issue headings must be distinct ignoring case. A repeated label cannot
 stand in for another required field, even when the profile and manifest hashes
 match. Regenerate guidance from the intended setup configuration and preserve
 existing changes; updating hashes alone does not make a malformed profile valid.
+
+
+Installed required issue headings follow the same constraints as field mappings: trimmed single-line text, no line/control separators and at most128UTF-8 bytes per heading. A label containing a newline cannot be satisfied by an issue. Regenerate unsupported guidance using the intended setup configuration while preserving existing changes; changing manifest hashes alone cannot repair it.
