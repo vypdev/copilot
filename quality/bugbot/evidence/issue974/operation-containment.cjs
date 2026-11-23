@@ -267,7 +267,7 @@ function requireFixedMountConfiguration(configured, effective, expected) {
 }
 
 /** Bootstrap-authorized adapter. Unknown create/start effects are retained, never replayed. */
-async function createOperationContainment({ root, identity, inputDirectory, outputDirectory, record }) {
+async function createOperationContainment({ root, identity, inputDirectory, outputDirectory, record, signal }) {
     identity = Object.freeze({ ...identity });
     const proof = require('../issue-950/execution-provenance.cjs').requireBootstrapAdmission(root);
     const bytes = fs.readFileSync(path.join(root, proof.planPath));
@@ -283,8 +283,8 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
         profile.supervisorSha256, 'immutable supervisor differs');
     const api = (method, route, body, signal) => request(profile.socketPath, profile.engine.apiVersion, method, route, body,
         method === 'GET' ? 200 : route.startsWith('/containers/create?') ? 201 : 204, signal);
-    assert.deepEqual(observedEngine(await api('GET', '/version')), profile.engine, 'observed engine tuple differs');
-    const image = await api('GET', '/images/' + profile.image + '/json');
+    assert.deepEqual(observedEngine(await api('GET', '/version', undefined, signal)), profile.engine, 'observed engine tuple differs');
+    const image = await api('GET', '/images/' + profile.image + '/json', undefined, signal);
     assert.equal(image.Id, profile.image, 'actual immutable image differs');
     assert.equal(objectSha256(image.Config), profile.imageConfigSha256, 'actual image configuration differs');
     assert.equal(image.Os, 'linux'); assert.equal(image.Architecture, profile.engine.arch);
@@ -295,7 +295,7 @@ async function createOperationContainment({ root, identity, inputDirectory, outp
     const config = fixedConfiguration(profile, identity, inputDirectory, outputDirectory, image.Config.Env ?? []);
     const name = 'copilot-qualification-' + sha256(JSON.stringify(identity));
     await record({ event: 'scope-create-start', identity, name, configurationSha256: objectSha256(config) });
-    const created = await api('POST', '/containers/create?name=' + name, config);
+    const created = await api('POST', '/containers/create?name=' + name, config, signal);
     assert.match(created?.Id ?? '', idPattern, 'scope creation identity is unknown');
     const id = created.Id;
     let lifetime, lifetimeClosed, starting = false, startAcknowledged = false, observedRunning = false, stopping = false, removed = false;
@@ -519,6 +519,7 @@ async function runContainedOperation({ root, plan, mode, slot, outputDirectory, 
             stopping = scope.stop('cancelled'); void stopping.catch(() => undefined);
         }
     };
+    signal.addEventListener('abort', abort, { once: true });
     try {
         fs.mkdirSync(outputDirectory, { mode: 0o700 }); outputDirectory = fs.realpathSync(outputDirectory);
         const bundle = path.join(input, 'plan.bundle');
@@ -554,10 +555,9 @@ async function runContainedOperation({ root, plan, mode, slot, outputDirectory, 
             if (mode === 'review') credentials.evidenceToken = process.env.COPILOT_EVIDENCE_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN || null;
         }
         privateWrite(path.join(input, 'private-credentials.json'), JSON.stringify(credentials));
-        scope = await createOperationContainment({ root, identity, inputDirectory: input, outputDirectory, record: retained });
+        scope = await createOperationContainment({ root, identity, inputDirectory: input, outputDirectory, record: retained, signal });
         privateWrite(path.join(input, 'invocation.json'), JSON.stringify({ schemaVersion: 1, identity,
             scopeId: scope.scopeId, proof, mode, slot, bundleSha256, preflight }));
-        signal.addEventListener('abort', abort, { once: true });
         if (signal.aborted) abort();
         await record({ event: 'operation-start', identity, scopeId: scope.scopeId, slot, preflight, outputDirectory, inputDirectory: input, bundleSha256 });
         if (!cancelled) await scope.start();

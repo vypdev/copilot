@@ -5613,3 +5613,54 @@ Official revision/seed validation and same-branch publication -> pure scope poli
 ### 20. References and decisions
 
 Retained owning SDD and runtime owner are listed in section15. Primary mechanism: https://www.man7.org/linux/man-pages/man7/pid_namespaces.7.html ; Node detached/session behavior: https://nodejs.org/api/child_process.html#optionsdetached . Selected decision is existing local Docker Engine with verified owned stdin/EOF lifetime; actual immutable SDK image and CLI admission are separate pending evidence. Earlier native preparation failures44817084221 (unknown reference) and44821319812 (25reserved identities redeclared) are retained. This candidate defines only10 new cases and fresh EV974-S requirement identities. It is a proposed appendix, not implemented containment, model measurement, native acceptance, qualified profile or activation authorization.
+
+
+## Post-campaign pre-dispatch failure boundaries
+
+The completed093fd141/07f21a4 campaign remains a valid negative result. Its174
+initial deliveries,200scientific SDK calls and separate technical SDK control
+retain their original identities, attempts and thresholds. Subsequent source
+corrections MUST NOT revise that result or admit phase42. Any future measurement
+requires a new complete tuple, committed preregistration and actual admission.
+
+Existing EV974-S02/S03/S08 and controls C15/C16/C27 also cover the preparation
+interval before a namespace ID is returned and the acceptance recorder's required
+pre-dispatch writes. Explicit cancellation MUST reach initial Engine version,
+image and create requests. The outer cancellation listener is installed before
+the first awaited preparation step. An interrupted create with no confirmed ID
+MUST preserve its exact identity/intent as ownership-unknown and incomplete; it
+cannot claim stopped/removal proof, replay creation or delete another resource.
+
+| Boundary | Required outcome | Retained evidence |
+|---|---|---|
+| Initial version/image request cancelled | HTTP request and response callbacks close before returning | Incomplete operation; no namespace claim |
+| Create reply withheld when cancelled | Cancellation settles before the reply is released | Exact create intent/name/identity; unknown ID; no blind delete or replay |
+| Required observation/preparation write fails before CLI dispatch | Cancel the original owned signal synchronously; no CLI subprocess starts | Original persistence failure and incomplete attempt chain |
+
+SDK lifecycle observers remain optional telemetry that cannot throw into ordinary
+execution. Qualification acceptance writes are owned by the driver: its recorder
+MUST bind the exact original request signal and its trusted abort capability. It
+MUST NOT substitute a new signal, which would lose the live operation admission.
+The corpus, paired-review and technical SDK factories all use that same owned
+cancellation. Review-specific observation writes share the critical recorder
+fence. A later SDK cancellation or terminal persistence error cannot replace the
+first evidence failure. No retry, time/turn/read cap, setting, privilege or model
+path is introduced.
+
+The unchanged35logical control identities gain **five distinct executable
+regression cases**: three real SDK planner/client/executor controls with a local
+shell (positive delivery; failed started observation; failed admitted observation),
+and two actual Unix-HTTP controls with modeled Engine replies (held version and
+held create). The same regression definitions MUST expose the old dispatch/stall
+and pass after correction. Scope confirmations in these fixtures are modeled;
+they establish no native namespace, Docker, provider, model or qualification
+acceptance. Existing durability/transport suites and their cancellation-before-
+creation case remain required; pre-aborted preparation records incomplete with
+zero create requests. Original coverage, full source/driver checks, normal hooks,
+package, documentation and final native gates remain in force.
+
+Traceability: C15/C16 -> critical recorder and three actual factories -> real SDK
+regressions; C27 -> host Engine adapter -> held-response and existing protocol
+controls. Operator guidance documents unknown creation effects and first-error
+retention. SDK production modules remain unchanged; changed driver identities
+must be frozen afresh before any future model measurement.

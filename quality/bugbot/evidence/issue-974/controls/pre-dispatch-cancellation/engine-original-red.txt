@@ -1,0 +1,54 @@
+✖ explicit cancellation closes a held version reply before it is released (1194.677459ms)
+✖ explicit cancellation closes a held create reply before it is released (1159.694666ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2448.65725
+
+✖ failing tests:
+
+test at ../copilot-goal-974-create-cancellation-regression.cjs:7:41
+✖ explicit cancellation closes a held version reply before it is released (1194.677459ms)
+  AssertionError [ERR_ASSERTION]: explicit cancellation must settle before the Engine releases its held reply
+  + actual - expected
+  
+  + 'pending'
+  - 'rejected'
+  
+      at /private/tmp/copilot-goal-974-create-cancellation-regression.cjs:17:11
+      at async use (/private/tmp/copilot-goal-974-driver-hardening/quality/bugbot/evidence/issue974/engine-transport-components.cjs:208:5)
+      at async TestContext.<anonymous> (/private/tmp/copilot-goal-974-create-cancellation-regression.cjs:10:2)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'pending',
+    expected: 'rejected',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../copilot-goal-974-create-cancellation-regression.cjs:7:41
+✖ explicit cancellation closes a held create reply before it is released (1159.694666ms)
+  AssertionError [ERR_ASSERTION]: explicit cancellation must settle before the Engine releases its held reply
+  + actual - expected
+  
+  + 'pending'
+  - 'rejected'
+  
+      at /private/tmp/copilot-goal-974-create-cancellation-regression.cjs:17:11
+      at async use (/private/tmp/copilot-goal-974-driver-hardening/quality/bugbot/evidence/issue974/engine-transport-components.cjs:208:5)
+      at async TestContext.<anonymous> (/private/tmp/copilot-goal-974-create-cancellation-regression.cjs:10:2)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'pending',
+    expected: 'rejected',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

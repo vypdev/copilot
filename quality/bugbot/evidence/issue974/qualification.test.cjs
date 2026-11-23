@@ -78,6 +78,7 @@ function ledgerFixture(t, selected = plan()) {
         }
     } });
     const make = (caseId, response = () => '{}') => createRecordedCli({ caseId, record, artifactDirectory: artifacts,
+        cancellation: { signal: c.signal, abort: () => c.abort() },
         createClient: factory(response) });
     return { directory, artifacts, file, rows, record, request, c, make, factory, selected };
 }
@@ -446,6 +447,7 @@ test('ev974-C16 failed ordinary preparation is retained without a spawned sessio
     const { AgentCliClient } = require(path.join(root, 'src/data/repository/agent_cli_client'));
     const f = ledgerFixture(t), failure = new Error('private preparation error, never public');
     const cli = createRecordedCli({ caseId: 'preflight', record: f.record, artifactDirectory: f.artifacts,
+        cancellation: { signal: f.c.signal, abort: () => f.c.abort() },
         createClient: observer => new AgentCliClient({ prepare() { throw failure; } }, observer) });
     await assert.rejects(cli.execute(f.request), error => error === failure);
     assert.deepEqual(f.rows.filter(row => row.event === 'attempt-observation').map(row => row.fact.state), ['started', 'failed']);

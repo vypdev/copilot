@@ -42,11 +42,13 @@ function boundedFailure(error) {
 }
 
 /** Wrap each real execute call, including ordinary application-generated follow-ups. */
-function createRecordedCli({ caseId, record, artifactDirectory, createClient }) {
+function createRecordedCli({ caseId, record, artifactDirectory, createClient, cancellation, recordObservation }) {
+    assert(cancellation?.signal && typeof cancellation.abort === 'function', 'attempt recorder requires owned cancellation');
     const attemptIds = [];
     return {
         attemptIds,
         async execute(request) {
+            assert.equal(request.signal, cancellation.signal, 'attempt cancellation must own the exact request signal');
             const ordinal = attemptIds.length + 1, attemptId = caseId + ':' + ordinal;
             const stem = hash(caseId).slice(0, 24) + '-' + ordinal;
             const requestBytes = JSON.stringify({ prompt: request.prompt, outputSchema: request.outputSchema ?? null });
@@ -57,14 +59,28 @@ function createRecordedCli({ caseId, record, artifactDirectory, createClient }) 
                 schemaSha256: hash(JSON.stringify(request.outputSchema ?? null)),
                 requestFile, requestSha256: hash(requestBytes), providerReported: { model: null, usage: null } });
             attemptIds.push(attemptId);
-            let observationFailure;
+            let observationFailure, observationFailed = false;
+            const failedObservation = error => {
+                if (observationFailed) return;
+                observationFailed = true; observationFailure = error;
+                // SDK observers are telemetry and deliberately swallow errors.
+                // Cancel the original admitted signal synchronously instead:
+                // replacing it would invalidate the live qualification scope.
+                cancellation.abort();
+            };
             try {
                 const client = createClient({ observe(fact) {
-                    try { record({ event: 'attempt-observation', attemptId, fact }); }
-                    catch (error) { observationFailure ??= error; }
-                } }, prepared => record({ event: 'attempt-prepared', attemptId, prepared }));
+                    try {
+                        recordObservation?.(fact);
+                        record({ event: 'attempt-observation', attemptId, fact });
+                    } catch (error) { failedObservation(error); }
+                } }, prepared => {
+                    if (observationFailed) throw observationFailure;
+                    try { record({ event: 'attempt-prepared', attemptId, prepared }); }
+                    catch (error) { failedObservation(error); throw error; }
+                });
                 const response = await client.execute(request);
-                if (observationFailure) throw observationFailure;
+                if (observationFailed) throw observationFailure;
                 assert.equal(typeof response, 'string', 'ordinary CLI response must be text');
                 const responseFile = stem + '.response.txt';
                 durableWrite(path.join(artifactDirectory, responseFile), response, 'wx');
@@ -72,11 +88,14 @@ function createRecordedCli({ caseId, record, artifactDirectory, createClient }) 
                     responseFile, responseSha256: hash(response), providerReported: { model: null, usage: null } });
                 return response;
             } catch (error) {
-                record({ event: 'attempt-finish', attemptId,
-                    status: request.signal?.aborted || error?.category === 'cancelled' ? 'interrupted' : 'failed',
-                    at: new Date().toISOString(), failure: boundedFailure(error),
-                    observationIncomplete: observationFailure !== undefined, providerReported: { model: null, usage: null } });
-                throw error;
+                const failure = observationFailed ? observationFailure : error;
+                try {
+                    record({ event: 'attempt-finish', attemptId,
+                        status: observationFailed ? 'failed' : request.signal?.aborted || error?.category === 'cancelled' ? 'interrupted' : 'failed',
+                        at: new Date().toISOString(), failure: boundedFailure(failure),
+                        observationIncomplete: observationFailed, providerReported: { model: null, usage: null } });
+                } catch { /* A secondary persistence failure cannot replace the original failure. */ }
+                throw failure;
             }
         },
     };

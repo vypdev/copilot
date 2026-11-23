@@ -43,9 +43,11 @@ function fixture(t, options = {}) {
     const record = row => { durable(row); rows.push(row); events.push({ type: 'record', event: row.event, status: row.status }); };
     const dispatch = async () => { dispatches += 1; events.push({ type: 'dispatch' }); return '{}'; };
     const create = role => {
+        const cancel = new AbortController();
         const request = { prompt: 'model-free durability control', outputSchema: { type: 'object' },
-            schema: { type: 'object' }, configuration: { provider: 'component-only' }, candidateId: 'component-candidate' };
+            schema: { type: 'object' }, configuration: { provider: 'component-only' }, candidateId: 'component-candidate', signal: cancel.signal };
         const cli = role === 'detector' ? api.createRecordedCli({ caseId: 'durability', record, artifactDirectory: artifacts,
+            cancellation: { signal: cancel.signal, abort: () => cancel.abort() },
             createClient: () => ({ execute: dispatch }) }) : undefined;
         const verifier = role === 'verifier' ? api.createRecordedVerifier({ caseId: 'durability', record,
             artifactDirectory: artifacts, admitRuntime: () => ({}), transport: async () => {

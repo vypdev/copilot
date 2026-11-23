@@ -135,6 +135,7 @@ function controllerFixture(t, options = {}) {
     const selected = { ...admitted(), runtime: { codex: 'codex-cli modeled', executableSha256: 'a'.repeat(64) } };
     const cancel = new AbortController(), operation = options.host ? undefined : {
         identity: { purpose: 'runtime-admission', operationId: 'runtime:admission' }, signal: cancel.signal,
+        abort: () => cancel.abort(),
         preflight: false, slot: {},
     };
     const durable = require('./attempt-ledger.cjs');

@@ -1,0 +1,99 @@
+{
+  "at": "2026-11-23T05:11:55.389894+00:00",
+  "parent": "d42fc720192ac36c9e9cd9d25975e74e14d4d70a",
+  "sourceSha256": {
+    "quality/bugbot/evidence/issue974/attempt-ledger.cjs": "ab1d15b4a1ecca01bbf589856fd07fec41d74c95815c15d35453ecd430dbd573",
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "fd6e2183cc4b06f126a7b83bdb22dbc5a959c6754331e00def61aa8f0b971162",
+    "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs": "304977e6a3229f2c58ec8998f27dba07953be6b4b13b93f4f92e3cbbfb597200",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs": "065e283c2d400c1b461c35b70caebbcc10565b6d10bbf3a42166e6eb3e49dfb9",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs": "4cccd4eb3c3ec399daf6ef0714713b7a5fab79041f4151c944a8b815e4b74e38"
+  },
+  "unchangedSdkCompositionSha256": {
+    "src/data/repository/agent_cli_client.ts": "e726cf7990b16938dd04ed15bcd80dbf9bcd371a8c55c24c32879f6ab311656b",
+    "src/data/repository/agent_cli_execution.ts": "fe89645d361e2dab3d3118f79fbb3fb45bc8bd61dcdea711b1209695453d5987",
+    "src/infrastructure/agents/agent_execution_planner.ts": "8cbb5e1509f31a995e0da6c137f41f4cd21d6c22e0d19586322b52c2a60f9e1d",
+    "src/infrastructure/agents/qualification_operation_scope.ts": "705158cab2c351d533d73014be9f67b0e6fbb1f26ad47a4e445ba814c592bd04",
+    "src/infrastructure/agents/qualification_investigation_admission.ts": "9493a7f3982dbfb6f7abf2d57846fcb9bc46578885a9bbd356d363c3c70f8b2e",
+    "src/infrastructure/agents/__tests__/source_snapshot_fixture.ts": "ab28d9f834aa87126ad647fe3250b35c93782a59f7d7e281d17c6201f65f04a3"
+  },
+  "sdkCounterfactual": {
+    "sameFinalPrivateTestSha256": "f33b57748245a27f7205868011b0252b643c8f183d420854f188dc8aec1b6a0a",
+    "originalLedgerSha256": "f8812728ecdbe99c072c2ae49eb78ef0c5ebc1e8e5a50e45925b340389420c4b",
+    "originalPass": 1,
+    "originalFail": 2,
+    "correctedPass": 3,
+    "correctedFail": 0,
+    "actual": "real SDK planner/client/executor and controlled local POSIX shell; modeled namespace confirmation; Windows launcher prepared but not executed here",
+    "invalidAttemptsRetained": "Original1reusednamespace;corrected1didnotawait deliberateabortedscoperejection;all original and corrected attempts in private ZIP"
+  },
+  "engineCounterfactual": {
+    "originalAdapterSha256": "608d81d0f9024556a1ae413a75c93434f2474711ce0f944788c9da89e55bb94f",
+    "originalFail": 2,
+    "correctedPass": 2,
+    "actual": "real Unix HTTP and host adapter; modeled Engine/version/image/create replies; no Docker or namespace execution"
+  },
+  "focusedComponents": {
+    "passed": 45,
+    "fail": 0,
+    "skip": 0,
+    "cancel": 0,
+    "additionalAdverseCases": 4
+  },
+  "sdkMaintainedSuite": {
+    "passed": 30,
+    "fail": 0,
+    "skip": 0
+  },
+  "logicalControlIds": 35,
+  "existingControlsExtended": [
+    "ev974-C15",
+    "ev974-C16",
+    "ev974-C27"
+  ],
+  "publicOriginalControls": {
+    "sdk-original-red.txt": {
+      "bytes": 1599,
+      "sha256": "ec18650614a2695a7d95ecc87abbdc448e1c0a7de88ccb5c34f9524d6b78f822"
+    },
+    "sdk-corrected-green.txt": {
+      "bytes": 245,
+      "sha256": "f2944c25b43ece6eb1c0d6873c3d6033d147daa8ebf28eddbc8b40a0d585606b"
+    },
+    "engine-original-red.txt": {
+      "bytes": 2245,
+      "sha256": "5420ab69ea7d4f61ab01240d0f92b170981471a2ed50bc69be53606f5f2b9fc8"
+    },
+    "engine-corrected-green.txt": {
+      "bytes": 296,
+      "sha256": "18a87d4f19a93a19eee321f03659323520875bd2e0b7b788431361bcf2bcec2b"
+    },
+    "focused-components.txt": {
+      "bytes": 5391,
+      "sha256": "8c64653e669c5f63b4a38dae9c3c0c0438ced76732f6fbd13fcc9504744f0977"
+    },
+    "sdk-maintained-suite.txt": {
+      "bytes": 286,
+      "sha256": "dcef95bbc0dbdaae69e1c46b43a3ce11d8e485705eaaedff8fa04104d593c2ea"
+    }
+  },
+  "privateRetention": {
+    "archive": "predispatch-causal-original-controls.zip",
+    "bytes": 38261,
+    "sha256": "ab19f552fbf5a469f7bbee1699b2f523775d3ebfe881b9adc8962a45777a28db",
+    "verifiedMembers": 26,
+    "allOriginalAttemptsPreserved": true
+  },
+  "globalAcceptanceCurrentHead": false,
+  "priorGlobalAppliesToMeasured093": true,
+  "fullSourceDriverCoverage": "PENDING_EXACT_COMMITTED_SOURCE",
+  "finalNativeAcceptance": false,
+  "measured174Source": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "actual174": "COMPLETE_NEGATIVE",
+  "performanceCorrection": false,
+  "scientificRerunAuthorizedByThis": false,
+  "scientificCallsAdded": 0,
+  "actual42": "UNSTARTED_NOT_ADMITTED",
+  "qualifiedProfiles": [],
+  "pilotWrites": 0,
+  "production": "disabled"
+}

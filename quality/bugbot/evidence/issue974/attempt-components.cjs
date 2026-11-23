@@ -21,11 +21,14 @@ function fixture(t, options = {}) {
         ...(selected.runtime.nativeExecutableSha256 ? { nativeExecutableSha256: selected.runtime.nativeExecutableSha256 } : {}) });
     const controller = new AbortController(), rows = [], durable = createDurableRecorder(path.join(directory, 'attempts.jsonl'));
     const record = row => { if (options.observerFailure && row.event === 'attempt-observation') throw options.observerFailure;
+        if (options.preparedWriteFailure && row.event === 'attempt-prepared') throw options.preparedWriteFailure;
         durable(row); rows.push(row); };
     const flags = config => ({ model: config.model, modelProvider: config.modelProvider, reasoningEffort: config.effort, sandbox: 'read-only' });
     const request = { prompt: 'component-only delivered prompt', outputSchema: { type: 'object', properties: {}, additionalProperties: false },
         configuration: selected.detector, signal: controller.signal };
     const cli = createRecordedCli({ caseId: 'component-case', record, artifactDirectory: artifacts,
+        cancellation: { signal: controller.signal, abort: () => controller.abort() },
+        recordObservation: options.auxiliaryObserverFailure ? () => { throw options.auxiliaryObserverFailure; } : undefined,
         createClient: (observer, prepared) => ({ async execute(input) {
             if (options.preparationFailure) throw options.preparationFailure;
             observer.observe({ provider: 'codex', capability: 'findings', state: 'started', phase: 'plan' });
@@ -79,6 +82,56 @@ test('attempt ledger component a successful CLI return cannot conceal failed obs
     await assert.rejects(f.cli.execute(f.request), error => error === failure);
     assert.equal(f.rows.at(-1).status, 'failed'); assert.equal(f.rows.at(-1).observationIncomplete, true);
     assert(!fs.readdirSync(f.artifacts).some(name => name.endsWith('.response.txt'))); assert.throws(() => f.validate());
+});
+
+test('attempt ledger component requires its original cancellation signal before artifacts or client creation', async t => {
+    const f = fixture(t);
+    for (const cancellation of [undefined, { signal: f.controller.signal }]) {
+        assert.throws(() => createRecordedCli({ cancellation }), /requires owned cancellation/);
+    }
+    await assert.rejects(f.cli.execute({ ...f.request, signal: new AbortController().signal }), /exact request signal/);
+    assert.equal(f.controller.signal.aborted, false);
+    assert.equal(f.rows.length, 0); assert.equal(f.cli.attemptIds.length, 0);
+    assert.deepEqual(fs.readdirSync(f.artifacts), []);
+});
+
+test('attempt ledger component preparation evidence failure aborts before an admitted observation', async t => {
+    const failure = new Error('controlled preparation record failure'), f = fixture(t, { preparedWriteFailure: failure });
+    await assert.rejects(f.cli.execute(f.request), error => error === failure);
+    assert.equal(f.controller.signal.aborted, true);
+    assert.deepEqual(f.rows.filter(row => row.event === 'attempt-observation').map(row => row.fact.state), ['started']);
+    assert.equal(f.rows.at(-1).status, 'failed'); assert.equal(f.rows.at(-1).observationIncomplete, true);
+    assert(!fs.readdirSync(f.artifacts).some(name => name.endsWith('.response.txt')));
+});
+
+test('attempt ledger component review-specific observation writes share the pre-dispatch abort fence', async t => {
+    const failure = new Error('controlled auxiliary observation failure'), f = fixture(t, { auxiliaryObserverFailure: failure });
+    await assert.rejects(f.cli.execute(f.request), error => error === failure);
+    assert.equal(f.controller.signal.aborted, true);
+    assert.equal(f.rows.some(row => row.event === 'attempt-prepared'), false);
+    assert.equal(f.rows.at(-1).status, 'failed'); assert.equal(f.rows.at(-1).observationIncomplete, true);
+});
+
+test('attempt ledger component preserves the first observation failure through later SDK and terminal write failures', async t => {
+    const f = fixture(t), first = new Error('first controlled evidence failure'), later = new Error('later controlled failure');
+    let observations = 0, aborts = 0;
+    const record = createDurableRecorder(path.join(f.directory, 'first-error.jsonl'));
+    const cli = createRecordedCli({ caseId: 'first-error', artifactDirectory: f.artifacts,
+        cancellation: { signal: f.controller.signal, abort() { aborts++; f.controller.abort(); } },
+        record(row) {
+            if (row.event === 'attempt-observation') throw ++observations === 1 ? first : later;
+            if (row.event === 'attempt-finish') throw later;
+            record(row);
+        },
+        createClient: observer => ({ async execute() {
+            observer.observe({ state: 'started', phase: 'plan' });
+            observer.observe({ state: 'failed', phase: 'preflight' });
+            throw later;
+        } }),
+    });
+    await assert.rejects(cli.execute(f.request), error => error === first);
+    assert.equal(observations, 2); assert.equal(aborts, 1); assert.equal(f.controller.signal.aborted, true);
+    assert(!fs.readdirSync(f.artifacts).some(name => name.endsWith('.response.txt')));
 });
 
 test('attempt ledger component cannot invent absent case-attempt accounting', async t => {

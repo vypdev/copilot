@@ -1,3 +1,5 @@
+import { makeWindowsRuntimePathPrivate } from '../windows_runtime_acl';
+import { AgentCliClient } from '../../../data/repository/agent_cli_client';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -557,4 +559,81 @@ describe('whole-operation scope policy and live binding components', () => {
         expect(rejected).toHaveBeenCalledWith(expect.objectContaining({ category: 'process', message: 'Qualification operation stop is unconfirmed.' }));
         expect(childKill).not.toHaveBeenCalled();
     });
+});
+
+// Real SDK and controlled local shell; scope confirmations remain modeled.
+describe('ev974-C15 critical attempt persistence before SDK dispatch', () => {
+  const { createRecordedCli } = require(join(__dirname, '../../../../quality/bugbot/evidence/issue974/attempt-ledger.cjs'));
+  it.each(['none', 'started', 'admitted'] as const)('persistence failure=%s', async failedState => {
+    const f = sourceSnapshotFixture(), cancel = new AbortController();
+    const marker = join(f.directory, 'controlled-child-dispatched');
+    const environment: NodeJS.ProcessEnv = { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, WINDIR: process.env.WINDIR };
+    let executable = f.executable;
+    if (process.platform === 'win32') {
+      const packageRoot = join(f.directory, 'node_modules', '@openai', 'codex');
+      mkdirSync(join(packageRoot, 'bin'), { recursive: true });
+      writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({ name: '@openai/codex', bin: { codex: 'bin/codex.js' } }));
+      const script = join(packageRoot, 'bin', 'codex.js');
+      writeFileSync(script, `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'launched');process.stdout.write('{}');`);
+      executable = join(f.directory, 'codex.cmd'); writeFileSync(executable, '@echo off\r\n');
+      makeWindowsRuntimePathPrivate(executable, false); makeWindowsRuntimePathPrivate(script, false);
+      environment.PATH = f.directory; environment.PATHEXT = '.EXE;.CMD';
+    } else {
+      const quote = (value: string) => "'" + value.replace(/'/gu, "'\"'\"'") + "'";
+      writeFileSync(executable, `#!/bin/sh\nprintf launched > ${quote(marker)}\nprintf '{}'\n`);
+    }
+    const planner = new AgentExecutionPlanner({ resolveWorkspace: () => f.root, resolveExecutable: () => executable,
+      readVersion: () => getAgentRuntimeManifestEntry('codex').reviewedVersion });
+    const artifacts = join(f.directory, 'attempts'); mkdirSync(artifacts);
+    const failure = new Error('controlled durable observation failure');
+    const rows: { event: string; fact?: { state?: string } }[] = [];
+    const number = String(['none', 'started', 'admitted'].indexOf(failedState) + 1);
+    const identity = { ownerId: number.repeat(64), operationId: 'observer-' + failedState,
+      planSha256: 'b'.repeat(64), implementation: 'c'.repeat(40), imageSha256: 'd'.repeat(64), purpose: 'native-control' as const };
+    const scopeId = number.repeat(64);
+    let stopped!: (proof: QualificationOperationStopped) => void;
+    const stoppedProof = new Promise<QualificationOperationStopped>(resolve => { stopped = resolve; });
+    const scope = { identity, scopeId, signal: cancel.signal, stopped: stoppedProof,
+      requestStop() { stopped({ identity, scopeId, namespaceInitStopped: true }); } };
+    let body: Promise<void> | undefined;
+    let terminal: Promise<{ ok: boolean; error?: unknown }> | undefined;
+    try {
+      const scoped = withQualificationOperationScope(scope, () => body = (async () => {
+        const cli = createRecordedCli({ caseId: identity.operationId, artifactDirectory: artifacts,
+          cancellation: { signal: cancel.signal, abort: () => cancel.abort() },
+          record(row: { event: string; fact?: { state?: string } }) {
+            rows.push(row);
+            if (row.event === 'attempt-observation' && row.fact?.state === failedState) throw failure;
+          },
+          createClient: (observer: ConstructorParameters<typeof AgentCliClient>[1], prepared: (fact: unknown) => void) =>
+            new AgentCliClient({ prepare(request) {
+              const plan = planner.prepareQualificationInvestigation(request);
+              prepared({ componentOnly: true });
+              return plan;
+            } }, observer),
+        });
+        const request = { configuration: { provider: 'codex' as const, modelProvider: 'openai', model: 'gpt-6-luna', effort: 'xhigh' },
+          capability: 'findings' as const, prompt: 'Controlled local executor regression.', signal: cancel.signal,
+          environment, timeoutMs: 20 };
+        if (failedState === 'none') {
+          await expect(cli.execute(request)).resolves.toBe('{}');
+          expect(existsSync(marker)).toBe(true);
+          expect(cancel.signal.aborted).toBe(false);
+        } else {
+          await expect(cli.execute(request)).rejects.toBe(failure);
+          expect(existsSync(marker)).toBe(false);
+          expect(cancel.signal.aborted).toBe(true);
+        }
+      })());
+      terminal = scoped.then(() => ({ ok: true }), error => ({ ok: false, error }));
+      expect(body).toBeDefined();
+      await body;
+      const result = await terminal;
+      expect(result.ok).toBe(failedState === 'none');
+      if (!result.ok) expect((result.error as Error).message).toContain('exact live owned operation scope');
+    } finally {
+      await Promise.allSettled([body, terminal]);
+      f.cleanup();
+    }
+  });
 });

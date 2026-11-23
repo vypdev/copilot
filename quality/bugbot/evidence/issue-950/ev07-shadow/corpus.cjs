@@ -111,7 +111,7 @@ async function run(destination, preflight = false) {
                 const start = performance.now();
                 const calls = [], runtimeProofs = [];
                 const cli = v2 ? require('../../issue974/attempt-ledger.cjs').createRecordedCli({
-                    caseId: testCase.id, record, artifactDirectory,
+                    caseId: testCase.id, record, artifactDirectory, cancellation: cancel,
                     createClient: (observer, prepared) => new AgentCliClient({
                         prepare: request => prepare(request, calls, runtimeProofs, prepared),
                     }, observer),

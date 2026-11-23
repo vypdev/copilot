@@ -635,3 +635,25 @@ marker and refuted helper-home hypothesis remain separate retained negatives.
 ## Measured independent174 result on093fd141
 
 The complete campaign is **not qualified**:174/174 complete, precision88.0952%below90%; recall92.50%,F190.2439%,location93.2432%,severity91.8919%,category100%and Brier0.11320833 pass their unchanged gates.200ordinary SDK invocations include26source-pinned follow-ups and one outer attempt per case. The separate genuine SDK control adds1 invocation; provider-internal request counts remain unknown. All174initial prompt/schema identities and dispatch order match the committed preregistration;175scopes are freshly404 after stopped confirmation, workspace integrity holds and pilotwrites0. **42remainUNSTARTED,Solcalls0,productiondisabled.** See [full negative result](../issue-974/campaigns/093fd141/results.md).
+
+
+### Pre-dispatch evidence and Engine cancellation follow-up
+
+The negative093fd141 campaign stays unchanged and phase42 stays unstarted. Two
+later failure-boundary findings are reproduced independently: required started/
+admitted observation writes could fail while the real SDK still launched its
+local controlled CLI; version/create responses held by a modeled Engine ignored
+explicit cancellation until released. The driver now cancels its original owned
+signal synchronously on critical recorder failure; corpus, review and technical
+SDK use that exact capability, and review-specific writes share the fence. Initial
+version/image/create HTTP requests now observe cancellation before an ID exists.
+Unknown create effects retain exact intent and remain incomplete, without replay,
+stopped/removal claims or unrelated deletion.
+
+Three maintained SDK controls use the real planner/client/executor and a local
+controlled shell; two Unix-HTTP controls use modeled Engine replies. Their
+namespace confirmations are synthetic and no provider or Docker is contacted.
+These five cases extend existing controls without changing the35logical IDs.
+The original controlled failures and corrected positives are retained separately.
+No new scientific/native admission is inferred; future measurement needs a new
+complete source/driver/runtime tuple and committed preregistration.

@@ -42,3 +42,27 @@ for(const reason of ['cancelled','failed'])test('owned stop record fault: '+reas
   assert.equal(f.running,false);await f.whenRemoved();assert.equal(f.removed,true);assert.equal(f.requests.filter(row=>row.method==='DELETE').length,0);assert(f.events.some(row=>row.event==='scope-stop-request'));
  });
 });
+
+// Engine metadata/create cancellation must settle before a held response.
+for(const phase of ['version','create'])test('ev974-C27 explicit cancellation closes a held '+phase+' reply before it is released',async()=>{
+ let release,held;const waiting=new Promise(resolve=>{held=resolve;});
+ const options=phase==='version'?{holdVersion:true,onHeldVersion(reply){release=reply;held();}}:{holdCreateReply:true,onHeldCreate(reply){release=reply;held();}};
+ await withEngineFixture(options,async f=>{
+  const cancel=new AbortController();
+  const operation=f.api.runContainedOperation({root:f.directory,plan:f.plan,mode:'native-control',slot:{caseId:'ev974-C32'},outputDirectory:path.join(f.directory,'outer-output'),record:f.record,signal:cancel.signal});
+  const observed=operation.then(value=>({kind:'resolved',value}),error=>({kind:'rejected',error}));
+  try{
+   await waiting;cancel.abort();
+   let timer;const terminal=await Promise.race([observed,new Promise(resolve=>{timer=setTimeout(()=>resolve({kind:'pending'}),1000);})]);clearTimeout(timer);
+   assert.equal(terminal.kind,'rejected','explicit cancellation must settle before the Engine releases its held reply');
+   assert.match(terminal.error.message,/cancelled|aborted/);
+   assert.equal(f.activeClientRequests,0);
+   assert.equal(f.events.at(-1).event,'operation-incomplete');
+   assert.equal(f.events.at(-1).reason,'explicit-cancellation');
+   assert.equal(f.events.at(-1).scopeId,null);
+   assert.equal(f.events.at(-1).stoppedConfirmed,false);
+   assert.equal(f.events.at(-1).removed,false);
+   assert.equal(f.requests.filter(r=>r.method==='DELETE'||r.route.endsWith('/start')).length,0);
+  }finally{release?.();await observed;}
+ });
+});

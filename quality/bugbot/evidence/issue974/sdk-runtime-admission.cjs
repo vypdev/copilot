@@ -95,7 +95,7 @@ async function runWorker(output, plan, operation, record) {
     const artifactDirectory = path.join(output, 'attempts'); fs.mkdirSync(artifactDirectory, { mode: 0o700 });
     const rows = [], retain = row => { record({ ...row, event: 'runtime-' + row.event }); rows.push(row); };
     const planner = new AgentExecutionPlanner();
-    const cli = createRecordedCli({ caseId: 'runtime:admission', artifactDirectory, record: retain,
+    const cli = createRecordedCli({ caseId: 'runtime:admission', artifactDirectory, record: retain, cancellation: operation,
         createClient: (observer, prepared) => new AgentCliClient({ prepare(request) {
             const execution = implementation.preparePinnedExecution(planner, request, plan.runtime);
             try {

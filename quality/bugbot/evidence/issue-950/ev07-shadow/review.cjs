@@ -165,15 +165,17 @@ async function run(checkout, id, repetition, output, preflight = false) {
     assert.deepEqual(operation.analysis.agentConfiguration, plan.detector);
     process.chdir(checkout);
     const planner = new AgentExecutionPlanner();
+    const cancel = contained ? { signal: contained.signal, abort: contained.abort } : new AbortController();
     let detectorCli;
     if (!preflight && plan.schemaVersion === 2) {
         const artifactDirectory = output + '.attempts';
         fs.mkdirSync(artifactDirectory, { mode: 0o700 });
         detectorCli = require('../../issue974/attempt-ledger.cjs').createRecordedCli({
-            caseId: id + ':r' + repetition, record: log, artifactDirectory,
+            caseId: id + ':r' + repetition, record: log, artifactDirectory, cancellation: cancel,
+            recordObservation: fact => log({ event: 'detector', fact }),
             createClient: (observer, prepared) => new AgentCliClient({
                 prepare: request => prepareDetector(planner, request, log, plan, prepared),
-            }, { observe(fact) { log({ event: 'detector', fact }); observer.observe(fact); } }),
+            }, observer),
         });
     } else detectorCli = new AgentCliClient({ prepare: request => prepareDetector(planner, request, log) },
         { observe(fact) { log({ event: 'detector', fact }); } });
@@ -183,7 +185,6 @@ async function run(checkout, id, repetition, output, preflight = false) {
         reviewed_head_sha: subject.head,
     }) }
         : createFindingsQueryPort({ cli: detectorCli });
-    const cancel = contained ? { signal: contained.signal, abort: contained.abort } : new AbortController();
     process.once('SIGINT', () => cancel.abort());
     process.once('SIGTERM', () => cancel.abort());
     const evidenceToken = process.env.COPILOT_EVIDENCE_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
