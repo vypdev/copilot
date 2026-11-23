@@ -112940,7 +112940,9 @@ function validRepositoryAgentWorkflowFact(value, kind, formsEnabled, issueManage
         && value.nativeIssueType === definition.nativeIssueType
         && value.createsManagedBranch === (definition.branchManaged && issueManagedBranches)
         && (definition.branchManaged ? isNonEmptyString(value.branchPrefix) : value.branchPrefix === null)
-        && isStringArray(value.requiredFields) && value.requiredFields.every(isNonEmptyString)
+        && isStringArray(value.requiredFields)
+        && value.requiredFields.length === definition.requiredHeadings.length
+        && value.requiredFields.every(isNonEmptyString)
         && (value.workflow === null || isNonEmptyString(value.workflow));
 }
 function isRecord(value) {

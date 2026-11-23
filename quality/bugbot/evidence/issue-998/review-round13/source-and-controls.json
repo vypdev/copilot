@@ -86,15 +86,15 @@
   "udpFinding": "REFUTED: original10transportcontrols PASS; Node24.20.0 dgram.Socket.prototype.sendto legacy wrapper exists and forwards send",
   "primarySource": "https://github.com/nodejs/node/blob/v24.20.0/lib/dgram.js#L581-L597",
   "publicOriginalControls": {
-    "required-fields-original-red.log": {
+    "required-fields-original-red.txt": {
       "bytes": 2316,
       "sha256": "25a2863b9e808b89c19a1edb36aa6048f645e031f705920d74b334f96711de1e"
     },
-    "sendto-original-real-transport.log": {
+    "sendto-original-real-transport.txt": {
       "bytes": 196,
       "sha256": "5623df5543a801d0bc0c94399414e22475d80993bd5ec2b72a96790f2d1b024c"
     },
-    "required-fields-corrected-green.log": {
+    "required-fields-corrected-green.txt": {
       "bytes": 417,
       "sha256": "cc3ffdbf23c981f78f0538bf2249c0a5793f9c77aaa5bc2473bbc0124044d907"
     }
@@ -104,5 +104,13 @@
   "installation": "NOT_EXECUTED",
   "actualModelCallsAdded": 0,
   "pilotWrites": 0,
-  "production": "disabled"
+  "production": "disabled",
+  "normalSourceCommit": {
+    "sha": "22ab36ab33537e58c34db7e700ac077c298de32e",
+    "suites": 968,
+    "passed": 19836,
+    "historicalSkips": 35,
+    "buildTestLint": "PASS",
+    "bundledDelivery": "separate normal commit required; first hook regenerated CLI/Action after staging; no remote publication of incomplete delivery"
+  }
 }
