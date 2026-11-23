@@ -15,10 +15,10 @@ test at ../copilot-goal-974-create-cancellation-regression.cjs:7:41
 ✖ explicit cancellation closes a held version reply before it is released (1194.677459ms)
   AssertionError [ERR_ASSERTION]: explicit cancellation must settle before the Engine releases its held reply
   + actual - expected
-  
+
   + 'pending'
   - 'rejected'
-  
+
       at /private/tmp/copilot-goal-974-create-cancellation-regression.cjs:17:11
       at async use (/private/tmp/copilot-goal-974-driver-hardening/quality/bugbot/evidence/issue974/engine-transport-components.cjs:208:5)
       at async TestContext.<anonymous> (/private/tmp/copilot-goal-974-create-cancellation-regression.cjs:10:2)
@@ -36,10 +36,10 @@ test at ../copilot-goal-974-create-cancellation-regression.cjs:7:41
 ✖ explicit cancellation closes a held create reply before it is released (1159.694666ms)
   AssertionError [ERR_ASSERTION]: explicit cancellation must settle before the Engine releases its held reply
   + actual - expected
-  
+
   + 'pending'
   - 'rejected'
-  
+
       at /private/tmp/copilot-goal-974-create-cancellation-regression.cjs:17:11
       at async use (/private/tmp/copilot-goal-974-driver-hardening/quality/bugbot/evidence/issue974/engine-transport-components.cjs:208:5)
       at async TestContext.<anonymous> (/private/tmp/copilot-goal-974-create-cancellation-regression.cjs:10:2)

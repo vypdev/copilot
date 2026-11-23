@@ -59,10 +59,6 @@
       "bytes": 245,
       "sha256": "f2944c25b43ece6eb1c0d6873c3d6033d147daa8ebf28eddbc8b40a0d585606b"
     },
-    "engine-original-red.txt": {
-      "bytes": 2245,
-      "sha256": "5420ab69ea7d4f61ab01240d0f92b170981471a2ed50bc69be53606f5f2b9fc8"
-    },
     "engine-corrected-green.txt": {
       "bytes": 296,
       "sha256": "18a87d4f19a93a19eee321f03659323520875bd2e0b7b788431361bcf2bcec2b"
@@ -362,5 +358,36 @@
     "sha256": "b4159c01d3278809514b6d7732bbe6bc4f2c5ff207231f743a4fdb7e1a33efe1",
     "verifiedOriginalMembers": 26,
     "negativeSelectionPreserved": true
+  },
+  "historicalOriginalControlVersions": {
+    "engine-original-red.txt": {
+      "bytes": 2245,
+      "sha256": "5420ab69ea7d4f61ab01240d0f92b170981471a2ed50bc69be53606f5f2b9fc8",
+      "path": "quality/bugbot/evidence/issue-974/controls/pre-dispatch-cancellation/engine-original-red.txt",
+      "gitSource": "97525e17d8ce6092a7195a925eeff08eed537459",
+      "privateArchive": "predispatch-causal-original-controls.zip",
+      "privateExactMembers": [
+        "controls/copilot-goal-974-create-cancellation-original-red-attempt1.log"
+      ],
+      "byteExactPrivateVerified": true
+    }
+  },
+  "derivedPublicControlCopies": {
+    "engine-original-red-derived.txt": {
+      "bytes": 2237,
+      "sha256": "3931b95ed0cc2070655c9e13186ec679732b9cbdefae42e2f629461bad8687ad",
+      "originalSha256": "5420ab69ea7d4f61ab01240d0f92b170981471a2ed50bc69be53606f5f2b9fc8",
+      "derivation": "Only remove the eight trailing space bytes from four blank lines; line endings, statements and failures otherwise unchanged. The original is retained exactly in private ZIP and immutable published Git.",
+      "originalBytes": 2245,
+      "acceptanceGranted": false
+    }
+  },
+  "nativeStaticFailure": {
+    "head": "a696e786010ecc22de41e969fc89292ed7c0a2ee",
+    "job": 137510284906,
+    "reason": "Strict repository diff-check rejected trailing blank-line whitespace in original negative log.",
+    "guardChanged": false,
+    "sourceOrAssertionsChanged": false,
+    "retryDispatched": false
   }
 }
