@@ -12,6 +12,19 @@ import {
 } from '../repository_agent_guidance_policy';
 
 describe('repository agent guidance policy', () => {
+  it('publisher977-C106: rejects missing or excess required field counts while preserving custom labels', () => {
+    const profile = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
+    for (const kind of profile.issueWorkflows.enabled) {
+      const fact = profile.issueWorkflows.forms[kind]!;
+      const withFields = (requiredFields: readonly string[]) => JSON.stringify({ ...profile,
+        issueWorkflows: { ...profile.issueWorkflows,
+          forms: { ...profile.issueWorkflows.forms, [kind]: { ...fact, requiredFields } } } });
+      for (const fields of [[], fact.requiredFields.slice(1), [...fact.requiredFields, 'Extra heading']]) {
+        expect(validRepositoryAgentProfile(withFields(fields))).toBe(false);
+      }
+      expect(validRepositoryAgentProfile(withFields(fact.requiredFields.map((_, index) => `Custom heading ${index}`)))).toBe(true);
+    }
+  });
   it.each(['feature', 'bugfix', 'help', 'chore', 'documentation', 'hotfix', 'release'] as const)(
     'publisher977-C104: rejects a noncanonical %s template even when it is nonempty', kind => {
       const profile = buildRepositoryAgentProfile(createDefaultSetupConfiguration());
@@ -115,6 +128,7 @@ describe('repository agent guidance policy', () => {
     expect(profile.issueWorkflows.forms.release?.workflow).toBe('custom-release.yml');
     expect(profile.branches.preBranchSdd).toBe(true);
     expect(profile.deployment.launcherLabel).toBe('ship');
+    expect(validRepositoryAgentProfile(JSON.stringify(profile))).toBe(true);
 
     const guide = renderRepositoryAgentGuide(profile);
     expect(guide).toContain('Issue Forms are disabled');

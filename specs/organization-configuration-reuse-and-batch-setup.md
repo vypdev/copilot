@@ -1308,3 +1308,36 @@ pure/runtime, global/changed-line, package, documentation and final-head native
 gates remain required. User documentation explains unsupported template state and
 the limits of package transport evidence. No new configuration, privilege,
 permission, schema, timeout, retry or activation is introduced.
+
+
+### Reviewed publisher route: required issue-field cardinality
+
+Each enabled workflow's installed profile MUST contain exactly the number of
+required issue fields defined by its catalog kind. Empty, shortened or excess
+lists are unsupported even with self-consistent profile and artifact hashes.
+Custom nonempty heading labels at the canonical count remain supported. The pure
+profile policy owns this check; the existing immutable planner rejects unsupported
+guidance before preview, approval or provider writes. Renderer fallback behavior
+and issue admission remain unchanged. No new setting or schema is introduced.
+
+| Case | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C106 | Read-only planning/freshness | PU977-G01, PU977-G07 | Required issue field counts must match each workflow catalog while custom heading labels remain supported; matching manifest hashes cannot authorize empty required fields. |
+
+This obligation raises the cumulative minimum to **106 logical IDs / 102 mapped
+Jest cases plus four extracted-package cases**. Two named executable tests cover
+all seven enabled kinds: one rejects zero, short and excess lists while admitting
+custom labels; the other exercises actual planning with empty lists and matching
+manifest hashes. Both MUST fail against the previous policy and pass after the
+cardinality correction. All C01–C105 ledger objects and the Action-selected
+companion MUST remain unchanged. C01–C106 retain published rows and executable
+mappings; the validator's independent minimum is106. Pure-policy100%, existing
+runtime/global/changed-line, package, documentation and final-head native gates
+remain required. The unchanged UDP loopback controls are also retained, including
+the Node24.20 legacy `sendto` alias; model assertions do not replace primary source
+or actual transport evidence. None of these controls establishes installation.
+
+Traceability: C106 -> PU977-G01/G07 -> repository agent guidance policy and
+immutable publisher planner -> repository guidance troubleshooting. An unsupported
+profile requires regeneration with the intended setup configuration, preserving
+existing changes; manually replacing hashes does not repair semantic validity.

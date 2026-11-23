@@ -361,6 +361,14 @@ does not include arbitrary `actionInputs`; only allowlisted typed projections
 are serialized. Object keys and arrays use canonical ordering. A SHA-256 digest
 of canonical bytes is stored in the manifest, not trusted from the profile.
 
+Installed-profile validation MUST require each enabled workflow's required-field
+count to match its catalog definition. Empty, shortened or excess lists cannot
+establish compatibility even with matching manifest hashes; nonempty custom
+heading labels remain supported at the catalog count. The immutable publisher
+planner consumes this pure-policy decision before preview or writes. The two
+causal controls are publisher977-C106 in the owning batch-setup appendix and
+acceptance ledger; renderer fallback behavior does not establish profile validity.
+
 The manifest contains its schema version, generator package/contract version,
 profile digest, and an ordered map of setup-managed path to source role and
 content hash. It never claims arbitrary existing repository files. Backups and

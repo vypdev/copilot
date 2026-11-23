@@ -2624,6 +2624,26 @@
           "test": "publisher977-C105: UDP package transport fences blocks UDP connect before creating a listener or connected socket"
         }
       ]
+    },
+    {
+      "id": "publisher977-C106",
+      "area": "Read-only planning/freshness",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Required issue field counts must match each workflow catalog while custom heading labels remain supported; matching manifest hashes cannot authorize empty required fields.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C106: rejects missing or excess required field counts while preserving custom labels"
+        },
+        {
+          "file": "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts",
+          "test": "publisher immutable two-file planning publisher977-C106: matching manifest hashes cannot authorize empty required issue fields"
+        }
+      ]
     }
   ]
 }

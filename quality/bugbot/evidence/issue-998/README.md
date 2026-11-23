@@ -287,3 +287,5 @@ Round8 native Commit/Verification failed on nine newly named .json.gz report arc
 ## Round10: inventory and no-command recovery
 
 [Round10 evidence](./review-round10/README.md) retains causal failures,1,251passing assertions/96mapped/100registered cases, three changed modules100%allmetrics and a real private-module mutation detecting the valid receipt byte boundary. All95prior ledger objects and the selected companion remain exact. Uninspected remote/local implementations still require reconciliation before preview. Normal hooks and final-head native acceptance remain separate.
+
+- [Required issue-field cardinality and UDP review adjudication](./review-round13/README.md): two causal negative/positive cases, prior105ledger identities preserved,106logical/102mapped Jest, actual UDP finding refuted.

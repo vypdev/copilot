@@ -27,6 +27,8 @@ Setup writes each generated artifact atomically and the manifest last. Approved 
 
 Older generated guides may link to `../docs/agents/` files that were never installed in the destination repository. Update Copilot and rerun setup with the same configuration to replace an unchanged, setup-owned guide with absolute links to the shared documentation. The previous guide is backed up. If the guide was edited or is not setup-owned, preserve those edits and follow the normal conflict recovery above.
 
+Publisher preview also requires each enabled workflow to retain the catalog count of required issue fields. An empty, shortened or excess list is unsupported even if manifest hashes match. Custom heading labels remain supported at that count. Regenerate guidance with the intended setup configuration before reviewing a new preview.
+
 Do not repair drift by editing `.copilot/repository-profile.json` or its hashes. Change the setup configuration and rerun setup so forms, Variables, workflows, guide, skill, and manifest converge from one plan.
 
 ## AGENTS.md pointer hash scope
