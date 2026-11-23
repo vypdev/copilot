@@ -425,3 +425,18 @@ retained; C114 appends required provider-ref composition. C120/C121 raise the
 cumulative floor to121IDs/117mapped+fourpackaged controls. Earlier statements
 about byte-identical case objects describe their pinned historical deliveries.
 No earlier result or report is rewritten as a later execution.
+
+
+Round21 local preparation requires ordered routing-prefix coherence and preserves
+generated duplicates/custom priorities. C122 adds four policy controls without
+changing prior121 objects. Existing journal diagnostics now cover the batch
+recovery suite that timed out oncf533; this is observation, not a proven fix or a
+larger deadline. Await the completed cf533 review before source publication.
+
+
+Completed cf533 review also identifies unsupported hotfix/release facts when
+managed branches are disabled. C123 covers four form-on/off negatives plus two
+valid manual-only positives; prior pre-branch-SDD fixture remains independently
+causal with feature-only selection. Round21 is now123IDs/119mapped+4package and
+ten new policy cases, with all earlier objects retained. No branch lifecycle
+permission, production setting or journal timeout changes.

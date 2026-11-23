@@ -3290,6 +3290,70 @@
           "test": "actual shared Git delivery composition with controlled provider publisher977-C121: stale snapshot during open-claim inspection prevents POST"
         }
       ]
+    },
+    {
+      "id": "publisher977-C122",
+      "area": "Pure/installed profile compatibility",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Installed form labels retain the exact ordered routing-label prefix while preserving generated custom duplicate labels and custom priority values.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C122: rejects form routing prefix mismatch foreign label"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C122: rejects form routing prefix mismatch reordered prefix"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C122: rejects form routing prefix mismatch misplaced priority"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C122: preserves generated duplicate routing and priority labels"
+        }
+      ]
+    },
+    {
+      "id": "publisher977-C123",
+      "area": "Pure/installed profile compatibility",
+      "requirements": [
+        "PU977-G01",
+        "PU977-G07"
+      ],
+      "assertion": "Installed profiles enabling hotfix or release require managed branches even when forms are disabled, while otherwise valid manual-only workflow profiles remain compatible.",
+      "gate": "jest",
+      "evidence": [
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: rejects hotfix without managed branches when forms=true"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: rejects hotfix without managed branches when forms=false"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: rejects release without managed branches when forms=true"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: rejects release without managed branches when forms=false"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: preserves manual-only workflow profiles when forms=true"
+        },
+        {
+          "file": "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts",
+          "test": "repository agent guidance policy publisher977-C123: preserves manual-only workflow profiles when forms=false"
+        }
+      ]
     }
   ]
 }

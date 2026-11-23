@@ -363,7 +363,9 @@ function validRepositoryAgentWorkflowFact(
   return (formsEnabled ? value.template === definition.formFile : value.template === null)
     && isStringArray(value.labels) && value.labels.length === definition.labels.length && value.labels.every(isNonEmptyString)
     && isStringArray(value.formLabels) && value.formLabels.length === definition.labels.length + 1 && value.formLabels.every(isNonEmptyString)
+    && routingPrefixMatches(value.labels, value.formLabels)
     && value.nativeIssueType === definition.nativeIssueType
+    && ((kind !== 'hotfix' && kind !== 'release') || issueManagedBranches)
     && value.createsManagedBranch === (definition.branchManaged && issueManagedBranches)
     && (definition.branchManaged ? isNonEmptyString(value.branchPrefix) : value.branchPrefix === null)
     && isStringArray(value.requiredFields)
@@ -372,6 +374,10 @@ function validRepositoryAgentWorkflowFact(
     && distinctIssueWorkflowHeadings(value.requiredFields)
     && ((kind === 'hotfix' || kind === 'release') || value.workflow === null)
     && (value.workflow === null || isNonEmptyString(value.workflow));
+}
+
+function routingPrefixMatches(labels: readonly string[], formLabels: readonly string[]): boolean {
+  return labels.every((label, index) => formLabels[index] === label);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

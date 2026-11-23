@@ -1,4 +1,5 @@
 import { createDefaultSetupConfiguration } from '../setup_configuration_defaults';
+import { validateSetupConfiguration } from '../setup_configuration_validation';
 import { readIssueWorkflowFields } from '../../../domain/issue_workflow_body';
 import {
   buildRepositoryAgentProfile,
@@ -13,6 +14,45 @@ import {
 } from '../repository_agent_guidance_policy';
 
 describe('repository agent guidance policy', () => {
+  it.each((['hotfix', 'release'] as const).flatMap(kind => [true, false].map(formsEnabled => ({ kind, formsEnabled }))))(
+    'publisher977-C123: rejects $kind without managed branches when forms=$formsEnabled', ({ kind, formsEnabled }) => {
+      const configuration = createDefaultSetupConfiguration();
+      configuration.repository.issueManagedBranches = false; configuration.repository.preBranchSdd = false;
+      configuration.issueWorkflows = { enabled: [kind] }; configuration.features.issueTemplates = formsEnabled;
+      expect(validateSetupConfiguration(configuration)).toContain('release and hotfix issue workflows require issue-managed-branches.');
+      const profile = buildRepositoryAgentProfile(configuration);
+      expect(profile.issueWorkflows.forms[kind]!.createsManagedBranch).toBe(false);
+      expect(validRepositoryAgentProfile(JSON.stringify(profile))).toBe(false);
+    });
+  it.each([true, false])('publisher977-C123: preserves manual-only workflow profiles when forms=%s', formsEnabled => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.issueManagedBranches = false; configuration.repository.preBranchSdd = false;
+    configuration.issueWorkflows = { enabled: ['feature', 'bugfix', 'documentation', 'chore', 'help'] };
+    configuration.features.release = false; configuration.features.hotfix = false;
+    configuration.features.issueTemplates = formsEnabled;
+    expect(validateSetupConfiguration(configuration)).not.toContain('release and hotfix issue workflows require issue-managed-branches.');
+    const profile = buildRepositoryAgentProfile(configuration);
+    expect(Object.values(profile.issueWorkflows.forms).every(fact => !fact.createsManagedBranch)).toBe(true);
+    expect(validRepositoryAgentProfile(JSON.stringify(profile))).toBe(true);
+  });
+  it.each(['foreign label', 'reordered prefix', 'misplaced priority'] as const)(
+    'publisher977-C122: rejects form routing prefix mismatch %s', change => {
+      const profile = structuredClone(buildRepositoryAgentProfile(createDefaultSetupConfiguration()));
+      const fact = profile.issueWorkflows.forms.feature!, labels = [...fact.formLabels];
+      if (change === 'foreign label') labels[0] = 'Foreign routing';
+      else if (change === 'reordered prefix') [labels[0], labels[1]] = [labels[1], labels[0]];
+      else [labels[0], labels[2]] = [labels[2], labels[0]];
+      (fact as { formLabels: readonly string[] }).formLabels = labels;
+      expect(validRepositoryAgentProfile(JSON.stringify(profile))).toBe(false);
+    });
+  it('publisher977-C122: preserves generated duplicate routing and priority labels', () => {
+    const defaults = createDefaultSetupConfiguration();
+    const profile = buildRepositoryAgentProfile({ ...defaults, actionInputs: { ...defaults.actionInputs,
+      'enhancement-label': 'Shared label', 'feature-label': 'Shared label', 'priority-low-label': 'Shared label' } });
+    expect(profile.issueWorkflows.forms.feature!.labels).toEqual(['Shared label', 'Shared label']);
+    expect(profile.issueWorkflows.forms.feature!.formLabels).toEqual(['Shared label', 'Shared label', 'Shared label']);
+    expect(validRepositoryAgentProfile(JSON.stringify(profile))).toBe(true);
+  });
   it.each([
     ['labels', 'empty'], ['labels', 'short'], ['labels', 'extra'],
     ['formLabels', 'empty'], ['formLabels', 'short'], ['formLabels', 'extra'],
@@ -34,7 +74,7 @@ describe('repository agent guidance policy', () => {
     for (const kind of profile.issueWorkflows.enabled) {
       const fact = profile.issueWorkflows.forms[kind]!;
       (fact as { labels: readonly string[] }).labels = fact.labels.map((_, index) => `Custom routing ${index}`);
-      (fact as { formLabels: readonly string[] }).formLabels = fact.formLabels.map((_, index) => `Custom form ${index}`);
+      (fact as { formLabels: readonly string[] }).formLabels = [...fact.labels, 'Custom priority'];
       if (kind === 'hotfix' || kind === 'release') (fact as { workflow: string | null }).workflow = `custom-${kind}.yml`;
     }
     expect(validRepositoryAgentProfile(JSON.stringify(profile))).toBe(true);
@@ -131,6 +171,8 @@ describe('repository agent guidance policy', () => {
 
   it('rejects pre-branch SDD authority when the otherwise consistent profile disables managed branches', () => {
     const configuration = createDefaultSetupConfiguration();
+    configuration.issueWorkflows = { enabled: ['feature'] };
+    configuration.features.release = false; configuration.features.hotfix = false;
     configuration.repository.issueManagedBranches = false; configuration.repository.preBranchSdd = true;
     const profile = buildRepositoryAgentProfile(configuration);
     expect(Object.values(profile.issueWorkflows.forms).every(fact => !fact.createsManagedBranch)).toBe(true);

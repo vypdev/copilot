@@ -330,3 +330,27 @@ adds five observations. Local correction validates generated profile facts and
 proves open-marker conflict absence before a new PR within the same ten-query
 budget. Existing C34/C114 evidence is strengthened; current floor121IDs/117mapped
 plus four package cases. Delivery/native gates are not claimed before execution.
+
+
+## Round21 preparation
+
+Current local floor123 IDs/119 mapped+four package cases retains all121 earlier
+ledger objects and appends C122/C123. The completed cf53329-partition review
+reports two findings: routing/form prefix mismatch and enabled hotfix/release
+without managed branches. Both are corrected locally. C122 has four policy
+controls preserving generated duplicates/custom priorities; C123 has six
+form-on/off and valid manual-only controls. Existing C120/pre-branch-SDD positive
+and negative fixtures are coherent and keep their titles/mappings.
+
+Prefix original1PASS/3FAIL becomes53-test guidance assertions passed; managed-branch
+original2PASS/4FAIL becomes59 policy assertions passed. Every causal assertion
+body is retained unchanged within its red/green pair. Expanded final-source
+validation and normal delivery remain pending. The first source-identical
+cohort's16 loopback EPERMs remain retained; running its actual socket controls
+with the required permission passes without source edits.
+
+The cf533 native journal timeout remains UNKNOWN. Its affected75-case batch
+suite gains the existing bounded I/O observer without changing outcomes, timers,
+retries, assertions, skips or acceptance floors. No identical native job is
+rerun. No model campaign or installation is performed; production disabled and
+pilotwrites0.

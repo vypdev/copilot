@@ -1763,3 +1763,88 @@ Graphify, build/extracted-package smoke, normal hooks/audit and final-head nativ
 CI/review with all valid findings addressed. Merge and an installation preview
 remain distinct; installation still requires its specific authorization. The
 original174 negative and inadmissible42 remain unchanged.
+
+
+### Round21: routing labels agree with the form that applies them
+
+Counts alone do not establish routing coherence. Observed on sourcecf533: a
+profile with foreign, reordered or priority-swapped form-label prefixes passes
+shared compatibility validation. The generator always constructs form labels
+as the ordered routing labels followed by one priority label. The validator MUST
+require that exact prefix, preserving custom nonempty values, configured
+duplicates and priority reuse; it MUST NOT add uniqueness or default-value
+requirements. A changed routing label or shifted priority cannot be certified by
+a self-consistent profile/manifest. Doctor and publisher use the same pure rule
+and existing compatibility warning; reconcile installed facts and guidance by
+the reviewed setup route before retrying. No new input, authority or migration
+is introduced, and valid generated configurations remain compatible.
+
+The additional budget is four policy cases: three original failures for foreign,
+reordered and misplaced-priority prefixes, and one actual-generator positive
+with duplicate configured routing/priority values. The C120 custom-value positive
+keeps its existing title/mapping but now uses the coherent routing prefix; its
+prior independent form values could not be generated. Preserve every prior121
+ledger object/evidence and selected64-case companion, then append C122. Current
+floor after the prefix change was122 logical IDs/118 mapped Jest plus four
+extracted-package cases; C123 below extends the final Round21 floor to123/119
+plus the same four package cases.
+Keep changed guidance100%, six pure100% and20 runtime95/90, global/source,
+architecture, normal hooks, package, documentation and final-head native gates.
+
+| Case ID | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C122 | Pure/installed profile compatibility | PU977-G01, PU977-G07 | Installed form labels retain the exact ordered routing-label prefix while preserving generated custom duplicate labels and custom priority values. |
+
+Traceability: C122 -> G01/G07 -> shared installed guidance pure validation ->
+profile compatibility troubleshooting. Documentation MUST explain exact routing
+order while retaining customized/duplicate labels. Existing flows, GitHub/CLI
+content, read/write fences and ten-query bounds are unchanged; no new UI state
+or optional setting is needed.
+
+Native cf533 also retains one5000ms timeout in batch recovery with the real
+journal. Cause remains UNKNOWN. Its newly affected suite installs the existing
+bounded observation-only journal diagnostic, already used by publisher and
+local-batch suites. It reports only slow/pending method, ordinal, duration and
+bounded error category; never arguments, paths, contents, credentials or env.
+It changes no I/O result, retry, timeout, skip or acceptance floor. Local75-case
+execution is diagnostic evidence only. Do not describe it as a root-cause fix,
+rerun an identical job or infer an fsync/streams cause without an observation.
+Fresh native execution of this corrected/observable source remains required.
+
+
+The completed29-partition cf533 review confirms C122 and identifies an additional
+configuration/profile disagreement: hotfix and release are admitted without
+managed branches by the profile predicate although setup configuration forbids
+that combination. Enabled hotfix/release facts MUST require managed branches,
+regardless of whether forms are rendered. This does not force managed branches
+for feature, bugfix, documentation, chore or help; valid manual-only profiles
+remain supported with the existing pre-branch-SDD constraints. It changes no
+remote branch authority or workflow enablement setting. Unsupported installed
+profiles receive the existing compatibility warning and must be reconciled by
+the supported reviewed setup path.
+
+| Managed branches | Enabled workflows | This compatibility rule |
+|---|---|---|
+| Enabled | Any otherwise supported selection | Allowed |
+| Disabled | Manual-only kinds, excluding hotfix/release | Allowed when other profile/SDD rules hold |
+| Disabled | Hotfix or release, with forms on or off | Rejected |
+
+C123 adds six policy cases: four original failures for hotfix/release with forms
+on/off and two actual-generated manual-only positives. Each negative also
+observes the existing setup configuration rejection; no second invariant is
+invented. The prior pre-branch-SDD negative now selects manual-only feature so
+its intended guard remains independently exercised rather than hidden behind
+this new rejection. Additional Round21 budget is ten policy cases: C122four plus
+C123six; journal diagnostics add no case or timeout allowance. Current floor is
+**123 IDs/119 mapped Jest plus four extracted-package cases**, retaining all121
+cf533 objects, the new C122 object and the selected64-case companion.
+
+| Case ID | Area | Requirements | Assertion |
+|---|---|---|---|
+| publisher977-C123 | Pure/installed profile compatibility | PU977-G01, PU977-G07 | Installed profiles enabling hotfix or release require managed branches even when forms are disabled, while otherwise valid manual-only workflow profiles remain compatible. |
+
+Traceability: C123 -> G01/G07 -> shared generated-profile compatibility -> setup
+configuration branch/workflow rule -> guidance troubleshooting. The same pure100,
+runtime95/90, complete mapping, source/build/package/documentation and final
+native gates apply. No new schema, user setting, state, migration or installation
+authorization is introduced.

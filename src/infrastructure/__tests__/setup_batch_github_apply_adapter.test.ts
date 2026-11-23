@@ -17,6 +17,8 @@ import { InstallSetupPublisherUseCase } from '../../application/usecases/setup/i
 import { setupPublisherFixture } from '../../application/policies/__tests__/fixtures/setup_publisher_fixture';
 import { SetupBatchJournalAdapter } from '../setup_batch_journal_adapter';
 import { SetupPublisherJournalAdapter } from '../setup_publisher_journal_adapter';
+// Observation only: retain slow/pending journal phases without changing I/O or test bounds.
+jest.requireActual<{ installJournalIoDiagnostics(): void }>('./fixtures/journal_io_diagnostics.cjs').installJournalIoDiagnostics();
 const operation = 'a67c8e40-93be-43ed-a7ed-e07378c7e773';
 const base = 'a'.repeat(40); const prepared = 'c'.repeat(40);
 function fixture() {
