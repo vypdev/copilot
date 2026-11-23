@@ -1,1269 +1,1386 @@
 {
   "schemaVersion": 1,
   "kind": "lossless historical text-evidence archive index",
-  "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+  "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
   "allArchiveObjectsRemainReachable": true,
-  "historyRewritten": false,
-  "reason": "raw gzip text logs remain in pinned immutable Git history; current delivery contains reviewable evidence/source and exact retrieval/provenance instead of newly changed binary archives",
+  "historyRewritten": true,
+  "reason": "Original gzip log bytes remain reachable in the privacy-redacted public history; entry locators point at their exact sanitized mirror revisions.",
   "entryCount": 114,
   "entries": [
     {
       "path": "quality/bugbot/evidence/issue-974/controls/233-committed-controls.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "dac7b430e56e8053fcb1c78852495134cdfd6591",
       "encoding": "gzip",
       "gzipBytes": 7466,
       "gzipSha256": "9ac9e1e20d27d500dbf5014f2ac14731450837635d5dd44d22e2c693500a1fd9",
       "decodedUtf8Bytes": 25183,
       "decodedUtf8Sha256": "b802b865591404bcea540391261ca523859ca0e6ed8cd4d14bf6be42f830f58f",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/233-committed-controls.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/233-committed-controls.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/38f4c04-correction-commit.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "3a653d1e650df5de613dbdb2db8c1c2341e02775",
       "encoding": "gzip",
       "gzipBytes": 50562,
       "gzipSha256": "5bccc129a22c240f82f68a4cfe1a5397227b92fdb0423074fc6df3644412b8f2",
       "decodedUtf8Bytes": 535817,
       "decodedUtf8Sha256": "ef438d9fe41180f244d1090f36335181a307e2612821ef80cd335d3f2eebd516",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/38f4c04-correction-commit.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/38f4c04-correction-commit.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/5241685-bundle-evidence-commit.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "8f1e9f94358743820e73d02b68aaed0f8e1db04b",
       "encoding": "gzip",
       "gzipBytes": 50631,
       "gzipSha256": "58853dba102180256befcc577d924c72c424b96a940a9aeb1d389c5666f07816",
       "decodedUtf8Bytes": 536133,
       "decodedUtf8Sha256": "4bc15dc6f1ce42eb76368e212e8029980834ae9ef1437dc67c51ee02c706a7ec",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/5241685-bundle-evidence-commit.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/5241685-bundle-evidence-commit.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/5241685-committed-controls.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "d7c9b1c179ea1cb021031fe5d19c9309763f0f77",
       "encoding": "gzip",
       "gzipBytes": 7375,
       "gzipSha256": "2b130bc46844aab72ede251d276c99d8ef211ab918eda1ba51b8217ea1decb51",
       "decodedUtf8Bytes": 24987,
       "decodedUtf8Sha256": "3875aa8113f8ce567559549447ad52589a2307ce370f96435cece3d41ac3dc29",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/5241685-committed-controls.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/5241685-committed-controls.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/5241685-native-static-failure.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "de5d607bbe65d03c036218c3f8fa199e04aa936f",
       "encoding": "gzip",
       "gzipBytes": 3749,
       "gzipSha256": "25e8f6cdc8d5316de9e77005b6b3039ae7d9d93257863ed5c4bcd7bb30b5555c",
       "decodedUtf8Bytes": 16230,
       "decodedUtf8Sha256": "65b3126bcd93e4cdd675cc40fe25eaf60484e60fe45187cae1f54e54414f7e5d",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/5241685-native-static-failure.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/5241685-native-static-failure.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/63628b-committed239-negative.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "4ed9b3552d882bd293bb97c179d02dd40b3945c6",
       "encoding": "gzip",
       "gzipBytes": 8545,
       "gzipSha256": "49fd90647aefe47d2ec1d9887e78d8ba5c291ee6684fc3f5edd773ab4a945a17",
       "decodedUtf8Bytes": 30047,
       "decodedUtf8Sha256": "35d3b3d735c0f7c0b18873b83c3bc6193a32f210cd5ad98501af71331911f078",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/63628b-committed239-negative.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/63628b-committed239-negative.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/63628b-normal-hook-success.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "415d264834d95f32845f92ae5cb66a61ae817ae2",
       "encoding": "gzip",
       "gzipBytes": 51085,
       "gzipSha256": "4d1e7793812b7069efecb0c1ed33bd197fbd5227f6865d64bf095e803952e05e",
       "decodedUtf8Bytes": 541135,
       "decodedUtf8Sha256": "3712c9007151581df2b9c384063b77eaf9fdcbab761724f0091c53c346cc2078",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/63628b-normal-hook-success.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/63628b-normal-hook-success.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/actual-plan-bundle-positive.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "86b33f0454602803078faba074487c02cb19c3f4",
       "encoding": "gzip",
       "gzipBytes": 207,
       "gzipSha256": "706afc7212ba915c90c9c10d77a54b9797fd7f066dd2e8c1e174ee3830d5d74e",
       "decodedUtf8Bytes": 261,
       "decodedUtf8Sha256": "f458ce258a9d21a209c9b0aad69bf0116b34892a18c769abc4c8e8dd589c42d9",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/actual-plan-bundle-positive.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/actual-plan-bundle-positive.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/additional-fullreview-attempt-admission.cjs.txt.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "0243cdcb31b2a42df0dbeb78ab098a0250546cc0",
       "encoding": "gzip",
       "gzipBytes": 881,
       "gzipSha256": "951386ba47148c53a17be7e5424605e07e5f7da62bbf1eecd691cb825c196fe2",
       "decodedUtf8Bytes": 2200,
       "decodedUtf8Sha256": "ae7cd9a482b34fca462c714df4267b354b3a579a5c7852affe36b17b7745dc0b",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/additional-fullreview-attempt-admission.cjs.txt.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/additional-fullreview-attempt-admission.cjs.txt.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/additional-fullreview-attempt-admission.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "2dd10d1c8ba83532abe90ed285763c02e7baeed6",
       "encoding": "gzip",
       "gzipBytes": 281,
       "gzipSha256": "3c30ea61ba6a3f4607c1f84a5d6f61a425b4ba63c8a1a629002c8bc6dcfc6f9c",
       "decodedUtf8Bytes": 388,
       "decodedUtf8Sha256": "ac62b16e3974c11b7a71227d6f437c293c501fcf0f82ccb16138e33605562790",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/additional-fullreview-attempt-admission.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/additional-fullreview-attempt-admission.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/compatibility-three-corrected.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "622eb1ecbd2432be589502682407c4deeeae97d1",
       "encoding": "gzip",
       "gzipBytes": 310,
       "gzipSha256": "dbbf3c4fe3a555c13a6928d160021179ba5ae0cbd079ff47fcdb2001b7f56a9b",
       "decodedUtf8Bytes": 457,
       "decodedUtf8Sha256": "ec8e0d8ecf27493789bf6a7033f6fad0d9909db2aa51609c10a662da98b38fcc",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/compatibility-three-corrected.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/compatibility-three-corrected.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt1.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "2d04855b468e4d4d1ffcae8005c8229d1e3c78a6",
       "encoding": "gzip",
       "gzipBytes": 453,
       "gzipSha256": "157e706732b322b65456e2451246b292d7a3e9ca2e2d14b4d24851b109eb739b",
       "decodedUtf8Bytes": 1035,
       "decodedUtf8Sha256": "21e071130cfa42ac745a59afaa37fd55811703715618d8ad174a52e091bb60f3",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt1.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt1.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt2.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "1d8355510a35776495231757f5e20f5b158a921a",
       "encoding": "gzip",
       "gzipBytes": 101,
       "gzipSha256": "844eb5e682c82cd97f2bd21d0944f539afa1f19c5cf275229a7fbc153e9177ea",
       "decodedUtf8Bytes": 87,
       "decodedUtf8Sha256": "cbef50910705828b731155e4ee403ae7937bcc1b1846b014fe8c02d256307ae9",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt2.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt2.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt3.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "1d8355510a35776495231757f5e20f5b158a921a",
       "encoding": "gzip",
       "gzipBytes": 101,
       "gzipSha256": "844eb5e682c82cd97f2bd21d0944f539afa1f19c5cf275229a7fbc153e9177ea",
       "decodedUtf8Bytes": 87,
       "decodedUtf8Sha256": "cbef50910705828b731155e4ee403ae7937bcc1b1846b014fe8c02d256307ae9",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt3.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt3.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-retained-node-uncommitted-source.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "5348581ed96a5bb79a83eb9796f0431386396565",
       "encoding": "gzip",
       "gzipBytes": 8324,
       "gzipSha256": "ad8a651f3784fbb699839d2b0b45374abd2a0d7750c0d1119542da5683da46d5",
       "decodedUtf8Bytes": 52793,
       "decodedUtf8Sha256": "f0b887786facdaf5e7154bdc020fb2a32b89cdf9aefd4cc9d700308d06a1c356",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-retained-node-uncommitted-source.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-retained-node-uncommitted-source.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-architecture-final.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "fd4ae19e60e728c9cbd600638b56d0ce5795bbda",
       "encoding": "gzip",
       "gzipBytes": 184,
       "gzipSha256": "361bfc51190fa5f76f852bd79d2de69d9cd42c6344b895e2e320c75850c790dc",
       "decodedUtf8Bytes": 334,
       "decodedUtf8Sha256": "726f9fe02a2b2f70ab0776c6f4d4ea5b1bfd0b875c2a570eaed0e09b60a92564",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-scope-architecture-final.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-scope-architecture-final.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt1.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "935c8f4abd7e0491701aa8e434022276aa559e24",
       "encoding": "gzip",
       "gzipBytes": 466,
       "gzipSha256": "17886511d70d9e6d2ea1cc513e049420a59eb570d9218960c443e79ff5df85b3",
       "decodedUtf8Bytes": 1581,
       "decodedUtf8Sha256": "a8126979139e301ed8cb007f425eb6c7712d6e2a872a58bfbbb940655f09ebbf",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt1.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt1.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt2.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "106a614f88966930829e084934e6feff797c6c3f",
       "encoding": "gzip",
       "gzipBytes": 368,
       "gzipSha256": "857fb852c50b398df93f8a25475519d0d143adef5e2d66f2ff7c903c53269b72",
       "decodedUtf8Bytes": 1429,
       "decodedUtf8Sha256": "87ce13de9124fae92278363bfe0d0ae694fb2caf7b718b949184735b630d70ef",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt2.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt2.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt3.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "b6a1ab52ef41397e003b94423436891a19291766",
       "encoding": "gzip",
       "gzipBytes": 371,
       "gzipSha256": "cc5e2a396456a9b07bd177c7f1afc87f7fca1f498b1174ee8ffd16f89dfd65ae",
       "decodedUtf8Bytes": 1429,
       "decodedUtf8Sha256": "bfbc5bfca66313bf1cb219b7ad1016fd95b71a411bbfe830cb05d7e72d44496c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt3.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt3.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt4.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "2ec12fc449b0c687bf7c1d50458c8fc17863dcbe",
       "encoding": "gzip",
       "gzipBytes": 382,
       "gzipSha256": "d68077eee0ad9b3d8551475fb0987b0a2e15c37d4bf95e2e7b7764c863e17459",
       "decodedUtf8Bytes": 1446,
       "decodedUtf8Sha256": "1008f0056d70882074a2003f45dc49f99e576a42f29cc0036ca9ff3e4c9b1ba1",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt4.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt4.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt5.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "d5220f51706d44e32791b96170122978a276a9a3",
       "encoding": "gzip",
       "gzipBytes": 381,
       "gzipSha256": "cf54ce1d623a57d9db068dda79e40f2572ff49551a4498ea22c876df4cd8f730",
       "decodedUtf8Bytes": 1446,
       "decodedUtf8Sha256": "210d9acaf24cf1bc1b0e5024b7672e3ae47500a5ef4ef633c8ef6a1bed505ada",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt5.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt5.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-graphify-final.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "53fb815220829d569a0da87bacfa07d0615cdf14",
       "encoding": "gzip",
       "gzipBytes": 924,
       "gzipSha256": "f285444706ad9faae1e812f7d69e226169b5335ab7bee550dd547f3faa47f18b",
       "decodedUtf8Bytes": 3618,
       "decodedUtf8Sha256": "f3fcb95552539b014674146aef1f9af18d36dcec536231a15211e0904d136964",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-scope-graphify-final.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-scope-graphify-final.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-lint-attempt1.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "7b00bd69f5e56e9a42bb3b6c8627f7cd05cd88b3",
       "encoding": "gzip",
       "gzipBytes": 175,
       "gzipSha256": "77359c1431887acb580b724254174988064d849a8fada4d50ad565ba4eb1a3ac",
       "decodedUtf8Bytes": 194,
       "decodedUtf8Sha256": "e4e85f0fe39f91078c9f1e5a69b177aaa459a879e5c62025f9c78bb3f265566c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-scope-lint-attempt1.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-scope-lint-attempt1.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-lint-attempt2.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "86e43ea3218b5890302b754bbf8927f94e79f7ee",
       "encoding": "gzip",
       "gzipBytes": 20,
       "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
       "decodedUtf8Bytes": 0,
       "decodedUtf8Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-scope-lint-attempt2.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-scope-lint-attempt2.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-types-final.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "86e43ea3218b5890302b754bbf8927f94e79f7ee",
       "encoding": "gzip",
       "gzipBytes": 20,
       "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
       "decodedUtf8Bytes": 0,
       "decodedUtf8Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/containment-scope-types-final.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/containment-scope-types-final.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/d81c5e-normal-hook-success.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "6abc951f1ac1a33f320f5f6844f64adb8d3986b2",
       "encoding": "gzip",
       "gzipBytes": 50644,
       "gzipSha256": "b9a6501e065e036db36f15faa447729d78c7c73f8f52a095e4907efc88636526",
       "decodedUtf8Bytes": 536232,
       "decodedUtf8Sha256": "d74dd1b5169afcf88859f00a0b015d01ebd501314449a17faeeddc54ec315a51",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/d81c5e-normal-hook-success.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/d81c5e-normal-hook-success.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C32-UAqXJ8-native3-ledger.jsonl.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "98afc3899ead80c05f918b31765f46c39efd9448",
       "encoding": "gzip",
       "gzipBytes": 825,
       "gzipSha256": "8adddb80fcab16c0a1fe03287c7314b79e78af587b0bb12150a9a6582015bcac",
       "decodedUtf8Bytes": 4971,
       "decodedUtf8Sha256": "0714f2305a7be4de0349f47b896e106aa5fc9fcaad7219157cf0b4c368679db1",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C32-UAqXJ8-native3-ledger.jsonl.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C32-UAqXJ8-native3-ledger.jsonl.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C32-wolO4r-native4-ledger.jsonl.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "39b012b152f85ee55fc836277ac435c94e42d1d1",
       "encoding": "gzip",
       "gzipBytes": 1195,
       "gzipSha256": "e3444df0fcb9626c25d81fe0fdde3afeb9b80ccc7192bdaea64e7627f9316f09",
       "decodedUtf8Bytes": 6650,
       "decodedUtf8Sha256": "3182721ca0f3106db40a2be45e937af9ff996b001b5789c35e3ea8a059b338ec",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C32-wolO4r-native4-ledger.jsonl.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C32-wolO4r-native4-ledger.jsonl.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C33-HnRtxy-native3-ledger.jsonl.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "3f1d20bb0a60723e393a69bae45af6e2730e588e",
       "encoding": "gzip",
       "gzipBytes": 826,
       "gzipSha256": "c5d31deee482fff052ce606fd3e0a3dbf6d1f70d129945371d3bfab783a38515",
       "decodedUtf8Bytes": 4971,
       "decodedUtf8Sha256": "0f32c3b4a1f56ef7dabb98df51dc70961871747b8cdb6bb580a67ae3c76dfd05",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C33-HnRtxy-native3-ledger.jsonl.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C33-HnRtxy-native3-ledger.jsonl.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C33-P2rMwq-native4-ledger.jsonl.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "76fb1667409f17a077c5e20f27bd38258a167217",
       "encoding": "gzip",
       "gzipBytes": 1184,
       "gzipSha256": "3bd656e1bfcaf708d7a7c77a0a008e1c9353bf38c21f56cc730af5c470cdcb10",
       "decodedUtf8Bytes": 6640,
       "decodedUtf8Sha256": "7ecbe7ca6fb8469d48d66055ced11dc493dbad3dd35c63340c1911376322cb3c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C33-P2rMwq-native4-ledger.jsonl.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/ev974-native-ev974-C33-P2rMwq-native4-ledger.jsonl.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/ev974-native-owner-loss-83Y7li-native4-ledger.jsonl.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "a7d78d601674080cd793500bb511c754af071e76",
       "encoding": "gzip",
       "gzipBytes": 826,
       "gzipSha256": "d294ce826129a44d6b270a59633987cea283bc825be82cf24f47e73e65f891b7",
       "decodedUtf8Bytes": 4976,
       "decodedUtf8Sha256": "92e88ae61271bdfae0d5fc04614fa4fdadf7f6733446ffddc869eac5d73d8cca",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/ev974-native-owner-loss-83Y7li-native4-ledger.jsonl.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/ev974-native-owner-loss-83Y7li-native4-ledger.jsonl.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/ev974-native-owner-loss-DdVM4m-native3-ledger.jsonl.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "448088a8c386a7a9229ef9c52d03ca98c4d131f2",
       "encoding": "gzip",
       "gzipBytes": 828,
       "gzipSha256": "75dd066c1e5ee112eb0dcddf8e4cdd8ac7265ffe20052e6dd8da0a0023062007",
       "decodedUtf8Bytes": 4973,
       "decodedUtf8Sha256": "ef9b98e6887e9293d3696c392f6e4cbfe665277be3883c7a49147546e4625edc",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/ev974-native-owner-loss-DdVM4m-native3-ledger.jsonl.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/ev974-native-owner-loss-DdVM4m-native3-ledger.jsonl.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/ev974-native-unrelated-sentinel-GbKfyZ-native3-ledger.jsonl.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "b1a1ce3fd3f5c6d5ed27be0a0510f4ac18d5ace7",
       "encoding": "gzip",
       "gzipBytes": 837,
       "gzipSha256": "9263a1579187d745a95ab97457878bf53e0a88f6c0a1abc17a56be057676e5b1",
       "decodedUtf8Bytes": 4989,
       "decodedUtf8Sha256": "2b6b658d3e21d8683c74b70743631710113fa45ef552899e6fb930f97439a33f",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/ev974-native-unrelated-sentinel-GbKfyZ-native3-ledger.jsonl.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/ev974-native-unrelated-sentinel-GbKfyZ-native3-ledger.jsonl.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/ev974-native-unrelated-sentinel-MNVwyK-native4-ledger.jsonl.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "1355255dab2bc2daf95ab641929acd854db467ef",
       "encoding": "gzip",
       "gzipBytes": 863,
       "gzipSha256": "5973ba7edca9e52108f8e51d7ae857b2f19bdd70793cea9d0ec46a79648f6f0a",
       "decodedUtf8Bytes": 5496,
       "decodedUtf8Sha256": "fae9ed6632bc91c7cae32de8dbeba7de01df18529ecd79a1150ca4a70efdfe7c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/ev974-native-unrelated-sentinel-MNVwyK-native4-ledger.jsonl.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/ev974-native-unrelated-sentinel-MNVwyK-native4-ledger.jsonl.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/lifecycle-incomplete-global-coverage.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "0f9ec94f49a797c7568fd852cb725d4bd28a0493",
       "encoding": "gzip",
       "gzipBytes": 583,
       "gzipSha256": "b53b2e539bdbd1d8972f61ade2e4cd0b9de78a5a30b0e0a6d4252dfbad9d9510",
       "decodedUtf8Bytes": 1990,
       "decodedUtf8Sha256": "d284c9213fecaa664690f5afe553becb278ad02697b125e825be9fe0e4ca4d00",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/lifecycle-incomplete-global-coverage.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/lifecycle-incomplete-global-coverage.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/lifecycle-scoped-coverage.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "bf3a9e352ad27f7f5bc86d582da76ec85a61a219",
       "encoding": "gzip",
       "gzipBytes": 538,
       "gzipSha256": "d4e1a8ba00aa9aed3834f538459f49184e4255588c33febeb3f4d6f2f9b1581d",
       "decodedUtf8Bytes": 1855,
       "decodedUtf8Sha256": "3393e5828e8f53db495ddf3c04ec423d201724c733520d1d5430a807ffac2992",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/lifecycle-scoped-coverage.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/lifecycle-scoped-coverage.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/missing-runtime-observation-negative.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "d736f3c607e78afecd0c3e649d41b6cd4935f4c8",
       "encoding": "gzip",
       "gzipBytes": 560,
       "gzipSha256": "a438ebf2177017401b55447565c41e352613afa30632c020f02fe5aca6b228bc",
       "decodedUtf8Bytes": 1070,
       "decodedUtf8Sha256": "798e83486e3949e3ae3c2ba47a85a23fb63c5a27c6da7d87578fc8e7d7f25731",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/missing-runtime-observation-negative.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/missing-runtime-observation-negative.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-engine-mount-admission-negative.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "e60311cd2ad63b6bff76ef7886a3a45b4142ae14",
       "encoding": "gzip",
       "gzipBytes": 827,
       "gzipSha256": "6ef8f9aaaf2901491d27c981c6462b5e50718c29f3468ded03d236d3d80e35da",
       "decodedUtf8Bytes": 4009,
       "decodedUtf8Sha256": "0a0fd2513889f8dc0e74ebff0ae7bfab9b266da281cc18887a8861ddd7c99693",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/native-engine-mount-admission-negative.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/native-engine-mount-admission-negative.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-engine-mount-normalization-focused.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "a94fcf63392a604d4f7e58f8d7d5d440d7a5d401",
       "encoding": "gzip",
       "gzipBytes": 207,
       "gzipSha256": "a337916de429b3f404953a482b898526bb611fdc040419db59e4de79694fe159",
       "decodedUtf8Bytes": 261,
       "decodedUtf8Sha256": "7614b3d8cc7c16c76b3d5fd6d8fa35e9403f1c818baa854f4e669fdb0ac503ea",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/native-engine-mount-normalization-focused.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/native-engine-mount-normalization-focused.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-fixture-diagnostic-component.cjs.txt.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "20803562351cd684f7c23eb6520e442c34d9bed1",
       "encoding": "gzip",
       "gzipBytes": 1591,
       "gzipSha256": "e7843526168a1e9e0078024c7512af0be187b836a9bc8e8ea6931ba9d35f5c9e",
       "decodedUtf8Bytes": 3683,
       "decodedUtf8Sha256": "ed9498f8230a614b7ed084822025c61f649e473e3588418a3b6b62144fe10f7d",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/native-fixture-diagnostic-component.cjs.txt.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/native-fixture-diagnostic-component.cjs.txt.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-fixture-diagnostic-component.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "7bd5ea40a5615b85723836a17265c908c1fa6f9b",
       "encoding": "gzip",
       "gzipBytes": 384,
       "gzipSha256": "56c0893817f84f3a75f494f0cf698a6a02477efe362c9354a155f2fb0902abb1",
       "decodedUtf8Bytes": 829,
       "decodedUtf8Sha256": "863963a0e931af118881d41c702422643c12b6ae26934a6cff797e4e0361d16d",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/native-fixture-diagnostic-component.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/native-fixture-diagnostic-component.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native3-sdk-preflight-negative.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "e9bf66027f80e3ccc756afc62be28385b39ecca0",
       "encoding": "gzip",
       "gzipBytes": 840,
       "gzipSha256": "c6538d512187fb9f8dabb2e266310080cae36a13827cfeb73c37f5229155650d",
       "decodedUtf8Bytes": 4302,
       "decodedUtf8Sha256": "9852db5336fc677839572406743bb455ecb39d02a5127344d680304c439ec757",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/native3-sdk-preflight-negative.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/native3-sdk-preflight-negative.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native4-partial-sdk-result.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "c9dbed0f2bcab6ca9eeac70a5f2e9f70f15517dc",
       "encoding": "gzip",
       "gzipBytes": 702,
       "gzipSha256": "d9bf639c4d273d2adca44ae919be4e4689d6db41062955411efd54a73a8ef220",
       "decodedUtf8Bytes": 2528,
       "decodedUtf8Sha256": "67e84293fcceb2c0c2c22c9090f7ce03bc4f50806935ec54c039c9f337f08801",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/native4-partial-sdk-result.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/native4-partial-sdk-result.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native4-topology-diagnostic-component.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "2b4acc4a14b3fd67592ed3ec081f9cc5aaecedb3",
       "encoding": "gzip",
       "gzipBytes": 382,
       "gzipSha256": "1c48a4e543b5f766c280695df906e9f8a18932b0536c73f0f3dd8108cf7aec1e",
       "decodedUtf8Bytes": 829,
       "decodedUtf8Sha256": "e5d47aee1a7c19b4d683894a96a93e6730bd427d380f0cf7d7b26f7afdbca96c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/native4-topology-diagnostic-component.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/native4-topology-diagnostic-component.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/runtime-observation-six-corrected.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "63c5500caaecb97d9bcb95a4cdc192f94f6318d1",
       "encoding": "gzip",
       "gzipBytes": 522,
       "gzipSha256": "54b81b532347ed0c169931af654c9b5d84cada04d903f30415a2469789944b3b",
       "decodedUtf8Bytes": 882,
       "decodedUtf8Sha256": "33c60f94265c91304afbcd679442eca62931dcf9353722839a80f08732c14aba",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/runtime-observation-six-corrected.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/runtime-observation-six-corrected.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/session-jest-coverage-negative.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "25c8d14b1e25648ccf97a4489a9362c596afea83",
       "encoding": "gzip",
       "gzipBytes": 455,
       "gzipSha256": "a9ee4c0abe699f96730b7b97b785d690a2d162f4e469e6e9ba0644355cfbd1a0",
       "decodedUtf8Bytes": 1316,
       "decodedUtf8Sha256": "3caf6e4ae55ea5bd970bb42604548bdf92365b70a98f4bec8ae85f5681c359e6",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/session-jest-coverage-negative.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/session-jest-coverage-negative.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/session-node-coverage-harness.cjs.txt.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "277218edb0a81d81014b01faa5157e3f9bd180f9",
       "encoding": "gzip",
       "gzipBytes": 1049,
       "gzipSha256": "9034476d2a81983c0ece6ccd172622083fd3661cdf027e9a30e0556566975577",
       "decodedUtf8Bytes": 2289,
       "decodedUtf8Sha256": "827eaa3f31f7d2b8caf25fef2dab84b2404fcb27a8e0412f63be3e2b3d9da767",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/session-node-coverage-harness.cjs.txt.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/session-node-coverage-harness.cjs.txt.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/session-node-coverage-negative.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "57e8a8c4e4899b121e3a90e34c20401e550827c4",
       "encoding": "gzip",
       "gzipBytes": 2762,
       "gzipSha256": "03d2a72aa517a3e1ea693e42494c7d752212bc96ba87fd5bf4773304ff084b0c",
       "decodedUtf8Bytes": 6964,
       "decodedUtf8Sha256": "6c8b1e936ac2a54013c51d93df043d4deec53723b57149b5d7af74bcdabeb2d5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/session-node-coverage-negative.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/session-node-coverage-negative.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/source-commit.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "93ca9705351b230746f9a07d3c1916a31e9249c0",
       "encoding": "gzip",
       "gzipBytes": 50646,
       "gzipSha256": "724d466880bd6dae3d00894ca41a545c054a070e1fabb671ab9287a2336228c1",
       "decodedUtf8Bytes": 535223,
       "decodedUtf8Sha256": "ca15605f80107394e75291ed20f27e75275b4cd9caead7659302f2f1acb7aa8a",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/source-commit.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/source-commit.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/transport-architecture-transport.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "41fe1cdf0dd05521ac5eaca65318996a44fcb769",
       "encoding": "gzip",
       "gzipBytes": 184,
       "gzipSha256": "599bc83aee1be29ff103b338b3a5c3f53f0af5e4f782f241f3749fcce7177e16",
       "decodedUtf8Bytes": 334,
       "decodedUtf8Sha256": "518debc91c9a729e3d54968cac3fa932dc25020ff8991d0a78d51ea49b7103c9",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/transport-architecture-transport.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/transport-architecture-transport.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/transport-bootstrap-focused-attempt1.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "2c9f19f70b684dd181e019655723e83ff77ccf83",
       "encoding": "gzip",
       "gzipBytes": 314,
       "gzipSha256": "e7b5f03ab5ae4440fdf226524decc1bb2e316cc3741cfade21532f6a6803b59a",
       "decodedUtf8Bytes": 507,
       "decodedUtf8Sha256": "075e98426655ca7f623e4822724c7322396d115fd4a160fb329e155be0d1c2eb",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/transport-bootstrap-focused-attempt1.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/transport-bootstrap-focused-attempt1.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/transport-bootstrap-focused-attempt2.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "a02f425148d899eebbf703d581c9bae73d359232",
       "encoding": "gzip",
       "gzipBytes": 311,
       "gzipSha256": "1f45dd073ebfdab29a9fdb42937cfc8b77749c05536a3c20eb6217b72f7fb3c1",
       "decodedUtf8Bytes": 502,
       "decodedUtf8Sha256": "00708f92db8aeea7df0b48d5ee23e2ed557a3b762275496f0b6c1dfc60741545",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/transport-bootstrap-focused-attempt2.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/transport-bootstrap-focused-attempt2.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/transport-executor-compatibility-attempt1.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "0111e6eb06f408637c2da7c14a7275d3f77c6ee5",
       "encoding": "gzip",
       "gzipBytes": 227,
       "gzipSha256": "96d838e22832e91744e312c6b537e8b78c907a8ff9b7abefb13a16f3f515dbfb",
       "decodedUtf8Bytes": 472,
       "decodedUtf8Sha256": "3db782b676196f2ee460da6ec2ae089e264ce3e49786fc997eafafec03932efe",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/transport-executor-compatibility-attempt1.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/transport-executor-compatibility-attempt1.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/transport-executor-compatibility-attempt2.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "0836cb3c6fa3ffb98da5ed976ef528ac7ad26401",
       "encoding": "gzip",
       "gzipBytes": 237,
       "gzipSha256": "4fd41c1e08fe5bc73a886ce3100c230c14643fb9b4fc89afb4503a27f37274a0",
       "decodedUtf8Bytes": 487,
       "decodedUtf8Sha256": "c2f671fcad2a25e1113ef93959aa3264d22e8273de3cfe569c3fe88fa501c6bb",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/transport-executor-compatibility-attempt2.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/transport-executor-compatibility-attempt2.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/transport-executor-integration-attempt1.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "de93bfb45e00f39a22b4073640a16d936ecbe15c",
       "encoding": "gzip",
       "gzipBytes": 168,
       "gzipSha256": "340674e26b65323a807cc393872017abb29da2ffda2993f31fc337abab157624",
       "decodedUtf8Bytes": 223,
       "decodedUtf8Sha256": "548a62936e6f70f7d5eb52e0cd582361122049185cd9d15cbe7deb8659462f95",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/transport-executor-integration-attempt1.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/transport-executor-integration-attempt1.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/transport-graphify-transport.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "5bc1304bd9306b5455563bcb002cb7e3e1bfd06b",
       "encoding": "gzip",
       "gzipBytes": 924,
       "gzipSha256": "d4f3536b6cc0a1634145d2884cc05eb437d370d81a223778349e54be929ca13b",
       "decodedUtf8Bytes": 3618,
       "decodedUtf8Sha256": "ca9e6cb4162a5a146c7300ee14bf9e7a7be49bee107cb79c52abc3933ba3109a",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/transport-graphify-transport.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/transport-graphify-transport.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/transport-lint-transport.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "86e43ea3218b5890302b754bbf8927f94e79f7ee",
       "encoding": "gzip",
       "gzipBytes": 20,
       "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
       "decodedUtf8Bytes": 0,
       "decodedUtf8Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/transport-lint-transport.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/transport-lint-transport.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/transport-types-transport.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "86e43ea3218b5890302b754bbf8927f94e79f7ee",
       "encoding": "gzip",
       "gzipBytes": 20,
       "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
       "decodedUtf8Bytes": 0,
       "decodedUtf8Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/transport-types-transport.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/transport-types-transport.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/v2-loader-admission-green.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "4f2a1afdc8a6d3accd9ea0daa34518ecc8896c2c",
       "encoding": "gzip",
       "gzipBytes": 213,
       "gzipSha256": "6be39570b0967a853c47ac33c0d34480ce63f4388da80155dff2d944a7abbc3b",
       "decodedUtf8Bytes": 273,
       "decodedUtf8Sha256": "4f66ca9e648302b2a6e4893b942596d77656104acc0a5bf58ac5a0b1df66d5c2",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/v2-loader-admission-green.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/v2-loader-admission-green.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/v2-loader-admission-red.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "8a4e3ce1a557957ec778876b4ee4a9bd03a1a47f",
       "encoding": "gzip",
       "gzipBytes": 651,
       "gzipSha256": "9fd1e16f999cfa35682975041035b4b719db24e1a1136bda9c6bfdc69a2c9fe6",
       "decodedUtf8Bytes": 1484,
       "decodedUtf8Sha256": "dd79fc5c1ff9f7114c46988e45e698c40b984d1e459ea6a80e71c51f3088d924",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/v2-loader-admission-red.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/v2-loader-admission-red.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-C30-actual-scorer.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "d4013e8c5c7828da49395d1a639c9f61bd04b923",
       "encoding": "gzip",
       "gzipBytes": 186,
       "gzipSha256": "adbe5bb1ae0838eb84fa33f3268bf13e8fc326aba0601be44d429854a50b02c2",
       "decodedUtf8Bytes": 237,
       "decodedUtf8Sha256": "46d935c14c517f026f543cbc7d72bd53cfeed95388f1455577cf07f6236527b3",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-C30-actual-scorer.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-C30-actual-scorer.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-C30-component-intermediate.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "ca9b37a3b81ee9ac359fbfe52d9e75a2ba613844",
       "encoding": "gzip",
       "gzipBytes": 183,
       "gzipSha256": "6aade7d399b23eeea7681f92897e1a9394432ac847d2573673f703b4d4ddb1fe",
       "decodedUtf8Bytes": 235,
       "decodedUtf8Sha256": "e4c3efae162227fb75a4ee19b803f82ae0d39a68b3ad3a952e381a3b5408f1cf",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-C30-component-intermediate.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-C30-component-intermediate.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-C30-initial-syntax-negative.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "96e42916ffa0a5659bd356aee2f7f79b8eece0be",
       "encoding": "gzip",
       "gzipBytes": 500,
       "gzipSha256": "df7a8f938f8ccb827662a58ada37e1a153de617bfa0f9da1ef58d13a6a01d205",
       "decodedUtf8Bytes": 1286,
       "decodedUtf8Sha256": "be26f588f13d98d0036b37f9f8a78b1009189aeac0c8346ce08317733dc065ea",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-C30-initial-syntax-negative.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-C30-initial-syntax-negative.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-architecture-initial-one-matched.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "592a4be91997e6d9ee7f6b024fe4870b0d889a97",
       "encoding": "gzip",
       "gzipBytes": 185,
       "gzipSha256": "cee7846da1e27c2878d4f3b6863baa48c8cfc26bb72fe173e94ccc5d8f041691",
       "decodedUtf8Bytes": 325,
       "decodedUtf8Sha256": "9794c5fafffcb3457d1f15fc9fcf2fcab8980c3b3390311bae4a37582706ab84",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-architecture-initial-one-matched.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-architecture-initial-one-matched.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-architecture3-17.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "57b213fd9422b404b34167dc4c99d9707136678e",
       "encoding": "gzip",
       "gzipBytes": 193,
       "gzipSha256": "c6e7c0d633751bb378ae3bb9530503c0caed6832981a62195f4673dc0637b18c",
       "decodedUtf8Bytes": 349,
       "decodedUtf8Sha256": "536bf1297ce80e57c0bc79d1eb03a5b89edecf4b331afd83e890307fc40a82bb",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-architecture3-17.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-architecture3-17.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-documentation.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "30d7f74800a9eee76b694c5ba8bd24803ebd051c",
       "encoding": "gzip",
       "gzipBytes": 221,
       "gzipSha256": "e415b0dc7d5e7c0e14944817e2e48f38c29f970e065bc497098b77e75b03a6e6",
       "decodedUtf8Bytes": 306,
       "decodedUtf8Sha256": "1b2d840993321a85c930e6767a23f6fa9a1e6e9ba3d7b48dcac9dce11d259c5a",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-documentation.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-documentation.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-graphify.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "32cc2a0b6d7975669113ef18f41608613f0bc2d5",
       "encoding": "gzip",
       "gzipBytes": 924,
       "gzipSha256": "0c8df117b8bb9ea20380fef631622cb4e2235e4013664040f4b4f71cd6e732e8",
       "decodedUtf8Bytes": 3618,
       "decodedUtf8Sha256": "7273996599b1e6276152bb2b197644ed1b5d0d814680885e588bb6d2c1d0590e",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-graphify.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-graphify.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-lint-final.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "86e43ea3218b5890302b754bbf8927f94e79f7ee",
       "encoding": "gzip",
       "gzipBytes": 20,
       "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
       "decodedUtf8Bytes": 0,
       "decodedUtf8Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-lint-final.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-lint-final.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-lint-initial-warning.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "28a3071da872debcbdb0668944daa44198797daf",
       "encoding": "gzip",
       "gzipBytes": 254,
       "gzipSha256": "00c03ca2aa05d76e6b7285213976bf179bed678aae6b950e97c3c7a7b6de558f",
       "decodedUtf8Bytes": 333,
       "decodedUtf8Sha256": "413cea5feaa7670efae867272da6ea9a0b617f8c8e5c42e54eaf17491d5b4873",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-lint-initial-warning.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-lint-initial-warning.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-normal-hook-SIGSEGV.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "b77d51b70b04b152891445ad3ab00cfb6c0b15da",
       "encoding": "gzip",
       "gzipBytes": 50041,
       "gzipSha256": "cbd85e2892dedef2b0f395dfa62bde20e7228526c5700527fcdeae73b3376d24",
       "decodedUtf8Bytes": 532888,
       "decodedUtf8Sha256": "af5c6219b492612ba25789a41157e7af9f48c4b57e3c096b0101efb21a50715c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-normal-hook-SIGSEGV.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-normal-hook-SIGSEGV.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage6-historical.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "c6785c402170d93aa0ad756289d558cfe409560b",
       "encoding": "gzip",
       "gzipBytes": 382,
       "gzipSha256": "e5d37a0487d49cdbc6b9d414cd01ab4486fa744c581c3fbec80f19e79a220abf",
       "decodedUtf8Bytes": 1446,
       "decodedUtf8Sha256": "619b2425ae0c49d8c5417ba7554b8e772162a8f091883112b8c3deb653fbee82",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage6-historical.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage6-historical.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage7-cancel-category-negative.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "e15fc0421a2fee7e2f08409e66c913e7d2fb716c",
       "encoding": "gzip",
       "gzipBytes": 859,
       "gzipSha256": "02dcd70431ce014f13c1afde12a69befd8ebd922fb81d88b5ff854b06a1aea11",
       "decodedUtf8Bytes": 2613,
       "decodedUtf8Sha256": "56799e2ab5601447e83299ccd905967ac226ed7a9a4adf66e3189c636286bbcf",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage7-cancel-category-negative.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage7-cancel-category-negative.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage8-final.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "275bee88db2a4c8574e2f9631576c5dde2a3eb78",
       "encoding": "gzip",
       "gzipBytes": 379,
       "gzipSha256": "d9c7926113ea95aec6a40bcc1f85c9f06cf9967bdd2d5af26759d341111b127c",
       "decodedUtf8Bytes": 1447,
       "decodedUtf8Sha256": "95799b778a1958f6f3b4431577e66eed628f793a9a21ec46da219f7cd39f232d",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage8-final.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage8-final.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-scorer-legacy11.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "16b66fc8e0ee95be0154c41f11237d0ada6c72ee",
       "encoding": "gzip",
       "gzipBytes": 344,
       "gzipSha256": "88c4e20d9b0d4ab3732e2f05e16029011b3543bf64e6467be7144da753feb19b",
       "decodedUtf8Bytes": 1305,
       "decodedUtf8Sha256": "5f34efc829053298d307c04613106b5956e7e8bea1de5d20a2d928e3c72f4ee2",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-scorer-legacy11.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-scorer-legacy11.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-segfault-suite-focused.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "ab2db3a5602d8998645e69b4b3bebaebc6e28cd3",
       "encoding": "gzip",
       "gzipBytes": 164,
       "gzipSha256": "f0d7b1df8c6394b0e9ef60176c972dfd50cdad7d51e1f9f80a7a85218ae3666c",
       "decodedUtf8Bytes": 218,
       "decodedUtf8Sha256": "dfc96117e947acc7bc6033d4216916b78a188b968d40836fa0939e70c7e36449",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-segfault-suite-focused.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-segfault-suite-focused.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-six-node-final.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "820d8cbc04d91f727b0887a179adbc6448008dc4",
       "encoding": "gzip",
       "gzipBytes": 522,
       "gzipSha256": "c567066e22ba4b618c4f12cc0ed8d1a9ac0539a2882f605af7d7fd0d8f00a0e0",
       "decodedUtf8Bytes": 881,
       "decodedUtf8Sha256": "c04717b418b4e4cc354761360b4d825041cc8983d35dc5d5d2800eadbb70c63c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-six-node-final.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-six-node-final.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-specifications.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "136d249b24b2ba40f3e987ad712df35edc11b93a",
       "encoding": "gzip",
       "gzipBytes": 1080,
       "gzipSha256": "b6f7b55ac9dca0fb1f042e1ef0d2eb35838bc1707afc1611995f807a0e42fa25",
       "decodedUtf8Bytes": 2458,
       "decodedUtf8Sha256": "8c689eaaad0d7983c82d42a28bd091129bea742552e86fe8b086c8ab5d8172e1",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-specifications.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-specifications.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-types.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "86e43ea3218b5890302b754bbf8927f94e79f7ee",
       "encoding": "gzip",
       "gzipBytes": 20,
       "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
       "decodedUtf8Bytes": 0,
       "decodedUtf8Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-types.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-types.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-verifier-scope-32.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "32f29ac75b6f42f9b54c895ee036f5da46bf1cf9",
       "encoding": "gzip",
       "gzipBytes": 186,
       "gzipSha256": "d783bb01ccb335c2cb3bd2bf6e37785afa6ec406d451a882ffc308196531844d",
       "decodedUtf8Bytes": 280,
       "decodedUtf8Sha256": "49edfb4b5ae6e04dd04f33a94b7e8a7f9b769ba9b48b42a7b0bfdbfe408b2b60",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/controls/whole-operation-verifier-scope-32.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/controls/whole-operation-verifier-scope-32.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-ev974-C32-0qULgx-bootstrap.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "4a544ab73f6f21c765543783c880594d968777f1",
       "encoding": "gzip",
       "gzipBytes": 193,
       "gzipSha256": "dd6a9efb874f61e89bcc13ab335421aed04c3b6db6d739d06d386122873e9e5b",
       "decodedUtf8Bytes": 226,
       "decodedUtf8Sha256": "405f3465fe5efacc7b10c330a50e310e45a2bfc742ba5ab0657f6eebb0fbf881",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-ev974-C32-0qULgx-bootstrap.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-ev974-C32-0qULgx-bootstrap.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-ev974-C33-vjxc3j-bootstrap.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "4a544ab73f6f21c765543783c880594d968777f1",
       "encoding": "gzip",
       "gzipBytes": 193,
       "gzipSha256": "dd6a9efb874f61e89bcc13ab335421aed04c3b6db6d739d06d386122873e9e5b",
       "decodedUtf8Bytes": 226,
       "decodedUtf8Sha256": "405f3465fe5efacc7b10c330a50e310e45a2bfc742ba5ab0657f6eebb0fbf881",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-ev974-C33-vjxc3j-bootstrap.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-ev974-C33-vjxc3j-bootstrap.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-owner-loss-vaCfmY-bootstrap.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "4a544ab73f6f21c765543783c880594d968777f1",
       "encoding": "gzip",
       "gzipBytes": 193,
       "gzipSha256": "dd6a9efb874f61e89bcc13ab335421aed04c3b6db6d739d06d386122873e9e5b",
       "decodedUtf8Bytes": 226,
       "decodedUtf8Sha256": "405f3465fe5efacc7b10c330a50e310e45a2bfc742ba5ab0657f6eebb0fbf881",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-owner-loss-vaCfmY-bootstrap.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-owner-loss-vaCfmY-bootstrap.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-unrelated-sentinel-TvoC9Q-bootstrap.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "4a544ab73f6f21c765543783c880594d968777f1",
       "encoding": "gzip",
       "gzipBytes": 193,
       "gzipSha256": "dd6a9efb874f61e89bcc13ab335421aed04c3b6db6d739d06d386122873e9e5b",
       "decodedUtf8Bytes": 226,
       "decodedUtf8Sha256": "405f3465fe5efacc7b10c330a50e310e45a2bfc742ba5ab0657f6eebb0fbf881",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-unrelated-sentinel-TvoC9Q-bootstrap.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-native-unrelated-sentinel-TvoC9Q-bootstrap.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/first-native.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "0f07af8cfe7a9d7ab3421b632fc07486ec11e164",
       "encoding": "gzip",
       "gzipBytes": 940,
       "gzipSha256": "85855b2c3959789d45e00e01b6bd7662c0ff0eeb7ffec7dbf1c3ad03fc52bce7",
       "decodedUtf8Bytes": 4935,
       "decodedUtf8Sha256": "a255c469dbf349c8d90fa91f18ed988b7f5da380dc0ab3bca0b8659e94901f3f",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/first-native.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/first-native.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9/committed239.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "8a885b2c76235e2be5701f0883cf1ce7dccc6f00",
       "encoding": "gzip",
       "gzipBytes": 7719,
       "gzipSha256": "d220c3924281fa316945bdab973efa30d2833467e3ca035572a6312c920fdefa",
       "decodedUtf8Bytes": 25903,
       "decodedUtf8Sha256": "07b8a59b03c47648e0f3d844fae4969539ba4cdbf7d10997cba0518250ed3a00",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/1f20e9/committed239.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/1f20e9/committed239.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9/image-build.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "34d8ce9f4c57fa3e745c3adb6f44fdd69dd3d424",
       "encoding": "gzip",
       "gzipBytes": 4872,
       "gzipSha256": "28308791065234fbdf43a4e7198dbfaf1d12573245bfd36fa525328aecb3c717",
       "decodedUtf8Bytes": 19910,
       "decodedUtf8Sha256": "cd16f417e2e20f173741601b62bfcbb8153e8b57b0e03d1587e02e760a040c55",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/1f20e9/image-build.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/1f20e9/image-build.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/64da6ec/committed239.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "73f8952795a72099e4e6068e613cd35dccb6a466",
       "encoding": "gzip",
       "gzipBytes": 7734,
       "gzipSha256": "9866c0b31e4e465f156e0b54c4b8e7c98786b9e345389c553fe11832c6bed662",
       "decodedUtf8Bytes": 25916,
       "decodedUtf8Sha256": "0b3b149171a461775007750d3a4a6c825ed0d651d31d49b545346307910ba69c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/64da6ec/committed239.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/64da6ec/committed239.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/64da6ec/image-build.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "2916d995aa39992e9c326269ae15fcafa9c0f078",
       "encoding": "gzip",
       "gzipBytes": 1717,
       "gzipSha256": "a779c3d06d5ab4b7de449046c26e20a57439161c1a01bae09938811abf9ad7bc",
       "decodedUtf8Bytes": 4523,
       "decodedUtf8Sha256": "557af34376d940d468bb3957685bb6dfda7653cba8fcf578788d746b891fec8e",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/64da6ec/image-build.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/64da6ec/image-build.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/64da6ec/implementation-normal-hook.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "a00274ac350d34b85069e7af02ea88ee0def131d",
       "encoding": "gzip",
       "gzipBytes": 50759,
       "gzipSha256": "7cfb67545a702506a3a7df212d806b4bff74cf7c7887ff110d3d57bf7ab40cdb",
       "decodedUtf8Bytes": 537229,
       "decodedUtf8Sha256": "50e9a058c8a56f2f3e3f8fa97c8ecb1a7e72a6942fe468b24c8677e9355ce7a8",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/64da6ec/implementation-normal-hook.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/64da6ec/implementation-normal-hook.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/committed239.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "4a7cff1a7ebfcf309c9344aedc9017ad693e9dd5",
       "encoding": "gzip",
       "gzipBytes": 7514,
       "gzipSha256": "50289d68e29b46aab20b6b5d896c90c44bd23b878c901e82dc9785f0aa744bed",
       "decodedUtf8Bytes": 25603,
       "decodedUtf8Sha256": "f4aca2a30b0494d8f2787d7e319a2bbd9c870aea3e8322c5eaef654ef69a4b3c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/82f0c14/committed239.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/82f0c14/committed239.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/image-build.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "0a2b19a14cb89deb2034373be4231f0702551dc7",
       "encoding": "gzip",
       "gzipBytes": 1714,
       "gzipSha256": "aebaaf21579ff9bd464680d1003ec78e063fc9caf14e7ebff125612d35db08e9",
       "decodedUtf8Bytes": 4432,
       "decodedUtf8Sha256": "6dd688f92f0315e88413b89fc15dfe4cb05f32ba5cfcd0f4d63b6694264f668e",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/82f0c14/image-build.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/82f0c14/image-build.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/implementation-normal-hook.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "eb32cd516a3d7bec86375b5d00b5840da45ca4cb",
       "encoding": "gzip",
       "gzipBytes": 50755,
       "gzipSha256": "a3766090b2c1807600917a655c49f44554cc737d39de5bf4121f7624d0c10272",
       "decodedUtf8Bytes": 537718,
       "decodedUtf8Sha256": "726d1e5e6b0da191079da0f42753a9c5e82b1041a130d77c28f04338c3448cf2",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/82f0c14/implementation-normal-hook.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/82f0c14/implementation-normal-hook.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/committed239.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "30fd1cdf4f3e118aa3aad9faf88711b246cbd88a",
       "encoding": "gzip",
       "gzipBytes": 7731,
       "gzipSha256": "c069c092ee21be3c14cf15220821bd29a336fbb081151205748809223176ce92",
       "decodedUtf8Bytes": 25905,
       "decodedUtf8Sha256": "909e1cba61b8fe1020e5137b44f3f9e8c52526a74aa7a9656d32c661c2a5cb36",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/e4bade2/committed239.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/e4bade2/committed239.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/image-build.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "38ac00253a2ff1bf8c9f2277c8213fccf1eabaa6",
       "encoding": "gzip",
       "gzipBytes": 1716,
       "gzipSha256": "5edab7ae548f80f16a32480b7589d46aea2587c85c94bc7add68bb13fea53070",
       "decodedUtf8Bytes": 4432,
       "decodedUtf8Sha256": "a110004895101bbdb3d8ef6956321c5283b3385207122e92456fd31a3d5b2352",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/e4bade2/image-build.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/e4bade2/image-build.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/implementation-normal-hook.log.gz",
-      "archiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+      "archiveRevision": "a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff",
       "gitBlob": "defda86de7d0fae5f29bd8c9a070e4b49fbc5b27",
       "encoding": "gzip",
       "gzipBytes": 50631,
       "gzipSha256": "c2d775c97b05307c05b37b744c7704286cb372fe2041237680838f3c13567345",
       "decodedUtf8Bytes": 536392,
       "decodedUtf8Sha256": "e60ed5eba426319b1e37b75cb10dd81cd755bbd514ff7fb388e796431d471532",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/b8782afbcc7d79aa25f303c4ead8a647d7fbbc99/quality/bugbot/evidence/issue-974/native-controls/e4bade2/implementation-normal-hook.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/a7caa0dfad7e2ba3c8caddf74ffcf0a2ec060aff/quality/bugbot/evidence/issue-974/native-controls/e4bade2/implementation-normal-hook.log.gz",
+      "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/coverage-retention-incident.json.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "0215598ba1c812f96b001593ee588bd06727f8cb",
       "encoding": "gzip",
       "gzipBytes": 1185,
       "gzipSha256": "d6d278ad96d5c623b71f9cd775b5c2f0bd485287cf3a8a06d3828044a1c2c73e",
       "decodedUtf8Bytes": 3844,
       "decodedUtf8Sha256": "a32ff3d6a96ae19b6ba086c928ae122b1f494a2a2e09cf292802d37a646f6095",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/coverage-retention-incident.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/coverage-retention-incident.json.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-components-attempt1.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "1ceb93ebed3511443bf4b5620f4057482a2f1d48",
       "encoding": "gzip",
       "gzipBytes": 2145,
       "gzipSha256": "e49c55f0861deacf23e5cc21ff225f2fc4869561f58ed2405dc71358c108d4ec",
       "decodedUtf8Bytes": 11767,
       "decodedUtf8Sha256": "173a2a8777c305e3a065f5159b45c52312ae6d80765c2dba5ae21a03561f4ce6",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-components-attempt1.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-components-attempt1.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-components-attempt2.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "50cbab2de6872988c8313b709032a8b0336f47a8",
       "encoding": "gzip",
       "gzipBytes": 1058,
       "gzipSha256": "f8d34fd9fba4a32a1bbd41d1a83a60b7be923d15583dc3adc89a0ab361dad046",
       "decodedUtf8Bytes": 2366,
       "decodedUtf8Sha256": "20064d3276b52e9bf18a07e71c7e941f1bff27619ac729d71da4c71343b343c4",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-components-attempt2.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-components-attempt2.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt1.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "f5503e6211f4c0ba8d6f8eb75bfb636e070f7852",
       "encoding": "gzip",
       "gzipBytes": 403,
       "gzipSha256": "ee8319647bf8c1dc775862da7d872209cb0a1d4b63ed15e58a1668c2d491bef8",
       "decodedUtf8Bytes": 924,
       "decodedUtf8Sha256": "df47c52959e744e229f0c1034060691fd987662164069f84a3d09b989159bbda",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt1.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt1.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt2--coverage-final.json.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "a9ddd6fd6dcbcc80ccb217f5f8c52887928c566e",
       "encoding": "gzip",
       "gzipBytes": 2784,
       "gzipSha256": "9f14224fff6ab820ed7021c83394a0a124dcf9737349380d2142a5ce4d82c021",
       "decodedUtf8Bytes": 15203,
       "decodedUtf8Sha256": "c839c321c1fe731024cfcf7a9aea1822ea00f4c6c79e2c09b1aa6889641f6d5b",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt2--coverage-final.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt2--coverage-final.json.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt2--receipt.json.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "2cbeee7890af88835752b93a664bdb2a9ee28dcd",
       "encoding": "gzip",
       "gzipBytes": 679,
       "gzipSha256": "e94c61c4d6479887fee0c0bc99e024c61957c7aab1cbbd27a0d6e49e8057e458",
       "decodedUtf8Bytes": 3641,
       "decodedUtf8Sha256": "c071f983abe37cfe7a1175d061aa809f291de787d81df2941622470c7b32b19c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt2--receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt2--receipt.json.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt2.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "cf917c1ec6028e6f37cade598bf560ff6e0906e6",
       "encoding": "gzip",
       "gzipBytes": 1204,
       "gzipSha256": "0c42506413a8ed5425dba131605895143e877bd8bfc75627412ccc9a4b470a12",
       "decodedUtf8Bytes": 2539,
       "decodedUtf8Sha256": "dc2b2d19c7a2e0b59d06e02fe31eff6d245ae36bebc6e11875dc9855b2dc75b0",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt2.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt2.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt3--coverage-final.json.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "f08b26d5f75c1dfc4872f5d2e3d994a0ff8741ca",
       "encoding": "gzip",
       "gzipBytes": 2892,
       "gzipSha256": "ef6ce4d3d6f42c1a410fe36df4cae770cf609a262a0e0aa15f78d3eab7d60a2e",
       "decodedUtf8Bytes": 15872,
       "decodedUtf8Sha256": "37dc5d4941b777cadf67f43e15ef799e4989fed321764561e2fc4cd88cc1f753",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt3--coverage-final.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt3--coverage-final.json.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt3--receipt.json.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "9bee6b1510a669052a840d8c4fba2e63ec3086a1",
       "encoding": "gzip",
       "gzipBytes": 685,
       "gzipSha256": "844d12f939e6b8b728fab23e439f9ad1cf94076fca9c7820d605e6f6d20fcb67",
       "decodedUtf8Bytes": 3781,
       "decodedUtf8Sha256": "9871bd0185fbd06dcf47ec64e1a37edd73847d2fd52cbdeaba4521c9ada49a11",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt3--receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt3--receipt.json.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt3.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "807258e9210d4197c0c94ea114e30200a1fe5d89",
       "encoding": "gzip",
       "gzipBytes": 1208,
       "gzipSha256": "e0360334bed30698c98c92ebcad0ac9f272cd5b7a3707f905080408b87c8012f",
       "decodedUtf8Bytes": 2570,
       "decodedUtf8Sha256": "e3d65ad48e29265207937ef932a4dee9eb88149a7caf08a837922cc6519be0db",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt3.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-controller-coverage-attempt3.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-causal-decision.json.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "1cfb7c8365be5f9abaa05c52786e3d3e2b0fdaee",
       "encoding": "gzip",
       "gzipBytes": 409,
       "gzipSha256": "551f01f7f8bd43b8b6a36e313f2b055a12150c7091b30d78d08f4613744487c7",
       "decodedUtf8Bytes": 613,
       "decodedUtf8Sha256": "96d21a9714cd88fc9e5d6952e94255ca2f441016fefb2ce1e121cf794afcf923",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-causal-decision.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-causal-decision.json.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-green-attempt1.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "d0f2aa3cde11ece19467786ac1860715856bcd00",
       "encoding": "gzip",
       "gzipBytes": 198,
       "gzipSha256": "5f7781dc90844e83a2548ff67c828459367019713aae4ddbf883ee3d0833e4f4",
       "decodedUtf8Bytes": 250,
       "decodedUtf8Sha256": "f6c4bc838d39356cc35a78358f85eefaed91f441fe56b7916f9c17fd656d0b8b",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-green-attempt1.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-green-attempt1.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-red-attempt1.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "3ff67c869db71d5bea09f1331911f92a727427bf",
       "encoding": "gzip",
       "gzipBytes": 539,
       "gzipSha256": "9e9a11ae5b6502269b2811be4980c5162dc829c54196e363d564b06693a4ffc4",
       "decodedUtf8Bytes": 1026,
       "decodedUtf8Sha256": "e19783ef2d9872a64ac80345b949875ebf146ab6a4342ea2819ce6fdf8916c68",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-red-attempt1.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-red-attempt1.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-red-receipt.json.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "7115d286c961fbd2bf3b2cc856478a69682a68a8",
       "encoding": "gzip",
       "gzipBytes": 365,
       "gzipSha256": "294de745d4b22621762130370f5576ac8eedc23eeef40552d53a68e7fbf622e0",
       "decodedUtf8Bytes": 508,
       "decodedUtf8Sha256": "c53451137baba1fbff5f47ed3c9e43cba44189006bfcb768202ddbce952fb4fc",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-red-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-red-receipt.json.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-red-test-original.cjs.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "48ae9b015ad3b011cfcec68650a6bc11700bc483",
       "encoding": "gzip",
       "gzipBytes": 5653,
       "gzipSha256": "fc16ff79a5d59484464120fd4f4e5fd8889911bbd2e1eb594839c158e9bb8abb",
       "decodedUtf8Bytes": 19800,
       "decodedUtf8Sha256": "24f11b4bb7001b519830b7d043082253d1c127e913673ad50c2e578aea161f70",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-red-test-original.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-missing-schema-red-test-original.cjs.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage--coverage-final.json.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "d45e283ed1c8a964d09bdfc98156ada09675e2dd",
       "encoding": "gzip",
       "gzipBytes": 1966,
       "gzipSha256": "12251af26c25fc35a639868282093b24b7f8d7624edb47499ec618c6db9e4f95",
       "decodedUtf8Bytes": 11887,
       "decodedUtf8Sha256": "3de9df0dea967047172420ce97b529b0662d124fd2b4d67954c2030417fd0242",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage--coverage-final.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage--coverage-final.json.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage--coverage-summary.json.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "8e8c1e80031a3c466de26913964543d0051bed4d",
       "encoding": "gzip",
       "gzipBytes": 237,
       "gzipSha256": "881efa7e2f7f1f4af3847598cf96667b6565379819ea0b2b573fab7790f5dd26",
       "decodedUtf8Bytes": 671,
       "decodedUtf8Sha256": "ec953e0641d2eac33da21874031ef652df5b2d839ba7a7668dc84071eaf59f5d",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage--coverage-summary.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage--coverage-summary.json.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage--receipt.json.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "5a6bee2cb6e18b789e63f464ab99f8b077e2a804",
       "encoding": "gzip",
       "gzipBytes": 495,
       "gzipSha256": "148ca02eb6cf401ed04ed6004e215ed3c3a6eb215c5e8afaa2160ed4ad412c67",
       "decodedUtf8Bytes": 976,
       "decodedUtf8Sha256": "2efd90524cd662596677280cdfa0b22156659abb1bc1698767920e04d937774c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage--receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage--receipt.json.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage.log.gz",
-      "archiveRevision": "22c94195ed38975acaade066473c5fea167ca09d",
+      "archiveRevision": "e3dd278b8294e4b8ed67859dbbb93374ea71d369",
       "gitBlob": "5689ace01f6a36ca08e5a56b8704f3c9d30d679d",
       "encoding": "gzip",
       "gzipBytes": 219,
       "gzipSha256": "061c1456d5a9493f8e05e4550c847b7231e0bb591e70d3fd43ccd494ef94a5d0",
       "decodedUtf8Bytes": 355,
       "decodedUtf8Sha256": "1310f2ec95e89c7f009d0e2004add82852848c313b9ca25e0eba5f74e9e6fbbb",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/22c94195ed38975acaade066473c5fea167ca09d/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/e3dd278b8294e4b8ed67859dbbb93374ea71d369/quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/files/sdk-admission-scope-coverage.log.gz",
+      "originalArchiveRevision": "22c94195ed38975acaade066473c5fea167ca09d"
     }
   ],
   "retrievalExample": "git show <entry.archiveRevision>:<entry.path> > /private/tmp/recovered-evidence.log.gz",
   "verification": "verify gzipSha256 against the exact retrieved bytes, then decode gzip as UTF-8 and verify decodedUtf8Sha256",
   "pilotWrites": 0,
-  "production": "disabled"
+  "production": "disabled",
+  "originalArchiveRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+  "privacyRedaction": "Only21 historical account-bearing host prefixes were redacted at maintainer request. Archive log blobs/bytes are unchanged. Original scientific identities stay historical claims; these are reachable redacted-mirror retrieval locators.",
+  "historyRedactionManifest": "quality/bugbot/evidence/issue-974/controls/history-redaction.json"
 }

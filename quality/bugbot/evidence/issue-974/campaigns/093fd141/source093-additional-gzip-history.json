@@ -1,1429 +1,1562 @@
 {
   "schemaVersion": 1,
-  "kind": "Lossless additional source093 evidence history index; no rewritten/deleted Git objects",
-  "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "kind": "Lossless additional source093 evidence index at reachable redacted-mirror locators; original gzip bytes unchanged",
+  "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
   "entryCount": 129,
   "entries": [
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/docs.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "ae5a269c7c2585923e23a84699aedd3a12324a79",
       "encoding": "gzip",
       "gzipBytes": 232,
       "gzipSha256": "b570189e8f7902fec6eba5c94c2f6a25886edbe79fdba21f140e5928d38d52c8",
       "decodedUtf8Bytes": 323,
       "decodedUtf8Sha256": "ba86a3bc3e17d55ab4ac0f5896a05f637d0773a9fcc164da9573c0ca813a34c5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/docs.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/docs.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-focused36.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "9dbe9aa6de77e7c85d9f3aad5d05375a41ff7546",
       "encoding": "gzip",
       "gzipBytes": 2135,
       "gzipSha256": "90d3c8406f2c32573fb327ea3a1e78d65c4dbd25592ef983e27de3bf637c7d4e",
       "decodedUtf8Bytes": 18072,
       "decodedUtf8Sha256": "db022a87c07ccb14f2e4791e5bde7f07c3576d2f86fd1930e729b078842a9351",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-focused36.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-focused36.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-focused36.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "44f85f7de2efaca76f0b4acc7dca2579f8f0bb95",
       "encoding": "gzip",
       "gzipBytes": 245,
       "gzipSha256": "409aa951ee2b44b00c1e975334290c4841126884a09102a2404ccda0e1038c77",
       "decodedUtf8Bytes": 392,
       "decodedUtf8Sha256": "3b4d40c007f6168417673d5b8157bb8ada7e2ca9dfa80ec0bc8733cd6e9db398",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-focused36.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-focused36.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-lint.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "5e0b56105ac49e5b0cee4bbee75280d4ffa15d50",
       "encoding": "gzip",
       "gzipBytes": 109,
       "gzipSha256": "776ab2ea47a3a8ef5e2c82c0cea6020fbfe6ba9b4b2abe2300ede2e0ecb0e8cd",
       "decodedUtf8Bytes": 103,
       "decodedUtf8Sha256": "f7a7a8b2762abf5a0993e2b28046aaad7a3643c66dbaff8bdfbf794501aff7e2",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-lint.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-lint.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-types.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "56d5d34cc9b98864acf192e4cde04e17daa27ebc",
       "encoding": "gzip",
       "gzipBytes": 264,
       "gzipSha256": "eeaa38073bdefc37e94de038ba68429080a381e45cbbedee81673dee82b9862e",
       "decodedUtf8Bytes": 623,
       "decodedUtf8Sha256": "3e7c38815cf2e6015bd19d50846d49ff28b3ee8c759ddb0d3cb13917502fcbfc",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-types.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/final-types.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/generate.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "e33fbd1dbfa6013656db8bddf767f8deb9a4f923",
       "encoding": "gzip",
       "gzipBytes": 1091,
       "gzipSha256": "6ae3a2054a75894e42dab0e39b29dc2b8ea723f3106492e31b66526779a1ea5c",
       "decodedUtf8Bytes": 2495,
       "decodedUtf8Sha256": "f6fadcac2a2a08bb0e1c67ef16916df1e9ce94237a2152e6827200ba081919aa",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/generate.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/generate.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/graphify.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "516fa581cb6bb09b210c703b3ea81a8db25714a4",
       "encoding": "gzip",
       "gzipBytes": 940,
       "gzipSha256": "56430db5ed86187291b758c272524efbdcd5657db91d1995a1a027664bcee928",
       "decodedUtf8Bytes": 3743,
       "decodedUtf8Sha256": "882cbba196c6ce19a4dde9ee061bb909ec21ed9e52980898226ceb9a7c33edcf",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/graphify.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/graphify.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/intermediate-focused36.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "413fa390b8cad78d7724b38da86965a67131ecb7",
       "encoding": "gzip",
       "gzipBytes": 234,
       "gzipSha256": "c3a710ca81dd4367137dcffd5278ffd94bfc32dcebd431944364fd28fc383489",
       "decodedUtf8Bytes": 374,
       "decodedUtf8Sha256": "43c9dad8ddb89a62145b98e60c4cc5e812d330e7431754b15a8cbcbe9e24dc95",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/intermediate-focused36.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/intermediate-focused36.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/intermediate-lint-negative.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "d067373afb83ea84c1d426410a6da9d4506f655a",
       "encoding": "gzip",
       "gzipBytes": 282,
       "gzipSha256": "4bfd73025ceb5f9be73b91e3ab551c2e2815c4c5f97c0e7a9e2931c24d8278a4",
       "decodedUtf8Bytes": 378,
       "decodedUtf8Sha256": "30936e1b44f14587cd4e553f28e653a88c0494f91832c14f48df990864bd757c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/intermediate-lint-negative.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/intermediate-lint-negative.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-helper-adapter-source.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "45488d0a01d4997c9b23cc40b89e5b1ef8c732f6",
       "encoding": "gzip",
       "gzipBytes": 438,
       "gzipSha256": "9bfab04b4b49a01e0071bda78fb304cee4d98d59960353b137442e44c95de868",
       "decodedUtf8Bytes": 653,
       "decodedUtf8Sha256": "7554c02c7923db6056b87469177e93bca4da942f64b11a70bdb3f60568584f6c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-helper-adapter-source.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-helper-adapter-source.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-helper-adapter.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8e2187c721e924228602c09b022b9602e3ab8d88",
       "encoding": "gzip",
       "gzipBytes": 533,
       "gzipSha256": "df0993772b7bf9dac4a8cf4899051d0bc59cd79c1e6937f8ede3740969e420a3",
       "decodedUtf8Bytes": 1303,
       "decodedUtf8Sha256": "c84d12cef06dfd6830e08e090995017096984f8d97b5c622768c4ec3ba95d45a",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-helper-adapter.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-helper-adapter.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-helper-adapter.ts.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "b3aa54486d72ac344feb0633746feb1da6e72074",
       "encoding": "gzip",
       "gzipBytes": 604,
       "gzipSha256": "a6b18e77220885da439b9382ec9b577895635bc0655db8944a402950d1c41ac5",
       "decodedUtf8Bytes": 1267,
       "decodedUtf8Sha256": "31f5d58d771e5b0cdcb7ce1a9ab67c5eaf16f5b96b7b25c97d57c667dc48b6ee",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-helper-adapter.ts.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-helper-adapter.ts.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-nine-red.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "dc75ee3826b71de6da01e73655d27dfdfec91c8e",
       "encoding": "gzip",
       "gzipBytes": 2469,
       "gzipSha256": "972a492610f31de57c4436c1a178fa5c40e5346122562758d4b0fd978e9da398",
       "decodedUtf8Bytes": 26167,
       "decodedUtf8Sha256": "87ff2716b1cef91b41919e3afd72e95e08321fe0e4309e7f1218b6a7df2250db",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-nine-red.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-nine-red.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-nine-red.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "15e4075e4a2c3ec32121c05a0f678d4c7bfd7dda",
       "encoding": "gzip",
       "gzipBytes": 1451,
       "gzipSha256": "df3ff3f503c70a9a84422d86cb758d246585144aff902c9cae8318cc92677c15",
       "decodedUtf8Bytes": 7860,
       "decodedUtf8Sha256": "bbd2ce1413e9a015e83bd8836f185bd179a3e3a095176d5eb691ebf56c4fdebd",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-nine-red.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-nine-red.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-private-jest-config.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "b58d190bc0e91e9e992ceda32a37f7e2864d0f16",
       "encoding": "gzip",
       "gzipBytes": 222,
       "gzipSha256": "74402828950b93c25f185e8ad758aa7ab0ff8cf3403b0a3014ede215bba92911",
       "decodedUtf8Bytes": 338,
       "decodedUtf8Sha256": "b216a9b7b1119e1a774cb51ce063001442513547835ecf18d97ccf61db47b28d",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-private-jest-config.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/original-private-jest-config.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/specifications.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "33618c17b0e32bb88ee25509ffdce8a7522fa0ed",
       "encoding": "gzip",
       "gzipBytes": 1093,
       "gzipSha256": "8a1cd6f47cbbd7fd52f4cfca8f213f423cb7d4e3b097ae22ef839cb7c5b73d36",
       "decodedUtf8Bytes": 2493,
       "decodedUtf8Sha256": "050f8d2abc9b6837cb13b3631bebe67ca30be19329167145a48f6a6932612e56",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/specifications.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/c03-fixture-cleanup/specifications.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/committed-reference16-green.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "d1be1e17566b006e0c67c2f29601391d09de5996",
       "encoding": "gzip",
       "gzipBytes": 659,
       "gzipSha256": "26cd71bbdbe591e58f101b93c4be171afe4d5fc5c71f7f732db0b341cf207a96",
       "decodedUtf8Bytes": 1708,
       "decodedUtf8Sha256": "dab6521a4c0c0796cf4a086748df09fdf3b0280bac45d081d3fccdbdeaed19d4",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/committed-reference16-green.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/committed-reference16-green.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/corrected12-green.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "81186222a7924a20b2bed218dbb0b437806c6775",
       "encoding": "gzip",
       "gzipBytes": 510,
       "gzipSha256": "539bc679c00d2a2dba77db977302ac6eb8a480ae7888914f4349427eb9dc517a",
       "decodedUtf8Bytes": 1279,
       "decodedUtf8Sha256": "e925d8836e2418abac817281add77dcb2b6fc9edb59d2a56d7fedae5023c9b3c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/corrected12-green.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/corrected12-green.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/corrected12-red.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "cae7ee2aff87f89b9e63e1456c3ceca28e794c6f",
       "encoding": "gzip",
       "gzipBytes": 1213,
       "gzipSha256": "2c798a9bca46b6b4adc779e5bca55dc3229963c0491c29002a26a267870a5317",
       "decodedUtf8Bytes": 7913,
       "decodedUtf8Sha256": "14851fb25a27e3b41d9370f494cb18a8b5e1960c203d3ebf1f3f3ec46c51e9e0",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/corrected12-red.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/corrected12-red.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/docs.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "ae5a269c7c2585923e23a84699aedd3a12324a79",
       "encoding": "gzip",
       "gzipBytes": 232,
       "gzipSha256": "b570189e8f7902fec6eba5c94c2f6a25886edbe79fdba21f140e5928d38d52c8",
       "decodedUtf8Bytes": 323,
       "decodedUtf8Sha256": "ba86a3bc3e17d55ab4ac0f5896a05f637d0773a9fcc164da9573c0ca813a34c5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/docs.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/docs.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/filesystem-reference-harness.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "c602c4e3793ab9312118e6640b7c5f6b61c5684f",
       "encoding": "gzip",
       "gzipBytes": 4506,
       "gzipSha256": "ce17a665e44a909803ea742f303def6db27f56bbb9c483ab6206bbe3c777905e",
       "decodedUtf8Bytes": 15222,
       "decodedUtf8Sha256": "da84bcfda87ece16f32865b7fddf329a45b1284445b6f53efbc29efdbd689dc0",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/filesystem-reference-harness.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/filesystem-reference-harness.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/filesystem-reference15-red.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "5f937ac57579208c13e6bc580bebdccf334998e0",
       "encoding": "gzip",
       "gzipBytes": 1255,
       "gzipSha256": "d60a505834cb87c0798b6cbc37633581991bc7189ca3d04adde92183c1df615c",
       "decodedUtf8Bytes": 4135,
       "decodedUtf8Sha256": "40ffe15db89895879b65c005a08bd559dd11d2d8e9f9da6b98a3fa5f206cc561",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/filesystem-reference15-red.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/filesystem-reference15-red.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/filesystem-reference16-red.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "758532c1f8ff065f622ec19a5c5cf9a6e1104464",
       "encoding": "gzip",
       "gzipBytes": 1308,
       "gzipSha256": "2aa1d1e7a17ff6fb6d06659b75061c35da36e9e791b5565239f01148762673fe",
       "decodedUtf8Bytes": 5188,
       "decodedUtf8Sha256": "ab39a4618971242ff1cc3fe631203f670a124f00c217554a29ff3398d2b8eb16",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/filesystem-reference16-red.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/filesystem-reference16-red.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/final13-green.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "7c6016571bd5ec6add0344696eb5219714205cae",
       "encoding": "gzip",
       "gzipBytes": 548,
       "gzipSha256": "eddc4ebd14f42e452dba9f38b4d850c51d070f6539ec5f7b93410ef80178fe02",
       "decodedUtf8Bytes": 1391,
       "decodedUtf8Sha256": "7240f7b4d76533ea0766e8ccf81362190df1beb19d1396551ccda2a5874ce729",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/final13-green.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/final13-green.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/final13-red.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "045e8de6aad6c2de32b563eb68f83dc652807971",
       "encoding": "gzip",
       "gzipBytes": 1292,
       "gzipSha256": "1a7f27cc1a847d0290692261b3fa2a76e4a9f22de86e69a6529a593c3e76b902",
       "decodedUtf8Bytes": 9338,
       "decodedUtf8Sha256": "ffe7f430c9c2b7d8bb11f73627d07788fb8c37c226f52f25db9835bae1175f83",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/final13-red.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/final13-red.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/final13-test-source.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "922bc15f6fd2e65296d457f754371fb267c51fb7",
       "encoding": "gzip",
       "gzipBytes": 3068,
       "gzipSha256": "b4e81a21eaf1f62bc0280d0685efc2a7dd9150f3d9fa3602732115021f2cc95e",
       "decodedUtf8Bytes": 8918,
       "decodedUtf8Sha256": "49187bd37d28433d88aff60c0c5b3daa12f8ac5aecaeea6c602b0bd0e97af91c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/final13-test-source.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/final13-test-source.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/full506.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "08670d811ba3a2ed05e251fdac17657d4c956f8b",
       "encoding": "gzip",
       "gzipBytes": 14691,
       "gzipSha256": "0eb8aa46a459cd1936c82b06feac043bd77d5064932768f817adab7a94716331",
       "decodedUtf8Bytes": 63206,
       "decodedUtf8Sha256": "abb39645ebe2aeb6704d25d652360ab1a051232f519d2a6ad33e9118124abab8",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/full506.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/full506.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/generate.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "ff2b331a31f7aba35894c9e529d4a2d5b1d0fb4b",
       "encoding": "gzip",
       "gzipBytes": 1116,
       "gzipSha256": "fb0969fac2501a953d2bec8151f68d0a27d3987a4fc2c9d91819ef2c1962e984",
       "decodedUtf8Bytes": 2504,
       "decodedUtf8Sha256": "6bf14390cf66190a16e4e69b750c1ad79a0a21525f6b85121cdacd7d47062611",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/generate.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/generate.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/graphify.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "cecf7fb1bd7cd5b40bce6a2e9582030ea21193db",
       "encoding": "gzip",
       "gzipBytes": 937,
       "gzipSha256": "01479f90357dec40676880ed6155bf62ee29656131a008c8ac3c62237d164aba",
       "decodedUtf8Bytes": 3743,
       "decodedUtf8Sha256": "3fc77b53308fc738d43d75785ca2bbbd21361433a6e6eed2a7e65705a5f2a199",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/graphify.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/graphify.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/initial12-red.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "33ec2cbfc5a81e18c1d1be0124b0c24960f15659",
       "encoding": "gzip",
       "gzipBytes": 1240,
       "gzipSha256": "03d8cefe4fd533dce00ffcc03aac1402da42585d38bdae2e8720ac492d0052a0",
       "decodedUtf8Bytes": 7808,
       "decodedUtf8Sha256": "a28c043b38c73684047f31a8102c93a0b9a85ccbd2959f0b4e22a0063efd8552",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/initial12-red.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/initial12-red.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/initial12-test-source.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "3a4dcd449db788f87c862d6d1b0dd3977cfbd64b",
       "encoding": "gzip",
       "gzipBytes": 2902,
       "gzipSha256": "15c5dcba09bc81faf89d208dff7e54fad52907713f993d0b02ff0e18ab7bf0fe",
       "decodedUtf8Bytes": 8225,
       "decodedUtf8Sha256": "c76a9cd28ac1d654f37c42164bda66d20c8db2c6a067c6b218abbabdaef82694",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/initial12-test-source.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/initial12-test-source.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/intermediate-full503-scope.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "e1a9bf38084f8dd2650868a0582175d8c4aaf731",
       "encoding": "gzip",
       "gzipBytes": 426,
       "gzipSha256": "dc21eeb6848c968e339475c7e9559787de12b0eab7d95dc78a169c2d4106523b",
       "decodedUtf8Bytes": 619,
       "decodedUtf8Sha256": "0af49a6a6a946171d7fcd161a2555b382558099cf27d52bee1e59d0fd552f606",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/intermediate-full503-scope.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/intermediate-full503-scope.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/intermediate-full503.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "ce1736baa9fcf9109bc0393cad30f5a68c12de00",
       "encoding": "gzip",
       "gzipBytes": 14531,
       "gzipSha256": "9b1ab4b370c44283cd50ac72b248920aad11a37b529c6cb891ab485f073ed5d3",
       "decodedUtf8Bytes": 62842,
       "decodedUtf8Sha256": "e71e8522e114a7d61cd631d30076327288848e75cf1d1a7aab232833924fe9dd",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/intermediate-full503.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/intermediate-full503.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/intermediate15-test-source.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "d152d8043d988758ebd9037bac3df70c936815fd",
       "encoding": "gzip",
       "gzipBytes": 3293,
       "gzipSha256": "196b3ae0cfb181657cfc34c593e39328e30881207c325fc2af46cf59206c8393",
       "decodedUtf8Bytes": 10279,
       "decodedUtf8Sha256": "2ecf57911c30af675394de50c2a581d6e7f18838f56f09861cf4dd59eb349a59",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/intermediate15-test-source.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/intermediate15-test-source.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/pinned-git-reader16-green.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "ea03b84d5636cfc4d0e1ea8c80ad0db7bddcd04a",
       "encoding": "gzip",
       "gzipBytes": 658,
       "gzipSha256": "9b3c2fdba218e8bb8f6b9d9a5ebc23e900f8776a4c8ef1584ad7c3661840e77c",
       "decodedUtf8Bytes": 1701,
       "decodedUtf8Sha256": "e17b7833dd26fcff5d3b1a776ede03e4baacd0703e00892bf341c187404e01aa",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/pinned-git-reader16-green.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/pinned-git-reader16-green.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/specifications.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "e716e98617df30c4bdd0bb6478eedec791f0c7ea",
       "encoding": "gzip",
       "gzipBytes": 1097,
       "gzipSha256": "6a529af959f83b64043ad3f42f79e7502f12f922e249f691b3ef8484472f4825",
       "decodedUtf8Bytes": 2491,
       "decodedUtf8Sha256": "fd04daebe19b164f66ddd40aefab304bd01139c7339a8be1978f1ab0f630d380",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/specifications.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/specifications.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/types.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "56d5d34cc9b98864acf192e4cde04e17daa27ebc",
       "encoding": "gzip",
       "gzipBytes": 264,
       "gzipSha256": "eeaa38073bdefc37e94de038ba68429080a381e45cbbedee81673dee82b9862e",
       "decodedUtf8Bytes": 623,
       "decodedUtf8Sha256": "3e7c38815cf2e6015bd19d50846d49ff28b3ee8c759ddb0d3cb13917502fcbfc",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/types.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/native-bootstrap-admission/types.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/autoremove-provider-attempt1-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "391730554c1fdc20de6a96ad5416f1c21db40136",
       "encoding": "gzip",
       "gzipBytes": 1227,
       "gzipSha256": "fabb776fe78f27b7dbd4de33c2d9b0496b9aa46851e45a20ca8988bb35b19e59",
       "decodedUtf8Bytes": 2603,
       "decodedUtf8Sha256": "8a1690a4f0856244c51275c9f6fafdafd216d63f5e8458ed3eb1d9372a2f77f8",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/autoremove-provider-attempt1-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/autoremove-provider-attempt1-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/autoremove-provider-attempt1.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "61ce0a271faad7bdc258f0a58812dd228e518856",
       "encoding": "gzip",
       "gzipBytes": 4169,
       "gzipSha256": "6c4145ddf07b8817406801415e34df9fcb8cf5d37ffbe587bc5e448296fddd8d",
       "decodedUtf8Bytes": 12080,
       "decodedUtf8Sha256": "7a4c74a9ce9e6086448fa4a3469abbddd06cce637bc45a91db4aad90e42eb331",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/autoremove-provider-attempt1.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/autoremove-provider-attempt1.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1-output--coverage-final.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "d711f65efd2fe3b5f404aa52222b04abee67e8a8",
       "encoding": "gzip",
       "gzipBytes": 13709,
       "gzipSha256": "631c8477b713d59826521ce6ca4930a85e82669c7b664ac3d362d34dcd6d2975",
       "decodedUtf8Bytes": 89354,
       "decodedUtf8Sha256": "d7240ef9b26fe3b1c03e28f9cc69347454845cfbdc67b19349824d17d5569738",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1-output--coverage-final.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1-output--coverage-final.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1-output--receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "0eee2d0e7446f169085b3b56df7316b59ffa7205",
       "encoding": "gzip",
       "gzipBytes": 1783,
       "gzipSha256": "11a7a6cc2d119fbaa254c440a2f4150393e6a5c82dca5ae195eb16dd19c88e3f",
       "decodedUtf8Bytes": 21046,
       "decodedUtf8Sha256": "cbdfdee2fc7fbfe5bb44bf868fc365c0f0f3c061fb6a33417c27d66b77113b0c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1-output--receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1-output--receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "df9dd55a7332aa10086e1c0ad33091fd18179f6b",
       "encoding": "gzip",
       "gzipBytes": 256,
       "gzipSha256": "8c443e4430842f97560c1a6f3df735e09b0291848cbe7787170994dc70cb46d7",
       "decodedUtf8Bytes": 326,
       "decodedUtf8Sha256": "f9c5cfe0eb85c9fd3b5e2b95fa97a605443806a8aba66219408135aee2749711",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "0bf220708f15b85c59ed283e927cb1f98cf590cd",
       "encoding": "gzip",
       "gzipBytes": 9169,
       "gzipSha256": "a054b0f6a43ef62c45cdcc5d87125fb31e9d216a1be2d0aa4c6042d860e556ca",
       "decodedUtf8Bytes": 38605,
       "decodedUtf8Sha256": "8d00d2a7377e0f1c8624613081b26cb639e9e16240031f64a058a49d604b99e9",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt1.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2-output--coverage-final.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "04ea97fca42128855594603b772431f979601a5e",
       "encoding": "gzip",
       "gzipBytes": 14282,
       "gzipSha256": "9742d1b4c8279f30e41f9c9ed53f8716efca1c41ed615ec2ae3a05377be6940a",
       "decodedUtf8Bytes": 93233,
       "decodedUtf8Sha256": "c2d13bce894db0b546a8f6fd794112cd4ab0b5ec249f72ddcf31512d4145e789",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2-output--coverage-final.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2-output--coverage-final.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2-output--receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "4a3a31ee4e47df41ab77cbea351295bf914da1da",
       "encoding": "gzip",
       "gzipBytes": 1785,
       "gzipSha256": "5e2774fe40326605b2a27c552bafebe57e6d500a9a7402d741a27a01efc12231",
       "decodedUtf8Bytes": 21362,
       "decodedUtf8Sha256": "7c172b5cbaa36a7ef842e8ee06a4c27ea6f43227f5bccc300ee964c5aad3c003",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2-output--receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2-output--receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "b81b7071de6bda5f95bd2e1d39da4c32c38b21f0",
       "encoding": "gzip",
       "gzipBytes": 257,
       "gzipSha256": "2ceed55614171575b30089ae964a91184646324ed8fe64a296d1e5b17da6f874",
       "decodedUtf8Bytes": 326,
       "decodedUtf8Sha256": "96cbf8822c30ba0f63cbeec3a4461ddad72b4b7d22d81f81b691e2ae3da8e362",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "abe04344625080edb443fd810663cb51970936e9",
       "encoding": "gzip",
       "gzipBytes": 9201,
       "gzipSha256": "fc7e3c688ae13624769ce2a4af0227ea4425470919b2a24c62febafdd4ca2189",
       "decodedUtf8Bytes": 38718,
       "decodedUtf8Sha256": "c653935d8ed190e810b0187bdaaeb6787f8c0594fc5f844c854c71dc7acbe8c3",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-coverage-attempt2.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-observation-attempt1.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "242e842bd3b9dcb9ecf4203de653e99b0b484590",
       "encoding": "gzip",
       "gzipBytes": 348,
       "gzipSha256": "60a8df04daa8dc3281a521d66c3b7ea2f593b741bed09a972d7d70a0f90c3035",
       "decodedUtf8Bytes": 504,
       "decodedUtf8Sha256": "7ed4482bfe49cf114d524a2a8ee013776c51dbc4b23e0d3346007fdcf9b9eb47",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-observation-attempt1.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/engine-observation-attempt1.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1-fixture-source.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "76973d973edf05818eed5e94728b2abb7d30bde8",
       "encoding": "gzip",
       "gzipBytes": 6012,
       "gzipSha256": "6be5fc4fc148d16cf0a307ef50eea6f0db646c96437e0f112b84bde19876b849",
       "decodedUtf8Bytes": 22160,
       "decodedUtf8Sha256": "a61f5056039401981de1406fcd3d52c7acf782f92c8b470baf352548a10d7d40",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1-fixture-source.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1-fixture-source.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "e281adc5beb6482699684d51a3b59bb77dbc3e92",
       "encoding": "gzip",
       "gzipBytes": 392,
       "gzipSha256": "e3f7743c9d78d46795eb743918cd592396d7bb2ebb84cff39c52df4c0e619fb5",
       "decodedUtf8Bytes": 637,
       "decodedUtf8Sha256": "ca2abce1acfd1a5e1b578fe4f8b8730ae604ddecd8aff549882e60d2437b9604",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1-source.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "6163f186d479e2b2c1e4cbf2948692fac02a0fc1",
       "encoding": "gzip",
       "gzipBytes": 254,
       "gzipSha256": "0157b03961f2e09727e031d5e5520db6b5a19c969dcb0f8d7472211c087e4871",
       "decodedUtf8Bytes": 406,
       "decodedUtf8Sha256": "0edca5470e91407ccde226c1fe63b29de9cac18cc41f16fa2babf51ae3d5d463",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1-source.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1-source.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "86e43ea3218b5890302b754bbf8927f94e79f7ee",
       "encoding": "gzip",
       "gzipBytes": 20,
       "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
       "decodedUtf8Bytes": 0,
       "decodedUtf8Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/existing-transport-attempt1.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-hung-fixture-termination.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "3cc01ef08ba8aa4936bcc919f4ed86f1d3d5b6fa",
       "encoding": "gzip",
       "gzipBytes": 436,
       "gzipSha256": "0bc0b016e04c17d2d4a945e7d4fa0df314ff75fba8c178f162f1d4ea213a76fd",
       "decodedUtf8Bytes": 638,
       "decodedUtf8Sha256": "92e8c081af866cf78af1159e148280a3d734052ad07e16c1056a8f8bed7ba46d",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-hung-fixture-termination.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-hung-fixture-termination.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "b35c628b7300da28165245a2fd79ea1aa2197cb2",
       "encoding": "gzip",
       "gzipBytes": 584,
       "gzipSha256": "074c61de0be19b8bde44ef4d9f7e84d9c2e7e3e0d4ab58ba12632777f1a28ca8",
       "decodedUtf8Bytes": 947,
       "decodedUtf8Sha256": "40c1f52ef3ffd2e7e2cacdb137eaa7a2807163f2cc2e0c957e9117938a78e1a8",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-engine-transport-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "673edbb24e467f26a010ea3fcf3c435b34a13ede",
       "encoding": "gzip",
       "gzipBytes": 6098,
       "gzipSha256": "77e4d6dd7f42ec9b0ae26ef0fba5027bbf53d8c4d0006036014fd24351370452",
       "decodedUtf8Bytes": 22477,
       "decodedUtf8Sha256": "3c5412f8c32bdd5073dbb394283870dab9d9718275eaa1b6cd63e5b8bdf48b39",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-engine-transport-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-engine-transport-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-late-cancellation-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8867e814ce5e15265ad833f51584f1c9ce6cbb29",
       "encoding": "gzip",
       "gzipBytes": 1754,
       "gzipSha256": "8826caf3e3b703f687e706bfa814266f2debdd8cfcb4f9b061c4896bcf3070f0",
       "decodedUtf8Bytes": 5542,
       "decodedUtf8Sha256": "0b21d26de2e10e89603fe3a1e547ee68e2bd77e17ba19713d6b70cfa9b7599ec",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-late-cancellation-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-late-cancellation-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-operation-containment.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "fc45ebdfd1b15dbc34e3906900368d0e624a56ee",
       "encoding": "gzip",
       "gzipBytes": 9631,
       "gzipSha256": "62132916915bb6c0460babdd592af565a98c784bed0a912e962bfaa0fc2b82be",
       "decodedUtf8Bytes": 37607,
       "decodedUtf8Sha256": "bb6ff80fc9b7a92cc90a69a62e670d34ec533135dbe9d9d0dc6feec34ace3eb5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-operation-containment.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-operation-containment.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-owner-loss-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "b9762d25716a1b620022cd35bfb676795a2b5c7d",
       "encoding": "gzip",
       "gzipBytes": 3990,
       "gzipSha256": "be2d82cb443f0cc469fb6ee82799454ce3d4d6d7219581a11d3a0d7dd5e3e4f5",
       "decodedUtf8Bytes": 18748,
       "decodedUtf8Sha256": "4e26edfb8bd733f637c4bfacf4c8aafcec4159863adcfa8d506671fba759c74e",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-owner-loss-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-owner-loss-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-startup-stop-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8bec600d501c26944b79218528f8b53e2e5e69b6",
       "encoding": "gzip",
       "gzipBytes": 894,
       "gzipSha256": "3fa691d4e0a0b7b65d8afc2df227ed3b600526be7355d8de0df6c491b9dcb950",
       "decodedUtf8Bytes": 2188,
       "decodedUtf8Sha256": "6adf6f4988271d654015d105e163c713e49631db4a3106cb21a91e9c17766e83",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-startup-stop-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-startup-stop-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-stop-record-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "99c33f236a57af72c452dee45fd7a93d75fef54e",
       "encoding": "gzip",
       "gzipBytes": 1316,
       "gzipSha256": "a2a143391ec0a356c12f46431ec556399b99c0ac35580de1b7bccd6d5936b387",
       "decodedUtf8Bytes": 4116,
       "decodedUtf8Sha256": "c03e4b9ac70213bc490cbd1f6aa256f02ba298151c55bfd1fa3921cc07e83ce5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-stop-record-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source-stop-record-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "dbc5a2ea67f7a8d27188974ce6d3a0057dc5ec10",
       "encoding": "gzip",
       "gzipBytes": 375,
       "gzipSha256": "b695638bfc1e4822e84bcb82e4fe765cbc20d0203fd52204868a0cf520e84870",
       "decodedUtf8Bytes": 613,
       "decodedUtf8Sha256": "54dc42caa68acd9a5f4a91f62d88b9bc7c1d41365d5bf8a8f3d6e51fb6172cf7",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1-source.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "0e078556c3a0df0f928cab60137b4e8348af2c4e",
       "encoding": "gzip",
       "gzipBytes": 2045,
       "gzipSha256": "cc175ac5bf3999305e62cfc1b78a9ce13d7fe1e785bf375429a74067711dcf06",
       "decodedUtf8Bytes": 6916,
       "decodedUtf8Sha256": "f36deae7ddfc082898d746c2f9568a31c104e7dd828c5e34f166919257fba5be",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt1.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "524fb0fb1bcc351cf511cc5f9c13b63cc6769214",
       "encoding": "gzip",
       "gzipBytes": 582,
       "gzipSha256": "bd5dd4da1193b0333c73b7efc7c256cc1a2393f304d901a3c7b1307ba221a997",
       "decodedUtf8Bytes": 947,
       "decodedUtf8Sha256": "c1129a4fb929d07ac3c4a110a6722c7389d94b775856dcb3bbd913f1d91c8c87",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-engine-transport-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "328c78db660b419a8a859cb91fc29d42b19a8091",
       "encoding": "gzip",
       "gzipBytes": 6177,
       "gzipSha256": "c1185d1edf7f3c327a2a6f4da45c0bea351e3dde3e857cd4b32239664955dfe3",
       "decodedUtf8Bytes": 22660,
       "decodedUtf8Sha256": "b1dd2eb06681f9d2ab57c0d13025ce76113da5b3334e144c978329699f66b72c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-engine-transport-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-engine-transport-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-late-cancellation-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8867e814ce5e15265ad833f51584f1c9ce6cbb29",
       "encoding": "gzip",
       "gzipBytes": 1754,
       "gzipSha256": "8826caf3e3b703f687e706bfa814266f2debdd8cfcb4f9b061c4896bcf3070f0",
       "decodedUtf8Bytes": 5542,
       "decodedUtf8Sha256": "0b21d26de2e10e89603fe3a1e547ee68e2bd77e17ba19713d6b70cfa9b7599ec",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-late-cancellation-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-late-cancellation-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-operation-containment.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "fc45ebdfd1b15dbc34e3906900368d0e624a56ee",
       "encoding": "gzip",
       "gzipBytes": 9631,
       "gzipSha256": "62132916915bb6c0460babdd592af565a98c784bed0a912e962bfaa0fc2b82be",
       "decodedUtf8Bytes": 37607,
       "decodedUtf8Sha256": "bb6ff80fc9b7a92cc90a69a62e670d34ec533135dbe9d9d0dc6feec34ace3eb5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-operation-containment.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-operation-containment.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-owner-loss-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "b9762d25716a1b620022cd35bfb676795a2b5c7d",
       "encoding": "gzip",
       "gzipBytes": 3990,
       "gzipSha256": "be2d82cb443f0cc469fb6ee82799454ce3d4d6d7219581a11d3a0d7dd5e3e4f5",
       "decodedUtf8Bytes": 18748,
       "decodedUtf8Sha256": "4e26edfb8bd733f637c4bfacf4c8aafcec4159863adcfa8d506671fba759c74e",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-owner-loss-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-owner-loss-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-startup-stop-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8bec600d501c26944b79218528f8b53e2e5e69b6",
       "encoding": "gzip",
       "gzipBytes": 894,
       "gzipSha256": "3fa691d4e0a0b7b65d8afc2df227ed3b600526be7355d8de0df6c491b9dcb950",
       "decodedUtf8Bytes": 2188,
       "decodedUtf8Sha256": "6adf6f4988271d654015d105e163c713e49631db4a3106cb21a91e9c17766e83",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-startup-stop-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-startup-stop-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-stop-record-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "99c33f236a57af72c452dee45fd7a93d75fef54e",
       "encoding": "gzip",
       "gzipBytes": 1316,
       "gzipSha256": "a2a143391ec0a356c12f46431ec556399b99c0ac35580de1b7bccd6d5936b387",
       "decodedUtf8Bytes": 4116,
       "decodedUtf8Sha256": "c03e4b9ac70213bc490cbd1f6aa256f02ba298151c55bfd1fa3921cc07e83ce5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-stop-record-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source-stop-record-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "593a6998d11f0165b8a7fd41bf5ff718e3b98689",
       "encoding": "gzip",
       "gzipBytes": 374,
       "gzipSha256": "889c4a0b892b2abc9b602375f856297f71644145a00635a0a5df5b5f97d1eecf",
       "decodedUtf8Bytes": 613,
       "decodedUtf8Sha256": "878ad41f557ee65bd49f9ec41a0f1b1dbb468bf06dcf3f46114e55b3a21c2a84",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2-source.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "92c1af8175826dc0058dcc23363b93ff8e056868",
       "encoding": "gzip",
       "gzipBytes": 1699,
       "gzipSha256": "617f8eff4f02041b90b739cbd9fb175848f326611ec8ec9eac4fc0e29c40713a",
       "decodedUtf8Bytes": 5877,
       "decodedUtf8Sha256": "b035e87cc90884a9b402ea2d40a8777d58111edd7f738dbc24f709d9ca6938fe",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt2.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "596fcfab22a57c4c1c739c8278e1dd1ef994e9dd",
       "encoding": "gzip",
       "gzipBytes": 685,
       "gzipSha256": "5ed5d00f463a9bc0fde291c58cee1c0dccab3ca86786547f028e9b80ae8c323c",
       "decodedUtf8Bytes": 1157,
       "decodedUtf8Sha256": "5cb99805e9589e2870e78a5c93c6d0a5f2b7a36afc40952e49f8ea19a86456aa",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-containment-native.test.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "a3e319f3a1cf112a782390503965aca1f7412d82",
       "encoding": "gzip",
       "gzipBytes": 5838,
       "gzipSha256": "a63115a7e24d52a0bbcef166e859242c1f002072fe9d96722fb3f7bd33b439ba",
       "decodedUtf8Bytes": 20960,
       "decodedUtf8Sha256": "01dc92e3988ac846b1d25f2c0615c12b4c6fdcf6cdd35a337e89d0cf8d8620b2",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-containment-native.test.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-containment-native.test.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-engine-transport-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "328c78db660b419a8a859cb91fc29d42b19a8091",
       "encoding": "gzip",
       "gzipBytes": 6177,
       "gzipSha256": "c1185d1edf7f3c327a2a6f4da45c0bea351e3dde3e857cd4b32239664955dfe3",
       "decodedUtf8Bytes": 22660,
       "decodedUtf8Sha256": "b1dd2eb06681f9d2ab57c0d13025ce76113da5b3334e144c978329699f66b72c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-engine-transport-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-engine-transport-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-late-cancellation-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8867e814ce5e15265ad833f51584f1c9ce6cbb29",
       "encoding": "gzip",
       "gzipBytes": 1754,
       "gzipSha256": "8826caf3e3b703f687e706bfa814266f2debdd8cfcb4f9b061c4896bcf3070f0",
       "decodedUtf8Bytes": 5542,
       "decodedUtf8Sha256": "0b21d26de2e10e89603fe3a1e547ee68e2bd77e17ba19713d6b70cfa9b7599ec",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-late-cancellation-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-late-cancellation-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-native-bootstrap-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "ff12c11dcd8b9b4eeeac421ee806fbe6f662af90",
       "encoding": "gzip",
       "gzipBytes": 3482,
       "gzipSha256": "c6f73a927032bf36cac852d9ca3a1e704b9002ab594456bab0cc586bdb12f191",
       "decodedUtf8Bytes": 11341,
       "decodedUtf8Sha256": "46ad5f1fc57fa2a8c22991c0c213a601388e44d8be1a47b2dab6f635e5ef1051",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-native-bootstrap-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-native-bootstrap-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-operation-containment.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "fc45ebdfd1b15dbc34e3906900368d0e624a56ee",
       "encoding": "gzip",
       "gzipBytes": 9631,
       "gzipSha256": "62132916915bb6c0460babdd592af565a98c784bed0a912e962bfaa0fc2b82be",
       "decodedUtf8Bytes": 37607,
       "decodedUtf8Sha256": "bb6ff80fc9b7a92cc90a69a62e670d34ec533135dbe9d9d0dc6feec34ace3eb5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-operation-containment.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-operation-containment.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-owner-loss-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "1a6e2ae5614dde292e9023be31cf5cecb4ffebb7",
       "encoding": "gzip",
       "gzipBytes": 4648,
       "gzipSha256": "2e62e40f1ba019093da7f4191037fc43db2d437d0e594d34c12cc5342bcf54ac",
       "decodedUtf8Bytes": 21849,
       "decodedUtf8Sha256": "0a9ddbed0afe21eb67f95e024cd4121594f5d5486ab05ce48a4a9f5f7bd09241",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-owner-loss-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-owner-loss-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-startup-stop-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8bec600d501c26944b79218528f8b53e2e5e69b6",
       "encoding": "gzip",
       "gzipBytes": 894,
       "gzipSha256": "3fa691d4e0a0b7b65d8afc2df227ed3b600526be7355d8de0df6c491b9dcb950",
       "decodedUtf8Bytes": 2188,
       "decodedUtf8Sha256": "6adf6f4988271d654015d105e163c713e49631db4a3106cb21a91e9c17766e83",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-startup-stop-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-startup-stop-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-stop-record-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "99c33f236a57af72c452dee45fd7a93d75fef54e",
       "encoding": "gzip",
       "gzipBytes": 1316,
       "gzipSha256": "a2a143391ec0a356c12f46431ec556399b99c0ac35580de1b7bccd6d5936b387",
       "decodedUtf8Bytes": 4116,
       "decodedUtf8Sha256": "c03e4b9ac70213bc490cbd1f6aa256f02ba298151c55bfd1fa3921cc07e83ce5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-stop-record-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source-stop-record-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "f66b9cf8a5f0b7f32e5c4e1ec06660222f43efd4",
       "encoding": "gzip",
       "gzipBytes": 475,
       "gzipSha256": "f278c92aa8a18ff847ebf193094542e5335e27a3f5af6f927cf1aa4d994f6ea9",
       "decodedUtf8Bytes": 819,
       "decodedUtf8Sha256": "2dde3ea6d2eb0d11fce1c239ef166cff9ba15d76ef70d698027178818744e5d0",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3-source.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "674564e73695913e5a15a00ab43e8b698e0a0330",
       "encoding": "gzip",
       "gzipBytes": 2247,
       "gzipSha256": "7937437031907bdd0603b8a238a9bc695c978c33085ca5777ad7080ad385abef",
       "decodedUtf8Bytes": 7712,
       "decodedUtf8Sha256": "54c68ff0501bbf56d292810a33f94bd8f14733debbfe101b3ec6fd4dd263d186",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt3.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "4a64700b388d164ceb9fa4e7b95f4fc3512071b4",
       "encoding": "gzip",
       "gzipBytes": 683,
       "gzipSha256": "791e1cad05c90dd4c3519a863d75dc9252cdbe956626e6043c3b3e3795f05b7f",
       "decodedUtf8Bytes": 1157,
       "decodedUtf8Sha256": "e9d1dff4396a7db78b789093bb6f838ad401a826573b3cad63a9997e60813e30",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-containment-native.test.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "e65768c48ea7fafb0e87a41ed586810a960cd3ab",
       "encoding": "gzip",
       "gzipBytes": 5849,
       "gzipSha256": "84e644e6c8d3fb0f793f9db9911279292ad558115a2bd3488deef8a71b96ce07",
       "decodedUtf8Bytes": 21011,
       "decodedUtf8Sha256": "34ee8e152702f4a205a4d87b34c3e21c9b5ed076a0ab5dcea2f47815d1211e63",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-containment-native.test.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-containment-native.test.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-engine-transport-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "328c78db660b419a8a859cb91fc29d42b19a8091",
       "encoding": "gzip",
       "gzipBytes": 6177,
       "gzipSha256": "c1185d1edf7f3c327a2a6f4da45c0bea351e3dde3e857cd4b32239664955dfe3",
       "decodedUtf8Bytes": 22660,
       "decodedUtf8Sha256": "b1dd2eb06681f9d2ab57c0d13025ce76113da5b3334e144c978329699f66b72c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-engine-transport-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-engine-transport-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-late-cancellation-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8867e814ce5e15265ad833f51584f1c9ce6cbb29",
       "encoding": "gzip",
       "gzipBytes": 1754,
       "gzipSha256": "8826caf3e3b703f687e706bfa814266f2debdd8cfcb4f9b061c4896bcf3070f0",
       "decodedUtf8Bytes": 5542,
       "decodedUtf8Sha256": "0b21d26de2e10e89603fe3a1e547ee68e2bd77e17ba19713d6b70cfa9b7599ec",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-late-cancellation-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-late-cancellation-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-native-bootstrap-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "ff12c11dcd8b9b4eeeac421ee806fbe6f662af90",
       "encoding": "gzip",
       "gzipBytes": 3482,
       "gzipSha256": "c6f73a927032bf36cac852d9ca3a1e704b9002ab594456bab0cc586bdb12f191",
       "decodedUtf8Bytes": 11341,
       "decodedUtf8Sha256": "46ad5f1fc57fa2a8c22991c0c213a601388e44d8be1a47b2dab6f635e5ef1051",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-native-bootstrap-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-native-bootstrap-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-operation-containment.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "dbc10a0ad71ea126afe6e0b4023c8dfc030507ab",
       "encoding": "gzip",
       "gzipBytes": 9805,
       "gzipSha256": "0dc5be514f9a84fba340898e88de8093e4061177a80750d8b4badd7b1a7b72b0",
       "decodedUtf8Bytes": 38792,
       "decodedUtf8Sha256": "ba77f589bf870ef89981f9b1c211018da33e65a13bf27dc0b6e7e97dee66289f",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-operation-containment.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-operation-containment.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-owner-loss-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8b41b2b74584e5ae8f8ff73e2be6ad2e60fbd813",
       "encoding": "gzip",
       "gzipBytes": 5057,
       "gzipSha256": "548c23c898c502d9c4ad1430238e78aae2b706ff7eb0b6139dc77beb486da5e3",
       "decodedUtf8Bytes": 23952,
       "decodedUtf8Sha256": "209ec4a0e87bda33a31f6cec135eef44afdada479b1ac7beaff1508047d7ea07",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-owner-loss-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-owner-loss-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-startup-stop-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8bec600d501c26944b79218528f8b53e2e5e69b6",
       "encoding": "gzip",
       "gzipBytes": 894,
       "gzipSha256": "3fa691d4e0a0b7b65d8afc2df227ed3b600526be7355d8de0df6c491b9dcb950",
       "decodedUtf8Bytes": 2188,
       "decodedUtf8Sha256": "6adf6f4988271d654015d105e163c713e49631db4a3106cb21a91e9c17766e83",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-startup-stop-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-startup-stop-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-stop-record-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "99c33f236a57af72c452dee45fd7a93d75fef54e",
       "encoding": "gzip",
       "gzipBytes": 1316,
       "gzipSha256": "a2a143391ec0a356c12f46431ec556399b99c0ac35580de1b7bccd6d5936b387",
       "decodedUtf8Bytes": 4116,
       "decodedUtf8Sha256": "c03e4b9ac70213bc490cbd1f6aa256f02ba298151c55bfd1fa3921cc07e83ce5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-stop-record-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source-stop-record-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "499696518f98a55b90e89dfb6e1503f869a9c1ca",
       "encoding": "gzip",
       "gzipBytes": 477,
       "gzipSha256": "b989489a0e6e1d0bc4e1a02e0095122695eb9a4ae3b9d25a23d668eac58bb5d8",
       "decodedUtf8Bytes": 819,
       "decodedUtf8Sha256": "18252fe7d2bad07d1d6af48734a4aa595a4ef9d9d37ebd098fd4e71aab1bb4e2",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4-source.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "49fdc22457cee18d51afd7d7e45729d9f3f91566",
       "encoding": "gzip",
       "gzipBytes": 2281,
       "gzipSha256": "23239109b23136992cbc77d3dff58cfa627c6ecac34b71b3eb607fe8eb99ed10",
       "decodedUtf8Bytes": 7838,
       "decodedUtf8Sha256": "90b3fe805e9dd5efcdeeeeee0d67c18e246c65e851aed3541e8ede7a8f82385a",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/focused-attempt4.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "319d1c747bd116e1fdc66e85f35e8c6ada99cc1d",
       "encoding": "gzip",
       "gzipBytes": 223,
       "gzipSha256": "cfdde7748dbfe6f9981e1ab62043572ceb2286941667ac9b34ebd4d3a534654a",
       "decodedUtf8Bytes": 292,
       "decodedUtf8Sha256": "cddb8a6618391b02526dd7e405a130b6f4947acfc5536a7728161feb8e6acecf",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1-shared-test.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "1a6e2ae5614dde292e9023be31cf5cecb4ffebb7",
       "encoding": "gzip",
       "gzipBytes": 4648,
       "gzipSha256": "2e62e40f1ba019093da7f4191037fc43db2d437d0e594d34c12cc5342bcf54ac",
       "decodedUtf8Bytes": 21849,
       "decodedUtf8Sha256": "0a9ddbed0afe21eb67f95e024cd4121594f5d5486ab05ce48a4a9f5f7bd09241",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1-shared-test.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1-shared-test.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1-source.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "2ad46adfbeba255eb4350fb833d03894a15562ce",
       "encoding": "gzip",
       "gzipBytes": 442,
       "gzipSha256": "febe6ea2742689ecd4205751edd18c5dac1f10818af444a3531aa02742879865",
       "decodedUtf8Bytes": 680,
       "decodedUtf8Sha256": "e9fef4b04c572e35244726ddce007396f7a852d4f3d85f94aeb52e77a1bcf982",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1-source.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1-source.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "62757307fe605a7550b7a56f52af4327fbd6e882",
       "encoding": "gzip",
       "gzipBytes": 313,
       "gzipSha256": "e1de9af7f1a7fc8c1c0af14f8ba2006cd54089fd77a0fecc0f0aeb2239861039",
       "decodedUtf8Bytes": 609,
       "decodedUtf8Sha256": "e8fbc53eacaab1abf5a743c7045858b72ed87f18e62193b81360db2d9f0be5f3",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "e040def69508013c11ccd271b6ee8d6f61bba61a",
       "encoding": "gzip",
       "gzipBytes": 849,
       "gzipSha256": "e56edbe6c520efb415b09410e54f0dc5aa1ca5a253410c10b6d544da0cbf9abb",
       "decodedUtf8Bytes": 3877,
       "decodedUtf8Sha256": "de08fa1f3e5600476d2ddb02207519f961b512d006eb4ea77a1f935fe02a7270",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-controls-attempt1.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-fixture-attempt1.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8f41738a95271e09c90040f3f44c9c468ad923b3",
       "encoding": "gzip",
       "gzipBytes": 6224,
       "gzipSha256": "060a3bca9914e87daf131d819c46c6421afcda93260191644cbf53042c9c3f1b",
       "decodedUtf8Bytes": 22727,
       "decodedUtf8Sha256": "778e7c77064c73c8c5281082cb73d7e07a89ffd79dc84089c283204c4f8f8bdb",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-fixture-attempt1.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-fixture-attempt1.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-policy-provider-attempt1-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "7232f50326acfd571db59bae0cd1a19c51866488",
       "encoding": "gzip",
       "gzipBytes": 1248,
       "gzipSha256": "2b9de2fea36bc07e3d554e63c2e673262b7339593da75cc1724e5de3e7b9e85a",
       "decodedUtf8Bytes": 2625,
       "decodedUtf8Sha256": "b06ebf4026065256ba6178984009539a8fc53d6ae5c9d6e3c11b9b134ff0a74c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-policy-provider-attempt1-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-policy-provider-attempt1-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-policy-provider-attempt1.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "71a5124f8a07d6efeb53596bd651540e52a93bd2",
       "encoding": "gzip",
       "gzipBytes": 4310,
       "gzipSha256": "eaf36a3cca9ed3870da3c6659cd069e43bcd9f16a2c5f9a9c2baaaca18d945bf",
       "decodedUtf8Bytes": 12674,
       "decodedUtf8Sha256": "9c143fa2bb7ded308c55e6a66326234bf36e4dd697fcace6d0df59cf36286001",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-policy-provider-attempt1.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-policy-provider-attempt1.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-source-attempt1.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "2379783bf4de36060dd36555a5de10875b4fb130",
       "encoding": "gzip",
       "gzipBytes": 8130,
       "gzipSha256": "465763a265b2a6d28c3b0771c31ada16e57cc41ea2072d6c9d0d9a8857908849",
       "decodedUtf8Bytes": 28694,
       "decodedUtf8Sha256": "04e725005c593cfa11ffd1a5885b891b7d8e92f0d0b4b6257d75f326b4bfd073",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-source-attempt1.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/original-source-attempt1.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "bb781eff20c805a3738cd7f7547cabfdbe73d849",
       "encoding": "gzip",
       "gzipBytes": 388,
       "gzipSha256": "bb78eb57e546681a49a4c35423bd217d35d24fe9da40b5a7d38a160c6618d488",
       "decodedUtf8Bytes": 575,
       "decodedUtf8Sha256": "3bbc5aa8d321de7cf9d7db0edfffa1a5ebc44311eab24d1d59abad90bd0d2f3f",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-source-engine-transport-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "328c78db660b419a8a859cb91fc29d42b19a8091",
       "encoding": "gzip",
       "gzipBytes": 6177,
       "gzipSha256": "c1185d1edf7f3c327a2a6f4da45c0bea351e3dde3e857cd4b32239664955dfe3",
       "decodedUtf8Bytes": 22660,
       "decodedUtf8Sha256": "b1dd2eb06681f9d2ab57c0d13025ce76113da5b3334e144c978329699f66b72c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-source-engine-transport-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-source-engine-transport-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-source-operation-containment.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "dbc10a0ad71ea126afe6e0b4023c8dfc030507ab",
       "encoding": "gzip",
       "gzipBytes": 9805,
       "gzipSha256": "0dc5be514f9a84fba340898e88de8093e4061177a80750d8b4badd7b1a7b72b0",
       "decodedUtf8Bytes": 38792,
       "decodedUtf8Sha256": "ba77f589bf870ef89981f9b1c211018da33e65a13bf27dc0b6e7e97dee66289f",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-source-operation-containment.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-source-operation-containment.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-source-owner-loss-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8b41b2b74584e5ae8f8ff73e2be6ad2e60fbd813",
       "encoding": "gzip",
       "gzipBytes": 5057,
       "gzipSha256": "548c23c898c502d9c4ad1430238e78aae2b706ff7eb0b6139dc77beb486da5e3",
       "decodedUtf8Bytes": 23952,
       "decodedUtf8Sha256": "209ec4a0e87bda33a31f6cec135eef44afdada479b1ac7beaff1508047d7ea07",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-source-owner-loss-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1-source-owner-loss-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "becf5c140208121852d5988a98ba91b50dece42d",
       "encoding": "gzip",
       "gzipBytes": 187,
       "gzipSha256": "f85ce501448775f21f4fdc514e36ee18dbd50154671c1fa72707b80a95d2cbb7",
       "decodedUtf8Bytes": 234,
       "decodedUtf8Sha256": "129fa637539f5a9ae5b4175893ec3c164bd2de7e086a1321bd7884ed4d172d3d",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-green-attempt1.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "b7c9cd12a298093ad25bc3b47ce90654c5bcbdc1",
       "encoding": "gzip",
       "gzipBytes": 445,
       "gzipSha256": "0eb24f3c599b2b1e51884d74a12c10fbc7a6bbf7d495c6ae2432078718991c6b",
       "decodedUtf8Bytes": 663,
       "decodedUtf8Sha256": "8bb1af263b2c7c2eed6a519186cbe22f89c67c2c3ea0fb3d38e56f91e3b6c12d",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-source-engine-transport-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "455f63e06f54c0adbfbcb4eaead5e384e8137afd",
       "encoding": "gzip",
       "gzipBytes": 6303,
       "gzipSha256": "664ec0ce4af00f55c3598abdb8fdb806114922f18ae0b9a8b29f193209e0ae4f",
       "decodedUtf8Bytes": 23320,
       "decodedUtf8Sha256": "78b1810973b60e5f7aab53302ddc4df7672b51cb701c2ff8f72601f5cb3686ff",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-source-engine-transport-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-source-engine-transport-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-source-operation-containment.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "fc45ebdfd1b15dbc34e3906900368d0e624a56ee",
       "encoding": "gzip",
       "gzipBytes": 9631,
       "gzipSha256": "62132916915bb6c0460babdd592af565a98c784bed0a912e962bfaa0fc2b82be",
       "decodedUtf8Bytes": 37607,
       "decodedUtf8Sha256": "bb6ff80fc9b7a92cc90a69a62e670d34ec533135dbe9d9d0dc6feec34ace3eb5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-source-operation-containment.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-source-operation-containment.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-source-owner-loss-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "406f946781e0beb3a117fb664d2cdaeae933fa11",
       "encoding": "gzip",
       "gzipBytes": 4899,
       "gzipSha256": "c1c53b19a1ba57508cc5d032e8fbc13e8c93582de2d4856751071c37d2e6683c",
       "decodedUtf8Bytes": 23194,
       "decodedUtf8Sha256": "c7df67d7237c0e31be75269fd17c486ea6a751b01e0ff29fb2b6399d884f71fc",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-source-owner-loss-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1-source-owner-loss-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "5d5187754bfedf3a573089f807200a129841f06b",
       "encoding": "gzip",
       "gzipBytes": 192,
       "gzipSha256": "b449ebaf6f9ea628d7adcb591d60ef62a0d98a6e03432714bc48c2769fa21bff",
       "decodedUtf8Bytes": 243,
       "decodedUtf8Sha256": "b915694e106714b71df5b940f8e93f0dd55b8d0eebf2d4c90c0374cf75284819",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt1.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "a64e1f6aa8a9aae995d189610c6f35bc8b1be797",
       "encoding": "gzip",
       "gzipBytes": 463,
       "gzipSha256": "6584a321397e09b6404d402e685c3889960bcea5148782ba98334ea6ef1077f8",
       "decodedUtf8Bytes": 690,
       "decodedUtf8Sha256": "97b371fa35ebc24e8ca040987b80bd47f70be3dda336f2500dc8f1fe21362770",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-source-engine-transport-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "328c78db660b419a8a859cb91fc29d42b19a8091",
       "encoding": "gzip",
       "gzipBytes": 6177,
       "gzipSha256": "c1185d1edf7f3c327a2a6f4da45c0bea351e3dde3e857cd4b32239664955dfe3",
       "decodedUtf8Bytes": 22660,
       "decodedUtf8Sha256": "b1dd2eb06681f9d2ab57c0d13025ce76113da5b3334e144c978329699f66b72c",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-source-engine-transport-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-source-engine-transport-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-source-operation-containment.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "fc45ebdfd1b15dbc34e3906900368d0e624a56ee",
       "encoding": "gzip",
       "gzipBytes": 9631,
       "gzipSha256": "62132916915bb6c0460babdd592af565a98c784bed0a912e962bfaa0fc2b82be",
       "decodedUtf8Bytes": 37607,
       "decodedUtf8Sha256": "bb6ff80fc9b7a92cc90a69a62e670d34ec533135dbe9d9d0dc6feec34ace3eb5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-source-operation-containment.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-source-operation-containment.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-source-owner-loss-components.cjs.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "8b41b2b74584e5ae8f8ff73e2be6ad2e60fbd813",
       "encoding": "gzip",
       "gzipBytes": 5057,
       "gzipSha256": "548c23c898c502d9c4ad1430238e78aae2b706ff7eb0b6139dc77beb486da5e3",
       "decodedUtf8Bytes": 23952,
       "decodedUtf8Sha256": "209ec4a0e87bda33a31f6cec135eef44afdada479b1ac7beaff1508047d7ea07",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-source-owner-loss-components.cjs.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2-source-owner-loss-components.cjs.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "045ffb273fb6da76558ff8da38a3b3de7b431fd6",
       "encoding": "gzip",
       "gzipBytes": 560,
       "gzipSha256": "6030dc64b206ca433850bb969846161f130ef57444f11c1a2263db17920d1489",
       "decodedUtf8Bytes": 1308,
       "decodedUtf8Sha256": "8e5b9b9e9b803862c5087e8693a3b2cd23fa4c699cd6ba726250aaae2f2c7e6b",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/pending-attach-close-red-attempt2.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-docs.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "ae5a269c7c2585923e23a84699aedd3a12324a79",
       "encoding": "gzip",
       "gzipBytes": 232,
       "gzipSha256": "b570189e8f7902fec6eba5c94c2f6a25886edbe79fdba21f140e5928d38d52c8",
       "decodedUtf8Bytes": 323,
       "decodedUtf8Sha256": "ba86a3bc3e17d55ab4ac0f5896a05f637d0773a9fcc164da9573c0ca813a34c5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-docs.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-docs.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-generate.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "5b136a19f7a62598194d8c2bb982aad1f1fa760f",
       "encoding": "gzip",
       "gzipBytes": 1101,
       "gzipSha256": "55518fab02a7d74ee2c1059f846180f51c7d793394cad02016eba927ea275f39",
       "decodedUtf8Bytes": 2499,
       "decodedUtf8Sha256": "a6de6f907a57aeb9390fc36c5931914e20790c86828849fae09e57068ad3d27f",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-generate.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-generate.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-graphify.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "ff1cd43f9272e6b0b5a71cebfd035dab6f847df0",
       "encoding": "gzip",
       "gzipBytes": 937,
       "gzipSha256": "b1da7117f59c9dbdeef7ae56486a7412cb2a6522807c66244615a3e54adadab8",
       "decodedUtf8Bytes": 3743,
       "decodedUtf8Sha256": "8dd8e080dffd7994202f3e27641ac6f88c5220502cab665f7370edc041bcaa71",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-graphify.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-graphify.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "e361a7f21294fa5828342aa54c13b49b23c88816",
       "encoding": "gzip",
       "gzipBytes": 477,
       "gzipSha256": "916868cf01e612f9482daf66a30a12fdfcfe3d62e0f26d0de7f0668bf137667c",
       "decodedUtf8Bytes": 1317,
       "decodedUtf8Sha256": "e84b47f2d7d7f9a20b471f40c7e5e23215b5dc7e8a987d7d5ae784c8bcf9ff67",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-specifications.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "c59bae78100d58f44ab5860fdb06f535f7829d3e",
       "encoding": "gzip",
       "gzipBytes": 1092,
       "gzipSha256": "ed718b5649bd673e1d3f786b866e84a9418fe1ecc7aad728f7030cc6462e4b3c",
       "decodedUtf8Bytes": 2493,
       "decodedUtf8Sha256": "ca5110c7f9564c59a8b9beeaf0ef9d6aba98d08fadd6ca949bc7b8e38c4415f3",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-specifications.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-specifications.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-types.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "56d5d34cc9b98864acf192e4cde04e17daa27ebc",
       "encoding": "gzip",
       "gzipBytes": 264,
       "gzipSha256": "eeaa38073bdefc37e94de038ba68429080a381e45cbbedee81673dee82b9862e",
       "decodedUtf8Bytes": 623,
       "decodedUtf8Sha256": "3e7c38815cf2e6015bd19d50846d49ff28b3ee8c759ddb0d3cb13917502fcbfc",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-types.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt1-types.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-docs.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "ae5a269c7c2585923e23a84699aedd3a12324a79",
       "encoding": "gzip",
       "gzipBytes": 232,
       "gzipSha256": "b570189e8f7902fec6eba5c94c2f6a25886edbe79fdba21f140e5928d38d52c8",
       "decodedUtf8Bytes": 323,
       "decodedUtf8Sha256": "ba86a3bc3e17d55ab4ac0f5896a05f637d0773a9fcc164da9573c0ca813a34c5",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-docs.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-docs.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-generate.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "6138cdd4c79e2e3a316fba1764f01403e23badd3",
       "encoding": "gzip",
       "gzipBytes": 1102,
       "gzipSha256": "a986199032600edb04219af9ba29ef97a55ad1dc31136c8108cc06092cb12f76",
       "decodedUtf8Bytes": 2503,
       "decodedUtf8Sha256": "6226b4c1ffd0e4aadfc6fd7d29216136e96692f23135444952f737cb48d14c58",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-generate.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-generate.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-graphify.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "b04e279c770feae24b11578d42e77a8dbea9f9ec",
       "encoding": "gzip",
       "gzipBytes": 937,
       "gzipSha256": "1c8b511c2a2ca3d75365b1e9a5f39c41b3c7880354be3aeb093ea4b831dc6197",
       "decodedUtf8Bytes": 3743,
       "decodedUtf8Sha256": "2d7c3ad0a58afbc887ea319d7a34952803c4fc2c5872731c38953d56f91c8fe7",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-graphify.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-graphify.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-receipt.json.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "942a4bf24388eb7ed15310b63052f917def41569",
       "encoding": "gzip",
       "gzipBytes": 480,
       "gzipSha256": "f80858d667037e7dacbf2437fc7cefe1b11130eac125755b1b8e7687ed3d339c",
       "decodedUtf8Bytes": 1317,
       "decodedUtf8Sha256": "abe94fcfc154a8fd105d3939b195a7afafa2ed37c01de8b65bfac786cec978b7",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-receipt.json.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-receipt.json.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-specifications.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "a401120d7713ffcaaecf4675c068e6bea975e007",
       "encoding": "gzip",
       "gzipBytes": 1088,
       "gzipSha256": "b69f63942f48095a98b24ac081abd67990dce663265e8f5f297d337d17f4a255",
       "decodedUtf8Bytes": 2494,
       "decodedUtf8Sha256": "d94ec94ca3a59038faf05efcc112fed2d6d14387134caa878d67a5b6a96b8c97",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-specifications.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-specifications.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     },
     {
       "path": "quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-types.log.log.gz",
-      "archiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "archiveRevision": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
       "gitBlob": "56d5d34cc9b98864acf192e4cde04e17daa27ebc",
       "encoding": "gzip",
       "gzipBytes": 264,
       "gzipSha256": "eeaa38073bdefc37e94de038ba68429080a381e45cbbedee81673dee82b9862e",
       "decodedUtf8Bytes": 623,
       "decodedUtf8Sha256": "3e7c38815cf2e6015bd19d50846d49ff28b3ee8c759ddb0d3cb13917502fcbfc",
-      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/093fd141fd513c92d3d0eb28ba8d40805a5e8b90/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-types.log.log.gz"
+      "permanentBlobUrl": "https://github.com/vypdev/copilot/blob/82235ac53e8c9477bdc8041112e8ccb9e56d3ccc/quality/bugbot/evidence/issue-974/controls/owner-loss-removal/validation-attempt2-types.log.log.gz",
+      "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90"
     }
   ],
   "retrieval": "git show <archiveRevision>:<path>, verify gzipSha256 and decodedUtf8Sha256",
-  "allOriginalBytesRemainReachable": true
+  "allOriginalBytesRemainReachable": true,
+  "originalArchiveRevision": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "historyRewritten": true,
+  "privacyRedaction": "Only21 historical account-bearing host prefixes were redacted at maintainer request. Archive log blobs/bytes are unchanged. Original scientific identities stay historical claims; these are reachable redacted-mirror retrieval locators.",
+  "historyRedactionManifest": "quality/bugbot/evidence/issue-974/controls/history-redaction.json"
 }

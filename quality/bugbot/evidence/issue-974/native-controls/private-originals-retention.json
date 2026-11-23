@@ -7,8 +7,7 @@
   "privateArchiveSha256": "bcd062574be4b7477f118b11dabb78a93c8e1a6ffcb03200cd4f89b13ca8c902",
   "originalsVerified": 20,
   "originalsChanged": false,
-  "historyRewritten": false,
-  "originalsRemainInExistingGitHistory": true,
+  "historyRewritten": true,
   "records": [
     {
       "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C32.json",
@@ -156,5 +155,10 @@
   "currentPreregistrationChanged": false,
   "scientificCallsAdded": 0,
   "pilotWrites": 0,
-  "production": "disabled"
+  "production": "disabled",
+  "originalsRemainInSanitizedBranchHistory": false,
+  "redactedPublicMirrorSource": "188ed25bdb2fea743a0d471a544f42c8f581bf4d",
+  "githubCachedOriginalsStillPublicAtReadback": true,
+  "githubPurgeStatus": "PENDING_GITHUB_SUPPORT; old raw revision HTTP200 and21 review-comment diff hunks remain; branch redaction is complete, total deletion is not claimed",
+  "historyRedactionManifest": "quality/bugbot/evidence/issue-974/controls/history-redaction.json"
 }

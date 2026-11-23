@@ -679,3 +679,12 @@ These five cases extend existing controls without changing the35logical IDs.
 The original controlled failures and corrected positives are retained separately.
 No new scientific/native admission is inferred; future measurement needs a new
 complete source/driver/runtime tuple and committed preregistration.
+
+## Historical privacy redaction
+
+At the maintainer’s request,21 historical host-path blobs were redacted with a
+verified exact-head lease. The original scientific identities/results remain
+privately preserved; public mirrors are explicitly derived. Archive retrieval
+locators use the reachable mirrors without changing any gzip bytes. GitHub
+cached originals and historical review diff hunks still require hosted removal.
+[Mapping, verification and limits](../issue-974/controls/history-redaction.md).
