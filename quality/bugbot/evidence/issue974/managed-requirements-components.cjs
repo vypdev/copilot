@@ -134,8 +134,8 @@ test('ev974-C26 the qualification-only system artifact covers every fixed privat
     const text = fs.readFileSync(path.join(root, relative), 'utf8').split('\n').filter(line => !line.startsWith('#')).join('\n').trim();
     assert(text.startsWith('[permissions.filesystem]\ndeny_read = '));
     const paths = JSON.parse(text.slice(text.indexOf('=') + 1));
-    assert.deepEqual(paths, ['/proc', '/sdk', '/tmp/bugbot-contained-worker-*/source',
-        '/tmp/bugbot-contained-worker-*/home/.codex/auth.json', '/qualification-input/private-credentials.json',
+    assert.deepEqual(paths, ['/proc', '/sdk', '/tmp/bugbot-contained-worker/source',
+        '/tmp/bugbot-contained-worker/home/.codex/auth.json', '/qualification-input/private-credentials.json',
         '/qualification-input/invocation.json', '/qualification-input/plan.bundle',
         '/qualification-input/campaign/corpus-v3', '/qualification-output']);
 });

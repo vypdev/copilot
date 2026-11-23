@@ -576,8 +576,9 @@ Prepare source/image -> review exact exception -> actual CLI and SDK checks
  -> commit scientific preregistration ->174 -> only same-tuple PASS permits42
 ```
 
-Actual acceptance additionally requires13 CLI cases: positive workspace read,
-nine private-root denials, symlink alias denial, write denial and network denial.
+Actual acceptance additionally requires14 CLI cases: positive workspace read,
+nine private-root denials, controller-directory masking, symlink alias denial,
+write denial and network denial.
 Use dummy canaries and require positive sandbox entry so a startup failure
 cannot pass a denial. Actual ordinary SDK/model-tool credential/oracle exclusion
 remains separate. Fresh C32–C35 on the common tuple remain mandatory: C32 now
@@ -591,3 +592,19 @@ the preceding immutable implementation/image when needed; never rewrite old
 plans or receipts. A deterministic PASS, build, syscall trial or native-only
 control does not qualify a profile. Production remains disabled and evaluated
 pilot writes remain0.
+
+The previous fixed-filter image's actual CLI result is12PASS/1FAIL: the private
+controller directory glob did not hide its file content. Codex expands these
+globs as regular-file matches. The worker now exclusively creates the fixed
+private `/tmp/bugbot-contained-worker` inside each operation's existing tmpfs;
+the policy literally masks its `source` directory and auth file. Existing paths,
+symlinks, a linked temporary parent or redirected temporary root reject startup.
+Five real-filesystem component cases use modeled Linux paths; they do not prove
+native denial. Real corpus/subject workspaces stay separate. Source changes
+require a fresh image, common runtime receipts and committed plan.
+
+Owned Node witnesses write with `fs.writeSync`, as established by the retained
+PR1003 diagnostics. Restricted socket introspection can cause ordinary Node
+streams to discard output. Raw witness success does not claim Node stream or
+ordinary SDK/model-tool compatibility. The initial TOML reader, missing-stream
+marker and refuted helper-home hypothesis remain separate retained negatives.

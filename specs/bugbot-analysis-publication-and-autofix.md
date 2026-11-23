@@ -5158,7 +5158,7 @@ before measurement. File admission alone does not permit a campaign.
 
 The fixed policy denies `/proc`, `/sdk`, the private scratch SDK source and
 Codex auth file, the credential/invocation/bundle inputs, independent corpus
-oracles, and qualification output. The complete nine literal/glob entries live
+oracles, and qualification output. The complete nine literal entries live
 in the reviewed TOML and its contract test. Subject workspaces remain governed
 by the existing ordinary read-only provider and evidence boundaries. Neither
 the dataset nor a global `/tmp` denial becomes configurable. Existing network,
@@ -5307,16 +5307,17 @@ silently retry, broaden the filter or replace earlier evidence. Rollback is to
 the preceding immutable implementation/image; it does not erase a negative or
 reuse a plan for a different tuple. Nothing changes on the daemon or runners.
 
-The risk-derived minimum is **29 distinct verification cases**, counted once:
+The risk-derived minimum is **35 distinct verification cases**, counted once:
 
 | Area | Cases | Required behavior |
 |---|---:|---|
 | Deterministic fixed policy/configuration |5| Preserve the entire baseline; constrain clone; constrain unshare; constrain filesystem additions; reject public override fields. |
 | Actual local HTTP with modeled Engine |4| Send exact bytes with unchanged capabilities; reject missing, changed and unconfined filter inspections before start. |
 | Public immutable bootstrap |3| Reject missing, changed and linked profile modules before imports/probes/scopes. |
-| Actual CLI isolation |13| Positive workspace read; denial of each of the nine fixed private roots; linked alias denial; write denial; network denial. |
+| Fixed worker scratch |5| Exclusive private creation; refuse existing directory and symlink; reject linked temporary parent and ambient temporary-root redirection. |
+| Actual CLI isolation |14| Positive workspace read; denial of each of the nine fixed private roots; controller-directory masking; linked alias denial; write denial; network denial. |
 | Actual common-tuple native SDK |4| Existing C32–C35, with C32 additionally holding a detached nested USER/MNT/PID/IPC/NET bubblewrap workload during abort. |
-| **Total** |**29**| The13 CLI cases and four native cases remain separate runtime acceptance, not deterministic test credit. |
+| **Total** |**35**| The14 CLI cases and four native cases remain separate runtime acceptance, not deterministic test credit. |
 
 `seccomp-components.cjs` owns the12 deterministic cases. The existing35 logical
 qualification IDs and scientific174/42 inventories stay unchanged. C32 retains
@@ -5340,12 +5341,73 @@ test source before loading it; instrumentation never enters native execution.
 
 Acceptance maps EV974-S01 to the three bootstrap refusals; EV974-S02/S03 to the
 five policy and four HTTP cases plus actual CLI exclusions; and EV974-S04 to
-fresh C32–C35 including the nested arm. Definition of Done requires all29 on the
+fresh C32–C35 including the nested arm. Definition of Done requires all35 on the
 same reviewed tuple, actual SDK model-tool exclusion, final source checks and
 committed scientific preregistration. No preparation state closes acceptance.
 The quality operations page and evidence README MUST describe the fixed filter,
 authorization, distinction between component/native evidence, recovery and
 rollback; the catalog includes source, provenance/license and component tests.
+
+#### Literal private controller root after actual CLI exclusion failure
+
+The approved fixed-filter image at implementation `faea9e2c` produced an actual
+**12 PASS /1 FAIL** CLI result: the positive workspace marker and eight other
+private-root denials passed, but a dummy file inside the controller source was
+readable. The thirteen cases used raw descriptor witnesses. Earlier attempts
+retain a multiline TOML fixture-reader failure and a discarded Node-stream
+witness; an outside-temporary-home contrast refuted the helper-alias warning as
+the missing marker's explanation. No corpus/model call occurred. These
+negatives cannot be relabeled as accepted runtime evidence.
+
+The [pinned glob expansion](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/linux-sandbox/src/bwrap.rs)
+enumerates regular files, so a glob naming the source directory did not mask its
+tree. The worker MUST exclusively create `/tmp/bugbot-contained-worker` inside
+its existing per-operation private tmpfs, using mode0700 and no adoption,
+overwrite or recursive mkdir. `/tmp` MUST be canonical and the actual temporary
+root; redirection rejects before creation. One authenticated worker already
+owns each fresh container, so parallel outer operations have separate namespaces
+and cannot collide at this internal path. A preexisting directory or symlink
+is incomplete startup, never a reusable workspace or retry grant.
+
+The system policy MUST literally deny the complete
+`/tmp/bugbot-contained-worker/source` directory and
+`/tmp/bugbot-contained-worker/home/.codex/auth.json`. Source cloning,
+dependency/driver admission and credential loading retain their order; scratch
+creation remains Node-core code inside the independently pinned bootstrap
+before any application import. No endpoint, port, profile field, flag, mount,
+capability or syscall permission is introduced. The approved fixed seccomp
+export and production defaults remain unchanged.
+
+```text
+Fresh owned namespace -> exclusive fixed private root -> literal source mask
+ -> positive workspace witness plus private-tree denial -> remaining gates
+```
+
+Text equivalent: each complete operation owns a filesystem namespace; its fixed
+private path enables a directory mask without a broad glob scan. Real
+subject/corpus workspaces stay outside the controller root. This does not
+replace subject source with an empty workspace.
+
+Five C26 cases in `worker-scratch-components.cjs` use real owned files with
+modeled Linux paths. They prove creation/refusal behavior, not native isolation.
+The artifact contract retains nine literal roots; CLI acceptance grows to14
+cases by independently proving that original controller directory entries
+cannot be enumerated, as well as denying its file content. Owned witnesses MUST
+use synchronous raw descriptor writes; Node stream compatibility remains
+unproven and is not repaired by relaxing network or seccomp policy. No
+assertion, label, scientific floor or prior failure is removed. The existing35
+logical IDs remain unchanged.
+
+Acceptance requires all568 deterministic regressions on final committed source,
+unchanged source/package/coverage/architecture/spec/catalog/docs gates, and new
+common-tuple14 CLI and four native receipts before scientific preregistration.
+The earlier image and unexecuted native plans remain historical preparation.
+A new policy requires a new image and committed plan. The operator UI says
+`Private source exclusion failed;174 remains unstarted` until actual same-tuple
+denial passes; partial results never say qualified. Keep the existing canonical
+comment and history. Documentation/catalog record the static path, no-adoption
+recovery and component/native distinction. Rollback preserves the preceding
+immutable image, plan and negative inputs.
 
 | Path | Change |
 |---|---|
@@ -5371,6 +5433,7 @@ rollback; the catalog includes source, provenance/license and component tests.
 | `quality/bugbot/evidence/issue974/qualification-seccomp.LICENSE` | create |
 | `quality/bugbot/evidence/issue974/seccomp-components.cjs` | create |
 | `quality/bugbot/evidence/issue974/managed-requirements-components.cjs` | create |
+| `quality/bugbot/evidence/issue974/worker-scratch-components.cjs` | create |
 | `quality/bugbot/evidence/issue974/containment-native.test.cjs` | create |
 | `quality/bugbot/evidence/issue974/containment-native-fixture.cjs` | create |
 | `src/domain/agent_execution_plan.ts` | update |

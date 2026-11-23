@@ -1307,6 +1307,21 @@ plan. Host-local execution on a machine running self-hosted listeners must be
 identified as local execution; it is not a GitHub Actions job. These Linux
 runtime checks establish no Desktop Setup or human/platform acceptance.
 
+The previous image's actual CLI controls retained12PASS/1FAIL: a directory glob
+left private controller content readable. The worker now exclusively creates
+`/tmp/bugbot-contained-worker` inside each operation's private tmpfs, and the
+system requirements literally mask its source directory and auth file. Existing
+paths, symlinks or a redirected/linked temporary parent reject startup without
+adoption. Actual acceptance includes both private file denial and masking its
+original directory entries. Real subject workspaces remain separate.
+
+Five component cases model these paths over real owned files; fresh14-case CLI
+and C32–C35 native proof remain required on a new image and committed tuple.
+Owned Node witnesses use raw `fs.writeSync` descriptors: restricted socket
+introspection can make ordinary streams discard output. This does not prove
+Node stream or ordinary SDK/model-tool compatibility. Preserve the original
+TOML-reader, missing-marker, refuted helper-home and private-source negatives.
+
 ### Deletion-only citation metadata
 
 A deletion-only hunk contains no new-side changed lines. A citation spanning

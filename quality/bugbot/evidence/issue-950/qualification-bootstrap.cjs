@@ -342,6 +342,16 @@ function operationSlot(plan, mode, identity, slot, root) {
 
 /** Not exported and not a public CLI mode. Only the immutable image's PID1
  * may fork this exact external bootstrap over a private inherited IPC fd. */
+function createContainedWorkerScratch() {
+    // Each complete operation has its own fresh PID namespace and /tmp tmpfs.
+    // Literal deny_read roots mask directories; Codex's glob scan returns files only.
+    assert.equal(os.tmpdir(), '/tmp', 'fixed contained tmpfs required');
+    assert.equal(fs.realpathSync('/tmp'), '/tmp', 'canonical contained tmpfs required');
+    const scratch = '/tmp/bugbot-contained-worker';
+    fs.mkdirSync(scratch, { mode: 0o700 }); // Exclusive: never adopt an existing path.
+    return scratch;
+}
+
 async function launchContainedWorker() {
     assert(process.channel && process.connected && process.argv.length === 2, 'private image worker unavailable');
     assert.equal(process.platform, 'linux'); assert.equal(process.ppid, 1);
@@ -373,8 +383,7 @@ async function launchContainedWorker() {
     assert.match(proof.planCommit, /^[a-f0-9]{40}$/u); safePath(proof.planPath);
     assert.match(proof.planSha256, /^[a-f0-9]{64}$/u); assert.equal(sha256(fs.readFileSync(__filename)), proof.bootstrapSha256);
     const bundle = privateFile('plan.bundle'); assert.equal(sha256(fs.readFileSync(bundle)), input.bundleSha256);
-    const scratch = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'bugbot-contained-worker-')));
-    fs.chmodSync(scratch, 0o700);
+    const scratch = createContainedWorkerScratch();
     const root = path.join(scratch, 'source'), imageTrust = gitFor('/sdk');
     execFileSync(imageTrust.executable, ['-c', 'core.hooksPath=' + os.devNull, 'clone', '--quiet', '--shared',
         '--no-checkout', '--template=', '/sdk', root], { env: imageTrust.env });
