@@ -2663,7 +2663,8 @@
         "quality/bugbot/evidence/issue-950/shadow-verification/README.md",
         "quality/bugbot/evidence/issue-950/review-progress-follow-up.md",
         "quality/bugbot/evidence/issue-985/README.md",
-        "quality/bugbot/evidence/issue974/README.md"
+        "quality/bugbot/evidence/issue974/README.md",
+        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/README.md"
       ]
     },
     {
@@ -2978,7 +2979,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance Qualification atomically consumes each complete operation identity and namespace before callback entry, rejecting parallel or terminal replay before ordinary planner preparation.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-22",
+      "lastVerified": "2026-11-23",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -3050,7 +3051,8 @@
         "src/application/ports/qualification_operation_scope_ports.ts",
         "src/application/policies/qualification_operation_scope_policy.ts",
         "src/infrastructure/agents/qualification_operation_scope.ts",
-        "src/data/repository/agent_authentication.ts"
+        "src/data/repository/agent_authentication.ts",
+        "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -3093,7 +3095,8 @@
         "src/application/policies/__tests__/sdd_source_context_presentation.test.ts",
         "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts",
         "src/infrastructure/agents/__tests__/qualification_investigation.test.ts",
-        "src/architecture/__tests__/agent_output_locale_boundaries.test.ts"
+        "src/architecture/__tests__/agent_output_locale_boundaries.test.ts",
+        "quality/bugbot/evidence/issue974/sdk-runtime-admission-components.cjs"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",
@@ -3114,7 +3117,8 @@
         "docs/security-operations/security/self-hosted-runners.mdx",
         "docs/security-operations/operations/upgrade-rollback.mdx",
         "docs/security-operations/operations/smoke-tests.mdx",
-        "docs/development/testing.mdx"
+        "docs/development/testing.mdx",
+        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/README.md"
       ]
     },
     {

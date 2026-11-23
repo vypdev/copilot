@@ -98,10 +98,15 @@ async function runWorker(output, plan, operation, record) {
                 const flags = codexInvocation(execution.argv);
                 assert.deepEqual(flags, { model: plan.detector.model, modelProvider: plan.detector.modelProvider,
                     reasoningEffort: plan.detector.effort, sandbox: 'read-only' });
+                const schemaArtifactSha256 = execution.artifacts.find(item => item.purpose === 'output-schema')?.sha256 ?? null;
+                assert.match(schemaArtifactSha256 ?? '', /^[a-f0-9]{64}$/u, 'native schema proof required before execution');
+                assert.equal(execution.workspaceMode, 'read-only');
+                assert.equal(execution.output, 'native-and-local-json-schema');
+                assert.equal(execution.qualificationInvestigation, true);
                 prepared({ flags, runtimeProof, runtimeContract: execution.runtimeContract,
                     workspaceMode: execution.workspaceMode, output: execution.output,
                     qualificationInvestigation: execution.qualificationInvestigation === true,
-                    schemaArtifactSha256: execution.artifacts.find(item => item.purpose === 'output-schema')?.sha256 ?? null });
+                    schemaArtifactSha256 });
                 return execution;
             } catch (error) { fs.rmSync(execution.runtimeDirectory, { recursive: true, force: true }); throw error; }
         } }, observer) });

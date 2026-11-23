@@ -1016,6 +1016,32 @@ unknown ownership, retention and recovery. Native evidence and the full frozen
 42-review closure are required before measurement; no source test qualifies a
 profile, installs a default or enables production.
 
+#### Separate actual SDK runtime-admission prerequisite — issue #974
+
+The existing private identity admits the closed `runtime-admission` purpose for
+the remaining genuine SDK/model-tool prerequisite owned by the [Bugbot runtime
+contract](./bugbot-analysis-publication-and-autofix.md#separate-authenticated-sdk-runtime-admission).
+Only the immutable reviewed bootstrap can compose its live operation. It uses
+the same findings planner/executor, cancellation-only lifecycle, read-only
+workspace, native/local schema, private Codex authentication and whole-namespace
+stop confirmation. No public/environment grant, alternate executor or ordinary
+consumer behavior is introduced. The complete scientific-slot policy MUST still
+accept only `corpus-case` and `paired-review`; a stopped runtime-control identity
+cannot qualify a corpus or admit42. Model-free native-control credentials remain
+forbidden. Runtime admission never receives an evidence/GitHub token.
+
+The Bugbot owner counts25 additional verification cases once:22 model-free
+CJS controls, the existing two extended SDK identity/slot controls and one
+separate real Luna/xhigh canary query. Independent same-tuple CLI14 and native
+C32–C35 remain separate mandatory prerequisites, counted by their existing
+owners. These controls preserve the existing35
+qualification IDs. Pure identity policy remains100% all metrics; the new runtime
+controller retains95% statements/lines and90% branches/functions through isolated
+model-free instrumentation. Instrumentation MUST NOT enter actual native/model
+execution. Actual model-tool acceptance and source-global floors remain separate
+requirements. Retain unavailable/negative prefixes and the exact implementation,
+image, driver and runtime tuple; do not retry an uncertain control automatically.
+
 #### Single-use identity and namespace admission — issue #974
 
 Observed defect: checking only the current asynchronous context rejects nested

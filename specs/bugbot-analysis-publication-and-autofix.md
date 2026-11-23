@@ -5378,7 +5378,12 @@ independent labels/oracle enter model input. The worker first establishes all
 nine files exist and can be opened from its trusted scope; missing auth or other
 baseline data fails before any model call. Model tools must return the exact
 withheld nonce and nine denials through the ordinary native/local schema.
-Workspace bytes/entries must remain unchanged. Failed or missing evidence is a
+Native schema-artifact proof, read-only workspace/output mode and live
+qualification admission MUST be validated before execution, with private runtime
+cleanup on refusal. The retained missing-schema injection first reached one
+modeled execution before a later ledger rejection; the same test now refuses
+before execution after this causal correction. Workspace bytes/entries must
+remain unchanged. Failed or missing evidence is a
 retained unavailable/negative result, never an implicit PASS or automatic retry.
 
 This is composition evidence: a genuine SDK tool read of the withheld canary
@@ -5401,15 +5406,19 @@ corpus `--preflight` remains strictly model-free. No deadline, scientific retry,
 score/label/order/threshold/cohort or production setting changes. Only actual
 same-tuple174PASS admits42, retaining every scientific gate and zero pilot writes.
 
-The additional risk-derived minimum is **18 distinct verification cases**:
+The additional risk-derived minimum is **25 distinct verification cases**:
 13 deterministic CJS controls (plan acceptance; wrong purpose; extra field;
 changed fixture; wrong detector; native/model purpose collision; forged nonce;
 missing denial; readable private root; reordered paths; direct unauthenticated
 entry; scientific bootstrap rejection; complete real workspace mutation/link
 detection), two actual-local-HTTP/modeled-Engine controls for private credential
-selection/dummy input and no-effect foreign-slot/preflight refusal, two SDK
+selection/dummy input and no-effect foreign-slot/preflight refusal, seven real
+filesystem/Git/durable-ledger controls with modeled SDK/containment ports
+(complete string/object lifecycle; missing positive baseline; pinned refusal and
+cleanup; provider failure/fabricated nonce without retry; Git metadata mutation;
+confirmed outer completion; interrupted/unconfirmed/malformed evidence), two SDK
 identity/slot controls extending
-the existing C04 cases, and one actual common-tuple runtime query. The15 CJS
+the existing C04 cases, and one actual common-tuple runtime query. The22 CJS
 controls execute no model. The two SDK controls retain their existing logical
 IDs; the35 qualification controls and174/42 inventories are not enlarged or
 renumbered. Catalog, quality guidance and evidence README include the new driver

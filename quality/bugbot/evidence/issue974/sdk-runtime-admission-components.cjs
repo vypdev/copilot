@@ -37,7 +37,7 @@ test('ev974-C26 runtime admission refuses model substitution before any applicat
 });
 test('ev974-C26 native fixture configuration cannot be combined with model-tool authority', () => {
     assert.throws(() => api.requireAdmissionPlan({ ...admitted(), nativeControl: {} }));
-    for (const delta of [{ containment: null }, { schemaVersion: 1 }, { lifecycle: 'ordinary' }]) {
+    for (const delta of [{ containment: null }, { schemaVersion: 1 }, { lifecycle: 'ordinary' }, { runtimeAdmission: null }]) {
         assert.throws(() => api.requireAdmissionPlan({ ...admitted(), ...delta }));
     }
 });
@@ -109,4 +109,150 @@ test('ev974-C27 foreign runtime slots and preflight cannot create any modeled En
         }
         assert.equal(f.requests.length, 0); assert.equal(f.events.length, 0);
     });
+});
+
+function controllerFixture(t, options = {}) {
+    // Real owned filesystem/Git and durable recorder; explicitly modeled SDK
+    // and containment ports. This cannot accredit an actual model or namespace.
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ev974-runtime-controller-'));
+    const originalCwd = process.cwd(), output = path.join(directory, 'worker-output');
+    t.after(() => { process.chdir(originalCwd); fs.rmSync(directory, { recursive: true, force: true }); });
+    const files = privatePaths.slice(0, -1).map((_, i) => path.join(directory, 'private-' + i));
+    for (const [i, target] of files.entries()) if (!(options.missingAuth && i === 3)) fs.writeFileSync(target, 'DUMMY_PRIVATE_CONTENT');
+    const mapped = value => {
+        if (typeof value !== 'string') return value;
+        if (value.startsWith('/qualification-output/runtime-admission')) return output + value.slice('/qualification-output/runtime-admission'.length);
+        const index = privatePaths.indexOf(value); return index < 0 ? value : files[index];
+    };
+    const controlledFs = new Proxy(fs, { get(target, key) {
+        if (key === 'mkdtempSync') return () => fs.mkdtempSync(path.join(directory, 'workspace-'));
+        const item = target[key]; return typeof item === 'function' ? (...args) => item(...args.map(mapped)) : item;
+    } });
+    const selected = { ...admitted(), runtime: { codex: 'codex-cli modeled', executableSha256: 'a'.repeat(64) } };
+    const cancel = new AbortController(), operation = options.host ? undefined : {
+        identity: { purpose: 'runtime-admission', operationId: 'runtime:admission' }, signal: cancel.signal,
+        preflight: false, slot: {},
+    };
+    const durable = require('./attempt-ledger.cjs');
+    const proof = require('../issue-950/execution-provenance.cjs');
+    let attempts = 0, preparations = 0, scopes = 0, runtimeDirectory;
+    class ModeledClient {
+        constructor(planner, observer) { this.planner = planner; this.observer = observer; }
+        async execute(request) {
+            const common = { provider: 'codex', capability: 'findings' };
+            this.observer.observe({ ...common, state: 'started', phase: 'plan' });
+            const execution = this.planner.prepare(request);
+            this.observer.observe({ ...common, state: 'admitted', phase: 'preflight', version: selected.runtime.codex,
+                workspaceMode: execution.workspaceMode, outputContract: execution.output,
+                artifactHashes: execution.artifacts.map(item => item.sha256) });
+            attempts++;
+            try {
+                if (options.modelFailure) throw Object.assign(new Error('Modeled unavailable provider'), { category: 'process' });
+                if (options.mutateGit) fs.appendFileSync(path.join(process.cwd(), '.git/config'), '\n# unexpected write\n');
+                const result = { nonce: options.guessedNonce ? 'guess' : fs.readFileSync('workspace-canary.txt', 'utf8'),
+                    denials: privatePaths.map(path => ({ path, denied: true })) };
+                const response = JSON.stringify(result);
+                this.observer.observe({ ...common, state: 'completed', phase: 'run', outputBytes: Buffer.byteLength(response) });
+                return response;
+            } finally { fs.rmSync(execution.runtimeDirectory, { recursive: true, force: true }); }
+        }
+    }
+    const nativeRequire = Module.createRequire(file), owner = { exports: {} };
+    const controlledRequire = name => {
+        if (name === 'node:fs') return controlledFs;
+        if (name === '../issue-950/execution-provenance.cjs') return {
+            requireBootstrapAdmission() {}, bootstrapOperation: () => operation,
+            trustedGitExecutable: proof.trustedGitExecutable, gitEnvironment: proof.gitEnvironment,
+        };
+        if (name === '../issue-950/ev07-shadow/configuration.cjs') return selected;
+        if (name === '../issue-950/ev07-shadow/implementation.cjs') return {
+            qualificationProvenance: () => ({ modeledUnitOnly: true }),
+            preparePinnedExecution(_planner, request) {
+                preparations++; runtimeDirectory = fs.mkdtempSync(path.join(directory, 'runtime-'));
+                return { runtimeDirectory, argv: ['--model', 'gpt-6-luna', '-c', 'model_provider="openai"', '-c',
+                    'model_reasoning_effort="xhigh"', '--sandbox', 'read-only'], runtimeContract: { version: selected.runtime.codex },
+                workspaceMode: 'read-only', output: 'native-and-local-json-schema', qualificationInvestigation: true,
+                artifacts: options.noSchema ? [] : [{ purpose: 'output-schema', sha256: require('node:crypto').createHash('sha256').update(JSON.stringify(request.outputSchema)).digest('hex') }] };
+            },
+            requirePinnedExecution() {
+                if (options.pinFailure) throw new Error('Modeled pinned CLI refusal');
+                return { executableSha256: selected.runtime.executableSha256 };
+            },
+        };
+        if (name.endsWith('/agent_capability_composition_root')) return { createFindingsQueryPort: ({ cli }) => ({
+            async query(request) {
+                const response = await cli.execute({ ...request, capability: 'findings', outputSchema: request.options.schema });
+                return options.objectResponse ? JSON.parse(response) : response;
+            },
+        }) };
+        if (name.endsWith('/agent_execution_planner')) return { AgentExecutionPlanner: class {} };
+        if (name.endsWith('/agent_cli_client')) return { AgentCliClient: ModeledClient };
+        if (name === './attempt-ledger.cjs') return {
+            createDurableRecorder: target => durable.createDurableRecorder(mapped(target)),
+            createRecordedCli: request => durable.createRecordedCli({ ...request, artifactDirectory: mapped(request.artifactDirectory) }),
+            validateCompleteAttempts: (rows, cases, plan, artifacts) => durable.validateCompleteAttempts(rows, cases, plan, mapped(artifacts)),
+        };
+        if (name === './operation-containment.cjs') return { async runContainedOperation(request) {
+            scopes++;
+            const inner = path.join(request.outputDirectory, 'runtime-admission'); fs.mkdirSync(inner, { recursive: true });
+            fs.writeFileSync(path.join(inner, 'runtime-admission.jsonl'), options.innerLedger ?? '{"event":"runtime-control-pass"}\n');
+            return options.terminal ?? { exitCode: 0, interrupted: false, namespaceInitStopped: true };
+        } };
+        return nativeRequire(name);
+    };
+    // Use the same JavaScript realm as the semantic ports, as CommonJS does.
+    // A foreign VM realm makes strict object equality reject before the tested
+    // lifecycle; that harness negative cannot establish a controller failure.
+    vm.compileFunction(source, ['require', 'module', '__dirname', '__filename', 'process', 'Buffer'], { filename: file })(
+        controlledRequire, owner, __dirname, file, process, Buffer);
+    return { directory, output, run: () => owner.exports.run(options.host ? path.join(directory, 'host-output') : '/qualification-output/runtime-admission'),
+        get attempts() { return attempts; }, get preparations() { return preparations; }, get scopes() { return scopes; }, get runtimeDirectory() { return runtimeDirectory; },
+        rows() { return fs.readFileSync(path.join(output, 'runtime-admission.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line)); } };
+}
+
+test('ev974-C26 runtime worker preserves complete recorded lifecycle for modeled string and object SDK results', async t => {
+    for (const objectResponse of [false, true]) {
+        const f = controllerFixture(t, { objectResponse }); await f.run();
+        assert.equal(f.attempts, 1); assert.equal(f.preparations, 1);
+        const rows = f.rows(); assert.equal(rows.filter(row => row.event === 'runtime-attempt-start').length, 1);
+        assert.equal(rows.at(-1).event, 'runtime-control-pass'); assert.equal(rows.at(-1).qualificationCalls, 0);
+        assert(!fs.existsSync(f.runtimeDirectory));
+    }
+});
+test('ev974-C26 missing positive auth-file contrast refuses runtime control before modeled SDK preparation', async t => {
+    const f = controllerFixture(t, { missingAuth: true }); await assert.rejects(f.run());
+    assert.equal(f.attempts, 0); assert.equal(f.preparations, 0);
+    assert(!f.rows().some(row => row.event === 'runtime-attempt-start'));
+});
+test('ev974-C26 pinned or missing-schema preparation refusal occurs before modeled execution with private runtime cleanup', async t => {
+    for (const option of [{ pinFailure: true }, { noSchema: true }]) {
+        const f = controllerFixture(t, option); await assert.rejects(f.run());
+        assert.equal(f.attempts, 0); assert(!fs.existsSync(f.runtimeDirectory));
+        assert.equal(f.rows().at(-1).event, 'runtime-attempt-finish'); assert.equal(f.rows().at(-1).status, 'failed');
+    }
+});
+test('ev974-C26 unavailable modeled SDK and fabricated nonce retain distinct failed evidence without retry', async t => {
+    for (const option of [{ modelFailure: true }, { guessedNonce: true }]) {
+        const before = process.cwd(), f = controllerFixture(t, option); await assert.rejects(f.run());
+        assert.equal(f.attempts, 1); assert.equal(process.cwd(), before);
+        assert(!f.rows().some(row => row.event === 'runtime-control-pass'));
+    }
+});
+test('ev974-C26 mutation of real Git metadata cannot become a successful modeled runtime control', async t => {
+    const f = controllerFixture(t, { mutateGit: true }); await assert.rejects(f.run(), /complete runtime fixture/);
+    assert.equal(f.attempts, 1); assert(!f.rows().some(row => row.event === 'runtime-control-pass'));
+});
+test('ev974-C26 outer runtime control requires completed stopped scope plus exactly one complete inner pass', async t => {
+    const f = controllerFixture(t, { host: true }); await f.run(); assert.equal(f.scopes, 1);
+    const rows = fs.readFileSync(path.join(f.directory, 'host-output/runtime-admission.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.equal(rows.at(-1).event, 'runtime-control-finish'); assert.equal(rows.at(-1).scientificCases, 0);
+});
+test('ev974-C26 outer runtime control refuses interrupted failed unconfirmed or malformed modeled evidence', async t => {
+    for (const option of [{ terminal: { exitCode: 1 } }, { terminal: { exitCode: 0, interrupted: true } },
+        { terminal: { exitCode: 0, interrupted: false, namespaceInitStopped: false } },
+        { innerLedger: '{"event":"runtime-control-pass"}' }, { innerLedger: '{bad}\n' },
+        { innerLedger: '{"event":"runtime-control-start"}\n' },
+        { innerLedger: '{"event":"runtime-control-pass"}\n{"event":"runtime-control-pass"}\n' }]) {
+        const f = controllerFixture(t, { host: true, ...option }); await assert.rejects(f.run()); assert.equal(f.scopes, 1);
+    }
 });

@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-11-23T01:37:16.728708+00:00",
+  "scope": "Private bootstrap runtime admission; model-free source/controller evidence only",
+  "sourceParent": "de74f4869436884c08f7ee55e2efd6be4a997633",
+  "qualificationIds": 35,
+  "newRuntimeDriverCount": 19,
+  "newAdditionalControlBudget": 25,
+  "scientific174": "UNSTARTED",
+  "scientific42": "UNSTARTED",
+  "actualModelControl": "UNSTARTED",
+  "qualificationCalls": 0,
+  "pilotWrites": 0,
+  "production": "disabled",
+  "originals": [
+    {
+      "original": "sdk-admission-controller-components-attempt1.log",
+      "archive": "files/sdk-admission-controller-components-attempt1.log.gz",
+      "originalBytes": 11767,
+      "originalSha256": "173a2a8777c305e3a065f5159b45c52312ae6d80765c2dba5ae21a03561f4ce6",
+      "archiveBytes": 2145,
+      "archiveSha256": "e49c55f0861deacf23e5cc21ff225f2fc4869561f58ed2405dc71358c108d4ec"
+    },
+    {
+      "original": "sdk-admission-controller-components-attempt2.log",
+      "archive": "files/sdk-admission-controller-components-attempt2.log.gz",
+      "originalBytes": 2366,
+      "originalSha256": "20064d3276b52e9bf18a07e71c7e941f1bff27619ac729d71da4c71343b343c4",
+      "archiveBytes": 1058,
+      "archiveSha256": "f8d34fd9fba4a32a1bbd41d1a83a60b7be923d15583dc3adc89a0ab361dad046"
+    },
+    {
+      "original": "sdk-admission-controller-coverage-attempt1.log",
+      "archive": "files/sdk-admission-controller-coverage-attempt1.log.gz",
+      "originalBytes": 924,
+      "originalSha256": "df47c52959e744e229f0c1034060691fd987662164069f84a3d09b989159bbda",
+      "archiveBytes": 403,
+      "archiveSha256": "ee8319647bf8c1dc775862da7d872209cb0a1d4b63ed15e58a1668c2d491bef8"
+    },
+    {
+      "original": "sdk-admission-controller-coverage-attempt2.log",
+      "archive": "files/sdk-admission-controller-coverage-attempt2.log.gz",
+      "originalBytes": 2539,
+      "originalSha256": "dc2b2d19c7a2e0b59d06e02fe31eff6d245ae36bebc6e11875dc9855b2dc75b0",
+      "archiveBytes": 1204,
+      "archiveSha256": "0c42506413a8ed5425dba131605895143e877bd8bfc75627412ccc9a4b470a12"
+    },
+    {
+      "original": "sdk-admission-controller-coverage-attempt2/receipt.json",
+      "archive": "files/sdk-admission-controller-coverage-attempt2--receipt.json.log.gz",
+      "originalBytes": 3641,
+      "originalSha256": "c071f983abe37cfe7a1175d061aa809f291de787d81df2941622470c7b32b19c",
+      "archiveBytes": 679,
+      "archiveSha256": "e94c61c4d6479887fee0c0bc99e024c61957c7aab1cbbd27a0d6e49e8057e458"
+    },
+    {
+      "original": "sdk-admission-controller-coverage-attempt2/coverage-final.json",
+      "archive": "files/sdk-admission-controller-coverage-attempt2--coverage-final.json.log.gz",
+      "originalBytes": 15203,
+      "originalSha256": "c839c321c1fe731024cfcf7a9aea1822ea00f4c6c79e2c09b1aa6889641f6d5b",
+      "archiveBytes": 2784,
+      "archiveSha256": "9f14224fff6ab820ed7021c83394a0a124dcf9737349380d2142a5ce4d82c021"
+    },
+    {
+      "original": "sdk-admission-missing-schema-red-attempt1.log",
+      "archive": "files/sdk-admission-missing-schema-red-attempt1.log.gz",
+      "originalBytes": 1026,
+      "originalSha256": "e19783ef2d9872a64ac80345b949875ebf146ab6a4342ea2819ce6fdf8916c68",
+      "archiveBytes": 539,
+      "archiveSha256": "9e9a11ae5b6502269b2811be4980c5162dc829c54196e363d564b06693a4ffc4"
+    },
+    {
+      "original": "sdk-admission-missing-schema-red-test-original.cjs",
+      "archive": "files/sdk-admission-missing-schema-red-test-original.cjs.log.gz",
+      "originalBytes": 19800,
+      "originalSha256": "24f11b4bb7001b519830b7d043082253d1c127e913673ad50c2e578aea161f70",
+      "archiveBytes": 5653,
+      "archiveSha256": "fc16ff79a5d59484464120fd4f4e5fd8889911bbd2e1eb594839c158e9bb8abb"
+    },
+    {
+      "original": "sdk-admission-missing-schema-red-receipt.json",
+      "archive": "files/sdk-admission-missing-schema-red-receipt.json.log.gz",
+      "originalBytes": 508,
+      "originalSha256": "c53451137baba1fbff5f47ed3c9e43cba44189006bfcb768202ddbce952fb4fc",
+      "archiveBytes": 365,
+      "archiveSha256": "294de745d4b22621762130370f5576ac8eedc23eeef40552d53a68e7fbf622e0"
+    },
+    {
+      "original": "sdk-admission-missing-schema-green-attempt1.log",
+      "archive": "files/sdk-admission-missing-schema-green-attempt1.log.gz",
+      "originalBytes": 250,
+      "originalSha256": "f6c4bc838d39356cc35a78358f85eefaed91f441fe56b7916f9c17fd656d0b8b",
+      "archiveBytes": 198,
+      "archiveSha256": "5f7781dc90844e83a2548ff67c828459367019713aae4ddbf883ee3d0833e4f4"
+    },
+    {
+      "original": "sdk-admission-missing-schema-causal-decision.json",
+      "archive": "files/sdk-admission-missing-schema-causal-decision.json.log.gz",
+      "originalBytes": 613,
+      "originalSha256": "96d21a9714cd88fc9e5d6952e94255ca2f441016fefb2ce1e121cf794afcf923",
+      "archiveBytes": 409,
+      "archiveSha256": "551f01f7f8bd43b8b6a36e313f2b055a12150c7091b30d78d08f4613744487c7"
+    },
+    {
+      "original": "sdk-admission-controller-coverage-attempt3.log",
+      "archive": "files/sdk-admission-controller-coverage-attempt3.log.gz",
+      "originalBytes": 2570,
+      "originalSha256": "e3d65ad48e29265207937ef932a4dee9eb88149a7caf08a837922cc6519be0db",
+      "archiveBytes": 1208,
+      "archiveSha256": "e0360334bed30698c98c92ebcad0ac9f272cd5b7a3707f905080408b87c8012f"
+    },
+    {
+      "original": "sdk-admission-controller-coverage-attempt3/receipt.json",
+      "archive": "files/sdk-admission-controller-coverage-attempt3--receipt.json.log.gz",
+      "originalBytes": 3781,
+      "originalSha256": "9871bd0185fbd06dcf47ec64e1a37edd73847d2fd52cbdeaba4521c9ada49a11",
+      "archiveBytes": 685,
+      "archiveSha256": "844d12f939e6b8b728fab23e439f9ad1cf94076fca9c7820d605e6f6d20fcb67"
+    },
+    {
+      "original": "sdk-admission-controller-coverage-attempt3/coverage-final.json",
+      "archive": "files/sdk-admission-controller-coverage-attempt3--coverage-final.json.log.gz",
+      "originalBytes": 15872,
+      "originalSha256": "37dc5d4941b777cadf67f43e15ef799e4989fed321764561e2fc4cd88cc1f753",
+      "archiveBytes": 2892,
+      "archiveSha256": "ef6ce4d3d6f42c1a410fe36df4cae770cf609a262a0e0aa15f78d3eab7d60a2e"
+    },
+    {
+      "original": "sdk-admission-scope-coverage.log",
+      "archive": "files/sdk-admission-scope-coverage.log.gz",
+      "originalBytes": 355,
+      "originalSha256": "1310f2ec95e89c7f009d0e2004add82852848c313b9ca25e0eba5f74e9e6fbbb",
+      "archiveBytes": 219,
+      "archiveSha256": "061c1456d5a9493f8e05e4550c847b7231e0bb591e70d3fd43ccd494ef94a5d0"
+    },
+    {
+      "original": "sdk-admission-scope-coverage/receipt.json",
+      "archive": "files/sdk-admission-scope-coverage--receipt.json.log.gz",
+      "originalBytes": 976,
+      "originalSha256": "2efd90524cd662596677280cdfa0b22156659abb1bc1698767920e04d937774c",
+      "archiveBytes": 495,
+      "archiveSha256": "148ca02eb6cf401ed04ed6004e215ed3c3a6eb215c5e8afaa2160ed4ad412c67"
+    },
+    {
+      "original": "sdk-admission-scope-coverage/coverage-summary.json",
+      "archive": "files/sdk-admission-scope-coverage--coverage-summary.json.log.gz",
+      "originalBytes": 671,
+      "originalSha256": "ec953e0641d2eac33da21874031ef652df5b2d839ba7a7668dc84071eaf59f5d",
+      "archiveBytes": 237,
+      "archiveSha256": "881efa7e2f7f1f4af3847598cf96667b6565379819ea0b2b573fab7790f5dd26"
+    },
+    {
+      "original": "sdk-admission-scope-coverage/coverage-final.json",
+      "archive": "files/sdk-admission-scope-coverage--coverage-final.json.log.gz",
+      "originalBytes": 11887,
+      "originalSha256": "3de9df0dea967047172420ce97b529b0662d124fd2b4d67954c2030417fd0242",
+      "archiveBytes": 1966,
+      "archiveSha256": "12251af26c25fc35a639868282093b24b7f8d7624edb47499ec618c6db9e4f95"
+    },
+    {
+      "original": "coverage-retention-incident.json",
+      "archive": "files/coverage-retention-incident.json.log.gz",
+      "originalBytes": 3844,
+      "originalSha256": "a32ff3d6a96ae19b6ba086c928ae122b1f494a2a2e09cf292802d37a646f6095",
+      "archiveBytes": 1185,
+      "archiveSha256": "d6d278ad96d5c623b71f9cd775b5c2f0bd485287cf3a8a06d3828044a1c2c73e"
+    }
+  ]
+}
