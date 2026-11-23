@@ -208,7 +208,7 @@ async function runWorker(output, plan, operation, record) {
             throw error;
         }
         process.chdir(cwd);
-        let captures = 0, capturedEvidence;
+        let captures = 0;
         const response = await withQualificationRuntimeCliEvidence(operation.signal, evidence => {
             const index = ++captures, file = 'runtime-cli-evidence-' + index + '.jsonl';
             // The existing durable recorder fsyncs file and directory entries.
@@ -216,11 +216,10 @@ async function runWorker(output, plan, operation, record) {
             require('./attempt-ledger.cjs').createDurableRecorder(path.join(output, file))(evidence);
             record({ event: 'runtime-tool-evidence', file, sha256: hash(fs.readFileSync(path.join(output, file))) });
             assert.equal(index, 1, 'independent CLI tool evidence cannot be replayed');
-            capturedEvidence = evidence;
+            requireToolEvidence(evidence, nonce);
         }, () => createFindingsQueryPort({ cli }).query({ agentId: 'runtime-admission', configuration: plan.detector,
             prompt, signal: operation.signal, options: { expectJson: true, schema, schemaName: 'runtime_admission' } }));
         assert.equal(captures, 1, 'independent CLI tool evidence is missing');
-        requireToolEvidence(capturedEvidence, nonce);
         const value = typeof response === 'string' ? JSON.parse(response) : response;
         requireWitnessResult(value, nonce);
         assert.deepEqual(workspaceSnapshot(cwd), before, 'complete runtime fixture and Git metadata must remain unchanged');

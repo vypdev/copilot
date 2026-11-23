@@ -13,7 +13,7 @@ duplicate captured stdout remains a durable negative before rejection. No public
 configuration, model substitution, privilege or deadline changes are introduced.
 
 The controller passes58 model-free cases; AST coverage passes100%lines,
-99.12%statements,94.73%branches,96%functions. Seven SDK suites pass200 assertions
+99.11%statements,94.73%branches,96%functions. Seven SDK suites pass200 assertions
 with24 historical platform omissions. Capture/policy coverage is100%; changed
 runtime modules exceed95/90. The first incomplete cohort budget and instrument
 ENOENT/branch-floor negative remain retained. Scoped Jest exit1 does not establish
@@ -35,3 +35,13 @@ Hosted cache purge remains pending with GitHub Support; no new history rewrite.
 No new real-model/native-SDK admission is claimed for this source. Previous
 CLI14/native4 acceptance belongs only to5327/private4c23/image6d196. Production
 disabled, installation NOT_EXECUTED, evaluated-pilot writes0;42not admitted.
+
+
+A final ordering control fails on local64bc: invalid tool events were checked
+only after the SDK had recorded completion. The identical strengthened assertion
+passes when the actual-child callback first persists the raw artifact, then
+validates synchronously before response decoding and SDK completion. Invalid and
+duplicate artifacts remain retained. The58-case component set and its unchanged
+coverage floors pass on the refined controller. The first947-suite/18807-test
+normal hook result belongs to64bc; final hooks and clean-commit shadow regression
+remain required. No real model/native execution is added.

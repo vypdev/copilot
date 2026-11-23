@@ -321,6 +321,8 @@ test('ev974-C26 invalid independently captured output remains a durable negative
     const raw = fs.readFileSync(path.join(f.output, row.file));
     assert.equal(require('node:crypto').createHash('sha256').update(raw).digest('hex'), row.sha256);
     assert.equal(JSON.parse(raw).stdout, '{"type":"error"}\n');
+    assert(!f.rows().some(row => row.event === 'runtime-attempt-observation' && row.fact.state === 'completed'),
+        'invalid independent tool evidence must fail before the SDK reports a completed model result');
     assert(!f.rows().some(row => row.event === 'runtime-control-pass'));
 });
 test('ev974-C26 missing positive auth-file contrast refuses runtime control before modeled SDK preparation', async t => {

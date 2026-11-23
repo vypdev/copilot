@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "kind": "Current source correction and model-free evidence; historical measurement and technical tuples unchanged",
   "publishedParent": "5327d533045ab10dff1ca6969317c12e93b88cf8",
-  "localParent": "2629515a3b16e141fb7bfdcf6d3fd47dc7c0abcc",
+  "localParent": "64bc924a8f917791a5a4f43fc4b78694ed1fcd8c",
   "sourceSha256": {
     "build/cli/index.js": "20aa48a885d1b198a1a30706d0dd92501a6cec9e5e3f4fddd6d3b679698c7a1f",
     "build/github_action/index.js": "05bcc2cd1a90051816979a96f41d0e2471c73fe0f5cae7158cc241d4c298a784",
@@ -37,8 +37,8 @@
     "quality/bugbot/evidence/issue-974/native-controls/private-originals-retention.json": "04d7b3d12c622e3083677e673607c00acfd67ab4bef2cf09b5918fa40b07e722",
     "quality/bugbot/evidence/issue974/README.md": "9c324080280750d1049e72a89491efe3198c3bf5e9138b081c76ae9ae97eff22",
     "quality/bugbot/evidence/issue974/qualification.test.cjs": "a724a72890e4c6cd31cd2f295418efcb58febea9ffb4d8d721a0dca05e110c93",
-    "quality/bugbot/evidence/issue974/sdk-runtime-admission-components.cjs": "938363b3243cb0b910ef6e1ce1654f32f00e3b69df447fd734172eb2b81b8cc9",
-    "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs": "3a9d287ccecf02080ad335055b8b769d590da7d3847029f755b08d71e1ddc49f",
+    "quality/bugbot/evidence/issue974/sdk-runtime-admission-components.cjs": "8a8f32382caaffc98222c8c3acd56590be35352bc8f60aa2408cc3109aaef446",
+    "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs": "ff579a6d84827527bf62979b41cc6b92d56b34ef22f8efad9f01e06ce2307119",
     "specs/CATALOG.md": "a5489d6b01c9401181163dd1789edbb2dcc5e75fa73566e94bc419aedc06ff9d",
     "specs/agent-execution-policy-hardening.md": "dd8ce3e68985fdde8297c1f82d743a7ae770cc0e8d958debba06c7b64af6a0bc",
     "specs/agent-runtime-provider-and-model-routing.md": "e29b4ce01850778524c47fc402310e5b054d41fa50a15c9b3f3d2a2ce7a711f5",
@@ -67,11 +67,11 @@
     "pending": 0,
     "coverage": {
       "file": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs",
-      "sourceSha256": "3a9d287ccecf02080ad335055b8b769d590da7d3847029f755b08d71e1ddc49f",
+      "sourceSha256": "ff579a6d84827527bf62979b41cc6b92d56b34ef22f8efad9f01e06ce2307119",
       "summary": {
         "lines": {
-          "total": 179,
-          "covered": 179,
+          "total": 178,
+          "covered": 178,
           "skipped": 0,
           "pct": 100
         },
@@ -82,10 +82,10 @@
           "pct": 96
         },
         "statements": {
-          "total": 228,
-          "covered": 226,
+          "total": 227,
+          "covered": 225,
           "skipped": 0,
-          "pct": 99.12
+          "pct": 99.11
         },
         "branches": {
           "total": 38,
@@ -352,6 +352,21 @@
       "file": "shadow-coherent-attempt1-receipt.json",
       "bytes": 6650,
       "sha256": "4dfee67c9a140ed34bc122dc52b5061b23aa9ede288be8f14017554ca7bdbd57"
+    },
+    {
+      "file": "ordering-red1-receipt.json",
+      "bytes": 362,
+      "sha256": "61771d27498f6a0cff2066f5e9f8c765e654cfa7d8ab0619b5962dd05cee6419"
+    },
+    {
+      "file": "ordering-green1-receipt.json",
+      "bytes": 329,
+      "sha256": "d8e0d6b3954040263e1f827f3dfec959149e13c31a75c2a6d38fa875aaca89d2"
+    },
+    {
+      "file": "runtime-controller-coverage-attempt4/receipt.json",
+      "bytes": 9669,
+      "sha256": "f1ec01802872dc7193795d931911b59cc69e324f785a5f6137cd50969afb7e31"
     }
   ],
   "deliveryValidation": {
@@ -510,5 +525,22 @@
   "newModelCalls": 0,
   "pilotWrites": 0,
   "installation": "NOT_EXECUTED",
-  "production": "disabled"
+  "production": "disabled",
+  "firstCorrectionLocalParent": "2629515a3b16e141fb7bfdcf6d3fd47dc7c0abcc",
+  "orderingRefinement": {
+    "causalRed": "The strengthened durable-invalid-output assertion fails on64bc because SDK completion precedes tool-event validation",
+    "green": "Identical assertion passes after retaining stdout then validating synchronously inside the actual-child callback, before model decoding or SDK completion",
+    "sameAssertionSha256": "8a8f32382caaffc98222c8c3acd56590be35352bc8f60aa2408cc3109aaef446",
+    "invalidAndDuplicateRawArtifactsStillRetained": true,
+    "newModels": 0
+  },
+  "firstCorrectionNormalHooks": {
+    "source": "64bc924a8f917791a5a4f43fc4b78694ed1fcd8c",
+    "suites": 947,
+    "passed": 18807,
+    "historicalSkips": 35,
+    "bundlesStable": true,
+    "mainAnd17StashesUnchanged": true
+  },
+  "priorDeliveryValidationScope": "All11 gates belong to the first correction; this refinement changes two quality CJS files and this evidence packet only, keeping SDK/build/SDD unchanged. Final normal hooks, graph/catalog/package checks and clean-commit shadow regression are required separately."
 }
