@@ -1917,7 +1917,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication; bind pre-branch analysis and drafting to a verified independent read-only view of the selected immutable source without changing the canonical checkout; distinguish visible protocol notation from repository citations, allow only constructive proposed-file directory ancestry and expose bounded private-safe origin diagnostics; distinguish registered-document updates from new companion and independent capability publication, carrying fresh authorized unpublished ownership context across clarification without changing published ownership fences; ground verification guidance in selected project declarations, preserve exact evidence and independent refinements, and render portable catalog instructions without assuming consumer package scripts; preserve admitted explicit case identities and derive declared-target navigation before unchanged native validation; assemble bounded SDD units, validate optional maintainer drafts, and bind companion recovery to immutable ownership and publication evidence",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-08",
+      "lastVerified": "2026-11-22",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -3002,9 +3002,9 @@
       "id": "agent-runtime",
       "title": "Agent runtime, provider, model, and role routing",
       "status": "implemented",
-      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance",
+      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance. Standalone Linux diagnostics pin their complete private CLI distribution, retain every model-free result and cleanup with contiguous bounded output prefixes and separate raw byte identities, and require raw descriptor output with exact stdout/stderr/exit witnesses before owned read/write observations; Node stream compatibility and SDK/model acceptance remain separate. Exact marker checks retain every captured byte without whitespace normalization, and known package-metadata failures remain distinct through outer receipt cleanup.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-07",
+      "lastVerified": "2026-11-22",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -3023,7 +3023,8 @@
       ],
       "entrypoints": [
         "src/actions/agent_configuration_builder.ts",
-        "src/actions/github_action_runtime.ts"
+        "src/actions/github_action_runtime.ts",
+        "scripts/diagnose-linux-sandbox-prerequisites.cjs"
       ],
       "code": [
         "src/domain/agent.ts",
@@ -3071,7 +3072,9 @@
         "src/application/policies/agent_source_snapshot_policy.ts",
         "src/infrastructure/agents/agent_source_snapshot_git.ts",
         "src/infrastructure/agents/agent_source_snapshot_workspace.ts",
-        "src/infrastructure/agents/agent_source_snapshot_integrity.ts"
+        "src/infrastructure/agents/agent_source_snapshot_integrity.ts",
+        "scripts/diagnose-linux-sandbox-prerequisites.cjs",
+        "scripts/lib/linux-sandbox-diagnostic-policy.cjs"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -3112,7 +3115,8 @@
         "src/infrastructure/agents/__tests__/agent_source_snapshot_integrity.test.ts",
         "src/infrastructure/agents/__tests__/agent_source_snapshot_gate.integration.test.ts",
         "src/application/policies/__tests__/sdd_source_context_presentation.test.ts",
-        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts"
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts",
+        "src/tooling/__tests__/linux_sandbox_diagnostic.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",
@@ -3133,7 +3137,11 @@
         "docs/security-operations/security/self-hosted-runners.mdx",
         "docs/security-operations/operations/upgrade-rollback.mdx",
         "docs/security-operations/operations/smoke-tests.mdx",
-        "docs/development/testing.mdx"
+        "docs/development/testing.mdx",
+        "quality/bugbot/evidence/issue-1002/controls/native-raw-fd-observation/README.md",
+        "quality/bugbot/evidence/issue-1002/controls/startup-observation/README.md",
+        "quality/bugbot/evidence/issue-1002/controls/engine-connection-cause/README.md",
+        "quality/bugbot/evidence/issue-1002/controls/review-output-integrity/README.md"
       ]
     },
     {

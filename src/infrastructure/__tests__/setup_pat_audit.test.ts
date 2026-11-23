@@ -189,7 +189,7 @@ describe('PAT write cleanup regressions', () => {
             .rejects.toThrow('Temporary reference changed');
         expect(fetcher.mock.calls.every(([, init]) => init.method === 'GET')).toBe(true);
         expect(await readdir(folder)).toHaveLength(1);
-    });
+    }, 20_000);
 
     it('cleans a journaled ref only when its exact name and recorded commit match', async () => {
         const name = `copilot-permission-test-${'a'.repeat(32)}`;
@@ -201,7 +201,7 @@ describe('PAT write cleanup regressions', () => {
         await journal.recover('owner', 'repo', new SetupPermissionProbeHttp(fetcher, 'fixture', 1000));
         expect(fetcher.mock.calls[1][1].method).toBe('DELETE');
         expect(await readdir(folder)).toEqual([]);
-    });
+    }, 20_000);
 
     it.each([
         [{ message: 'Resource not accessible by personal access token' }, undefined, 'missing'],

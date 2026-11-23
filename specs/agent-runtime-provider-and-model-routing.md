@@ -929,6 +929,528 @@ older/equal/newer/unparseable versions, metadata outage, explicit executable,
 private PATH overlay and cleanup. This is update detection, not exact version
 pinning.
 
+### Exact Linux sandbox prerequisite observations — issue #1002 (2026-11-22)
+
+Observed limitation: diagnostic44978657686 inspected PATH Codex0.160.0 while
+ordinary Actions44985430951/44986247868 used0.171.0. The existing Bash step
+discards individual statuses with `|| true`. Its unchanged bytes on default
+ace49, executed with five modeled probe commands returning37, exit0 overall.
+That is actual Bash/component evidence, not a Linux or Codex observation.
+
+Intentional contract: the existing manual Linux diagnostic MUST provision the
+official standalone Codex0.171.0 distribution privately in the same job as
+Node24.21.0. The closed x64/arm64 release table pins complete archive sizes and
+SHA256digests from the official release. The adapter MUST verify the full
+download and pinned full-package inventory before extraction/execution,
+record actual native executable and Node byte hashes, and require the exact
+reported version before probing. No global CLI installation, npm lifecycle,
+model request, public input, repository Variable or runtime fallback is added.
+
+```mermaid
+flowchart LR
+    D[Manual Linux diagnostic] --> P[Verify fixed private distribution]
+    P --> O[Observe five namespace and startup commands]
+    O --> T[Compare three independent execution transports]
+    T --> G[Admit owned read and write only after transport proof]
+    G --> C[Close every command and remove owned fixture]
+    C --> R[Retain receipt and job summary]
+```
+
+Text equivalent: trusted workflow selection precedes private preparation. Only
+verified preparation admits five namespace/startup probes, then three independent
+transport controls in parallel. Only all three verified controls admit the two
+owned read/write probes. Completion closes every owned
+processes, retains each observation, cleans the private fixture and publishes
+one receipt plus one Job Summary. None of those steps grants qualification.
+
+The schemaVersion4 receipt has ten fixed observations: unprivileged user/network namespace creation,
+two existing bubblewrap configurations, Codex empty-environment startup,
+Codex PATH-only startup, three execution-transport controls, an owned fixture
+read/hash, and an owned write-denial canary. Namespace probes MUST produce their
+exact Node stdout witness as well as exit0; silent success does not prove payload
+execution. Every executed probe MUST retain its actual exit or signal, explicit
+pass/fail/unavailable/cancelled state and bounded privacy-projected output.
+Absent or malformed status, signal termination, launch errors, truncation and
+wrong expected output cannot pass. Write denial requires the expected actual
+child result and trusted post-command absence; a sandbox startup failure or a
+created canary cannot become a successful denial. Probe results are never
+collapsed into the aggregate workflow exit code.
+
+Output collection MUST retain the contiguous first65,536 raw bytes of each
+channel independently, including the available prefix of an overflowing chunk.
+Later chunks MUST NOT fill a gap after discarded bytes. The adapter MUST decode
+the joined prefix once as UTF8 with replacement, so a valid character split
+between delivered chunks is preserved. Invalid original UTF8 or a byte-limit
+split character can produce a replacement character in that explicitly declared
+text view. `outputTextEncoding=utf8-replacement` identifies this behavior.
+Each executed native result's `outputCapture` MUST separately retain per-channel
+`observedBytes`, `retainedBytes`, `observedSha256` and `retainedSha256`, computed
+from original buffers. Observed identities cover all bytes delivered through
+child close, including bytes delivered after truncation initiates termination;
+they do not claim bytes the terminated child never delivered. Retained identities
+cover only the bounded raw prefix. Existing `stdoutSha256`/`stderrSha256` continue
+to identify the unprojected decoded text, while displayed text remains privacy
+projected. Raw bytes are not published to bypass that projection. No spawned
+child means capture metadata is unavailable. Truncation MUST remain a failed
+observation and cannot admit owned read/write probes.
+
+The distribution MUST be `codex-package-<target>.tar.gz`, matching the layout
+selected by the reviewed official installer, never the individual CLI archive.
+Both complete x64/arm64 packages have been checksum-verified and their full
+member/type/size/hash inventories retained without executing Linux programs.
+They share the exact pinned name-list digest. The x64 CLI bytes equal those of
+the former individual archive, but that archive omits the bundled resources:
+version/executable identity alone is not composition identity. Preserve all
+package members under a fresh owned runtime directory. Require owned regular
+non-symlink Codex, code-mode host, exec server, rg and bwrap files before any CLI
+version command; paths MUST NOT traverse symlinks. Record their actual byte
+counts/hashes. Bounded owned package metadata MUST exactly match the fixed
+layout/version/target/entrypoint/resource/path fields. A missing resource,
+malformed or wrong metadata, or inventory drift fails preparation. There is no
+fallback to the individual archive or npm lifecycle, and no global installation.
+See the reviewed [official installer](https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/scripts/install/install.sh)
+and [0.171.0 release](https://github.com/openai/codex/releases/tag/rust-v0.171.0).
+
+All owned Node witness/read/denial payloads MUST emit their evidence with
+synchronous raw descriptor writes (`fs.writeSync` to1/2). They MUST NOT depend
+on `process.stdout` or `process.stderr` stream classification. This changes the
+measurement channel only: fixed payload content, expected markers, exit codes,
+sandbox permissions and admission rules remain authoritative. SchemaVersion4
+MUST declare `payloadOutputTransport=node-fd-write-sync` and
+`nodeStreamCompatibility=not-measured`; neither the receipt nor summary may infer
+that arbitrary Node streams, SDK/model tools or qualification are supported.
+The Job Summary MUST show that measurement method and compatibility limit.
+Earlier schemaVersion1/2/3 receipts remain immutable under their original methods.
+No network/seccomp relaxation, proxy bypass or new transport/config selector is
+permitted to recover output.
+
+The three transport IDs are `node-execution-transport`,
+`bwrap-execution-transport` and `codex-path-execution-transport`. Each MUST run
+the identical harmless Node payload and verify its exact stdout marker, stderr
+marker and exit37 with an explicit null signal. Only those three fixed IDs may
+pass with37; the seven other IDs still require0. Missing/string-invalid output,
+missing status/signal, truncation, timeout, cancellation or absent expected
+markers cannot pass. Actual empty output has its empty-byte digest; unavailable
+output is null with a null digest. A failed or unavailable transport leaves
+`executionTransportVerified=false`, both owned probes `not-run` with
+`execution-unverified`, collection incomplete and exit1. The three independent
+commands MUST all settle, including rejection and cancellation, before cleanup;
+no sibling remains active after the owned directory is removed. Only one
+transport invokes Codex and its private home. This bounded three-command
+concurrency does not schedule model work or change command/job bounds.
+
+The native receipt MAY retain fixed `/usr/bin/bwrap` canonical path, byte count,
+SHA256, ELF/script/other format, owner UID/GID and mode. Observation requires a
+nonempty regular file at most2MiB, with device/inode/size/time identity unchanged
+across its read. Unavailable or drifting metadata cannot become a byte identity.
+This passive observation always leaves `payloadExecutionVerified=false`; a
+hash, executable format or owner is not execution or sandbox proof. The path and
+bound are fixed, with no public helper/socket/backend selector.
+
+The fixed Codex arguments MUST follow the pinned CLI's actual host-sandbox
+grammar: root `--config` pairs precede `sandbox -- <owned command>`. The
+`exec` options `--ignore-user-config` and `--ignore-rules` are not sandbox
+arguments and MUST NOT be prepended. Configuration isolation uses the fresh
+owned HOME, CODEX_HOME, XDG directory and cwd; it does not bypass managed
+system requirements. Create CODEX_HOME as an owned0700directory before any
+CLI version or sandbox command. This diagnostic contract does not change the
+ordinary SDK's `exec` policy. See the pinned [CLI root command dispatch](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/cli/src/main.rs)
+and [host sandbox arguments](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/cli/src/lib.rs).
+
+| State | Visible result | Next action |
+|---|---|---|
+| Preparing | Runtime preparation pending; no probe execution claim | Await the owned download/version checks |
+| Preparation failed/missing | Failed boundary; all remaining probes not-run | Inspect the retained receipt before a changed attempt |
+| Mixed observations | Separate failed/unavailable and positive rows | Investigate the actual failed prerequisite |
+| Cancelled | Actual child cancellation and remaining not-run rows | Preserve incomplete observations; no blind replay |
+| Observation complete | All ten rows and exact byte identities retained | Independently verify actual SDK/read-denial composition |
+
+Representative Job Summary (illustrative):
+
+```text
+Linux sandbox diagnostic
+Runtime preparation: observed. Codex target: 0.171.0.
+codex-fixture-read: pass (verified), exit0
+codex-write-denial: fail (command-failed), exit1
+Next: inspect failed or unavailable prerequisites before qualification.
+SDK/model tools, credential/oracle denial and qualification remain unverified.
+```
+
+The pure policy module owns the closed release table, outcome interpretation,
+privacy projection and summary. The diagnostic use case owns preparation/probe
+ordering and partial outcomes through semantic ports. Its native adapter owns
+fixed process/download/filesystem/local-Engine operations, scoped credentials-free
+HOME/config, actual close callbacks and private cleanup. The workflow owns Linux
+placement, Node provisioning and receipt retention. These standalone diagnostic
+modules MUST NOT import or mutate ordinary agent role/provisioning/application
+state. Existing source boundaries and routing validators remain authoritative.
+
+CLI arguments, executable URLs, package version, probes and host paths are not
+user configuration. The x64/arm64 selection follows the observed host architecture;
+unsupported architectures fail preparation. Existing `[self-hosted,codex,Linux]`,
+contents-read permission, resource counters and Windows Codex retirement remain.
+The diagnostic job has a15-minute orchestration allowance. Its download60s,
+three preparation commands and eight sequential probe phases at command20s plus
+post-termination1s, and Engine3s have a nominal294s total allowance. The former
+five-minute job left only6s for checkout, Node setup, hashing, receipt writing
+and artifact retention. The additional job margin is operational headroom,
+not a guarantee against stalled filesystem/kernel I/O. The four fixed technical
+timeouts remain unchanged and share one internal immutable table; they are not investigation,
+turn/read/token/heartbeat limits. No sudo, privilege, seccomp, sysctl, AppArmor,
+sandbox-bypass, runner registration or global configuration change is permitted.
+
+Cancellation MUST reach the actual owned command and settle its close before
+cleanup. Cancellation during a probe, the independent Engine observation or
+final cleanup MUST leave `executionIncomplete=true` and exit1, even when all
+earlier rows passed. No later probe is admitted after a cancelled command.
+The Job Summary MUST show collection completeness and cleanup separately from
+probe outcomes. Fully collected negative probe observations may still exit0;
+an interrupted collection cannot.
+
+Adapter-construction failures, including unsupported hosts and private-directory
+initialization failures, MUST retain the same exclusive receipt and summary,
+failed preparation, ten not-run rows and exit1. Initialization removes only
+its newly owned root before propagating the original failure. Its receipt
+distinguishes `not-created`, `completed`, `failed` and unavailable cleanup;
+cleanup failure cannot replace the first failure or imply success. Engine
+version and API-version fields MUST be strings before format validation;
+JSON numbers cannot become observed identities through regular-expression coercion.
+Private temporary files MUST be removed after successful or failed
+preparation/probes; cleanup failure stays visible. A read-only local Engine
+version observation is independent: unavailable or present does not establish
+a conforming container, and no image/container/workload is created. The workflow
+retains its report unconditionally, including negative preparation, with no
+new issue/PR comment stream. Report output projects account/private paths and
+does not inherit or enumerate credentials. Production settings are not mutated;
+the receipt does not infer their live values from a constant.
+
+For a failed local Engine connection, the observer MUST preserve only a closed
+optional `connectionFailure` tag: `ENOENT` means `missing-socket`, `EACCES` or
+`EPERM` means `access-denied`, and `ECONNREFUSED` means `connection-refused`.
+Unknown, absent, non-string or prototype-key code values MUST leave that field
+absent. Keep `state:unavailable` and `cause:local-engine-unavailable`; never
+serialize the raw error code, message, stack, path or arbitrary provider text.
+The same classification applies to synchronous request construction failure.
+Existing schema4 receipts without the optional field remain cause-unknown;
+earlier native observations MUST NOT acquire a retroactively inferred cause.
+
+The Job Summary MUST display only fixed Engine status text. For example:
+
+| Visible status | Meaning and next action |
+|---|---|
+| Engine: unavailable (socket missing) | The request reported no socket at the fixed job path; inspect the existing runner's local Engine configuration. This does not prove Docker is absent from the host. |
+| Engine: unavailable (socket access denied) | The request reported denied access; inspect the job identity and reviewed socket access. No permission change is automatic. |
+| Engine: unavailable (connection refused) | The local endpoint refused the connection; inspect service/socket availability from that job. |
+| Engine: unavailable (cause unknown) | No accredited cause is available; retain the receipt without inventing one. |
+| Engine: version metadata observed; workload not verified | A version response is retained; an actual conforming runtime remains unproven. |
+
+Unrecognized or forged failure text MUST project to cause-unknown and cannot
+reach the summary. The pure diagnostic policy owns classification/presentation;
+the HTTP adapter owns the request and its original close-before-cleanup rule.
+The fixed Unix socket, GET `/version`, timeouts, permissions, package/runtime
+pins and no-workload contract remain unchanged. There is no new selector,
+backend, global installation, privilege change or research limit.
+
+This adds **eight distinct controls** to130 (138 total): four known native
+connection codes; three unknown/absent/prototype-key and privacy cases; one
+closed summary/forged-text/metadata-only case. Controlled HTTP events establish
+classification, not an actual runner connection failure. Preserve the matched
+133PASS/5FAIL→138PASS contrast with identical test-file bytes, all module/global
+floors and every earlier native outcome. After a new committed source passes
+its exact-head source gates and review, one changed model-free observation MAY
+collect the previously missing Engine cause on an existing self-hosted runner.
+It cannot retry Native4 unchanged, infer a cause for it, authorize a workload,
+or substitute for #974's SDK/model-tool/credential/oracle and native prerequisites.
+The evidence packet and operator page MUST retain that distinction.
+
+| Path | Change |
+|---|---|
+| `quality/bugbot/evidence/issue-1002/controls/engine-connection-cause/README.md` | create |
+| `quality/bugbot/evidence/issue-1002/controls/engine-connection-cause/source-and-controls.json` | create |
+| `docs/security-operations/security/self-hosted-runners.mdx` | update |
+| `specs/catalog.json` | update |
+| `specs/CATALOG.md` | update |
+
+### Exact marker bytes and preparation boundaries — PR #1003 review follow-up
+
+Observed source `a01610d0` accepted surrounding whitespace through `.trim()`
+and dropped the adapter's known `package-metadata` failure tag to `unknown`.
+The first defect can mark unexpected bytes as verified; the second hides the
+actual failed preparation phase. The matched authored tests retain
+138 PASS / 7 FAIL before correction and 145 PASS after correction with identical
+test-file bytes. These are component observations; no new actual runner or
+qualification outcome is inferred.
+
+The pure policy MUST compare each specified marker with the unmodified captured
+channel. Leading/trailing spaces, tabs, CR/LF and Unicode whitespace MUST produce
+`fail (assertion-mismatch)` when they add bytes to an expected marker. Exact
+positive markers, including the actual empty channels of marker-free startup
+probes, retain their existing semantics. Output capture, raw/projected digests,
+truncation, explicit cancellation and exit-code requirements remain unchanged.
+The adapter still validates package metadata before CLI version/fixture work.
+The outer use case MUST retain the closed `package-metadata` boundary when that
+validation fails, emit ten preparation-failed not-run rows, mark collection
+incomplete and perform owned cleanup. Raw metadata or error text is not exposed.
+
+Operator flow: inspect the reviewed source -> run the unchanged manual Linux
+workflow -> inspect Summary state -> inspect the retained artifact's exact
+failure/bytes -> correct the cause before a changed attempt. For example:
+
+| Situation | Existing Summary surface | Retained artifact / action |
+|---|---|---|
+| Extra newline around a transport marker | `fail (assertion-mismatch)`; owned probes not admitted | Inspect the original bounded channel and producer; no whitespace normalization or inferred success |
+| Malformed package metadata | Runtime preparation failed; collection incomplete; cleanup completed if observed | `preparation.boundary: package-metadata`; inspect the fixed package/layout before another changed run |
+| Exact expected markers and status | Existing pass rows | Retain exact evidence; SDK/model-tool and qualification acceptance remain separate |
+
+The manual workflow retains the repository's existing trusted-operator model:
+GitHub requires repository write access for manual dispatch, and existing source
+CI already executes the selected same-repository branch on this self-hosted pool.
+The operator MUST choose the exact reviewed revision after its source gates.
+This is an operator trust prerequisite, not an isolation boundary enforced by
+read-only token permissions or disabled checkout credentials. Fork admission,
+runner privileges, hosted-job exceptions and workflow routing remain unchanged.
+No claim of protection against a malicious repository writer is introduced.
+See the retained review adjudication and the existing self-hosted runner contract.
+
+Seven additional risk-derived logical cases extend the 138-case baseline to
+**145**: six distinct extra-byte patterns exercise stdout/stderr and transport
+versus owned-read classification; one composition case routes actual private
+file preparation through the native adapter and outer receipt with modeled
+release/process ports and a controlled Engine port. It verifies the metadata
+boundary, ten not-run rows, no CLI invocation beyond archive preparation and
+owned cleanup. The earlier positive fixture now supplies its exact expected
+marker rather than a normalized newline. All previous cases and coverage floors
+remain; pure policy retains 100% for all metrics. Deterministic controls use no
+new wait, live service or model call. Keep actual runner acceptance distinct.
+
+Schema 4 and existing selectors remain unchanged. Older receipts retain their
+original values and executed source identity. Rollback selects the previous
+source; no output, decision or receipt is rewritten. The operator page, catalog
+and generated catalog MUST record the corrected semantics and
+`quality/bugbot/evidence/issue-1002/controls/review-output-integrity` evidence.
+Fresh final-head CI, Commit, Verification, Review and all valid finding decisions
+remain required before the next changed model-free observation. Production
+verification stays disabled, actual 174/42 unstarted and evaluated-pilot writes 0.
+
+Risk-derived minimum12new deterministic cases: four outcome/exit/signal/missing
+metadata; three exact-version/provenance/fixed-command/credential boundaries;
+two owned cleanup/cancellation; three workflow/summary/routing. Parameterized
+distinct behaviors count once each and executed counts MUST be recorded. Preserve
+all previous budgets and global coverage floors. Add both runtime CJS modules
+to coverage collection on supported POSIX test hosts; the pure outcome policy SHOULD reach100%branches, with
+module gates of95%lines/statements and90%branches/functions for it. The native
+adapter retains90%lines/statements,82%branches and88%functions. Its actual POSIX
+process/filesystem fixtures and module coverage are not applicable on Windows,
+where this Linux-only adapter cannot run; retain portable policy/use-case/HTTP/
+workflow cases and every existing Windows SDK/global gate. No new Windows Codex
+job or platform-success claim is introduced. Modeled ports
+cannot substitute for the actual same-job self-hosted observation.
+
+Review correction evidence adds ten distinct controls beyond the first58:
+five reproduce the four review defects (two numeric Engine fields), three
+cover late/independent cancellation, and two cover initialization cleanup and
+its failure. The same63controls retain the causal58PASS/5FAIL→63PASS contrast;
+the expanded68controls retain the additional boundaries. Native CI45011100858
+passed all first58diagnostic controls but failed source-context-C38 while Git
+preparation exhausted its original30s deadline before the intended assertion.
+That delay's cause is unknown. The deadline-focused C38 fixture now uses a
+controlled monotonic clock and semantic workspace/integrity ports with the
+actual planner, execution admission and owned-directory cleanup. Its unchanged
+plan must expire before child launch; an intentional deadline-reset mutant
+must fail the same control. All other real Git/source integration controls and
+all production deadlines remain. Neither component proof replaces native CI.
+
+First exact-source native diagnostic45016512460/job137189879318 ran on
+ubuntu-runner-1 with verified official Codex0.171.0 and Node24.21.0. Both
+bubblewrap commands passed. Unshare failed to write uid_map; all four CLI
+commands exited2 at argument parsing, before any CLI sandbox/read/denial
+execution, and reported missing CODEX_HOME. The local Engine observation was
+unavailable and cleanup completed. Preserve all seven outcomes and the original
+artifact: job success means collection completed, never sandbox acceptance.
+Native CI on2f057efb passed946suites/18,812tests with35historical skips and all
+four review threads resolved. Two additional boundary assertions reproduce
+the diagnostic grammar and missing-directory defects as67PASS/2FAIL across
+69controls; the same control bytes must pass after correction. One new grammar
+case and the refined existing real-filesystem case extend the risk budget.
+Only a new committed source identity and passing source gates permit a changed
+native diagnostic. Do not repeat45016512460 or infer CLI/tool acceptance from
+the positive bubblewrap rows.
+
+The changed native diagnostic45020212032/job137201216439 ran once on
+ubuntu-runner-2 at5eebe639 with the same verified Codex/Node executable hashes.
+Under the retained schemaVersion1 contract its seven outcomes were3PASS/4FAIL:
+unshare exit1 (uid_map), both bare bubblewrap commands exit0, empty-environment
+Codex exit101 (neither PATH nor adjacent bundled bwrap available), PATH startup
+exit0, and read/write both exit0 with empty stdout and stderr. The last two were
+assertion mismatches, never accepted read/denial. Engine remained unavailable;
+cleanup completed. The actual loss of payload execution/output is unresolved.
+Pinned upstream sources preserve argument vectors and inherited stdout/stderr;
+source inspection does not prove where this native loss occurs. Preserve both
+original schemaVersion1 receipts without retroactive reclassification.
+
+The execution-proof correction adds31 distinct cases to the prior69: three
+silent-zero namespace rejections,13 pure typed-output/transport policies, six
+transport admission and sibling-settlement/cancellation races, eight real-file
+helper-identity cases, and one cancellation of three actual Node process groups.
+The last case uses modeled routing, not actual Codex/bubblewrap or nativeC34.
+The same72test bytes first reproduce69PASS/3FAIL on the prior driver, then72PASS
+with namespace witnesses; expanded controls pass100/100. Retain the first
+71PASS/1FAIL partial-success fixture mismatch and the98PASS/1FAIL helper-drift
+fixture failure separately: the latter did not inject its fault across macOS
+path aliases, and correcting that fixture did not change product source.
+Pure policy is100% across metrics; adapter lines99.5%, statements96.1%,
+branches89.3%, functions94.23% exceed unchanged floors. Updated schema/table
+assertions refine existing cases rather than double-counting them. New native
+acceptance requires a new committed source and all source gates before one
+changed diagnostic; never repeat45020212032 unchanged or claim its cause fixed.
+
+The package-composition extension adds ten cases (110 total): one same-byte
+causal positive demonstrates rejection of the complete official layout by the
+prior individual-archive driver, then acceptance after correction; nine reject
+missing bwrap/rg/exec-server/code-mode-host, symlink bwrap, malformed metadata
+and wrong layout/version/target before CLI version execution. The first new
+control attempt did not compile because its fixture referenced an unimported
+filesystem name; preserve it separately from the subsequent actual causal
+failure. A source-capture guard also stopped before changes because one appended
+newline broke the reviewed installer checksum; its corrected snapshot matches
+the exact approved checksum. Neither controller failure is native evidence.
+The package correction explains missing bundled resources in the empty-PATH
+observation; the native PATH payload/output cause remains unresolved.
+
+Third changed-source native observation45028875562/job137227815416 at8e61dbe1
+ran once on ubuntu-runner-2 with the full verified0.171package and Node24.21.0.
+Its original schemaVersion2 receipt retains5PASS/3FAIL/2not-run. Direct Node and
+system bwrap both deliver identical stdout/stderr markers and exit37; namespace
+bwrap commands also deliver witnesses. Codex PATH returns37 but both streams
+are empty, so transport fails and read/write remain not-run. Unshare uid_map
+fails; empty-environment Codex reaches its now-present bundled bwrap and fails
+loopback RTM_NEWADDR with EPERM. Engine remains unavailable; cleanup completes.
+This narrows loss to the Codex/Node output path and preserves the failed gate.
+
+Pinned [Codex0.171 seccomp policy](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/linux-sandbox/src/seccomp.rs)
+denies socket-introspection calls under restricted networking. Pinned
+[Node24.21/libuv classification](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/src/unix/tty.c)
+returns unknown when those calls fail on socket-backed descriptors, and
+[Node's stream initialization](https://github.com/nodejs/node/blob/v24.21.0/lib/internal/bootstrap/switches/is_main_thread.js)
+then installs a dummy Writable. The [upstream report](https://github.com/openai/codex/issues/18473)
+describes the matching symptom. Source and that report support the mechanism;
+we have not independently traced syscalls on our exact native tuple.
+
+A separate actual local Linux component contrast, using existing Node24.20ARM
+as UID1001 with no capabilities/network/host mounts, applies only the three
+additional introspection denials. Its four fixed cases show that socket-backed
+Node streams become dummy Writable/outputless while synchronous raw FD output
+survives; unfiltered stream and FD baselines both work. The initial Python
+launcher exited127 before any case because Python was absent. The corrected
+launcher uses already-present Perl without installing dependencies or granting
+privileges. This is actual syscall/Node component evidence, not Codex, SDK,
+namespace isolation or the exact self-hosted24.21x64 composition.
+
+The correction adds six distinct Jest cases to110 (116 total): namespace
+witness1, two-channel transport1, actual read/missing-file2, modeled EROFS
+and actual unexpected canary write2. These use real owned Node processes and
+output descriptors with explicitly modeled dummy streams. They do not claim
+actual sandbox denial. The same116test-file bytes retain111PASS/5FAIL before
+and116PASS after changing only payload writes. Subsequent schema/UI assertions
+refine existing cases without increasing the count. Preserve both native and
+component negatives. A new committed source and source gates MUST precede one
+changed native observation; do not retry45028875562 or infer high-level Node
+stream compatibility from the new raw-FD probes. All coverage floors remain.
+
+Capture-integrity maintenance adds nine distinct cases to116 (125 total):
+split UTF8 in two channels2, overflow followed by a later small chunk in both
+channels2, malformed original UTF8/raw digests1, byte-limit split character1,
+independent channel budgets/late observed bytes1, exact byte limit1 and receipt
+projection with separate byte identities1. Deterministic child-delivery ports
+control chunk boundaries; existing actual owned-process/pipe/close tests remain
+separate. Preserve matched old/new source and all control outcomes. The earlier
+CI run45032430479 retains its one unrelated real-journal fixture timeout at5005ms
+against5000ms, with18,859tests passing and35historical skips; all116diagnostic
+controls passed. Its exact pending I/O stage is unobserved. The lost-response
+Variable fixture adopts the existing20s allowance of the successful real-journal
+Variable fixtures; HTTP/runtime/research/qualification limits do not change.
+A separate one-time6s post-real-fsync delay contrasts the old and corrected test
+budget; it models slow storage and is not a trace of that native failure.
+
+The changed [run 45038779876](https://github.com/vypdev/copilot/actions/runs/45038779876)
+executed immutable source `94d760065b208488432f6644b69a1991ad8b5597` on
+ubuntu-runner-4 after all source gates passed and the review validated 10/10
+partitions with all six threads resolved. It verified the full Codex 0.171.0
+distribution and Node 24.21.0, then retained eight passing and two failing rows.
+All three transport controls returned both exact markers and 37. Owned read
+matched the fixture digest; owned write returned DENIED and the trusted canary
+absence check passed. Unshare still failed uid_map with EPERM, and the
+empty-PATH bundled bubblewrap still failed loopback RTM_NEWADDR with EPERM.
+Engine remained unavailable; collection and cleanup completed. These negatives
+remain part of the successful collection, not successful prerequisite outcomes.
+The schema 4 original receipt, complete job log, raw byte identities, artifact
+metadata and full preceding CI/Commit/Review are preserved in the catalogued
+`quality/bugbot/evidence/issue-1002/controls/native-raw-fd-observation` packet.
+The preflight initially stopped before any POST because its optional neutral
+approval check was attached to Commit rather than Branch Sync. The corrected
+guard verified that exact out-of-scope assessment, with every critical gate and
+all resolved threads still required, before sending its only diagnostic POST.
+An evidence-only publication MUST NOT repeat this observation or claim its new
+Git commit was executed. SDK/model-tool acceptance, credential/oracle exclusion
+and common native C32–C35 remain independently unobserved. No 174/42 campaign or
+production activation follows from these model-free results.
+
+Startup-observation maintenance adds **five distinct controls** to125 (130 total):
+already-cancelled/no-spawn, real missing executable, no-spawn receipt projection,
+real successfully spawned empty output, and a modeled error after successful
+spawn. The existing modeled chunk fixture emits `spawn` before data on both old
+and new source. Preserve the matched126PASS/4FAIL→130PASS contrast with identical
+test-file bytes; the original successful native observations remain unchanged.
+The strengthened existing parsed-workflow case verifies placement/permissions,
+the unchanged four technical timers and at least600s of job margin over the
+nominal294s allowance. No actual workflow timeout was observed or reproduced;
+the insufficient margin is a source/contract defect.
+
+The native adapter MUST leave both output channels and `outputCapture` null
+unless the child actually emits `spawn`. Already-signaled cancellation and a
+launch failure cannot fabricate an observed empty stream. Receipt channel
+digests remain null for these unavailable channels. A successfully spawned
+command with no bytes MUST retain empty strings and empty-byte capture hashes;
+an error after spawn does not erase captured bytes. Exit, cancellation, failure,
+close-before-cleanup, privacy and schema4 semantics remain unchanged. The15-minute
+job allowance changes no research, model, call, corpus, scientific or consumer
+runtime limits. These controls establish process/receipt behavior, not a new
+same-job Codex observation or qualification. Required coverage and source gates
+remain; native evidence is retained by its original executed source identity.
+
+The catalogued startup-observation packet retains both complete raw logs with
+matched test identities, focused coverage including its unrelated-owner exit1,
+and the previous canonical comment verbatim. Its changed-module gates pass;
+repository-global/native gates remain separate. Documentation inventory:
+
+| Path | Change |
+|---|---|
+| `quality/bugbot/evidence/issue-1002/controls/startup-observation/README.md` | create |
+| `quality/bugbot/evidence/issue-1002/controls/startup-observation/source-and-controls.json` | create |
+| `docs/security-operations/security/self-hosted-runners.mdx` | update |
+| `specs/catalog.json` | update |
+| `specs/CATALOG.md` | update |
+
+Acceptance and traceability: fixed archive mismatch or version mismatch rejects
+before probes; every negative/missing/signal/cancelled probe has its own preserved
+status; fixture read matches its trusted digest; successful denial leaves no
+canary; cancellation/cleanup settles owned resources; workflow structure retains
+the above scheduling/permissions and unconditional receipt; job content separates
+observations from qualification. The focused diagnostic and workflow tests,
+normal hooks/global coverage, workflow/docs/specification validators, generated
+catalog and Graphify MUST pass. User/runner operations docs MUST explain the
+artifact, partial/failure/cancelled states, privacy and changed-attempt recovery.
+One changed exact-head/version diagnostic on an existing self-hosted Linux runner
+is required after source gates; retain every outcome without an unchanged retry.
+
+This prerequisite is separate from #974's source recovery and does not replace
+its branch. Fresh common native C32–C35, actual CLI credential/oracle exclusion,
+committed174preregistration and scientific gates remain required. The existing
+#974/#998 recovery snapshots cannot silently change, and this task must not
+move their reviewed develop base while their specific recovery approval is
+pending. Rollback is an ordinary reviewed source change; old status-swallowing
+diagnostics cannot be reclassified as a qualification pass.
+
 ## 14. Testing strategy and numeric budget
 
 | Area | Minimum cases | Risks |

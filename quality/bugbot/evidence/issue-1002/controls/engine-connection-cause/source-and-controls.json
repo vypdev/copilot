@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "kind": "closed-engine-connection-cause-components",
+  "at": "2026-11-22T17:46:06.494810+00:00",
+  "parent": "63d6ac0e848e7052542a63b23d0cafda26042eaa",
+  "newDistinctCases": 8,
+  "totalDistinctCases": 138,
+  "matchedTestBytes": true,
+  "contrast": {
+    "before": {
+      "pass": 133,
+      "fail": 5,
+      "skip": 0
+    },
+    "after": {
+      "pass": 138,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "sourceSha256": {
+    "scripts/diagnose-linux-sandbox-prerequisites.cjs": "dab4bc39219714c9057d317e88f4e045f286c23073da1eca6776547d590d81c9",
+    "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "24891ac35467375c213b26690215b868b6819056395737141760b58ffd52040c",
+    "src/tooling/__tests__/linux_sandbox_diagnostic.test.ts": "d952a074b6af180fbe8249b5e1e35b3e9c37c0653c750ae853983b9391a36812"
+  },
+  "archives": [
+    {
+      "label": "red",
+      "file": "red.log.gz",
+      "rawBytes": 6810,
+      "rawSha256": "620497330a971bc43a9e7289cd998b48cf6d977bac60892416899dcd2d0c9162",
+      "archiveBytes": 1580,
+      "archiveSha256": "ad0bd1b7b01a8debdf057b6e0f14f9035637c49d311490e824aa02012cf9f45d",
+      "exit": 1,
+      "summary": {
+        "numPassedTests": 133,
+        "numFailedTests": 5,
+        "numPendingTests": 0,
+        "numTotalTests": 138
+      },
+      "testSha256": "d952a074b6af180fbe8249b5e1e35b3e9c37c0653c750ae853983b9391a36812",
+      "measurementSource": {
+        "kind": "committed runtime plus newly added tests",
+        "parentCommit": "63d6ac0e848e7052542a63b23d0cafda26042eaa",
+        "runtimeSourceSha256": {
+          "scripts/diagnose-linux-sandbox-prerequisites.cjs": "7529325727d1c1d064151ca33aa34decd2f503b29f806b8d5b7193c8c1c5ab5a",
+          "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "05e19f77edec8c74b9436e1308dbb448c1e0769999272856e25a827a1e36260c"
+        },
+        "testSha256": "d952a074b6af180fbe8249b5e1e35b3e9c37c0653c750ae853983b9391a36812"
+      }
+    },
+    {
+      "label": "green",
+      "file": "green.log.gz",
+      "rawBytes": 299,
+      "rawSha256": "1dabcacf2ccd46643b27eb85fd1c3df40ed7d31790da6f72ac9579c5ed50675f",
+      "archiveBytes": 218,
+      "archiveSha256": "7f554e58d1e836bdd7742b495e7ca2ba154ea756367b7176abeb58b50d9d57e3",
+      "exit": 0,
+      "summary": {
+        "numPassedTests": 138,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "numTotalTests": 138
+      },
+      "testSha256": "d952a074b6af180fbe8249b5e1e35b3e9c37c0653c750ae853983b9391a36812",
+      "measurementSource": {
+        "kind": "modified runtime/test working tree before commit",
+        "parentCommit": "63d6ac0e848e7052542a63b23d0cafda26042eaa",
+        "runtimeSourceSha256": {
+          "scripts/diagnose-linux-sandbox-prerequisites.cjs": "dab4bc39219714c9057d317e88f4e045f286c23073da1eca6776547d590d81c9",
+          "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "24891ac35467375c213b26690215b868b6819056395737141760b58ffd52040c"
+        },
+        "testSha256": "d952a074b6af180fbe8249b5e1e35b3e9c37c0653c750ae853983b9391a36812"
+      }
+    },
+    {
+      "label": "coverage",
+      "file": "coverage.log.gz",
+      "rawBytes": 1677,
+      "rawSha256": "d2f74dc78b6515013ea6d80bf4b2fb47f04058feb976dbbe59c665e9d29361fd",
+      "archiveBytes": 560,
+      "archiveSha256": "88bb310e10c10743482f62f37aa60434245cecd54f4665395bdc2a7e750533f9",
+      "exit": 1,
+      "summary": null,
+      "testSha256": null,
+      "measurementSource": {
+        "kind": "modified runtime/test working tree before commit",
+        "parentCommit": "63d6ac0e848e7052542a63b23d0cafda26042eaa",
+        "runtimeSourceSha256": {
+          "scripts/diagnose-linux-sandbox-prerequisites.cjs": "dab4bc39219714c9057d317e88f4e045f286c23073da1eca6776547d590d81c9",
+          "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "24891ac35467375c213b26690215b868b6819056395737141760b58ffd52040c"
+        },
+        "testSha256": "d952a074b6af180fbe8249b5e1e35b3e9c37c0653c750ae853983b9391a36812"
+      }
+    },
+    {
+      "label": "parent-native-static",
+      "file": "parent-native-static.log.gz",
+      "rawBytes": 89341,
+      "rawSha256": "ee499419840ff95d9bb394df443c3ed4f6a8e30045829e79356ca345e15f6510",
+      "archiveBytes": 19766,
+      "archiveSha256": "1e6e7379335768d04a879e412b9b4e035ca69020b85030ef567b7e47a637b920",
+      "exit": 0,
+      "summary": null,
+      "sourceHead": "63d6ac0e848e7052542a63b23d0cafda26042eaa",
+      "testSha256": null
+    },
+    {
+      "label": "parent-native-build",
+      "file": "parent-native-build.log.gz",
+      "rawBytes": 413277,
+      "rawSha256": "5c17ef2490f1e63bdb6582015b2a18ba652c95897439eda6149dfbeae75884dc",
+      "archiveBytes": 55504,
+      "archiveSha256": "6b63692422db3cfc3788a0e0a63c232f0f03d372b8414be55bdb3e3677085d36",
+      "exit": 0,
+      "summary": null,
+      "sourceHead": "63d6ac0e848e7052542a63b23d0cafda26042eaa",
+      "testSha256": null
+    },
+    {
+      "label": "parent-native-coverage",
+      "file": "parent-native-coverage.log.gz",
+      "rawBytes": 3239276,
+      "rawSha256": "c3eaeeab4506fcc5ad604a413b1ff8fc5588e1a62e3682eee61776c52bf22aee",
+      "archiveBytes": 589402,
+      "archiveSha256": "19fa0ccd9043cf645aa5f98a86280ba9e1ede03ac27fc515f8e007cf82bf957e",
+      "exit": 0,
+      "summary": null,
+      "sourceHead": "63d6ac0e848e7052542a63b23d0cafda26042eaa",
+      "testSha256": null
+    },
+    {
+      "label": "parent-native-commit",
+      "file": "parent-native-commit.log.gz",
+      "rawBytes": 37416,
+      "rawSha256": "073c3a91672443a86da84a55acf5a17b1369c20e950445521b040ef642045692",
+      "archiveBytes": 9472,
+      "archiveSha256": "a86a7218275cb35041b97899f1c3238322e5af2f417013743ce78f09377c5dc7",
+      "exit": 0,
+      "summary": null,
+      "sourceHead": "63d6ac0e848e7052542a63b23d0cafda26042eaa",
+      "testSha256": null
+    },
+    {
+      "label": "parent-native-review",
+      "file": "parent-native-review.log.gz",
+      "rawBytes": 33629,
+      "rawSha256": "57e631a1c4b388dfa4126014ba25be388c6a1e2bd405543ce6e80f63081ac0c3",
+      "archiveBytes": 8267,
+      "archiveSha256": "f87e240910fa802ac39cd7065fafb7d7b9f1c682b672856097ab036ea612a726",
+      "exit": 0,
+      "summary": null,
+      "sourceHead": "63d6ac0e848e7052542a63b23d0cafda26042eaa",
+      "testSha256": null
+    }
+  ],
+  "moduleCoverage": {
+    "diagnose-linux-sandbox-prerequisites.cjs": {
+      "lines": {
+        "total": 225,
+        "covered": 224,
+        "skipped": 0,
+        "pct": 99.55
+      },
+      "functions": {
+        "total": 56,
+        "covered": 53,
+        "skipped": 0,
+        "pct": 94.64
+      },
+      "statements": {
+        "total": 341,
+        "covered": 330,
+        "skipped": 0,
+        "pct": 96.77
+      },
+      "branches": {
+        "total": 176,
+        "covered": 161,
+        "skipped": 0,
+        "pct": 91.47
+      }
+    },
+    "linux-sandbox-diagnostic-policy.cjs": {
+      "lines": {
+        "total": 38,
+        "covered": 38,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 42,
+        "covered": 42,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 76,
+        "covered": 76,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "moduleCoverageFloors": {
+    "diagnose-linux-sandbox-prerequisites.cjs": {
+      "lines": 90,
+      "statements": 90,
+      "branches": 82,
+      "functions": 88
+    },
+    "linux-sandbox-diagnostic-policy.cjs": {
+      "lines": 95,
+      "statements": 95,
+      "branches": 90,
+      "functions": 90
+    }
+  },
+  "moduleGatesPass": true,
+  "focusedCoverageExit": 1,
+  "focusedCoverageUnrelatedMissingOwners": [
+    "./web/src/",
+    "./src/infrastructure/specification_catalog_publication.cjs"
+  ],
+  "thresholdSuppression": false,
+  "parentNativeAcceptance": {
+    "at": "2026-11-22T17:32:57.521003+00:00",
+    "head": "63d6ac0e848e7052542a63b23d0cafda26042eaa",
+    "CI": "all4PASS45046905583",
+    "SDK": {
+      "suites": 946,
+      "pass": 18874,
+      "historicalSkips": 35
+    },
+    "extension": {
+      "suites": 385,
+      "pass": 5291
+    },
+    "allCoverageFloorsUnchangedAndPass": true,
+    "commit": {
+      "requirements": 42,
+      "verifiedBatches": 2,
+      "plannedBatches": 2,
+      "actualEngineeringCalls": 13,
+      "callBudget": 120
+    },
+    "review": "job45046905724/137283417104andcustom137285926202PASS;8threadsresolved7fixed1dismissed;twofreshvalidfindingsfixed;noadditionalunresolved",
+    "verificationCheck": 137286733187,
+    "approval": "optionalneutral137290668132;notanewmergeauthorization",
+    "mergeHeld": "keeprevieweddevelop5ebbbasewhileexactrecoveriesa74616abauthoritypending",
+    "nativeDiagnosticExecutedSourceStill": "94d760065b208488432f6644b69a1991ad8b5597",
+    "noAdditionalDiagnosticDispatch": true,
+    "qualificationCalls": 0,
+    "pilotWrites": 0,
+    "qualifiedProfiles": [],
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "canonical132": {
+    "file": "goal-950-canonical-through-continuation132.md",
+    "bytes": 5849,
+    "sha256": "c97c042ae48b9d48f6e02a0fcff6260188c584558968d6e56b6e719bccdfcbeb",
+    "sameComment": 7015916845
+  },
+  "actualNewEngineCauseObserved": false,
+  "futureNativeAttempt": "One changed model-free observation only after new committed source/exact-head CI/Commit/Verification/Review gates and resolved findings. Never repeat Native4 helper or infer a cause for earlier receipts.",
+  "native4ExecutedSourceStill": "94d760065b208488432f6644b69a1991ad8b5597",
+  "sameFixedSocketAndGetVersionAndTimeout": true,
+  "noRuntimeBackendPrivilegeOrSelectorChanges": true,
+  "qualificationCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "qualifiedProfiles": [],
+  "productionMutation": false
+}

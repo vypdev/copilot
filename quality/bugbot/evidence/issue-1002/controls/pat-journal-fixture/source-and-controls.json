@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "issue": 1002,
+  "pr": 1003,
+  "parentLocalR11": "e2b4922ca3ddad68e9bb85cb4b4d33db1d99ed9f",
+  "parentNativeSource": "a01610d0a8044f52fc5847b7398a51f4b2d28ae4",
+  "scope": "Only three pre-existing durable-journal fixture cases receive existing20s allowance; application/diagnostic/HTTP/research/scientific/capacity/globalJest limits and assertions unchanged",
+  "controlledResults": [
+    {
+      "phase": "red",
+      "startedAt": "2026-11-22T19:18:45.914070+00:00",
+      "at": "2026-11-22T19:18:56.669395+00:00",
+      "exit": 1,
+      "total": 38,
+      "passed": 0,
+      "failed": 1,
+      "pending": 37,
+      "logSha256": "2a0f03e405cd80dbab696ac5a0fc33cb5cea90245706bee6937ef464460ef079",
+      "logBytes": 1979,
+      "jsonSha256": "4c30e075f2464077df5e1e7b0da52518a1a7ba10c2f152089e48e858041259b0"
+    },
+    {
+      "phase": "green",
+      "startedAt": "2026-11-22T19:18:56.670600+00:00",
+      "at": "2026-11-22T19:19:08.566265+00:00",
+      "exit": 0,
+      "total": 38,
+      "passed": 1,
+      "failed": 0,
+      "pending": 37,
+      "logSha256": "367c42d0a174de5d7b7db6953db710290a18a5090d59039928309c6d3a9f68b3",
+      "logBytes": 307,
+      "jsonSha256": "1a6180c158e9e76f5fc9b8f59a9a6e6a7f5248c487da754c74a78732110a7aba"
+    }
+  ],
+  "selectedControl": "retains a changed branch and its journal instead of deleting an unowned commit; exactly1 selected/37unselected in both arms; no claim the other37 ran in this contrast",
+  "injection": {
+    "path": "src/infrastructure/setup_permission_probe_journal.ts",
+    "firstOnly": true,
+    "before": "            await file.sync();",
+    "after": "            await file.sync();\n            await new Promise(resolve => setTimeout(resolve, 6_000));",
+    "sha256": "d85beb7b9f4632df0f23d2be644b3578aeb6d3683c268d6bcf31d7af6534e31e",
+    "removedAfterControl": true
+  },
+  "realWork": "actual begin file.writeFile/fsync/close and setReferenceSha/recovery; fake provider responses; real owned filesystem; every original behavioral assertion retained",
+  "testCaseAllowances": {
+    "retains changed refMs": [
+      5000,
+      20000
+    ],
+    "retains legacy refMs": [
+      5000,
+      20000
+    ],
+    "cleans exact owned refMs": [
+      5000,
+      20000
+    ]
+  },
+  "evidenceLimits": "Fixed delay demonstrates fixture-timeout sensitivity, not actual CI pending I/O stage or exclusive host cause. Actual source runtime remains byte-identical and has no delay. No new permanent test case or sleep.",
+  "cohort": {
+    "numTotalTestSuites": 3,
+    "numPassedTestSuites": 3,
+    "numTotalTests": 127,
+    "numPassedTests": 127,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "success": true
+  },
+  "nativeA016": {
+    "runs": [
+      {
+        "label": "build",
+        "head": "a01610d0a8044f52fc5847b7398a51f4b2d28ae4",
+        "run": 45057918843,
+        "job": 137317177424,
+        "runner": "ubuntu-runner-1",
+        "conclusion": "success",
+        "bytes": 413252,
+        "sha256": "ed0b18ed0708600319437a3f0f7635634494d0436b02259e9b9f9c2eed44d93c",
+        "failedSteps": []
+      },
+      {
+        "label": "static",
+        "head": "a01610d0a8044f52fc5847b7398a51f4b2d28ae4",
+        "run": 45057918843,
+        "job": 137317177566,
+        "runner": "ubuntu-runner-3",
+        "conclusion": "success",
+        "bytes": 89438,
+        "sha256": "4fbf7133b4ebd6e799d0aa62fd652dd3b33fdf5f1a1da0c9ec7c40c2f929fbff",
+        "failedSteps": []
+      },
+      {
+        "label": "coverage",
+        "head": "a01610d0a8044f52fc5847b7398a51f4b2d28ae4",
+        "run": 45057918843,
+        "job": 137317177173,
+        "runner": "ubuntu-runner-2",
+        "conclusion": "failure",
+        "bytes": 3065359,
+        "sha256": "7d6bd7d6909f675408b7b44ae45782d00c20b4c4332bf42375ac072e3b0fe1b0",
+        "failedSteps": [
+          "Run tests with coverage"
+        ]
+      },
+      {
+        "label": "commit",
+        "head": "a01610d0a8044f52fc5847b7398a51f4b2d28ae4",
+        "run": 45057913181,
+        "job": 137317159150,
+        "runner": "ubuntu-runner-1",
+        "conclusion": "failure",
+        "bytes": 166062,
+        "sha256": "dfd748d2ec72deb12601a1fb1272921d743163e46d595128b63466bd505ebd3c",
+        "failedSteps": [
+          "Run ./"
+        ]
+      }
+    ],
+    "coverage": "1failed/945passed suites;1failed/18881passed tests+35historical skips;extensionnotrun",
+    "failingCase": "PAT write cleanup regressions: retains a changed branch and its journal instead of deleting an unowned commit;5004ms>5000ms",
+    "pendingStage": "unobserved",
+    "previousTargetedSuites": "realSSRrunner,completejournalcontract,diagnostic138PASS",
+    "commit": "binary negative before model assessment; separately corrected by six R100 archive renames in localR11; no identical rerun"
+  },
+  "actualRuntimeSha256": {
+    "src/infrastructure/setup_permission_probe_journal.ts": "a3829a5adc046d977afadbcfba4791b35edd13709f359366ace4f6b50021a5f9"
+  },
+  "workingTreeTestSourceSha256": {
+    "src/infrastructure/__tests__/setup_pat_audit.test.ts": "0170d5da9cd007e07a2925077e3f614c5d86e9cec8b1e3cce69e68bd3d81a540"
+  },
+  "previousLocalIncrement": {
+    "head": "e2b4922ca3ddad68e9bb85cb4b4d33db1d99ed9f",
+    "normalHookSummaries": [
+      "Test Suites: 946 passed, 946 total",
+      "Tests:       35 skipped, 18882 passed, 18917 total"
+    ],
+    "allFourBundlesUnchanged": true,
+    "publication": "not separately pushed; include after this justified fixture correction"
+  },
+  "canonicalHistory": "Previous134 remains verbatim in the archive-naming packet of the same next combined source; no duplicate copy needed",
+  "archiveMap": [
+    {
+      "file": "controlled-red.log.gz",
+      "rawBytes": 1979,
+      "rawSha256": "2a0f03e405cd80dbab696ac5a0fc33cb5cea90245706bee6937ef464460ef079",
+      "gzipBytes": 869,
+      "gzipSha256": "4b34c7faa2558f529c7262e0643c5a8ec4d4384aa5b2e8322ece493cf432102e"
+    },
+    {
+      "file": "controlled-red.jest.json.log.gz",
+      "rawBytes": 24736,
+      "rawSha256": "4c30e075f2464077df5e1e7b0da52518a1a7ba10c2f152089e48e858041259b0",
+      "gzipBytes": 2599,
+      "gzipSha256": "afbfc6789ba21ee202abe4b1e45711bff7b08caac11ef1550b98f5b94507e08f"
+    },
+    {
+      "file": "controlled-green.log.gz",
+      "rawBytes": 307,
+      "rawSha256": "367c42d0a174de5d7b7db6953db710290a18a5090d59039928309c6d3a9f68b3",
+      "gzipBytes": 223,
+      "gzipSha256": "c6bfa36e0e588f57aa0f0b4fad96d54478f3c21a4ca1f5203f1f76e85dbd4e2d"
+    },
+    {
+      "file": "controlled-green.jest.json.log.gz",
+      "rawBytes": 19656,
+      "rawSha256": "1a6180c158e9e76f5fc9b8f59a9a6e6a7f5248c487da754c74a78732110a7aba",
+      "gzipBytes": 1706,
+      "gzipSha256": "6b3082c6a635746659d6e54e237d89b1cb9876b8f69f123b06b103a4800db654"
+    },
+    {
+      "file": "control-receipt.json.log.gz",
+      "rawBytes": 2441,
+      "rawSha256": "efdd93197227fe893665852f1325235286dd925499e7802a73970a57951937c5",
+      "gzipBytes": 1162,
+      "gzipSha256": "bf162a50d099a83fb9023909a96834af6ae78add243a531bcd022e2a0f90453f"
+    },
+    {
+      "file": "control-driver.py.log.gz",
+      "rawBytes": 4617,
+      "rawSha256": "af2f6a3e0750549b5e8e9660c8f245de1e1cf29c828800c2e50415e359791dc3",
+      "gzipBytes": 2021,
+      "gzipSha256": "a4b7b8e5cd0a7bb9613da6c9bb7ec32f7b4ebc15d803b772d2a87c8406cf233e"
+    },
+    {
+      "file": "cohort.log.gz",
+      "rawBytes": 452,
+      "rawSha256": "02c2694d5fdb532b017605ae10e99ada66a66d10d40883407e4dfdf9bfddcc20",
+      "gzipBytes": 255,
+      "gzipSha256": "ccdf633f793e86058fb025fb0a5103af34e9adedff07b86a007db2d7cbd3ee42"
+    },
+    {
+      "file": "cohort.jest.json.log.gz",
+      "rawBytes": 62629,
+      "rawSha256": "8d040ab9c64caf37a2d2a52aae1bff2fe23d740938276032bd3f18266725d3a1",
+      "gzipBytes": 4748,
+      "gzipSha256": "8fd0c814780c5e0b5ae0ef76b24b731660b5e20fc09eb4e62a8ca94368648c9e"
+    },
+    {
+      "file": "a016-native-build.log.gz",
+      "rawBytes": 413252,
+      "rawSha256": "ed0b18ed0708600319437a3f0f7635634494d0436b02259e9b9f9c2eed44d93c",
+      "gzipBytes": 55493,
+      "gzipSha256": "1969b1fdeb162f28b4761348c8d8793fe3bc25bf0b8f1a7dc02564968905ed55"
+    },
+    {
+      "file": "a016-native-static.log.gz",
+      "rawBytes": 89438,
+      "rawSha256": "4fbf7133b4ebd6e799d0aa62fd652dd3b33fdf5f1a1da0c9ec7c40c2f929fbff",
+      "gzipBytes": 19865,
+      "gzipSha256": "a919881d53b5730d71a770c21e96d4a2fd93072fa4e1923584cb26f1e66bbddb"
+    },
+    {
+      "file": "a016-native-coverage.log.gz",
+      "rawBytes": 3065359,
+      "rawSha256": "7d6bd7d6909f675408b7b44ae45782d00c20b4c4332bf42375ac072e3b0fe1b0",
+      "gzipBytes": 563357,
+      "gzipSha256": "d8c7f0a543cf78f84864ff7c13d23e03c50c0b3c3caf863122a27ef2303ce517"
+    },
+    {
+      "file": "a016-native-commit.log.gz",
+      "rawBytes": 166062,
+      "rawSha256": "dfd748d2ec72deb12601a1fb1272921d743163e46d595128b63466bd505ebd3c",
+      "gzipBytes": 18911,
+      "gzipSha256": "b1b8f24952259586dba8a11e915385de7c7df8233f7ebf979e72a12adebc4212"
+    },
+    {
+      "file": "local-e2b-normal-commit-receipt.json.log.gz",
+      "rawBytes": 1134,
+      "rawSha256": "c21f19a94724ae32f860f7921035b80d1316dd6308cd4a6e01c7993c004b58ac",
+      "gzipBytes": 701,
+      "gzipSha256": "6a783df9a4a0eef22ab23ad51cffa4759bbd6a8f93d38f6e89f49ccb998f4306"
+    }
+  ],
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "newNativeDiagnosticDispatched": false,
+  "qualifiedProfiles": [],
+  "productionVerification": "disabled"
+}

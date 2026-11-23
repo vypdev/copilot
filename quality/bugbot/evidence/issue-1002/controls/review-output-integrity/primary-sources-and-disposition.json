@@ -1,0 +1,38 @@
+{
+  "at": "2026-11-22T19:28:43.052712+00:00",
+  "officialSources": [
+    {
+      "url": "https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow",
+      "observed": "Manualworkflow_dispatch requires repository writeaccess; selectedrefmaybeanotherbranch; defaultbranchmustcontainworkflow"
+    },
+    {
+      "url": "https://docs.github.com/en/actions/reference/security/secure-use",
+      "observed": "Persistent selfhostedrunnerscanbecompromisedbyuntrustedworkflowcode;contentsread/persistcredentialsfalse donotcreatehostisolation"
+    }
+  ],
+  "exactRepositoryBaseline": "a01610d0a8044f52fc5847b7398a51f4b2d28ae4",
+  "baselineSources": {
+    ".github/workflows/ci_check.yml": "51d30b659c0e1fae39b6ac3411cb1289ffda0f20f903c100c6cd78c4f0749a60",
+    ".github/workflows/repowise.yml": "9288761513287b9581637e90a42d03f0b01ccdac36e32eafcd5c6e3e1ed9116f",
+    ".github/workflows/copilot_runner_diagnostics.yml": "5ef0613e5df3d2ac541457d532bb7ad749e31684a64da23c432597af0e05bb5d",
+    "docs/security-operations/security/self-hosted-runners.mdx": "8b5e155695251739cecf78d19619e994583ac7e24739be61c04d49dc26147816"
+  },
+  "readFindings": "ExistingCIrunscheckedoutbranchNodecodeforsame-repositoryPRsandmanualdispatchonselfhostedgroup; forks excludedbeforeassignment. ExistingRepoWisemanualworkflowusesmaintainerreviewedselectedref. Userobjectiveexplicitlypreservesselfhostedevent/hostedexceptions. Diagnosticmanualtriggeraddsnonewforkadmissionoractorpermissions. Do notclaimhostisolationfromjobtokenpermissions.",
+  "highFindingAdjudicationState": "PUBLISHED_AND_RESOLVED",
+  "noConfigurationChanges": true,
+  "resolution": {
+    "at": "2026-11-22T19:40:23.322316+00:00",
+    "exit": 0,
+    "thread": "PRRT_kwDONSeBW866nNOP",
+    "replyId": 4659665228,
+    "replyUrl": "https://github.com/vypdev/copilot/pull/1003#discussion_r4659665228",
+    "priorConnectorFailure": "Resource not accessible by integration; definite failed resolution",
+    "productionOrPrivilegesChanged": false,
+    "qualificationCalls": 0,
+    "pilotWrites": 0,
+    "DONE_DO_NOT_REPEAT": true,
+    "isResolved": true,
+    "resolvedBy": "efraespada",
+    "state": "ADJUDICATION_REPLIED_AND_THREAD_RESOLVED"
+  }
+}

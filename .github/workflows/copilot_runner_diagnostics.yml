@@ -9,7 +9,7 @@ permissions:
 jobs:
   linux:
     runs-on: [self-hosted, codex, Linux]
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Report bounded Linux resource counters
         shell: bash
@@ -46,28 +46,22 @@ jobs:
             "$(to_mib "$(read_counter /proc/meminfo MemAvailable:)")" \
             "$cpus" "$(read_counter /proc/vmstat oom_kill)" \
             "$(read_counter /sys/fs/cgroup/memory.events oom_kill)" "$limit"
-      - name: Check tool and sandbox prerequisites
+      - name: Checkout diagnostic source
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Prepare diagnostic Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.21.0
+      - name: Observe exact Linux sandbox prerequisites
         shell: bash
-        run: |
-          uname -sr
-          for tool in node npm pnpm git bwrap unshare codex; do
-            command -v "$tool" || true
-          done
-          if command -v bwrap >/dev/null; then bwrap --version; fi
-          if command -v unshare >/dev/null; then
-            unshare --user --map-root-user --net true || true
-          fi
-          if command -v bwrap >/dev/null; then
-            bwrap --unshare-user --unshare-net --ro-bind / / --proc /proc --dev /dev /bin/true || true
-            bwrap --unshare-user --uid 0 --gid 0 --unshare-net --ro-bind / / --proc /proc --dev /dev /bin/true || true
-          fi
-          if command -v codex >/dev/null; then
-            codex --version
-            echo 'Codex sandbox with an empty command environment'
-            codex sandbox --config 'sandbox_mode="read-only"' --config 'shell_environment_policy.inherit="none"' -- /bin/true || true
-            echo 'Codex sandbox with only the system executable search path'
-            codex sandbox --config 'sandbox_mode="read-only"' --config 'shell_environment_policy.inherit="core"' --config 'shell_environment_policy.ignore_default_excludes=false' --config 'shell_environment_policy.include_only=["PATH"]' -- /bin/true || true
-          fi
-          for setting in /proc/sys/kernel/unprivileged_userns_clone /proc/sys/kernel/apparmor_restrict_unprivileged_userns; do
-            if [ -f "$setting" ]; then echo "$setting: $(cat "$setting")"; fi
-          done
+        run: node scripts/diagnose-linux-sandbox-prerequisites.cjs
+      - name: Retain Linux sandbox observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-sandbox-prerequisites
+          path: ${{ runner.temp }}/copilot-linux-sandbox-${{ github.run_id }}-${{ github.run_attempt }}.json
+          if-no-files-found: error
+          retention-days: 1

@@ -104,6 +104,152 @@ model success is distinct from a verified tool read, edit, or command. A model
 reply and a setup marker cannot certify sandbox tools. No new Windows-service
 Codex acceptance run is required or scheduled.
 
+The Linux diagnostic now prepares official standalone Codex0.171.0 privately
+in the same job as Node24.21.0. It checks the fixed distribution checksum and
+actual executable bytes before probes. It retains the full official package,
+including adjacent bwrap/rg and execution helpers, and checks its fixed layout
+and resource identities before the CLI version check. A matching standalone
+executable/version alone is insufficient when resources are missing. The
+runner's global installation stays untouched. Start `Copilot - Runner diagnostics` on the reviewed source revision.
+Manual dispatch uses the existing trusted-operator contract: repository writers
+can already run selected branch code through source CI. Choose the exact reviewed
+revision after its source checks and review; arbitrary selected branch code is
+not isolated by a read-only GitHub token or disabled checkout credentials. The
+workflow adds no fork-event admission or runner privilege. Persistent runner
+isolation remains an operator requirement.
+
+Its Job Summary shows each actual exit/signal and links through the run to the
+`linux-sandbox-prerequisites` artifact. Download the receipt within its one-day
+retention period when retaining investigation evidence.
+
+The host `sandbox` command uses root configuration overrides and a new private
+HOME/CODEX_HOME; `exec`-only ignore options do not apply to it. An
+`unexpected argument` result is a diagnostic invocation failure before sandbox
+execution. Preserve it and correct the source command before a changed attempt.
+The first exact-source run45016512460 retained two positive bubblewrap rows,
+a failed unshare uid-map write and four such parser failures; it did not prove
+a CLI tool read or write denial. Its unavailable local Engine observation is
+independent of those results.
+
+The schemaVersion4 receipt retains ten observations. Five check namespace or
+bubblewrap execution and empty-environment versus PATH-only Codex startup.
+Namespace commands require their actual Node output witness and exit0.
+Specified witnesses must match the captured channel exactly: added spaces, tabs,
+newlines or Unicode whitespace produce `assertion-mismatch`. The diagnostic
+does not trim those markers. A package metadata failure retains the closed
+`package-metadata` phase in the artifact; preparation stays failed, all ten
+probes stay not-run and owned cleanup remains visible. Three
+controls then run the same harmless Node payload directly, through bubblewrap
+and through Codex. Each requires both output markers and exit37. Only those
+three named execution-transport rows expect37; ordinary rows still require0.
+The summary shows expected and actual exit separately. Silent success does not
+prove that the enclosed command ran.
+
+The owned Node payloads write their evidence directly to stdout/stderr file
+descriptors. Restricted socket introspection can make Node silently discard its
+ordinary streams even though the command returns its expected exit. The receipt
+and summary declare `node-fd-write-sync` and mark Node stream compatibility as
+not measured. This measurement method does not relax sandbox/network policy or
+certify arbitrary Node tools, SDK/model tools or qualification. Preserve earlier
+schema1/2/3 receipts under their original output methods.
+
+The report retains the first65,536 raw bytes of each output channel as a
+contiguous prefix and decodes that prefix once. Valid UTF8 split across child
+chunks survives; invalid bytes or a character cut by the byte limit can appear
+as replacement characters. `outputTextEncoding=utf8-replacement` declares that
+view. `outputCapture` separately records observed/retained byte counts and raw
+SHA256s for stdout and stderr. Observed hashes include all chunks delivered
+through close, even after truncation starts termination; retained hashes cover
+the bounded prefix. The older stdout/stderr hash fields still identify decoded
+text before privacy projection. Raw bytes are not exposed to evade projection.
+Truncated output remains incomplete and cannot establish sandbox acceptance.
+
+All three independent transport commands must close before cleanup. If any
+fails or is unavailable, the owned read/hash and write-denial probes stay
+`not-run (execution-unverified)` and collection is incomplete. A verified read
+must match its trusted digest; a successful denial must produce the expected
+result and leave the canary absent. Missing output is null; actual empty output
+has an empty-byte hash. Cancellation before spawn and executable launch failure
+leave both channels, their hashes and capture metadata null. A later error after
+a successful spawn preserves actual captured bytes.
+
+The diagnostic job allows15minutes for preparation, collection and artifact
+retention. The fixed download/command/termination/Engine timeouts remain
+60s/20s/1s/3s. Their nominal sequential allowance is294s, leaving more than ten
+minutes for checkout, Node setup, hashing and retention; this margin is not a
+guarantee against stalled host I/O. No model or research limit changes.
+
+The report also observes the bounded fixed system bwrap
+file's hash, format, ownership and mode; metadata alone never proves execution.
+An optional local Engine version observation is separate and creates no
+image/container/workload.
+
+The Engine row distinguishes a missing socket, denied socket access and a
+refused connection when the job's actual request provides one of those known
+causes. The receipt adds only the closed `connectionFailure` tag; raw error
+codes, messages and paths are excluded. Unknown errors and older receipts stay
+cause-unknown. A forged value cannot appear as summary text.
+
+`Engine: unavailable (socket missing)` describes the fixed job socket query;
+it does not establish that Docker is uninstalled on the host. Inspect the
+existing runner's local Unix-socket configuration and the job's access before
+preparing qualification. Nothing changes permissions automatically. A version
+response appears as `version metadata observed; workload not verified` and
+still does not prove the contained SDK runtime or model-tool isolation.
+
+The changed run45020212032 on ubuntu-runner-2 retained its original seven-row
+receipt: unshare failed, both bare bubblewrap checks returned0, Codex without
+PATH could not find bwrap, PATH startup returned0, and read/write both returned0
+with empty output. Those read/write results failed their assertions. The cause
+of missing payload output remains unresolved; neither CLI version nor the two
+bare bubblewrap rows establish sandbox acceptance. Preserve both original
+seven-row receipts. A new source revision introduces the execution witnesses
+and three-way comparison; do not repeat the old diagnostic unchanged.
+
+Run45028875562 on ubuntu-runner-2 retained the full verified package and
+Node24.21.0, then found that direct Node and system bwrap deliver both output
+markers and37, while Codex PATH returns37 with empty output. Read/write safely
+remain not-run. Its bundled bwrap now reaches loopback setup and fails with
+EPERM; unshare and Engine observations remain negative/unavailable. Preserve
+that failed ten-row receipt. Exact-version source and a separate unprivileged
+Linux component contrast explain why raw descriptor output avoids Node's dummy
+stream fallback; they do not establish the exact runner's syscall trace. The
+changed output method still requires a new source identity, passing source gates
+and one changed real diagnostic before any new admission claim.
+
+The latest [run 45038779876](https://github.com/vypdev/copilot/actions/runs/45038779876),
+on ubuntu-runner-4, executed source `94d76006` after its complete CI and review
+passed. Its schema 4 receipt retains eight passing and two failing observations.
+Direct Node, system bubblewrap and Codex PATH returned both output markers and 37;
+the owned read matched its digest and the write-denial canary remained absent.
+Unshare and empty-PATH bundled bubblewrap still failed with EPERM. Engine was
+unavailable and cleanup completed. The completed job means all observations
+were retained; those negative prerequisites did not become passes. The original
+receipt, complete logs, identity pins and preceding source-gate evidence are
+preserved with [PR 1003](https://github.com/vypdev/copilot/pull/1003) under
+`quality/bugbot/evidence/issue-1002/controls/native-raw-fd-observation`.
+Evidence/documentation changes do not justify another unchanged diagnostic.
+SDK/model-tool access, credential/oracle exclusion and the contained runtime's
+C32–C35 still need their own actual evidence before 174/42 qualification.
+
+Preparation failure leaves probes `not-run`. Missing tools are `unavailable`;
+nonzero/signal/mismatched/truncated observations are failures. Cancellation
+settles the owned command and marks remaining probes `not-run`; cleanup failure
+stays visible. Cancellation during the final Engine observation or cleanup also
+leaves the collection incomplete and fails the job. The summary shows collection
+completeness and cleanup independently of earlier passing rows. Adapter startup
+errors retain a failed-preparation receipt; private-root initialization cleans
+only its owned directory and records any cleanup uncertainty. Engine identities
+require string version fields. Preserve the receipt and fix the demonstrated cause before a
+changed attempt. A completed diagnostic job means observations were collected,
+including negatives; its green status alone does not certify a sandbox.
+
+The report projects private/account paths and uses a private credential-free
+HOME/config. It introduces no privilege, runner registration or global setting
+change. These model-free command probes do not prove SDK/model tools, managed
+credential/oracle exclusion, native qualification controls or the174/42campaigns.
+Those require their own exact source/runtime evidence and committed admission.
+
 ## Credential-health source selection
 
 The source policy selected for integration in [#979](https://github.com/vypdev/copilot/issues/979)

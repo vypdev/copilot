@@ -7,6 +7,8 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.ts',
     'scripts/git-hooks/verification-environment.cjs',
+    ...(process.platform === 'win32' ? [] : ['scripts/diagnose-linux-sandbox-prerequisites.cjs']),
+    'scripts/lib/linux-sandbox-diagnostic-policy.cjs',
     'issue-admission/index.cjs',
     'deployment-recovery/index.cjs',
     'src/infrastructure/specification_catalog_publication.cjs',
@@ -25,6 +27,10 @@ module.exports = {
       functions: 88,
       branches: 82
     },
+    './scripts/lib/linux-sandbox-diagnostic-policy.cjs': { lines: 95, statements: 95, branches: 90, functions: 90 },
+    ...(process.platform === 'win32' ? {} : {
+      './scripts/diagnose-linux-sandbox-prerequisites.cjs': { lines: 90, statements: 90, branches: 82, functions: 88 }
+    }),
     './web/src/': {
       lines: 98,
       statements: 95,

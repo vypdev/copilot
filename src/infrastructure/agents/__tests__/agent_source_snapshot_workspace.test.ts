@@ -118,8 +118,25 @@ it.each(['file', 'directory'] as const)('source-context-C35: additional %s inval
     await expect(runAgentCli(plan, 'Read.')).rejects.toMatchObject({ reason: 'view-integrity' }); expect(existsSync(plan.runtimeDirectory)).toBe(false);
 });
 it('source-context-C38: elapsed admission cannot reset the original monotonic deadline', async () => {
+    // Control the semantic workspace/integrity ports and clock for this deadline case.
+    // The surrounding cases retain actual Git materialization and integrity checks.
+    const clock = jest.spyOn(performance, 'now').mockReturnValue(1000);
+    const workspacePort = require('../agent_source_snapshot_workspace') as typeof import('../agent_source_snapshot_workspace');
+    jest.spyOn(workspacePort, 'prepareSourceSnapshotWorkspace').mockImplementation((anchor, source, runtimeDirectory, deadline) => {
+        expect(deadline).toBe(31000);
+        const workspace = join(runtimeDirectory, 'source'); mkdirSync(workspace, { mode: 0o700 });
+        return { workspace, manifest: { schemaVersion: 1, source, anchor, treeSha: 'c'.repeat(40), bytes: 0,
+            files: [], directories: [], gitFiles: {}, gitDirectories: [] } };
+    });
     const plan = prepare();
-    await expect(runAgentCli({ ...plan, sourceDeadlineMs: performance.now() - 1 }, 'Read.')).rejects.toMatchObject({ category: 'timeout' });
+    const integrityPort = require('../agent_source_snapshot_integrity') as typeof import('../agent_source_snapshot_integrity');
+    const integrity = jest.spyOn(integrityPort, 'verifySourceSnapshotWorkspace').mockImplementation((source, workspace) => {
+        expect(source).toEqual(fixture.source); expect(workspace).toBe(plan.workspace); clock.mockReturnValue(31001);
+    });
+    const spawn = jest.spyOn(require('node:child_process') as typeof import('node:child_process'), 'spawn');
+    expect(plan.sourceDeadlineMs).toBe(31000);
+    await expect(runAgentCli(plan, 'Read.')).rejects.toMatchObject({ category: 'timeout' });
+    expect(integrity).toHaveBeenCalledTimes(1); expect(spawn).not.toHaveBeenCalled(); expect(plan.sourceDeadlineMs).toBe(31000);
     expect(existsSync(plan.runtimeDirectory)).toBe(false);
 });
 it.each(['success', 'failure', 'cancel', 'timeout'] as const)('source-context-C46/source-context-C53: native %s child uses the selected cwd and cleans all owned state', async outcome => {

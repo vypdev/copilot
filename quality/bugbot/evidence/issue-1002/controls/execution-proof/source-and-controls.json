@@ -1,0 +1,303 @@
+{
+  "schemaVersion": 1,
+  "issue": 1002,
+  "pr": 1003,
+  "parent": "5eebe639aa446ceac5f4e6b9734e45bfaf2949c7",
+  "sourceSha256": {
+    "docs/security-operations/security/self-hosted-runners.mdx": "589b3efb60f78fa4182bfee2be363898f996bbcbc8f44854646779ab258e06ac",
+    "scripts/diagnose-linux-sandbox-prerequisites.cjs": "256739496d17a575bf33cb89869acfb3a3ac48adda25a676378e1f1f1c407c6e",
+    "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "5ab852b9ebbd099ce7a7d58cbee5e33bfa5a539317ee333aadc2e661590e8914",
+    "specs/CATALOG.md": "a878eef70673d227ca87ca88beadc1b6cdab4a5ca66d97f3d585f138897ecd4a",
+    "specs/agent-runtime-provider-and-model-routing.md": "73f4cdb47a2f7060a30ee148af61983c5c923b92a9f55ce3dae82b6e178cafa7",
+    "specs/catalog.json": "c4b8cb4f759ff96c944114fa490d2fe4c2887c922e51e412434cfc1dd0f83242",
+    "src/tooling/__tests__/linux_sandbox_diagnostic.test.ts": "cec4c954e8fd3f11295bedd4caa37f37cb0d90eb83cb58c6c422ce36e80bacf4"
+  },
+  "scope": "diagnostic-only execution proof and full official package composition; not SDK/tool or scientific qualification",
+  "sourceContrast": {
+    "namespaceSame72Bytes": {
+      "beforePass": 69,
+      "beforeFail": 3,
+      "afterPass": 72
+    },
+    "packageNamedPositiveSame110TestFileBytes": {
+      "beforeFail": 1,
+      "afterPass": 1,
+      "selectionOnlySkipped": 109
+    },
+    "after": {
+      "pass": 110,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "moduleCoverage": {
+    "at": "2026-11-22T13:04:49.519725+00:00",
+    "pass": 110,
+    "fail": 0,
+    "skip": 0,
+    "modules": [
+      {
+        "module": "scripts/diagnose-linux-sandbox-prerequisites.cjs",
+        "metrics": {
+          "lines": 99.52,
+          "statements": 96.25,
+          "branches": 89.69,
+          "functions": 94.33
+        },
+        "floors": {
+          "lines": 90,
+          "statements": 90,
+          "branches": 82,
+          "functions": 88
+        },
+        "gate": true
+      },
+      {
+        "module": "scripts/lib/linux-sandbox-diagnostic-policy.cjs",
+        "metrics": {
+          "lines": 100,
+          "statements": 100,
+          "branches": 100,
+          "functions": 100
+        },
+        "floors": {
+          "lines": 95,
+          "statements": 95,
+          "branches": 90,
+          "functions": 90
+        },
+        "gate": true
+      }
+    ],
+    "focusedRawExit": 1,
+    "unrelatedMissingGlobalOwners": [
+      "web/src",
+      "specification_catalog_publication.cjs"
+    ],
+    "globalAcceptance": false,
+    "noThresholdSuppressed": true,
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "validation": {
+    "at": "2026-11-22T13:05:52.954415+00:00",
+    "results": [
+      {
+        "check": "generate",
+        "command": [
+          "pnpm",
+          "run",
+          "generate:specifications"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-execution-proof-round4-validation-attempt2-generate.log",
+        "bytes": 2468,
+        "sha256": "f22782c87d7782a358436750b4523dcef7ab77724622e593588413fe4467b079"
+      },
+      {
+        "check": "specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:specifications"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-execution-proof-round4-validation-attempt2-specifications.log",
+        "bytes": 2457,
+        "sha256": "5087b1864e8ddf166826ffc935a8946623c335c7fee69ec54a8dc2971cf073cc"
+      },
+      {
+        "check": "workflows",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:workflows"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-execution-proof-round4-validation-attempt2-workflows.log",
+        "bytes": 203,
+        "sha256": "3b2d3e6ce562c39076ace9e533166c3be6c393dc32a8ca0e4735c721ead2e23d"
+      },
+      {
+        "check": "types",
+        "command": [
+          "pnpm",
+          "run",
+          "typecheck"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-execution-proof-round4-validation-attempt2-types.log",
+        "bytes": 559,
+        "sha256": "d77320d599d448364f222a7ffe872bf25ad411c77186d4ccae583d2fedd0b640"
+      },
+      {
+        "check": "docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:documentation"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-execution-proof-round4-validation-attempt2-docs.log",
+        "bytes": 307,
+        "sha256": "03467c1b98ffc37d26de76250db345fb357b26954f0c32ec36f8655f142f73b5"
+      },
+      {
+        "check": "agent-docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:agent-docs"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-execution-proof-round4-validation-attempt2-agent-docs.log",
+        "bytes": 206,
+        "sha256": "d01f3d24297b9178d3b4c81ffd5b265fe08cf5839b8fd6dd3f601bbba99ddfcc"
+      },
+      {
+        "check": "lint",
+        "command": [
+          "pnpm",
+          "run",
+          "lint"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-execution-proof-round4-validation-attempt2-lint.log",
+        "bytes": 87,
+        "sha256": "e2c69811f34bf1391f67370bc30e0565df864888d15055b63a88d8f607fffd1c"
+      },
+      {
+        "check": "graphify",
+        "command": [
+          "graphify",
+          "update",
+          "."
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-execution-proof-round4-validation-attempt2-graphify.log",
+        "bytes": 3619,
+        "sha256": "b01bc2ce6d74545c97e4b43e22d0e7c061513d548b77479d5fb8f3e47de8825a"
+      }
+    ],
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "nativeBaseline": {
+    "run": 45020212032,
+    "job": 137201216439,
+    "artifact": 14753855010,
+    "head": "5eebe639aa446ceac5f4e6b9734e45bfaf2949c7",
+    "runner": "ubuntu-runner-2",
+    "retainedSchemaVersion": 1,
+    "outcomes": [
+      {
+        "id": "unshare-user-network",
+        "state": "fail",
+        "exitCode": 1,
+        "signal": null,
+        "reason": "command-failed",
+        "stdout": "",
+        "stderr": "unshare: write failed /proc/self/uid_map: Operation not permitted\n",
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "6b50086233b9e3c0f8f5ac5e8094da06d7a05f1c3be0b88baf49578943392a94",
+        "outputTruncated": false
+      },
+      {
+        "id": "bwrap-user-network",
+        "state": "pass",
+        "exitCode": 0,
+        "signal": null,
+        "reason": "verified",
+        "stdout": "",
+        "stderr": "",
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "outputTruncated": false
+      },
+      {
+        "id": "bwrap-root-user-network",
+        "state": "pass",
+        "exitCode": 0,
+        "signal": null,
+        "reason": "verified",
+        "stdout": "",
+        "stderr": "",
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "outputTruncated": false
+      },
+      {
+        "id": "codex-empty-start",
+        "state": "fail",
+        "exitCode": 101,
+        "signal": null,
+        "reason": "command-failed",
+        "stdout": "",
+        "stderr": "\nthread 'main' (2314943) panicked at linux-sandbox/src/launcher.rs:68:13:\nbubblewrap is unavailable: no system bwrap was found on PATH and no bundled codex-resources/bwrap binary was found next to the Codex executable\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n",
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "4f9a6f4a9ee616278d87256aca6116f4021507f10d31a66da80887cb9399e8f6",
+        "outputTruncated": false
+      },
+      {
+        "id": "codex-path-start",
+        "state": "pass",
+        "exitCode": 0,
+        "signal": null,
+        "reason": "verified",
+        "stdout": "",
+        "stderr": "",
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "outputTruncated": false
+      },
+      {
+        "id": "codex-fixture-read",
+        "state": "fail",
+        "exitCode": 0,
+        "signal": null,
+        "reason": "assertion-mismatch",
+        "stdout": "",
+        "stderr": "",
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "outputTruncated": false
+      },
+      {
+        "id": "codex-write-denial",
+        "state": "fail",
+        "exitCode": 0,
+        "signal": null,
+        "reason": "assertion-mismatch",
+        "stdout": "",
+        "stderr": "",
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "outputTruncated": false
+      }
+    ],
+    "actualCLIToolReadOrDenialAccepted": false,
+    "actualSilentPATHCause": "UNPROVEN",
+    "engine": {
+      "state": "unavailable",
+      "cause": "local-engine-unavailable"
+    },
+    "cleanup": "completed"
+  },
+  "protocol": "schema2 tenfixedIDs; namespace witnesses; exactly3 transport IDs expect37+bothmarkers; all other7 expect0; allSettled beforecleanup; read/write gate; unknownoutputnull",
+  "packageComposition": "fixed full x64/arm64 official package pins and full inventory; preserve adjacent resources, validate all5 executable/resource regular owned identities and metadata beforeversion; old x64 CLI bytes match but resources omitted",
+  "noGlobalInstallationOrFallback": true,
+  "nativeSourceParentCI": "all4CI/Commit/Review/BranchSyncPASS;946suites18813PASS35historicalskips;extension385suites5291PASS",
+  "firstValidation": "7PASS1FAIL lint multilinecall; corrected; all8PASS on finalsource",
+  "otherControllerNegatives": "initial package causal test did not compile; next actual namedcontrol reproduced inventory rejection; sourcecapture extra newline checksum guard stopped beforechanges; allretained separately",
+  "normalHooks": "PENDING_AT_PACKET_CREATION",
+  "newHeadNativeCI": "PENDING",
+  "native3": "UNEXECUTED;requires newcommitted source and allgates;never repeatprior2runs",
+  "actualSDKOrModelToolAcceptance": false,
+  "nativeCommonC32C35": "UNEXECUTED_ON_NEW_TUPLE",
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "qualifiedProfiles": [],
+  "productionConfigurationChanged": false,
+  "frozenRecoverySnapshots": "unchanged;no develop merge",
+  "archiveCount": 186
+}

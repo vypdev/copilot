@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "issue": 1002,
+  "parent": "5ebb96859b32a18736f8a75be09e698c763ce163",
+  "sourceSha256": {
+    ".github/workflows/copilot_runner_diagnostics.yml": "b5bbf5d18fc39433ce6c845bff10f5e3d7b40bbe0ef8c835156bf5c38f562fca",
+    "scripts/diagnose-linux-sandbox-prerequisites.cjs": "d4819b973a8b2bf4f174f0d81a7a4e52138e1710783e3e4e039e0926704bf0df",
+    "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "9f64e46946313984585a5a95031eba70b8957139790409f194834c18eb1cc6d3",
+    "src/tooling/__tests__/linux_sandbox_diagnostic.test.ts": "f40584f2633a733a8bbadad1c8b05a3677ede3ce7f265ad2f9d1b02cccc37537",
+    "jest.config.js": "dbf49759f8a76ccd3254e09886ef56b7f031deff8cb793f98ff87999bf9766f9",
+    "specs/agent-runtime-provider-and-model-routing.md": "a9977ca31f1bcb512e37ba89fe3fccf3647ee6c02e8bf02840c219714fad815e",
+    "specs/catalog.json": "4521427ee011638d09621f440354902c48377a0e236cae128756789f711bc7ab",
+    "specs/CATALOG.md": "043694fcc8f451ba7eea6e87b89c6e9ed8c4bf4803a66b5266e4528b6db4138f",
+    "docs/security-operations/security/self-hosted-runners.mdx": "cb59ec50897925d6df708e3f0537dcf4b57ccd8896130fc65a4908542dfdf937"
+  },
+  "scope": "standalone model-free Linux diagnostic; no ordinary detector/runtime policy change or scientific acceptance",
+  "actualDefaultBashNegative": {
+    "sameOriginalStepBytes": true,
+    "modeledProbeExits": [
+      37,
+      37,
+      37,
+      37,
+      37
+    ],
+    "actualAggregateBashExit": 0,
+    "actualCodexLinux": false
+  },
+  "sourceCorrectionContrasts": [
+    {
+      "scope": "same30component tests; version mismatch classification",
+      "before": {
+        "pass": 29,
+        "fail": 1
+      },
+      "after": {
+        "pass": 30,
+        "fail": 0
+      }
+    },
+    {
+      "scope": "same53component tests; synchronous HTTP constructor failure closure",
+      "before": {
+        "pass": 52,
+        "fail": 1
+      },
+      "after": {
+        "pass": 53,
+        "fail": 0
+      }
+    }
+  ],
+  "intermediateCoverageNegative": "53PASS;native adapter branch76.84 below unchanged selected82floor; retained",
+  "finalControls": {
+    "pass": 58,
+    "fail": 0,
+    "skip": 0,
+    "scope": "real local Bash/Node processes/private files/streams plus modeled CLI/HTTP/release/process ports; no actualLinuxCodex execution"
+  },
+  "finalModuleCoverage": {
+    "at": "2026-11-22T09:55:46.032890+00:00",
+    "cases": 58,
+    "pass": 58,
+    "fail": 0,
+    "modules": [
+      {
+        "path": "diagnose-linux-sandbox-prerequisites.cjs",
+        "summary": {
+          "lines": 99.36,
+          "statements": 94.91,
+          "branches": 87.62,
+          "functions": 92.85
+        },
+        "floors": {
+          "lines": 90,
+          "statements": 90,
+          "branches": 82,
+          "functions": 88
+        },
+        "gate": true
+      },
+      {
+        "path": "linux-sandbox-diagnostic-policy.cjs",
+        "summary": {
+          "lines": 100,
+          "statements": 100,
+          "branches": 100,
+          "functions": 100
+        },
+        "floors": {
+          "lines": 95,
+          "statements": 95,
+          "branches": 90,
+          "functions": 90
+        },
+        "gate": true
+      }
+    ],
+    "rawFocusedCoverageExit": 1,
+    "unrelatedGlobalOwnerDataMissing": [
+      "web/src",
+      "specification_catalog_publication.cjs"
+    ],
+    "globalCoverageSatisfied": false,
+    "actualLinuxCodexExecuted": false,
+    "modelCalls": 0,
+    "pilotWrites": 0,
+    "noThresholdOverridesOrSuppressions": true
+  },
+  "rootAndExtensionTypes": "PASS after offline locked extension dependency restoration",
+  "controllerNegatives": [
+    "check:types does not exist; no typecheck ran in validation1",
+    "typecheck2 failed because reused checkout lacked extension dependencies",
+    "first workspace install interrupted at purge confirmation; no module purge; matching-store filtered offline installation succeeded"
+  ],
+  "workflowsDocumentationSpecificationsCatalogLint": "PASS;validation-attempt1;types separate",
+  "graphify": "PASS",
+  "normalHooks": "PENDING_AT_PACKET_CREATION",
+  "nativeExactHeadCI": "PENDING",
+  "officialStandaloneArchive": "x64 full download122664925bytes verified against01baa2e47809f8597be5b2f8abd4e4dfe3fb5bcb6e504c2fbaaad97056c15e8d;one315109048byte regular executable;not executed",
+  "actualNewSelfhostedDiagnostic": "UNEXECUTED;requires reviewed committed source gates and one changed dispatch",
+  "nativeCommonC32C35": "UNEXECUTED_ON_NEW_TUPLE",
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationModelCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "qualifiedProfiles": [],
+  "productionLastActualRead": "disabled;production-read-attempt1 receipt;diagnostic does not mutate or infer live setting",
+  "pending974998RecoverySnapshots": "UNCHANGED;explicit recovery approval still pending;no develop merge in this task",
+  "windowsScope": "portable policy/usecase/HTTP/workflow/receipt controls retained;actualPOSIX process/private-file tests and Linux-adapter module gate not applicable on Windows;no WindowsCodex acceptance inferred",
+  "archiveCount": 78,
+  "archiveMap": "archive-map.json"
+}

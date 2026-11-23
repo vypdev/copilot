@@ -1,0 +1,317 @@
+{
+  "capture-integrity-native-diagnostic-dispatch-attempt1-gates.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-dispatch-attempt1-gates.json",
+    "rawBytes": 8373,
+    "rawSha256": "46dea050770329a18061ccde36d56f3357a9c2a74daf526e329f1e6cfd1b392b",
+    "gzipBytes": 2279,
+    "gzipSha256": "9a7d8845cbe2703aba58415ccfb7a921ba825c4b36123709b1c99c19c6ab3889"
+  },
+  "capture-integrity-native-diagnostic-dispatch-attempt1-receipt.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-dispatch-attempt1-receipt.json",
+    "rawBytes": 669,
+    "rawSha256": "6645e87a1183c8e96a157d4d43a31768661b9064533ae124509966b7d58ae253",
+    "gzipBytes": 449,
+    "gzipSha256": "eaefc956208a65103785e0e966efc4c3057e2ed6ef550133e948c8300b069f12"
+  },
+  "capture-integrity-native-diagnostic-dispatch-attempt1-request.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-dispatch-attempt1-request.json",
+    "rawBytes": 99,
+    "rawSha256": "b3ebc6bec7e91a5b7060ad8b80ee731d58540edbf65ea0981a6e8ae677cd2875",
+    "gzipBytes": 107,
+    "gzipSha256": "e5d010a6beb8a5eaf3d287a6a6ab56b2b9903561edcd8911513b840fc54c9a02"
+  },
+  "capture-integrity-native-diagnostic-dispatch-attempt1-response.txt.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-dispatch-attempt1-response.txt",
+    "rawBytes": 0,
+    "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gzipBytes": 20,
+    "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  "capture-integrity-native-diagnostic-dispatch-attempt1-stderr.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-dispatch-attempt1-stderr.log",
+    "rawBytes": 0,
+    "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gzipBytes": 20,
+    "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  "capture-integrity-native-diagnostic-dispatch-first-prepared.py.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-dispatch-first-prepared.py",
+    "rawBytes": 4508,
+    "rawSha256": "5fcfd508f80806b67ce3e003c745f1976ceb201e90d2f90590997494df4c29aa",
+    "gzipBytes": 1948,
+    "gzipSha256": "1cfd1f9d25314b22087b3f309d533a4a15dd5b63bde7a1b0b989dbe78c696362"
+  },
+  "capture-integrity-native-diagnostic-dispatch-once.py.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-dispatch-once.py",
+    "rawBytes": 5401,
+    "rawSha256": "4fff1abfd235eb0a459406b2f23bcb76f1f5eaeb7f7b5a81832b8e2dab0203bd",
+    "gzipBytes": 2245,
+    "gzipSha256": "da440489835b37470c6740bcea00ebd2983c5eba750ff1776132ba55c8802673"
+  },
+  "capture-integrity-native-diagnostic-observation-attempt1-artifact-download-stderr.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-observation-attempt1-artifact-download-stderr.log",
+    "rawBytes": 0,
+    "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gzipBytes": 20,
+    "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  "capture-integrity-native-diagnostic-observation-attempt1-artifacts.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-observation-attempt1-artifacts.json",
+    "rawBytes": 966,
+    "rawSha256": "4e5ba2bf76225e1d4719ff2ac4b3a4fab769ca36485c521cbfd2860234380ba2",
+    "gzipBytes": 513,
+    "gzipSha256": "f061b7faafcb189e1a0d1c87e22f8f99bfe2fe64dc9956ca3d9724058e0b29ac"
+  },
+  "capture-integrity-native-diagnostic-observation-attempt1-jobs.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-observation-attempt1-jobs.json",
+    "rawBytes": 3545,
+    "rawSha256": "5ec6c98ff344de49dcee36cdf940858584862593544e47349d9737426e2378f6",
+    "gzipBytes": 757,
+    "gzipSha256": "2e223b9828a5f2ef6855dc8d61d1a1fa97675fdf44d0d086e242a0d4d45f9fb7"
+  },
+  "capture-integrity-native-diagnostic-observation-attempt1-log-download-stderr.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-observation-attempt1-log-download-stderr.log",
+    "rawBytes": 0,
+    "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gzipBytes": 20,
+    "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  "capture-integrity-native-diagnostic-observation-attempt1-receipt.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-observation-attempt1-receipt.json",
+    "rawBytes": 15264,
+    "rawSha256": "8b7fd1cfaec64e618cbd5dc44f7926f59495704267b9e788bfb3545cc9464074",
+    "gzipBytes": 2601,
+    "gzipSha256": "6863a40cbbb95066dc4f22ca7d435af81701ce65a893cf40c37ff7b9bfc5f98e"
+  },
+  "capture-integrity-native-diagnostic-observation-attempt1-run.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-observation-attempt1-run.json",
+    "rawBytes": 13818,
+    "rawSha256": "dc48e2c94c5dc9c76b9d4bca7c53315f8ca62946706dcbd9c00392267409cb01",
+    "gzipBytes": 1916,
+    "gzipSha256": "f062b4356649ec6d9106f33c6210c0a913a1d579abba2b06d4025ef10323e105"
+  },
+  "capture-integrity-native-diagnostic-observation-attempt1.raw.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-diagnostic-observation-attempt1.raw.log",
+    "rawBytes": 19283,
+    "rawSha256": "da078b281d53eca0e5f0eb7effac20a02bfa1e182167c8a2026d9613be0ffe71",
+    "gzipBytes": 5195,
+    "gzipSha256": "684b8b4eb96b5517c26824cd9a67cc65a3ce8dc64508e05d0e0e24f71e175d6f"
+  },
+  "capture-integrity-native-dispatch-approval-source.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-dispatch-approval-source.json",
+    "rawBytes": 5014,
+    "rawSha256": "16ae719833ed366ec74d1a4ea2af9cd54cb9881a20d53c32cd8530a3b5888af4",
+    "gzipBytes": 1668,
+    "gzipSha256": "1ce2912dc87903a0456a895decdeae6fb9f7984693169b554d93c6ad636d1df9"
+  },
+  "capture-integrity-native-dispatch-guard-adjudication.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-dispatch-guard-adjudication.json",
+    "rawBytes": 1125,
+    "rawSha256": "938d3561d6a569902dec509a758e1af761b14d54e3d26c233738fce0e963280e",
+    "gzipBytes": 641,
+    "gzipSha256": "b9a0c375ef03573d3dfdf527ad06f992dc91c51fd22180703be3cecb3cd15da4"
+  },
+  "capture-integrity-native-dispatch-preflight-audit-attempt1.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-capture-integrity-native-dispatch-preflight-audit-attempt1.json",
+    "rawBytes": 3071,
+    "rawSha256": "e57a62944561bbc19983cb4a417d713f451351646b2e14c7e0e29efcf85d97e4",
+    "gzipBytes": 569,
+    "gzipSha256": "b184b246535cfb6be8d65971ffb6ef6d7ab5d3dd77591e2331298b5e229b9658"
+  },
+  "collect-capture-integrity-native-diagnostic-once.py.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-collect-capture-integrity-native-diagnostic-once.py",
+    "rawBytes": 7966,
+    "rawSha256": "48d89ddc5adab5e29c140d0684c04460646dd9e86aa13dcc8da9734a89406db7",
+    "gzipBytes": 2997,
+    "gzipSha256": "72f342a71d7f1e3c36d4b5abb64dfbd570a9515f5abed177b090f2b5d285d29c"
+  },
+  "native4-evidence-round7-package-once.py.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-native4-evidence-round7-package-once.py",
+    "rawBytes": 6445,
+    "rawSha256": "c1e2745a6a1ebe21ddf9be534c164d8e686b1a9c1f0f1fdc2644bcf654d7c4c2",
+    "gzipBytes": 2629,
+    "gzipSha256": "db49212c0e5f62766dc9bafac4adf3aa2d7989b18e1bb797365a933385efdf17"
+  },
+  "native4-evidence-round7-plan-attempt1.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-native4-evidence-round7-plan-attempt1.json",
+    "rawBytes": 1864,
+    "rawSha256": "80262667ece629751acd6f49f875437b65c77734236457822e985b272a088310",
+    "gzipBytes": 1119,
+    "gzipSha256": "0ae7c1954e3df8b37ad44beb237c4a7ddc498c4090236aed2203c9c5f88bf9e7"
+  },
+  "native4-evidence-round7-validation-attempt1-agent-docs.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-native4-evidence-round7-validation-attempt1-agent-docs.log",
+    "rawBytes": 206,
+    "rawSha256": "d01f3d24297b9178d3b4c81ffd5b265fe08cf5839b8fd6dd3f601bbba99ddfcc",
+    "gzipBytes": 170,
+    "gzipSha256": "eaa7944fa5d11531e783be9027d2009e60b13f6adb34d9bb4dd6cb851dfacb60"
+  },
+  "native4-evidence-round7-validation-attempt1-docs.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-native4-evidence-round7-validation-attempt1-docs.log",
+    "rawBytes": 307,
+    "rawSha256": "03467c1b98ffc37d26de76250db345fb357b26954f0c32ec36f8655f142f73b5",
+    "gzipBytes": 221,
+    "gzipSha256": "fe9d7cdbc3db47f5a6305e7c4b13187a449a46e59b3154d8c63f8066cec59d4a"
+  },
+  "native4-evidence-round7-validation-attempt1-generate.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-native4-evidence-round7-validation-attempt1-generate.log",
+    "rawBytes": 2473,
+    "rawSha256": "e9441da27a1237b134372d5c019c26b731a120a7ae1f820f30bafdfa2f74506c",
+    "gzipBytes": 1100,
+    "gzipSha256": "66c9b53ae511c2b894626b164dd144ec5da1dd8db10a547b6925acbae83d2a9a"
+  },
+  "native4-evidence-round7-validation-attempt1-graphify.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-native4-evidence-round7-validation-attempt1-graphify.log",
+    "rawBytes": 3619,
+    "rawSha256": "4c4b78ebeb33326d6a941087be14b50e83b0d17e67044bb2cfcf31fcf53535de",
+    "gzipBytes": 925,
+    "gzipSha256": "925e0b484ab2e5f822682ebfd8f4ad6aa6f65717052801e3aece950dce41ce66"
+  },
+  "native4-evidence-round7-validation-attempt1-receipt.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-native4-evidence-round7-validation-attempt1-receipt.json",
+    "rawBytes": 1968,
+    "rawSha256": "9b5dacb127bff3262c9a72e7d55efded8032718872166371fb279a0214369fc5",
+    "gzipBytes": 653,
+    "gzipSha256": "3274a3f5e519aac0e10b6ba6e6feedc2d27162c5639da7731b823e6f0bbefb92"
+  },
+  "native4-evidence-round7-validation-attempt1-specifications.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-native4-evidence-round7-validation-attempt1-specifications.log",
+    "rawBytes": 2461,
+    "rawSha256": "3f6a26f727d40ed8bac9a6058767a92cba44de9f6be51febc6302e696548a3a8",
+    "gzipBytes": 1083,
+    "gzipSha256": "95b17eb794919b2bca8906927b1e28503a03720ccfde86591ac30ca3f611b2e5"
+  },
+  "native4-evidence-round7-validation-once.py.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-native4-evidence-round7-validation-once.py",
+    "rawBytes": 1523,
+    "rawSha256": "37a84999c57c3d859af5396aaca9976075d3df5fd3cb49e8e55f2d59f218f706",
+    "gzipBytes": 814,
+    "gzipSha256": "68bd41e476d1c049f5e76556d4c17f25bd3a058fa6fd8fb1a6f9b63142554d14"
+  },
+  "output-capture-round6-native-commit-attempt1-job.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-commit-attempt1-job.json",
+    "rawBytes": 2558,
+    "rawSha256": "002d9c99285efe23283f6ba2c65f3c31bf815db0a6963191df737d73b7403091",
+    "gzipBytes": 658,
+    "gzipSha256": "68147cea8cd247ec6dc4f54d691f32af17d6e4040d36168f708600f5053b87d4"
+  },
+  "output-capture-round6-native-commit-attempt1-receipt.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-commit-attempt1-receipt.json",
+    "rawBytes": 426,
+    "rawSha256": "5c1099213010fed26cd18a04879864f2f044bfcf8f3c15e2f205d01da695ff2a",
+    "gzipBytes": 309,
+    "gzipSha256": "c660aa63d9e1151c69c16e6f45cb80315f9ec786f5488802950b98aafcbd2fc3"
+  },
+  "output-capture-round6-native-commit-attempt1-run.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-commit-attempt1-run.json",
+    "rawBytes": 13830,
+    "rawSha256": "5a69c201138f293117489c7254c4435b638d54806f18ad3fbbedf76206e60452",
+    "gzipBytes": 1916,
+    "gzipSha256": "9681ac78209af2042b30652ea3a301db42cf4cd365c27e18386f728c56133703"
+  },
+  "output-capture-round6-native-commit-attempt1-stderr.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-commit-attempt1-stderr.log",
+    "rawBytes": 0,
+    "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gzipBytes": 20,
+    "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  "output-capture-round6-native-commit-attempt1.raw.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-commit-attempt1.raw.log",
+    "rawBytes": 37420,
+    "rawSha256": "6a33dfa2f689de35e23be6343cca7e8e8031b9ef4801c13b15b32ba3297a3dd1",
+    "gzipBytes": 9575,
+    "gzipSha256": "59cdec6d04bededc6af7785d903493c0d8ba1ffc64e72a21d2f44b30db018d61"
+  },
+  "output-capture-round6-native-commit-progress-decision.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-commit-progress-decision.json",
+    "rawBytes": 838,
+    "rawSha256": "e82f72306e824aa845c8492f6521bf01539140f5bcd8c3eaffb758b6b4a9a508",
+    "gzipBytes": 526,
+    "gzipSha256": "1226a1540010d54109c4a8858ba10339b05434f488c8738bc4c8a8efc847c27d"
+  },
+  "output-capture-round6-native-coverage-attempt1-job.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-coverage-attempt1-job.json",
+    "rawBytes": 4380,
+    "rawSha256": "9c0ffe0c3b283400e5763712b535428b415a5b1463ef8a70bdad88048350a68e",
+    "gzipBytes": 845,
+    "gzipSha256": "927537092210b11528799991d3713471bf72230d18e00c3f04f082ec31892b49"
+  },
+  "output-capture-round6-native-coverage-attempt1-receipt.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-coverage-attempt1-receipt.json",
+    "rawBytes": 428,
+    "rawSha256": "423c28ea2f08a9229635e7d1c7b115ff0b59d89f826aecb98f454bdb1cfcd432",
+    "gzipBytes": 309,
+    "gzipSha256": "a44f4c81db76f0b0ec7a57dd486e58349134f5571abb2853ea186d9d0c8e17de"
+  },
+  "output-capture-round6-native-coverage-attempt1-run.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-coverage-attempt1-run.json",
+    "rawBytes": 13800,
+    "rawSha256": "391763c0efc0ac04017bee29a55ecb7520683405003f86154b5afc3c2b566fcb",
+    "gzipBytes": 1920,
+    "gzipSha256": "c54f3845868ef242bc5c960578e3b740fcc173fd927de5da51ad376e01b4add0"
+  },
+  "output-capture-round6-native-coverage-attempt1-stderr.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-coverage-attempt1-stderr.log",
+    "rawBytes": 0,
+    "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gzipBytes": 20,
+    "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  "output-capture-round6-native-coverage-attempt1.raw.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-coverage-attempt1.raw.log",
+    "rawBytes": 3238519,
+    "rawSha256": "ec099eea3bc8a49ce60057a4d17460741b0f022192e535ab5c1b32c84bbfa7fd",
+    "gzipBytes": 589262,
+    "gzipSha256": "4bc2a7028ec3e2f44d89aea80da3b5f664b57fe0ef8fe80b01599bf10f64511e"
+  },
+  "output-capture-round6-native-coverage-decision.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-coverage-decision.json",
+    "rawBytes": 701,
+    "rawSha256": "a7f8002fd20ae7d294e1f0bbfa26c1c9bd1927745a0592de9cdc0b9051e226c1",
+    "gzipBytes": 427,
+    "gzipSha256": "56a1fc303546fc9f2951f5db15579b84f2b8421b0d2f0ccbe5230952b9546642"
+  },
+  "output-capture-round6-native-review-attempt1-job.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-review-attempt1-job.json",
+    "rawBytes": 2597,
+    "rawSha256": "ce653107b1b8826d5c76f6f3353f4e12b01419fab91038ee35466133176768fe",
+    "gzipBytes": 698,
+    "gzipSha256": "fa5863ff380dc7a1887599650432ed818b574073d8e596a426fe7b8c2039e139"
+  },
+  "output-capture-round6-native-review-attempt1-receipt.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-review-attempt1-receipt.json",
+    "rawBytes": 426,
+    "rawSha256": "2fe08dcc28c189970cfaf9824776f449cf5aa0a2d38290cec2ddc3203a053552",
+    "gzipBytes": 309,
+    "gzipSha256": "92fb4d93c863833863ac97255341efddf6644ee09383d7e917f6c81116155642"
+  },
+  "output-capture-round6-native-review-attempt1-run.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-review-attempt1-run.json",
+    "rawBytes": 13837,
+    "rawSha256": "62c2e672774f88292afc8db5cb3ff3fa0a616e9fe0304d6deacb456ad2c495e7",
+    "gzipBytes": 1923,
+    "gzipSha256": "96e8192c31b41111c9df65753e32615ee4e47fa24c66c954e07f193273c5700c"
+  },
+  "output-capture-round6-native-review-attempt1-stderr.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-review-attempt1-stderr.log",
+    "rawBytes": 0,
+    "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gzipBytes": 20,
+    "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  "output-capture-round6-native-review-attempt1.raw.log.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-1002-output-capture-round6-native-review-attempt1.raw.log",
+    "rawBytes": 32280,
+    "rawSha256": "9c36d8932a7770695291c112dae3de22b44cc2e199bb23010a694ac662aaf751",
+    "gzipBytes": 8031,
+    "gzipSha256": "8cbe87f3ce7ae54aefefd4a3d2140ce65495d51504dd51a7769ddd0a91afedfb"
+  },
+  "974-model-transport-static-audit-round5-attempt1.json.log.gz": {
+    "originalPrivateRelativePath": "copilot-goal-974-model-transport-static-audit-round5-attempt1.json",
+    "rawBytes": 1373,
+    "rawSha256": "ecc1e934f0ba7977a88a6f9276c71326ba0e4bb2651eacca5a42bbd62655a379",
+    "gzipBytes": 792,
+    "gzipSha256": "ecd3d9a9e04c75fa7c2986d7a0a732f2998214d044ad29ae879ba0a931cf068f"
+  }
+}

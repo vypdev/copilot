@@ -1,0 +1,828 @@
+{
+  "schemaVersion": 1,
+  "issue": 1002,
+  "pr": 1003,
+  "parent": "94d760065b208488432f6644b69a1991ad8b5597",
+  "sourceSha256Revision": "b26c892c89e5fb3ee0e45629881b01a32e85ef5b",
+  "sourceSha256Scope": "Evidence-publication documentation and catalog; separate from immutableExecutedSource and its executable hashes",
+  "sourceSha256": {
+    "docs/security-operations/security/self-hosted-runners.mdx": "52f05a92dc6f737cc22ad570ad71f363b43d615df2f65b476dbf51f1c050ad69",
+    "specs/CATALOG.md": "d155686f73206dfa572f743b6442eb2e79480cfb5792b85271ce9d578ad17867",
+    "specs/agent-runtime-provider-and-model-routing.md": "fee05afb38ee68f8378c6ac14853e9214ecd8bdae83d7a9f73501c4743ac030d",
+    "specs/catalog.json": "93d0c96bec02d1c195a05fabebcaaae88a770892a770dae122216a34d16c1663"
+  },
+  "immutableExecutedSource": "94d760065b208488432f6644b69a1991ad8b5597",
+  "immutableExecutableSourceSha256": {
+    "scripts/diagnose-linux-sandbox-prerequisites.cjs": "2374aa72925dacf1c17dafa2c7825e73514d94e9888580763cefa2ca77b87d8d",
+    "scripts/lib/linux-sandbox-diagnostic-policy.cjs": "3c11796ddb336f8c95801a637b96945cc82f5e0822a294940060274337c607dd",
+    ".github/workflows/copilot_runner_diagnostics.yml": "b5bbf5d18fc39433ce6c845bff10f5e3d7b40bbe0ef8c835156bf5c38f562fca",
+    "src/tooling/__tests__/linux_sandbox_diagnostic.test.ts": "f19c89bbaa28a20eb9871604ac9bfb7120b725124b7e71afb08fae511784a6e4",
+    "src/infrastructure/__tests__/setup_permission_resource_probes.test.ts": "6a89ca975a4c0b34a98d419ee17c910199af7b144f112d5ec431a81127b2dd31",
+    "jest.config.js": "dbf49759f8a76ccd3254e09886ef56b7f031deff8cb793f98ff87999bf9766f9",
+    "pnpm-lock.yaml": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd"
+  },
+  "scope": "evidence, observed documentation and catalog only; no runtime source/test or admission changes",
+  "actualDiagnostic": {
+    "at": "2026-11-22T15:34:18.994849+00:00",
+    "run": 45038779876,
+    "job": 137258341354,
+    "runnerName": "ubuntu-runner-4",
+    "head": "94d760065b208488432f6644b69a1991ad8b5597",
+    "jobConclusion": "success",
+    "rawBytes": 19283,
+    "rawSha256": "da078b281d53eca0e5f0eb7effac20a02bfa1e182167c8a2026d9613be0ffe71",
+    "qualificationCalls": 0,
+    "evaluatedPilotWrites": 0,
+    "actual174": "UNSTARTED",
+    "actual42": "UNSTARTED",
+    "qualifiedProfiles": [],
+    "actualSDKOrModelToolAcceptance": false,
+    "DONE_DO_NOT_REPEAT": true,
+    "outputTextEncoding": "utf8-replacement",
+    "payloadOutputTransport": "node-fd-write-sync",
+    "nodeStreamCompatibility": "not-measured",
+    "executionTransportVerified": true,
+    "systemBwrap": {
+      "state": "observed",
+      "canonicalPath": "/usr/bin/bwrap",
+      "bytes": 80424,
+      "sha256": "523da3e7399044be5163aee6f57a77a6bef7454376e28f0a0627920bae1b76b6",
+      "format": "ELF",
+      "ownerUid": 0,
+      "ownerGid": 0,
+      "mode": 493,
+      "payloadExecutionVerified": false
+    },
+    "artifactId": 14760563041,
+    "artifactZipSha256": "d89baf54c1419d30890cec88fc38231402d8a2b38a6cb7cf63780bd2e042a7ee",
+    "artifactReceiptSha256": "62bd68bdb80550318ded7424e2e7a73410bef9a7995dad96b28317bb886b6ac6",
+    "preparation": {
+      "state": "observed",
+      "runtime": {
+        "version": "0.171.0",
+        "executableSha256": "b76a027d6b210f9a8da7aaf321dd235c700f0ef7a794d4a5314b9af6c134f0f0",
+        "distributionSha256": "8391d67757496bfd14893eca6cbf0c96994bf2627566ff1f018f70600c9ef6b3",
+        "archiveInventorySha256": "99caccd38a47e1dd9df829646c99b4efc24e0e751dea0a2781f98698b7045e9e",
+        "packageLayoutVersion": 1,
+        "packageExecutables": [
+          {
+            "path": "bin/codex",
+            "bytes": 315109048,
+            "sha256": "b76a027d6b210f9a8da7aaf321dd235c700f0ef7a794d4a5314b9af6c134f0f0"
+          },
+          {
+            "path": "bin/codex-code-mode-host",
+            "bytes": 70072856,
+            "sha256": "f49bd4f0c0cc73cf1ec3a719009e07ce5b6e100520d023c760cc203fb37e5c6f"
+          },
+          {
+            "path": "bin/codex-exec-server",
+            "bytes": 77627248,
+            "sha256": "da2b3636f0b050e4b97da5cf8ed6b3f85621d7611105f58ee9748d8c7e2266fe"
+          },
+          {
+            "path": "codex-path/rg",
+            "bytes": 5408904,
+            "sha256": "e62198eb19b136b88c330af83647b5a962cb99b6b1f066758568f12de1974849"
+          },
+          {
+            "path": "codex-resources/bwrap",
+            "bytes": 492984,
+            "sha256": "91a245ea678a7ae642f383a22576c3c476d0d6d3e2321a553f3ed8d4d487ed74"
+          }
+        ],
+        "nodeVersion": "24.21.0",
+        "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "fixtureSha256": "68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e"
+      }
+    },
+    "probes": [
+      {
+        "id": "unshare-user-network",
+        "state": "fail",
+        "reason": "command-failed",
+        "kind": "prerequisite",
+        "expectedExitCode": 0,
+        "exitCode": 1,
+        "signal": null,
+        "stdout": "",
+        "stderr": "unshare: write failed /proc/self/uid_map: Operation not permitted\n",
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "6b50086233b9e3c0f8f5ac5e8094da06d7a05f1c3be0b88baf49578943392a94",
+        "outputCapture": {
+          "textEncoding": "utf8-replacement",
+          "limitBytesPerChannel": 65536,
+          "stdout": {
+            "observedBytes": 0,
+            "retainedBytes": 0,
+            "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "observedBytes": 66,
+            "retainedBytes": 66,
+            "observedSha256": "6b50086233b9e3c0f8f5ac5e8094da06d7a05f1c3be0b88baf49578943392a94",
+            "retainedSha256": "6b50086233b9e3c0f8f5ac5e8094da06d7a05f1c3be0b88baf49578943392a94"
+          }
+        },
+        "outputTruncated": false
+      },
+      {
+        "id": "bwrap-user-network",
+        "state": "pass",
+        "reason": "verified",
+        "kind": "prerequisite",
+        "expectedExitCode": 0,
+        "exitCode": 0,
+        "signal": null,
+        "stdout": "bwrap-user-network",
+        "stderr": "",
+        "stdoutSha256": "dbe7790e4a855f7fd89afe0714fc70d0deea619f6c292c572c10b0e9d1b69fc1",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "outputCapture": {
+          "textEncoding": "utf8-replacement",
+          "limitBytesPerChannel": 65536,
+          "stdout": {
+            "observedBytes": 18,
+            "retainedBytes": 18,
+            "observedSha256": "dbe7790e4a855f7fd89afe0714fc70d0deea619f6c292c572c10b0e9d1b69fc1",
+            "retainedSha256": "dbe7790e4a855f7fd89afe0714fc70d0deea619f6c292c572c10b0e9d1b69fc1"
+          },
+          "stderr": {
+            "observedBytes": 0,
+            "retainedBytes": 0,
+            "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "outputTruncated": false
+      },
+      {
+        "id": "bwrap-root-user-network",
+        "state": "pass",
+        "reason": "verified",
+        "kind": "prerequisite",
+        "expectedExitCode": 0,
+        "exitCode": 0,
+        "signal": null,
+        "stdout": "bwrap-root-user-network",
+        "stderr": "",
+        "stdoutSha256": "30d33370fadba5dc5b9131f2ba285efb2d4698728d6087c10f6d47502646b059",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "outputCapture": {
+          "textEncoding": "utf8-replacement",
+          "limitBytesPerChannel": 65536,
+          "stdout": {
+            "observedBytes": 23,
+            "retainedBytes": 23,
+            "observedSha256": "30d33370fadba5dc5b9131f2ba285efb2d4698728d6087c10f6d47502646b059",
+            "retainedSha256": "30d33370fadba5dc5b9131f2ba285efb2d4698728d6087c10f6d47502646b059"
+          },
+          "stderr": {
+            "observedBytes": 0,
+            "retainedBytes": 0,
+            "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "outputTruncated": false
+      },
+      {
+        "id": "codex-empty-start",
+        "state": "fail",
+        "reason": "command-failed",
+        "kind": "prerequisite",
+        "expectedExitCode": 0,
+        "exitCode": 1,
+        "signal": null,
+        "stdout": "",
+        "stderr": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted\n",
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "ed3471f7900377f86150471417911309833a36d664cb5af7409e139103f67ddf",
+        "outputCapture": {
+          "textEncoding": "utf8-replacement",
+          "limitBytesPerChannel": 65536,
+          "stdout": {
+            "observedBytes": 0,
+            "retainedBytes": 0,
+            "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "observedBytes": 61,
+            "retainedBytes": 61,
+            "observedSha256": "ed3471f7900377f86150471417911309833a36d664cb5af7409e139103f67ddf",
+            "retainedSha256": "ed3471f7900377f86150471417911309833a36d664cb5af7409e139103f67ddf"
+          }
+        },
+        "outputTruncated": false
+      },
+      {
+        "id": "codex-path-start",
+        "state": "pass",
+        "reason": "verified",
+        "kind": "prerequisite",
+        "expectedExitCode": 0,
+        "exitCode": 0,
+        "signal": null,
+        "stdout": "",
+        "stderr": "",
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "outputCapture": {
+          "textEncoding": "utf8-replacement",
+          "limitBytesPerChannel": 65536,
+          "stdout": {
+            "observedBytes": 0,
+            "retainedBytes": 0,
+            "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "stderr": {
+            "observedBytes": 0,
+            "retainedBytes": 0,
+            "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "outputTruncated": false
+      },
+      {
+        "id": "node-execution-transport",
+        "state": "pass",
+        "reason": "verified",
+        "kind": "execution-transport",
+        "expectedExitCode": 37,
+        "exitCode": 37,
+        "signal": null,
+        "stdout": "transport-out:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+        "stderr": "transport-error:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+        "stdoutSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+        "stderrSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+        "outputCapture": {
+          "textEncoding": "utf8-replacement",
+          "limitBytesPerChannel": 65536,
+          "stdout": {
+            "observedBytes": 78,
+            "retainedBytes": 78,
+            "observedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+            "retainedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a"
+          },
+          "stderr": {
+            "observedBytes": 80,
+            "retainedBytes": 80,
+            "observedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+            "retainedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746"
+          }
+        },
+        "outputTruncated": false
+      },
+      {
+        "id": "bwrap-execution-transport",
+        "state": "pass",
+        "reason": "verified",
+        "kind": "execution-transport",
+        "expectedExitCode": 37,
+        "exitCode": 37,
+        "signal": null,
+        "stdout": "transport-out:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+        "stderr": "transport-error:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+        "stdoutSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+        "stderrSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+        "outputCapture": {
+          "textEncoding": "utf8-replacement",
+          "limitBytesPerChannel": 65536,
+          "stdout": {
+            "observedBytes": 78,
+            "retainedBytes": 78,
+            "observedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+            "retainedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a"
+          },
+          "stderr": {
+            "observedBytes": 80,
+            "retainedBytes": 80,
+            "observedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+            "retainedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746"
+          }
+        },
+        "outputTruncated": false
+      },
+      {
+        "id": "codex-path-execution-transport",
+        "state": "pass",
+        "reason": "verified",
+        "kind": "execution-transport",
+        "expectedExitCode": 37,
+        "exitCode": 37,
+        "signal": null,
+        "stdout": "transport-out:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+        "stderr": "transport-error:68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+        "stdoutSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+        "stderrSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+        "outputCapture": {
+          "textEncoding": "utf8-replacement",
+          "limitBytesPerChannel": 65536,
+          "stdout": {
+            "observedBytes": 78,
+            "retainedBytes": 78,
+            "observedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a",
+            "retainedSha256": "8fe7b3db5754082dddc5f37753d8a516ebad5abce18e3c883d7786aa73377c9a"
+          },
+          "stderr": {
+            "observedBytes": 80,
+            "retainedBytes": 80,
+            "observedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746",
+            "retainedSha256": "0974cfb9fbb374f2905eda903032d11777fb7e12df0ed9dde5e311454a245746"
+          }
+        },
+        "outputTruncated": false
+      },
+      {
+        "id": "codex-fixture-read",
+        "state": "pass",
+        "reason": "verified",
+        "kind": "prerequisite",
+        "expectedExitCode": 0,
+        "exitCode": 0,
+        "signal": null,
+        "stdout": "68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e",
+        "stderr": "",
+        "stdoutSha256": "1b34d83eff3de1eef04a9cc9a0bb184612a240911c640170825ef9e517f77f34",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "outputCapture": {
+          "textEncoding": "utf8-replacement",
+          "limitBytesPerChannel": 65536,
+          "stdout": {
+            "observedBytes": 64,
+            "retainedBytes": 64,
+            "observedSha256": "1b34d83eff3de1eef04a9cc9a0bb184612a240911c640170825ef9e517f77f34",
+            "retainedSha256": "1b34d83eff3de1eef04a9cc9a0bb184612a240911c640170825ef9e517f77f34"
+          },
+          "stderr": {
+            "observedBytes": 0,
+            "retainedBytes": 0,
+            "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "outputTruncated": false
+      },
+      {
+        "id": "codex-write-denial",
+        "state": "pass",
+        "reason": "verified",
+        "kind": "prerequisite",
+        "expectedExitCode": 0,
+        "exitCode": 0,
+        "signal": null,
+        "stdout": "DENIED",
+        "stderr": "",
+        "stdoutSha256": "fc2efd7036582a0827d74e346366df1c1330d284f94d0db97e252aff1efdf1fa",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "outputCapture": {
+          "textEncoding": "utf8-replacement",
+          "limitBytesPerChannel": 65536,
+          "stdout": {
+            "observedBytes": 6,
+            "retainedBytes": 6,
+            "observedSha256": "fc2efd7036582a0827d74e346366df1c1330d284f94d0db97e252aff1efdf1fa",
+            "retainedSha256": "fc2efd7036582a0827d74e346366df1c1330d284f94d0db97e252aff1efdf1fa"
+          },
+          "stderr": {
+            "observedBytes": 0,
+            "retainedBytes": 0,
+            "observedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "retainedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "outputTruncated": false
+      }
+    ],
+    "engine": {
+      "state": "unavailable",
+      "cause": "local-engine-unavailable"
+    },
+    "cleanup": "completed",
+    "executionIncomplete": false,
+    "nativeIdentity": {
+      "os": "linux",
+      "architecture": "x64",
+      "kernel": "7.0.0-43-generic",
+      "effectiveUid": 1001
+    },
+    "state": "ACTUAL_EXACT_HEAD_OBSERVATIONS_RETAINED_NO_QUALIFICATION_INFERENCE"
+  },
+  "beforeDispatchGates": {
+    "head": "94d760065b208488432f6644b69a1991ad8b5597",
+    "runs": [
+      {
+        "run": 45036272018,
+        "name": "CI Check",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 137250617121,
+            "name": "CI / Tests and coverage",
+            "conclusion": "success"
+          },
+          {
+            "id": 137250617139,
+            "name": "CI / Build and package",
+            "conclusion": "success"
+          },
+          {
+            "id": 137250617152,
+            "name": "CI / Static checks",
+            "conclusion": "success"
+          },
+          {
+            "id": 137255950298,
+            "name": "CI Check",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "run": 45036272025,
+        "name": "Copilot PR \u00b7 pull_request:synchronize",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 137250617633,
+            "name": "Copilot - Pull Request",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "run": 45036266333,
+        "name": "Copilot - Commit",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 137250598667,
+            "name": "Copilot - Commit",
+            "conclusion": "success"
+          },
+          {
+            "id": 137253088807,
+            "name": "Copilot / Review",
+            "conclusion": "success"
+          },
+          {
+            "id": 137253623438,
+            "name": "Copilot / Verification",
+            "conclusion": "success"
+          },
+          {
+            "id": 137256089980,
+            "name": "Copilot / Approval",
+            "conclusion": "neutral"
+          }
+        ]
+      },
+      {
+        "run": 45036266386,
+        "name": "Copilot - Branch Sync",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 137250598690,
+            "name": "Copilot - Branch Sync",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ],
+    "verificationCheck": 137253623438,
+    "optionalNonGatingApprovalAssessment": {
+      "id": 137256089980,
+      "name": "Copilot / Approval",
+      "node_id": "CR_kwDONSeBW88AAAAf9Rm5fA",
+      "head_sha": "94d760065b208488432f6644b69a1991ad8b5597",
+      "external_id": "copilot:approval:891781467:1003",
+      "url": "https://api.github.com/repos/vypdev/copilot/check-runs/137256089980",
+      "html_url": "https://github.com/vypdev/copilot/runs/137256089980",
+      "details_url": "https://github.com/vypdev/copilot/runs/137256089980",
+      "status": "completed",
+      "conclusion": "neutral",
+      "started_at": "2026-11-22T15:23:38Z",
+      "completed_at": "2026-11-22T15:23:38Z",
+      "output": {
+        "title": "PR approval: recommend",
+        "summary": "<!-- copilot:approval-assessment:v1 -->\n### Copilot approval \u00b7 Human review needed\n**Status:** This pull request is outside the configured approval scope\\.\n**Completed:** 4/4 observed checks succeeded; Bugbot complete.\n**Action required:** Ask a human reviewer to decide.\n**Impact:** No new approval is confirmed for this revision.\n[See checks](https://github.com/vypdev/copilot/pull/1003/checks)\n<details>\n<summary>Technical evidence</summary>\n\nRevision: `94d760065b20`; base: `5ebb96859b32`; reason: scope.\n\n</details>",
+        "text": null,
+        "annotations_count": 0,
+        "annotations_url": "https://api.github.com/repos/vypdev/copilot/check-runs/137256089980/annotations"
+      },
+      "check_suite": {
+        "id": 121879329992
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/vypdev/copilot/pulls/1003",
+          "id": 5437955331,
+          "number": 1003,
+          "head": {
+            "ref": "chore/1002-record-exact-same-job-codex-sandbox-diagnostic-outcomes-on-linux-runners",
+            "sha": "94d760065b208488432f6644b69a1991ad8b5597",
+            "repo": {
+              "id": 891781467,
+              "url": "https://api.github.com/repos/vypdev/copilot",
+              "name": "copilot"
+            }
+          },
+          "base": {
+            "ref": "develop",
+            "sha": "5ebb96859b32a18736f8a75be09e698c763ce163",
+            "repo": {
+              "id": 891781467,
+              "url": "https://api.github.com/repos/vypdev/copilot",
+              "name": "copilot"
+            }
+          }
+        }
+      ]
+    },
+    "reviewThreads": {
+      "pageInfo": {
+        "hasNextPage": false
+      },
+      "nodes": [
+        {
+          "id": "PRRT_kwDONSeBW866ivMj",
+          "isResolved": true,
+          "isOutdated": false
+        },
+        {
+          "id": "PRRT_kwDONSeBW866ivMk",
+          "isResolved": true,
+          "isOutdated": true
+        },
+        {
+          "id": "PRRT_kwDONSeBW866ivMm",
+          "isResolved": true,
+          "isOutdated": true
+        },
+        {
+          "id": "PRRT_kwDONSeBW866ivMo",
+          "isResolved": true,
+          "isOutdated": false
+        },
+        {
+          "id": "PRRT_kwDONSeBW866kJ9V",
+          "isResolved": true,
+          "isOutdated": false
+        },
+        {
+          "id": "PRRT_kwDONSeBW866kwH_",
+          "isResolved": true,
+          "isOutdated": true
+        }
+      ]
+    },
+    "priorDiagnosticRunIds": [
+      45028875562,
+      45020212032,
+      45016512460,
+      44978657686,
+      43450787404,
+      39253590623,
+      38473708325,
+      38434747817,
+      38407506837,
+      38390353897,
+      38385370861,
+      38373661215,
+      38284544869,
+      38240077874,
+      38237792793,
+      38181483127,
+      38181167261,
+      38085012772,
+      38084584665,
+      38083401032
+    ]
+  },
+  "nativeCI": {
+    "at": "2026-11-22T15:24:57.720323+00:00",
+    "head": "94d760065b208488432f6644b69a1991ad8b5597",
+    "run": 45036272018,
+    "job": 137250617121,
+    "runner": "ubuntu-runner-1",
+    "sdkSuites": 946,
+    "sdkPass": 18869,
+    "sdkHistoricalSkips": 35,
+    "sdkFail": 0,
+    "extensionSuites": 385,
+    "extensionPass": 5291,
+    "extensionFail": 0,
+    "completeOriginalRawBytes": 3238519,
+    "completeOriginalRawSha256": "ec099eea3bc8a49ce60057a4d17460741b0f022192e535ab5c1b32c84bbfa7fd",
+    "unchangedGlobalAndModuleGatesPassed": true,
+    "sourceAcceptanceOnly": true,
+    "qualificationAcceptance": false,
+    "native4Executed": false,
+    "qualificationCalls": 0,
+    "evaluatedPilotWrites": 0,
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "nativeCommit": {
+    "at": "2026-11-22T15:18:35.479987+00:00",
+    "head": "94d760065b208488432f6644b69a1991ad8b5597",
+    "run": 45036266333,
+    "job": 137250598667,
+    "runner": "ubuntu-runner-2",
+    "completeRequiredPaths": 603,
+    "sourceParts": 8,
+    "verifiedRequirements": 44,
+    "verifiedAcceptanceBatches": 2,
+    "totalAcceptanceBatches": 2,
+    "callsUsed": 13,
+    "unchangedCallLimit": 120,
+    "reportedEngineeringProgressPercent": 73,
+    "publicationIdentity": "6ad53ee108b623ca94e6c91441535cfa85da9191020737d6d2b58ca2df29bc30",
+    "rawReceipt": "/private/tmp/copilot-goal-1002-output-capture-round6-native-commit-attempt1-receipt.json",
+    "rawSha256": "6a33dfa2f689de35e23be6343cca7e8e8031b9ef4801c13b15b32ba3297a3dd1",
+    "qualificationAcceptance": false,
+    "goalComplete": false,
+    "qualificationCalls": 0,
+    "pilotWrites": 0,
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "nativeReview": "completed10of10;all6threadsclosed;5fixed1dismissed;fullrawretained",
+  "firstPreflight": "stoppedbeforePOST;optionalApprovalcheckattachedCommitratherthanBranchSync;exactneutralout-of-scopecheckverifiedandguardcorrected;nohardgatewaiver;singleactualPOST",
+  "validation": {
+    "at": "2026-11-22T15:46:12.064959+00:00",
+    "scope": "evidence/docs/catalog only; executable source and tests unchanged from accepted94",
+    "results": [
+      {
+        "check": "generate",
+        "command": [
+          "pnpm",
+          "run",
+          "generate:specifications"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-native4-evidence-round7-validation-attempt1-generate.log",
+        "bytes": 2473,
+        "sha256": "e9441da27a1237b134372d5c019c26b731a120a7ae1f820f30bafdfa2f74506c"
+      },
+      {
+        "check": "specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:specifications"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-native4-evidence-round7-validation-attempt1-specifications.log",
+        "bytes": 2461,
+        "sha256": "3f6a26f727d40ed8bac9a6058767a92cba44de9f6be51febc6302e696548a3a8"
+      },
+      {
+        "check": "docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:documentation"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-native4-evidence-round7-validation-attempt1-docs.log",
+        "bytes": 307,
+        "sha256": "03467c1b98ffc37d26de76250db345fb357b26954f0c32ec36f8655f142f73b5"
+      },
+      {
+        "check": "agent-docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:agent-docs"
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-native4-evidence-round7-validation-attempt1-agent-docs.log",
+        "bytes": 206,
+        "sha256": "d01f3d24297b9178d3b4c81ffd5b265fe08cf5839b8fd6dd3f601bbba99ddfcc"
+      },
+      {
+        "check": "graphify",
+        "command": [
+          "graphify",
+          "update",
+          "."
+        ],
+        "exit": 0,
+        "log": "/private/tmp/copilot-goal-1002-native4-evidence-round7-validation-attempt1-graphify.log",
+        "bytes": 3619,
+        "sha256": "4c4b78ebeb33326d6a941087be14b50e83b0d17e67044bb2cfcf31fcf53535de"
+      }
+    ],
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "newTestCases": 0,
+  "newDiagnosticAllowed": false,
+  "doNotRepeatNative4": "evidence-onlycommitdoesnotjustifynewattempt;neverrelabelnewGitheadasexecuted",
+  "normalHooks": "PENDING_AT_PACKET_CREATION",
+  "newEvidenceHeadSourceChecks": "PENDING",
+  "sdkModelToolAcceptance": false,
+  "nativeCommonC32C35": "UNEXECUTED_ON_NEW_TUPLE",
+  "credentialOracleExclusion": "UNEXECUTED_ON_NEW_TUPLE",
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "qualifiedProfiles": [],
+  "productionOrRunnerPrivilegesChanged": false,
+  "frozenRecoveriesAndDevelop": "unchanged;separatelyrequestedapprovalstillpending",
+  "archiveCount": 45
+}

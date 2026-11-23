@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "issue": 1002,
+  "pr": 1003,
+  "parent": "2f057efbf1d65241827f6bb18564de860bd1ebf1",
+  "sourceSha256": {
+    "docs/security-operations/security/self-hosted-runners.mdx": "3f1fe7e01affe16d18254b9de6645e2e216633a46a5b038cf77256e49551b716",
+    "scripts/diagnose-linux-sandbox-prerequisites.cjs": "081bc5877625693d8f7a4a2c8b03df91f58180d0bc80747f1d1c457f62a53556",
+    "specs/CATALOG.md": "d1aa88f30cbeed62bf5318e41afacf56ca6ffdfed886800674efd42acac7e7d8",
+    "specs/agent-runtime-provider-and-model-routing.md": "93cc98e94c56129150cbe3a79e052c4554f66c7b66b039fdd07131debd4fc779",
+    "specs/catalog.json": "151a8967dc6983059f14e5b6140ff15b78c28ee6f279d58625c782a89337f115",
+    "src/tooling/__tests__/linux_sandbox_diagnostic.test.ts": "79e1cd86f96e6d6e2012ebf60e24331b2e30883d156191b76a7e6d4ead8d426c"
+  },
+  "scope": "causal diagnostic-only correction after native parser rejection and missing private CLI home; ordinary SDK exec policy and runner privileges unchanged",
+  "nativeBaseline": {
+    "run": 45016512460,
+    "job": 137189879318,
+    "artifact": 14751688259,
+    "head": "2f057efbf1d65241827f6bb18564de860bd1ebf1",
+    "runner": "ubuntu-runner-1",
+    "preparation": {
+      "state": "observed",
+      "runtime": {
+        "version": "0.171.0",
+        "executableSha256": "b76a027d6b210f9a8da7aaf321dd235c700f0ef7a794d4a5314b9af6c134f0f0",
+        "distributionSha256": "01baa2e47809f8597be5b2f8abd4e4dfe3fb5bcb6e504c2fbaaad97056c15e8d",
+        "nodeVersion": "24.21.0",
+        "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "fixtureSha256": "68f3a474d33f4ef34dc4a3651d844a8911b82f82bd93ec178725ecc7f943999e"
+      }
+    },
+    "outcomes": [
+      {
+        "id": "unshare-user-network",
+        "state": "fail",
+        "exitCode": 1,
+        "reason": "command-failed"
+      },
+      {
+        "id": "bwrap-user-network",
+        "state": "pass",
+        "exitCode": 0,
+        "reason": "verified"
+      },
+      {
+        "id": "bwrap-root-user-network",
+        "state": "pass",
+        "exitCode": 0,
+        "reason": "verified"
+      },
+      {
+        "id": "codex-empty-start",
+        "state": "fail",
+        "exitCode": 2,
+        "reason": "command-failed"
+      },
+      {
+        "id": "codex-path-start",
+        "state": "fail",
+        "exitCode": 2,
+        "reason": "command-failed"
+      },
+      {
+        "id": "codex-fixture-read",
+        "state": "fail",
+        "exitCode": 2,
+        "reason": "command-failed"
+      },
+      {
+        "id": "codex-write-denial",
+        "state": "fail",
+        "exitCode": 2,
+        "reason": "command-failed"
+      }
+    ],
+    "engine": {
+      "state": "unavailable",
+      "cause": "local-engine-unavailable"
+    },
+    "cleanup": "completed",
+    "actualCLISandboxExecuted": false
+  },
+  "sourceContrast": {
+    "same69TestBytes": true,
+    "before": {
+      "pass": 67,
+      "fail": 2
+    },
+    "after": {
+      "pass": 69,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "moduleCoverage": {
+    "at": "2026-11-22T11:28:21.248235+00:00",
+    "pass": 69,
+    "fail": 0,
+    "skip": 0,
+    "modules": [
+      {
+        "module": "scripts/diagnose-linux-sandbox-prerequisites.cjs",
+        "metrics": {
+          "lines": 99.41,
+          "functions": 93.18,
+          "statements": 95.4,
+          "branches": 86.32
+        },
+        "floors": {
+          "lines": 90,
+          "statements": 90,
+          "branches": 82,
+          "functions": 88
+        },
+        "gate": true
+      },
+      {
+        "module": "scripts/lib/linux-sandbox-diagnostic-policy.cjs",
+        "metrics": {
+          "lines": 100,
+          "functions": 100,
+          "statements": 100,
+          "branches": 100
+        },
+        "floors": {
+          "lines": 95,
+          "statements": 95,
+          "branches": 90,
+          "functions": 90
+        },
+        "gate": true
+      }
+    ],
+    "focusedRawExit": 1,
+    "unrelatedMissingGlobalOwners": [
+      "web/src",
+      "specification_catalog_publication.cjs"
+    ],
+    "globalAcceptance": false,
+    "noThresholdSuppressed": true,
+    "DONE_DO_NOT_REPEAT": true
+  },
+  "priorNativeSourceGates": "2f057efb all4CI/Commit/Verification/Review/BranchSync success;4review threads resolved;optionalApproval neutral is not approval;SDK946suites18812PASS35historicalskips",
+  "nativeDispatchHistory": "two local pre-dispatch guard rejections caused no POST; corrected resolved-thread check admitted exactly one native dispatch; no unchanged native rerun",
+  "primarySource": "official rust-v0.171.0 CLI main/lib/debug_sandbox snapshots; newlibGitblob verified",
+  "configurationIsolation": "existing fresh ownedHOME/CODEX_HOME/XDG/cwd; now create0700CODEX_HOME; preserve managed requirements; no exec-only ignore flags in host sandbox command",
+  "normalHooks": "PENDING_AT_PACKET_CREATION",
+  "newHeadNativeCI": "PENDING",
+  "correctedNativeDiagnostic": "UNEXECUTED;needs new committed source and passing gates",
+  "actualSDKOrModelToolAcceptance": false,
+  "nativeCommonC32C35": "UNEXECUTED_ON_NEW_TUPLE",
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "qualifiedProfiles": [],
+  "productionConfigurationChanged": false,
+  "frozenRecoverySnapshots": "unchanged;no develop merge",
+  "archiveCount": 66
+}

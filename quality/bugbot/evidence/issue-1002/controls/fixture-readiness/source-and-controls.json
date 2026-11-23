@@ -1,0 +1,361 @@
+{
+  "schemaVersion": 1,
+  "issue": 1002,
+  "pr": 1003,
+  "parentNativeSource": "b01dc83a1e19e060f1b096b225008ee0490f0feb",
+  "scope": "Test-support readiness budgets and evidence-publication provenance only; no runtime, permissions, model or qualification limits changed",
+  "controlledDelays": {
+    "renderer": "21 seconds after the actual compiler is created, before ready IPC",
+    "journal": "6 seconds after actual durable begin fsync; real file and filesystem operations remain"
+  },
+  "controlledResults": [
+    {
+      "phase": "red",
+      "kind": "renderer",
+      "startedAt": "2026-11-22T18:40:58.985719+00:00",
+      "at": "2026-11-22T18:41:26.905149+00:00",
+      "exit": 1,
+      "tests": 43,
+      "passed": 0,
+      "failed": 43,
+      "pending": 0,
+      "logSha256": "af35a6e0082086e98096889825af010574d3641d7d7ba0374e024cfe1fd9b669",
+      "logBytes": 56383,
+      "jsonSha256": "4d6f9209e7178a100545da7a742bafe3e7530064f293756fe9d2173c3107017f"
+    },
+    {
+      "phase": "red",
+      "kind": "journal",
+      "startedAt": "2026-11-22T18:41:26.905929+00:00",
+      "at": "2026-11-22T18:41:38.018807+00:00",
+      "exit": 1,
+      "tests": 46,
+      "passed": 0,
+      "failed": 1,
+      "pending": 45,
+      "logSha256": "0d3ffa906be5567e482652250a7ad8c47da0f18eb43303cf697e35adabe039d7",
+      "logBytes": 2112,
+      "jsonSha256": "346acbbccf5512b1a44b95d23a75fc82040e530c7aef44ae3126c8be876b204d"
+    },
+    {
+      "phase": "green",
+      "kind": "renderer",
+      "startedAt": "2026-11-22T18:41:38.020171+00:00",
+      "at": "2026-11-22T18:42:04.667676+00:00",
+      "exit": 0,
+      "tests": 43,
+      "passed": 43,
+      "failed": 0,
+      "pending": 0,
+      "logSha256": "d075df6b8436ee99fbc75af0fbff048af2e7b4c90b5fd0e23cd1c8f85f0fec2c",
+      "logBytes": 328,
+      "jsonSha256": "8e8298c70fea8ff971923da7d1026f5449aa25f7c1c970a0c979ce265a675670"
+    },
+    {
+      "phase": "green",
+      "kind": "journal",
+      "startedAt": "2026-11-22T18:42:04.668094+00:00",
+      "at": "2026-11-22T18:42:16.411889+00:00",
+      "exit": 0,
+      "tests": 46,
+      "passed": 1,
+      "failed": 0,
+      "pending": 45,
+      "logSha256": "f534c91d5633d5822a4e74c2151b7e36707cf3ca50d6346415151192b0cf39cb",
+      "logBytes": 337,
+      "jsonSha256": "8aa23efea694069a6e9d2de180fcc01271a7c1599277cb012e7ffd1647f67677"
+    }
+  ],
+  "selectionNote": "Journal contrast selects exactly one pre-existing malformed-data case; the other 45 cases are explicitly unselected in both arms. The ordinary complete journal suite is included in the seven-suite cohort. No new permanent sleeps or controls were added.",
+  "onlyCausalContrastChanges": {
+    "rendererHookMs": [
+      20000,
+      60000
+    ],
+    "malformedIssueTypesCaseMs": [
+      5000,
+      20000
+    ]
+  },
+  "evidenceLimits": "The controlled delays prove fixture timeout sensitivity, not the CI pending I/O stage or an exclusive host cause. Every real compiler, fsync and behavioral assertion remains. Default render/assertion timeouts, HTTP timeouts, CI coverage floors, runtime/scientific budgets and source acceptance gates stay unchanged.",
+  "cohort": {
+    "numTotalTestSuites": 7,
+    "numPassedTestSuites": 7,
+    "numTotalTests": 411,
+    "numPassedTests": 411,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "success": true
+  },
+  "nativeParentGates": [
+    {
+      "label": "build",
+      "head": "b01dc83a1e19e060f1b096b225008ee0490f0feb",
+      "run": 45053859317,
+      "job": 137304682585,
+      "runner": "ubuntu-runner-2",
+      "conclusion": "success",
+      "bytes": 407655,
+      "sha256": "a5bd0ddbef46cb672d3ff4390051fbf4cf2bc2f2a4b4df85b3c9a170a56cb804",
+      "failedSteps": []
+    },
+    {
+      "label": "static",
+      "head": "b01dc83a1e19e060f1b096b225008ee0490f0feb",
+      "run": 45053859317,
+      "job": 137304682743,
+      "runner": "ubuntu-runner-2",
+      "conclusion": "success",
+      "bytes": 88677,
+      "sha256": "c03a5e1dcb0213d47120d1e0b9d3ccfe4f0e97817821f09f3a845201ff29283d",
+      "failedSteps": []
+    },
+    {
+      "label": "coverage",
+      "head": "b01dc83a1e19e060f1b096b225008ee0490f0feb",
+      "run": 45053859317,
+      "job": 137304682730,
+      "runner": "ubuntu-runner-3",
+      "conclusion": "failure",
+      "bytes": 3273839,
+      "sha256": "8d102e38a3fa5aa976eef9c071ff5898bf3f918d4813e0e83a6f527f556590a4",
+      "failedSteps": [
+        "Run tests with coverage"
+      ]
+    },
+    {
+      "label": "commit",
+      "head": "b01dc83a1e19e060f1b096b225008ee0490f0feb",
+      "run": 45053854170,
+      "job": 137304665652,
+      "runner": "ubuntu-runner-1",
+      "conclusion": "success",
+      "bytes": 37079,
+      "sha256": "98f386835c63fe3649b8c0d0eb8a27eb2ca7ce3668a246889266900a9ca10aa7",
+      "failedSteps": []
+    },
+    {
+      "label": "review",
+      "head": "b01dc83a1e19e060f1b096b225008ee0490f0feb",
+      "run": 45053859324,
+      "job": 137304683092,
+      "runner": "ubuntu-runner-4",
+      "conclusion": "success",
+      "bytes": 33506,
+      "sha256": "28ffc4c44a7b4911c93fe68adb8426c170cfc78f3ae3f62e42c683f19f5d309e",
+      "failedSteps": []
+    }
+  ],
+  "genuineNativeNegative": {
+    "ciRun": 45053859317,
+    "coverageJob": 137304682730,
+    "runner": "ubuntu-runner-3",
+    "failedSuites": 2,
+    "passedSuites": 944,
+    "failedTests": 45,
+    "passedTests": 18837,
+    "historicalSkipped": 35,
+    "sharedRendererBeforeAllFailures": 43,
+    "realJournalCaseTimeouts": 2,
+    "diagnostic138Cases": "PASS",
+    "extension": "not run because SDK Jest failed",
+    "pendingStage": "unobserved"
+  },
+  "provenanceCorrection": {
+    "finding": "PRRT_kwDONSeBW866mzTo",
+    "originalRetained": "original-ambiguous-manifest.json.log.gz",
+    "fourPublicationHashesUnchanged": true,
+    "distinctRevisionNowExplicit": true,
+    "fourComparisons": [
+      {
+        "path": "docs/security-operations/security/self-hosted-runners.mdx",
+        "recordedSha256": "52f05a92dc6f737cc22ad570ad71f363b43d615df2f65b476dbf51f1c050ad69",
+        "executed94Sha256": "6a99e7a778dc46ce28cf2234ba1d0374b5b3a881d0d701e0ca5fe3c0e05a4e46",
+        "publicationRevision": "b26c892c89e5fb3ee0e45629881b01a32e85ef5b",
+        "publicationSha256": "52f05a92dc6f737cc22ad570ad71f363b43d615df2f65b476dbf51f1c050ad69"
+      },
+      {
+        "path": "specs/CATALOG.md",
+        "recordedSha256": "d155686f73206dfa572f743b6442eb2e79480cfb5792b85271ce9d578ad17867",
+        "executed94Sha256": "42dd5416bc325fc4c71d97b3eabc8e6dfe7530e40e38bdba7ee9ca3675c2a69a",
+        "publicationRevision": "b26c892c89e5fb3ee0e45629881b01a32e85ef5b",
+        "publicationSha256": "d155686f73206dfa572f743b6442eb2e79480cfb5792b85271ce9d578ad17867"
+      },
+      {
+        "path": "specs/agent-runtime-provider-and-model-routing.md",
+        "recordedSha256": "fee05afb38ee68f8378c6ac14853e9214ecd8bdae83d7a9f73501c4743ac030d",
+        "executed94Sha256": "bfb8fd786892c8f1e87ed7d63e578f1b60a32230757dcfc3189fac41837c2d82",
+        "publicationRevision": "b26c892c89e5fb3ee0e45629881b01a32e85ef5b",
+        "publicationSha256": "fee05afb38ee68f8378c6ac14853e9214ecd8bdae83d7a9f73501c4743ac030d"
+      },
+      {
+        "path": "specs/catalog.json",
+        "recordedSha256": "93d0c96bec02d1c195a05fabebcaaae88a770892a770dae122216a34d16c1663",
+        "executed94Sha256": "7ab02123674b6f86f6f21f1f6b1c59153b568c4fba3cfea970b046cd3f93072b",
+        "publicationRevision": "b26c892c89e5fb3ee0e45629881b01a32e85ef5b",
+        "publicationSha256": "93d0c96bec02d1c195a05fabebcaaae88a770892a770dae122216a34d16c1663"
+      }
+    ],
+    "originalActualDiagnosticAndSevenExecutableHashesUnchanged": true
+  },
+  "workingTreeSourceSha256": {
+    "test-support/web-setup-renderer.ts": "f28ceb22102ab29d4f5955e10fc156f2c5ab373711786700010304f4d2bfc0f8",
+    "src/infrastructure/__tests__/setup_permission_journal_contract.test.ts": "cd28014597b35c5b13324410e031c9a9cac37b4d786dc7b4537b518a48edf0bd",
+    "quality/bugbot/evidence/issue-1002/controls/native-raw-fd-observation/source-and-controls.json": "df85345cd4c0ebc61956d64c54794592826ef98207c82fb3d3cda3d28456e23b"
+  },
+  "previousCanonical": {
+    "file": "goal-950-canonical-through-continuation133.md",
+    "bytes": 6279,
+    "sha256": "eba916ed8ae3f682287a31e3ed3c0c3916e61eb6c54a6904c34f430a5edc9b63"
+  },
+  "archiveMap": [
+    {
+      "file": "controlled-red-renderer.log.gz",
+      "rawBytes": 56383,
+      "rawSha256": "af35a6e0082086e98096889825af010574d3641d7d7ba0374e024cfe1fd9b669",
+      "gzipBytes": 1919,
+      "gzipSha256": "c50d99da521a7f0cac5e42b7ac864975c259f8c8d9846d9f8dfe4e898193bec3"
+    },
+    {
+      "file": "controlled-red-renderer.jest.json.log.gz",
+      "rawBytes": 209434,
+      "rawSha256": "4d6f9209e7178a100545da7a742bafe3e7530064f293756fe9d2173c3107017f",
+      "gzipBytes": 4698,
+      "gzipSha256": "5874f71c5f317de98a8fe89ff11f8ea5baa89299d486e71735b022fbdc536df2"
+    },
+    {
+      "file": "controlled-red-journal.log.gz",
+      "rawBytes": 2112,
+      "rawSha256": "0d3ffa906be5567e482652250a7ad8c47da0f18eb43303cf697e35adabe039d7",
+      "gzipBytes": 893,
+      "gzipSha256": "00c998e65e55f13dfdb72db1f2cfd4cfc3b36bf45e92b0084ccac440162a9d39"
+    },
+    {
+      "file": "controlled-red-journal.jest.json.log.gz",
+      "rawBytes": 27886,
+      "rawSha256": "346acbbccf5512b1a44b95d23a75fc82040e530c7aef44ae3126c8be876b204d",
+      "gzipBytes": 2529,
+      "gzipSha256": "9fe179c54dafc8ebce00b2a64272f84215aa9cbce2d72502fffe45494dcae721"
+    },
+    {
+      "file": "controlled-green-renderer.log.gz",
+      "rawBytes": 328,
+      "rawSha256": "d075df6b8436ee99fbc75af0fbff048af2e7b4c90b5fd0e23cd1c8f85f0fec2c",
+      "gzipBytes": 238,
+      "gzipSha256": "ddf901bb5c8417337380783001cba9be88b947bdb8916b35a8182e256bd367e0"
+    },
+    {
+      "file": "controlled-green-renderer.jest.json.log.gz",
+      "rawBytes": 19016,
+      "rawSha256": "8e8298c70fea8ff971923da7d1026f5449aa25f7c1c970a0c979ce265a675670",
+      "gzipBytes": 1670,
+      "gzipSha256": "74e20872bfc880ab22c9a265415d04a0e56bc2d215509b9fac7a5a105a361c5d"
+    },
+    {
+      "file": "controlled-green-journal.log.gz",
+      "rawBytes": 337,
+      "rawSha256": "f534c91d5633d5822a4e74c2151b7e36707cf3ca50d6346415151192b0cf39cb",
+      "gzipBytes": 237,
+      "gzipSha256": "663196c1715872c8449d94015a9797d352e0745070560f76bdcbf7ae01e09575"
+    },
+    {
+      "file": "controlled-green-journal.jest.json.log.gz",
+      "rawBytes": 22682,
+      "rawSha256": "8aa23efea694069a6e9d2de180fcc01271a7c1599277cb012e7ffd1647f67677",
+      "gzipBytes": 1666,
+      "gzipSha256": "9c248452371ae63a47b305b87b6e937ae7fc4d2738b1f455d4fc238faba0f81f"
+    },
+    {
+      "file": "cohort.log.gz",
+      "rawBytes": 667,
+      "rawSha256": "4f5284754a8dc37b916127bf9a9f31a2a11487a0f91b22541875ee8e37bda552",
+      "gzipBytes": 315,
+      "gzipSha256": "bff7eaf3075ffe283c8a33504ced277d9b8061c1dccd4488125b63a4ebc3a902"
+    },
+    {
+      "file": "cohort.jest.json.log.gz",
+      "rawBytes": 194322,
+      "rawSha256": "9711708b5aecbd9ee523d9668abcc6fe9221da5aec2540410aa170340dc5a8f3",
+      "gzipBytes": 12928,
+      "gzipSha256": "dce5797a01943794ee2c276846eaad04fafd10d1484c91ced12f21d43f00d02c"
+    },
+    {
+      "file": "b01-native-build.log.gz",
+      "rawBytes": 407655,
+      "rawSha256": "a5bd0ddbef46cb672d3ff4390051fbf4cf2bc2f2a4b4df85b3c9a170a56cb804",
+      "gzipBytes": 54979,
+      "gzipSha256": "1a040ce929fe33ff9fb74cce20a00230b002994963662b19f48652d3a85622aa"
+    },
+    {
+      "file": "b01-native-static.log.gz",
+      "rawBytes": 88677,
+      "rawSha256": "c03a5e1dcb0213d47120d1e0b9d3ccfe4f0e97817821f09f3a845201ff29283d",
+      "gzipBytes": 19811,
+      "gzipSha256": "cfae95c693fa7ed96300b4ae983432a34f83d0b73339b9877f90a413a9e08c76"
+    },
+    {
+      "file": "b01-native-coverage.log.gz",
+      "rawBytes": 3273839,
+      "rawSha256": "8d102e38a3fa5aa976eef9c071ff5898bf3f918d4813e0e83a6f527f556590a4",
+      "gzipBytes": 578574,
+      "gzipSha256": "34c5703e68f73ca9b8520d2339500198b5209cd5962cf7e2fb38f3cf4c5a72dd"
+    },
+    {
+      "file": "b01-native-commit.log.gz",
+      "rawBytes": 37079,
+      "rawSha256": "98f386835c63fe3649b8c0d0eb8a27eb2ca7ce3668a246889266900a9ca10aa7",
+      "gzipBytes": 9508,
+      "gzipSha256": "17530602c45adcca49bb8b0cd53467a76d1b63c75e24c17c36ee78cc00f21a6e"
+    },
+    {
+      "file": "b01-native-review.log.gz",
+      "rawBytes": 33506,
+      "rawSha256": "28ffc4c44a7b4911c93fe68adb8426c170cfc78f3ae3f62e42c683f19f5d309e",
+      "gzipBytes": 8266,
+      "gzipSha256": "21fc91385c6a2fb9f061b120adb84d7e017972d50392294995324ae786698c17"
+    },
+    {
+      "file": "original-ambiguous-manifest.json.log.gz",
+      "rawBytes": 31395,
+      "rawSha256": "dacce50f64c5ab87d2e8c2dd45239727f21e3920797eb5728b0a3e77711de47c",
+      "gzipBytes": 7086,
+      "gzipSha256": "10c701edc21e61c95ae9081f1e7b62d04eac2f93ed6322c39568f3c20960bc17"
+    }
+  ],
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationCalls": 0,
+  "evaluatedPilotWrites": 0,
+  "qualifiedProfiles": [],
+  "newNativeDiagnosticDispatched": false,
+  "productionVerification": "disabled",
+  "previousNativeObservationUnchanged": true,
+  "controlledFixtureSourceSha256": {
+    "compilerWithFixedDelay": "06750cf546a4a1e61ed384d17cb29b85ae6351f331dee7cb72600164f942173e",
+    "journalWithFixedDelay": "d85beb7b9f4632df0f23d2be644b3578aeb6d3683c268d6bcf31d7af6534e31e"
+  },
+  "compilerAssertionsSha256": "a880c2de3b0fb33966be7b86bf6b6adf23a05776ff8f244a42afb9ff5d2722ef",
+  "controlledExecution": {
+    "command": "node node_modules/jest/bin/jest.js --runInBand --runTestsByPath <selected-path> --json --outputFile=<private-report>",
+    "rendererPath": "src/cli/__tests__/web_setup_runner_components.test.ts",
+    "journalPath": "src/infrastructure/__tests__/setup_permission_journal_contract.test.ts",
+    "journalNamePattern": "Issue Types cleanup data.*\"id\":0",
+    "runtimeOriginalSourceSha256": {
+      "scripts/render-web-setup-component.cjs": "17bc9776f56b56a8dbf0d741a6eedebe854408842a8b97ab000e25d1711ecd77",
+      "src/infrastructure/setup_permission_probe_journal.ts": "a3829a5adc046d977afadbcfba4791b35edd13709f359366ace4f6b50021a5f9"
+    },
+    "injections": [
+      {
+        "path": "scripts/render-web-setup-component.cjs",
+        "before": "  process.send({ type: 'ready' });",
+        "after": "  await new Promise(resolve => setTimeout(resolve, 21_000));\n  process.send({ type: 'ready' });"
+      },
+      {
+        "path": "src/infrastructure/setup_permission_probe_journal.ts",
+        "firstOnly": true,
+        "before": "            await file.sync();",
+        "after": "            await file.sync();\n            await new Promise(resolve => setTimeout(resolve, 6_000));"
+      }
+    ]
+  }
+}
