@@ -2490,7 +2490,8 @@
         "quality/bugbot/evidence/issue974/containment-native-fixture.cjs",
         "quality/bugbot/evidence/issue974/qualification-seccomp.cjs",
         "quality/bugbot/evidence/issue974/qualification-seccomp.source.json",
-        "quality/bugbot/evidence/issue974/qualification-seccomp.LICENSE"
+        "quality/bugbot/evidence/issue974/qualification-seccomp.LICENSE",
+        "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
       ],
       "tests": [
         "src/application/policies/__tests__/bugbot_shadow_configuration_policy.test.ts",
@@ -2640,7 +2641,8 @@
         "src/infrastructure/agents/__tests__/qualification_process_fixture_cleanup.ts",
         "src/infrastructure/agents/__tests__/qualification_process_fixture_cleanup.test.ts",
         "quality/bugbot/evidence/issue974/seccomp-components.cjs",
-        "quality/bugbot/evidence/issue974/worker-scratch-components.cjs"
+        "quality/bugbot/evidence/issue974/worker-scratch-components.cjs",
+        "quality/bugbot/evidence/issue974/sdk-runtime-admission-components.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

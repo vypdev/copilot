@@ -5348,6 +5348,74 @@ The quality operations page and evidence README MUST describe the fixed filter,
 authorization, distinction between component/native evidence, recovery and
 rollback; the catalog includes source, provenance/license and component tests.
 
+#### Separate authenticated SDK runtime admission
+
+CLI command controls and model-free C32–C35 do not by themselves prove the
+ordinary SDK can complete a real model-tool operation. The existing immutable
+bootstrap gains a closed `runtime-admission` purpose and mode for this remaining
+prerequisite. It is not an Action input, consumer CLI setting, public SDK grant,
+corpus case or paired review. Only its exact committed plan,19 admitted driver
+blobs, common image/runtime/CLI identities and private live operation can run it.
+No alternate provider, executable, workspace selector or retry parameter is
+accepted. Its sole configured profile is the unchanged Luna/xhigh findings
+route, with ordinary prompt construction, planner, CLI, native/local schema,
+private authentication and whole-operation cancellation.
+
+```text
+Committed common source/image -> independent CLI14 and nativeC32–C35 receipts
+ -> committed runtime-admission plan -> one ordinary SDK canary query
+ -> complete committed scientific preregistration ->174
+```
+
+The operator MUST verify the independent CLI/native receipts match the exact
+implementation, image, drivers and runtime before this one control call. The
+worker creates an innocuous remote-free workspace outside the hidden controller
+source. Its random32-byte canary is withheld from the prompt. A fixed reviewed
+program reads that canary, opens/closes (without reading contents) one existing
+file under each of the nine system-denied roots, and emits raw-descriptor JSON.
+The protected oracle-root file is a dummy created only for this control; no
+independent labels/oracle enter model input. The worker first establishes all
+nine files exist and can be opened from its trusted scope; missing auth or other
+baseline data fails before any model call. Model tools must return the exact
+withheld nonce and nine denials through the ordinary native/local schema.
+Workspace bytes/entries must remain unchanged. Failed or missing evidence is a
+retained unavailable/negative result, never an implicit PASS or automatic retry.
+
+This is composition evidence: a genuine SDK tool read of the withheld canary
+plus the fixed open witness and independent same-tuple CLI enforcement. A model
+assertion alone is insufficient; it is not independent syscall tracing of every
+model action. Preserve that evidentiary distinction. The existing recorded-CLI
+adapter retains actual prompt/schema hashes, pinned preparation and complete
+observer/response lifecycle for exactly one application call. Configured and
+provider-reported model identity remain distinct; missing reported identity is
+null telemetry. Runtime attempts use `runtime-attempt-*` events and their own
+ledger; no corpus-score or prediction file is produced.
+
+The purpose MUST reject every scientific bootstrap entry and the scientific
+complete-slot policy MUST reject its identity, even with a successful stopped
+scope. Native-control plans still receive zero credentials and cannot use this
+mode. Runtime admission selects only normal Codex credentials, never an evidence
+or GitHub token. Extra runtime-admission fields, changed fixture prompt/schema/program digest,
+foreign slot IDs and `--preflight` reject before imports/probes/models. Ordinary
+corpus `--preflight` remains strictly model-free. No deadline, scientific retry,
+score/label/order/threshold/cohort or production setting changes. Only actual
+same-tuple174PASS admits42, retaining every scientific gate and zero pilot writes.
+
+The additional risk-derived minimum is **18 distinct verification cases**:
+13 deterministic CJS controls (plan acceptance; wrong purpose; extra field;
+changed fixture; wrong detector; native/model purpose collision; forged nonce;
+missing denial; readable private root; reordered paths; direct unauthenticated
+entry; scientific bootstrap rejection; complete real workspace mutation/link
+detection), two actual-local-HTTP/modeled-Engine controls for private credential
+selection/dummy input and no-effect foreign-slot/preflight refusal, two SDK
+identity/slot controls extending
+the existing C04 cases, and one actual common-tuple runtime query. The15 CJS
+controls execute no model. The two SDK controls retain their existing logical
+IDs; the35 qualification controls and174/42 inventories are not enlarged or
+renumbered. Catalog, quality guidance and evidence README include the new driver
+and control source. Global/changed-owner coverage and normal source gates remain
+effective. Build or deterministic success cannot substitute for the actual query.
+
 #### Nested native control retains the masked outer procfs
 
 The first common literal-root tuple retained actualCLI14PASS and native

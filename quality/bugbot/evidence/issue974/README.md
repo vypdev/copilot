@@ -593,6 +593,19 @@ plans or receipts. A deterministic PASS, build, syscall trial or native-only
 control does not qualify a profile. Production remains disabled and evaluated
 pilot writes remain0.
 
+After independent same-tuple CLI14 and nativeC32–C35 acceptance, use only the
+committed immutable bootstrap `runtime-admission` plan for the one ordinary
+Luna/xhigh SDK control. It reads a withheld innocuous workspace nonce and runs
+a frozen open/close witness for nine existing protected files. Protected
+contents are never read; the oracle-root fixture is dummy data. Missing auth or
+other baseline files fails before the model. The fixed witness plus independent
+CLI enforcement provides composition evidence, not syscall tracing of every
+model action. Preserve actual prompt/schema/preparation/response hashes and the
+separate runtime ledger. This purpose cannot start or count toward174/42;
+corpus `--preflight` stays model-free. No retries, profile broadening, GitHub
+tokens or scientific acceptance are granted. Fresh exact committed scientific
+preregistration remains required after runtime admission.
+
 C32's first literal-root native attempt failed while mounting a new `/proc`;
 C33–C35 passed. A matched two-arm contrast reproduced the fresh-proc refusal
 and entered five distinct namespaces with capabilities0 when retaining the

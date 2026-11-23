@@ -15,7 +15,7 @@ export function qualificationOperationIdentity(value: unknown): QualificationOpe
     || !matches(value.ownerId, digest) || !matches(value.operationId, identifier)
     || !matches(value.planSha256, digest) || !matches(value.implementation, revision)
     || !matches(value.imageSha256, digest)
-    || !['corpus-case', 'paired-review', 'native-control'].includes(String(value.purpose))) throw invalid();
+    || !['corpus-case', 'paired-review', 'native-control', 'runtime-admission'].includes(String(value.purpose))) throw invalid();
   return Object.freeze({
     ownerId: value.ownerId, operationId: value.operationId, planSha256: value.planSha256,
     implementation: value.implementation, imageSha256: value.imageSha256,

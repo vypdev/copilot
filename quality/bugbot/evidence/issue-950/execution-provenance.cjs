@@ -205,7 +205,7 @@ function admitQualificationModules(root) {
         const selected = JSON.parse(bytes);
         if (selected.schemaVersion === 2) {
             for (const name of ['corpus-selection.cjs', 'attempt-ledger.cjs', ...(selected.containment
-                ? ['operation-containment.cjs', 'qualification-seccomp.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'qualification-requirements.toml', 'containment-native-fixture.cjs'] : [])]) {
+                ? ['operation-containment.cjs', 'qualification-seccomp.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'qualification-requirements.toml', 'containment-native-fixture.cjs', 'sdk-runtime-admission.cjs'] : [])]) {
                 const file = path.join(root, 'quality/bugbot/evidence/issue974', name);
                 const expected = selected.inspectedArtifacts?.['../../issue974/' + name];
                 assert.match(expected ?? '', /^[a-f0-9]{64}$/u, 'v2 helper is absent from the reviewed closure');

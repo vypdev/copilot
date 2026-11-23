@@ -19,7 +19,7 @@ async function fixture(options = {}) {
     fs.writeFileSync(supervisor, '// component supervisor byte marker\n');
     const engine = { version: 'fixture', apiVersion: '1.56', os: 'linux', arch: 'arm64', kernelVersion: 'fixture' }, image = 'sha256:' + 'a'.repeat(64), imageConfig = { Env: ['PATH=/usr/local/bin:/usr/bin:/bin'], Volumes: null };
     const profile = { schemaVersion: 1, image, imageConfigSha256: objectHash(imageConfig), hostNodeSha256: hash(fs.readFileSync(process.execPath)), socketPath: socket, supervisorSha256: hash(fs.readFileSync(supervisor)), workerUid: process.getuid(), workerGid: process.getgid(), engine };
-    const plan = { implementation: 'd'.repeat(40), purpose: options.purpose ?? 'native-control', containment: profile, repositoryCohort: { order: ['U1'] } }, planFile = path.join(directory, 'plan.json');
+    const plan = { implementation: 'd'.repeat(40), purpose: options.purpose ?? 'native-control', containment: profile, repositoryCohort: { order: ['U1'] }, ...options.planDelta }, planFile = path.join(directory, 'plan.json');
     fs.writeFileSync(planFile, JSON.stringify(plan));
     const proof = { planPath: 'plan.json', planSha256: hash(fs.readFileSync(planFile)), planCommit: 'e'.repeat(40) };
     const identity = { ownerId: 'b'.repeat(64), operationId: 'control:C27', planSha256: proof.planSha256, implementation: plan.implementation, imageSha256: image.slice(7), purpose: 'native-control' };

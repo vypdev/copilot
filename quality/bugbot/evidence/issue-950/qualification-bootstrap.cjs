@@ -19,7 +19,8 @@ const normal = ['run.cjs', '../execution-provenance.cjs', '../ev07-shadow/load.c
 const entries = Object.freeze({ corpus: 'ev07-shadow/corpus.cjs',
     'full-review': 'ev07-shadow/launch-full-review.cjs', 'normal-flow': 'normal-flow-shadow/run.cjs',
     'full-review-runner': 'ev07-shadow/full-review.cjs', review: 'ev07-shadow/review.cjs',
-    'native-control': '../issue974/containment-native-fixture.cjs' });
+    'native-control': '../issue974/containment-native-fixture.cjs',
+    'runtime-admission': '../issue974/sdk-runtime-admission.cjs' });
 
 function safePath(value) {
     assert(typeof value === 'string' && value.length && !path.isAbsolute(value)
@@ -146,6 +147,8 @@ function reviewedPlan(repository, revision, planPath, planSha256, bootstrapSha25
     const plan = JSON.parse(bytes);
     assert(mode === 'native-control' ? plan.purpose === 'native-control' && plan.containment
         : plan.purpose !== 'native-control', 'native controls cannot authorize measurement');
+    assert(mode === 'runtime-admission' ? plan.purpose === 'runtime-admission' && plan.containment
+        : plan.purpose !== 'runtime-admission', 'runtime admission cannot authorize measurement');
     assert(plan.schemaVersion !== 2 || mode !== 'normal-flow', 'v2 qualification has no normal-flow admission route');
     assert.equal(plan.publication, 'dry-run', 'qualification must remain dry-run');
     assert.match(plan.implementation ?? '', /^[a-f0-9]{40}$/u);
@@ -153,7 +156,7 @@ function reviewedPlan(repository, revision, planPath, planSha256, bootstrapSha25
     const base = prefix + (mode === 'normal-flow' ? 'normal-flow-shadow/' : 'ev07-shadow/');
     const inventory = mode === 'normal-flow' ? normal : plan.schemaVersion === 2 ? [...ev07,
         '../../issue974/corpus-selection.cjs', '../../issue974/attempt-ledger.cjs', ...(plan.containment
-            ? ['operation-containment.cjs', 'qualification-seccomp.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'qualification-requirements.toml', 'containment-native-fixture.cjs']
+            ? ['operation-containment.cjs', 'qualification-seccomp.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'qualification-requirements.toml', 'containment-native-fixture.cjs', 'sdk-runtime-admission.cjs']
                 .map(name => '../../issue974/' + name) : [])] : ev07;
     const expected = mode === 'normal-flow' ? plan.drivers : plan.inspectedArtifacts;
     const admitted = [];
@@ -172,6 +175,8 @@ function reviewedPlan(repository, revision, planPath, planSha256, bootstrapSha25
         assert.equal(profile.supervisorSha256, sha256(committed(git, revision,
             path.posix.normalize(prefix + '../issue974/qualification-supervisor.cjs'))), 'reviewed supervisor differs');
     }
+    if (mode === 'runtime-admission') require(path.join(root, prefix,
+        '../issue974/sdk-runtime-admission.cjs')).requireAdmissionPlan(plan);
     return { root, trust, bytes, plan, admitted };
 }
 
@@ -224,7 +229,7 @@ async function launch(repository, revision, planPath, planSha256, bootstrapSha25
     assert(Object.hasOwn(entries, mode), 'unsupported qualification entrypoint; worker admission endpoint removed');
     assert(mode === 'normal-flow' ? args.length === 3
         : mode === 'full-review' || mode === 'full-review-runner' ? args.length === 1
-        : mode === 'review' ? args.length === 5 : mode === 'native-control' ? args.length === 1
+        : mode === 'review' ? args.length === 5 : ['native-control', 'runtime-admission'].includes(mode) ? args.length === 1
         : args.length === 1 || args.length === 2 && args[1] === '--preflight', 'invalid qualification arguments');
     const { root, trust, bytes, plan, admitted } = reviewedPlan(repository, revision,
         planPath, planSha256, bootstrapSha256, mode);
@@ -314,6 +319,11 @@ function privateFile(relative) {
 
 function operationSlot(plan, mode, identity, slot, root) {
     assert(slot && typeof slot === 'object' && !Array.isArray(slot), 'closed operation slot required');
+    if (mode === 'runtime-admission') {
+        assert.equal(plan.purpose, 'runtime-admission'); assert.equal(identity.purpose, 'runtime-admission');
+        assert.deepEqual(Object.keys(slot), []); assert.equal(identity.operationId, 'runtime:admission');
+        return ['/qualification-output/runtime-admission'];
+    }
     if (mode === 'corpus') {
         assert.equal(identity.purpose, 'corpus-case');
         assert.equal(Object.keys(slot).length, 2);
@@ -375,7 +385,7 @@ async function launchContainedWorker() {
     const input = JSON.parse(fs.readFileSync(privateFile('invocation.json'), 'utf8'));
     const fields = ['schemaVersion', 'identity', 'scopeId', 'proof', 'mode', 'slot', 'bundleSha256', 'preflight'];
     assert(input && Object.keys(input).length === fields.length && fields.every(key => Object.hasOwn(input, key)) && input.schemaVersion === 1);
-    assert(['corpus', 'review', 'native-control'].includes(input.mode));
+    assert(['corpus', 'review', 'native-control', 'runtime-admission'].includes(input.mode));
     assert(typeof input.preflight === 'boolean' && (input.mode === 'corpus' || input.preflight === false));
     assert.match(input.scopeId, /^[a-f0-9]{64}$/u); assert.match(input.bundleSha256, /^[a-f0-9]{64}$/u);
     const proof = input.proof;

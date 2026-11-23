@@ -16,6 +16,7 @@ require('./component-evidence-integrity-components.cjs');
 require('./implementation-components.cjs');
 require('./full-review-fault-components.cjs');
 require('./full-review-lifecycle-components.cjs');
+require('./sdk-runtime-admission-components.cjs');
 const root = path.resolve(__dirname, '../../../..');
 const ev07 = path.join(__dirname, '../issue-950/ev07-shadow');
 const sourceProof = require('../issue-950/execution-provenance.cjs');
@@ -199,6 +200,21 @@ function containmentProfile() {
         workerUid: process.getuid(), workerGid: process.getgid(),
         engine: { version: 'synthetic-engine', apiVersion: '1.54', os: 'linux', arch: 'arm64', kernelVersion: 'synthetic-kernel' } };
 }
+
+test('ev974-C26 actual public bootstrap refuses runtime plans as scientific entries before application imports', t => {
+    const f = publicBootstrapFixture(t, false, p => {
+        p.purpose = 'runtime-admission';
+        p.runtimeAdmission = { schemaVersion: 1, fixtureSha256: require('./sdk-runtime-admission.cjs').fixtureSha256 };
+    });
+    for (const mode of ['corpus', 'full-review', 'full-review-runner', 'normal-flow']) {
+        const result = f.launch(mode); assert.notEqual(result.status, 0);
+        assert.match(result.stderr, /runtime admission cannot authorize measurement/);
+        assert(!fs.existsSync(f.marker) && !fs.existsSync(f.probe));
+    }
+    const ordinary = publicBootstrapFixture(t, false, () => {}), result = ordinary.launch('runtime-admission');
+    assert.notEqual(result.status, 0); assert.match(result.stderr, /runtime admission cannot authorize measurement/);
+    assert(!fs.existsSync(ordinary.marker) && !fs.existsSync(ordinary.probe));
+});
 
 test('ev974-C26 immutable public bootstrap rejects closed profile and CLI byte mismatches before application imports/probes', t => {
     for (const mutate of [p => { p.containment.image = 'node:latest'; }, p => { p.containment.imageConfigSha256 = ''; },

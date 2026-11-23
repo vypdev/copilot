@@ -5,7 +5,7 @@ export interface QualificationOperationIdentity {
   readonly planSha256: string;
   readonly implementation: string;
   readonly imageSha256: string;
-  readonly purpose: 'corpus-case' | 'paired-review' | 'native-control';
+  readonly purpose: 'corpus-case' | 'paired-review' | 'native-control' | 'runtime-admission';
 }
 
 export type QualificationOperationStopReason = 'completed' | 'failed' | 'cancelled' | 'owner-lost';

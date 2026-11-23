@@ -318,7 +318,7 @@ describe('whole-operation scope policy and live binding components', () => {
             { ...original, imageSha256: 'latest' }, { ...original, purpose: 'consumer' }, { ...original, purpose: null }]) {
             expect(() => qualificationOperationIdentity(value)).toThrow(/ownership/);
         }
-        for (const purpose of ['corpus-case', 'paired-review', 'native-control'] as const) {
+        for (const purpose of ['corpus-case', 'paired-review', 'native-control', 'runtime-admission'] as const) {
             expect(qualificationOperationIdentity({ ...original, purpose }).purpose).toBe(purpose);
         }
         expect(sameQualificationOperation(original, { ...original, operationId: 'other' })).toBe(false);
@@ -427,7 +427,7 @@ describe('whole-operation scope policy and live binding components', () => {
         }
         expect(() => requireCompleteQualificationOperations(slots, [{ ...start, scopeId: 'unknown' }], id)).toThrow();
         for (const list of [[], [...slots, ...slots], [{ operationId: '../foreign', purpose: 'corpus-case' }],
-            [{ operationId: 'x', purpose: 'native-control' }]]) {
+            [{ operationId: 'x', purpose: 'native-control' }], [{ operationId: 'runtime:admission', purpose: 'runtime-admission' }]]) {
             expect(() => requireCompleteQualificationOperations(list as typeof slots, [start, end], id)).toThrow();
         }
         const second = { ...id, operationId: 'case-002' };

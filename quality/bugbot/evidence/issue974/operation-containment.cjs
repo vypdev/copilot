@@ -61,7 +61,7 @@ function fixedConfiguration(profile, identity, inputDirectory, outputDirectory, 
     assert.match(identity.ownerId, idPattern); assert.match(identity.planSha256, idPattern);
     assert.match(identity.implementation, /^[a-f0-9]{40}$/u);
     assert.match(identity.operationId, /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u);
-    assert(['corpus-case', 'paired-review', 'native-control'].includes(identity.purpose));
+    assert(['corpus-case', 'paired-review', 'native-control', 'runtime-admission'].includes(identity.purpose));
     assert.equal(Object.keys(identity).length, 6);
     assert.equal(identity.imageSha256, profile.image.slice(7));
     assert.equal(typeof process.getuid, 'function');
@@ -481,16 +481,24 @@ function privateWrite(file, bytes) {
 async function runContainedOperation({ root, plan, mode, slot, outputDirectory, record, signal, campaign, preflight = false }) {
     const provenance = require('../issue-950/execution-provenance.cjs');
     const proof = provenance.requireBootstrapAdmission(root);
-    assert(['corpus', 'review', 'native-control'].includes(mode));
+    assert(['corpus', 'review', 'native-control', 'runtime-admission'].includes(mode));
     assert(typeof preflight === 'boolean' && (mode === 'corpus' || !preflight));
     assert(signal instanceof AbortSignal && typeof record === 'function');
     assert.equal(mode === 'native-control', plan.purpose === 'native-control');
+    assert.equal(mode === 'runtime-admission', plan.purpose === 'runtime-admission');
+    if (mode === 'runtime-admission') {
+        require('./sdk-runtime-admission.cjs').requireAdmissionPlan(plan);
+        assert(slot && typeof slot === 'object' && !Array.isArray(slot));
+        assert.deepEqual(Object.keys(slot), []);
+    }
     const operationId = mode === 'corpus' ? 'corpus:' + slot.caseId
-        : mode === 'review' ? 'review:' + slot.subjectId + ':r' + slot.repetition : 'control:' + slot.caseId;
+        : mode === 'review' ? 'review:' + slot.subjectId + ':r' + slot.repetition
+            : mode === 'runtime-admission' ? 'runtime:admission' : 'control:' + slot.caseId;
     const identity = Object.freeze({ ownerId: randomBytes(32).toString('hex'), operationId,
         planSha256: proof.planSha256, implementation: plan.implementation,
         imageSha256: plan.containment.image.slice(7),
-        purpose: mode === 'corpus' ? 'corpus-case' : mode === 'review' ? 'paired-review' : 'native-control' });
+        purpose: mode === 'corpus' ? 'corpus-case' : mode === 'review' ? 'paired-review'
+            : mode === 'runtime-admission' ? 'runtime-admission' : 'native-control' });
     const staging = fs.realpathSync(fs.mkdtempSync(path.join(tmpdir(), 'bugbot-owned-operation-')));
     fs.chmodSync(staging, 0o700);
     const input = path.join(staging, 'input'); fs.mkdirSync(input, { mode: 0o700 });
@@ -515,6 +523,10 @@ async function runContainedOperation({ root, plan, mode, slot, outputDirectory, 
         fs.mkdirSync(outputDirectory, { mode: 0o700 }); outputDirectory = fs.realpathSync(outputDirectory);
         const bundle = path.join(input, 'plan.bundle');
         bundleSha256 = provenance.materializePlanBundle(root, plan.implementation, proof.planCommit, bundle);
+        if (mode === 'runtime-admission') {
+            const canary = path.join(input, 'campaign/corpus-v3'); fs.mkdirSync(canary, { recursive: true, mode: 0o700 });
+            privateWrite(path.join(canary, 'runtime-control-canary.txt'), 'DUMMY_RUNTIME_ORACLE_CANARY\n');
+        }
         if (mode === 'review') {
             assert(typeof campaign === 'string');
             const target = path.join(input, 'campaign');

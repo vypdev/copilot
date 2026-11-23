@@ -116,7 +116,7 @@ const qualificationDrivers = Object.freeze(['configuration.cjs', 'implementation
 function selectedQualificationDrivers(selected) {
     return selected.schemaVersion === 2 ? [...qualificationDrivers,
         '../../issue974/corpus-selection.cjs', '../../issue974/attempt-ledger.cjs', ...(selected.containment
-            ? ['operation-containment.cjs', 'qualification-seccomp.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'qualification-requirements.toml', 'containment-native-fixture.cjs']
+            ? ['operation-containment.cjs', 'qualification-seccomp.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'qualification-requirements.toml', 'containment-native-fixture.cjs', 'sdk-runtime-admission.cjs']
                 .map(name => '../../issue974/' + name) : [])] : qualificationDrivers;
 }
 
