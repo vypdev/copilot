@@ -5913,3 +5913,62 @@ purge remains pending; current minimization is no claim that caches are deleted.
 Documentation updates cover execution, quality observation, immutable retrieval
 and current operational limitations; catalog evidence remains tied to these
 actual source/test paths. No new configuration or migration authority is added.
+
+
+#### Source626e observation: CLI progress and fixed shell paths
+
+One separately preregistered protocol2 technical call ran on source626e,
+private runtime9f221, native-control preregistration817dd and immutable image
+1f0365. The authorized fixed13 filter and containment boundaries were unchanged.
+The same source/image/runtime passed CLI14 and native C32–C35; all12 earlier
+owned IDs and the one runtime scope subsequently returned fresh404. These were
+Linux ARM containers on the Mac listener host, not a GitHub Actions job.
+
+The actual captured CLI command completed with exit0 and independently recorded
+all nine protected open denials after the trusted positive baseline opened all
+nine. No protected contents were read. The CLI also emitted an agent_message
+progress item before the command and selected /usr/bin/bash -c. The original
+controller rejected this supported framing. Independently, the final model
+message returned a63-character nonce for the64-character tool nonce. The
+original whole canary is FAIL_NOT_ADMITTED and MUST remain so; its attempt,
+private original capture, failure and exact identities cannot be relabelled.
+
+Accept nonempty completed agent_message progress only before actual witness
+completion, retaining the entire raw capture without treating progress as tool
+or final-response evidence. Still require the one matching started/completed
+witness and a distinct final model JSON after completion. Duplicate final
+messages, missing final JSON and a wrong final nonce remain rejected. Extend
+only the closed non-login fixed-command wrapper list with /usr/bin/bash and
+/usr/bin/sh beside /bin/bash and /bin/sh. Other commands, login shells, extra
+tools, missing starts, nonzero exits, readable private paths and incomplete
+framing retain their existing rejection. The SDK decoder and public framing,
+existing output bounds, configuration, credentials and privileges do not change.
+
+```mermaid
+flowchart LR
+  P[Retained progress: no authority] --> W[One actual fixed witness]
+  W --> D[Nine independent denials]
+  D --> N[Separate final nonce equality]
+  N --> F[Original canary: FAIL,63 versus64]
+```
+
+Operator content must state: CLI witness observed; final nonce mismatch;
+runtime admission failed; no automatic retry. Do not call partial boundary
+observations an admitted runtime or scientific result. This correction grants
+no further genuine query. The historical original technical invocation and this
+one additional failed technical invocation remain separate from the unchanged
+200 scientific invocations and original174negative. The42 reviews remain
+unstarted/not admitted; profilesNONE,pilotwrites0,productiondisabled.
+
+The incremental budget is exactly7 model-free controller assertions: progress
+before command1, progress during command1, the two fixed /usr/bin wrappers2,
+actual-shaped final nonce mismatch1, duplicate final responses1 and blank
+progress1. The identical assertions produce2PASS/5FAIL on626e, then all65 current
+runtime components pass after correction. The intermediate63PASS/2EPERM local
+socket result remains retained; corrected execution permission yields65PASS
+without test/source edits. Exact AST coverage is100%lines,99.13%statements,
+95%branches,96%functions; the existing95/90 floors remain unchanged. All58 prior
+components, the earlier55-assertion amendment,18 SDK controls, schema1 bootstrap
+control and35 logical/scientific case identities remain intact. Documentation,
+catalog, Graphify, normal hooks, complete committed-source and final-head native
+reviews remain required. No new installation or migration path is added.

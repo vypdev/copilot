@@ -1501,3 +1501,18 @@ gates. The [Bugbot owner](./bugbot-analysis-publication-and-autofix.md#source532
 defines the full sequence, exact command evidence, operator states and separate
 unmet real-query requirement. No ordinary configuration or stored operation
 migration is introduced. Update execution and quality-observation documentation.
+
+
+#### Source626e observed progress and shell compatibility
+
+The [Bugbot owner](./bugbot-analysis-publication-and-autofix.md#source626e-observation-cli-progress-and-fixed-shell-paths)
+adds7 model-free controller controls, retaining the prior55 and unchanged SDK
+framing. Nonempty progress before witness completion is retained without
+establishing tool or final-response authority. Only the fixed non-login witness
+may use the additional /usr/bin/bash and /usr/bin/sh spellings. One complete
+command and a separate exact final nonce remain mandatory. The actual626e
+canary independently observed nine denials but failed; the model nonce had63
+characters against64 in the tool output. It remains FAIL_NOT_ADMITTED and is not
+rerun or relabelled by this amendment. Same-assertion controls2PASS/5FAIL become
+65componentPASS with unchanged95/90 floors. Full source/native review gates and
+existing scope/credential/output/cancellation boundaries remain unchanged.

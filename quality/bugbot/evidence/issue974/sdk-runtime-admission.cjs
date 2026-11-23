@@ -71,7 +71,8 @@ function requireToolEvidence(evidence, nonce) {
     assert.equal(events.at(-1)?.type, 'turn.completed');
     const commands = new Map(); let completed = 0, message;
     const command = '/usr/local/bin/node runtime-control-witness.cjs';
-    const allowed = [command, ...['/bin/bash', '/bin/sh'].map(shell => shell + " -c '" + command + "'")];
+    const allowed = [command, ...['/bin/bash', '/bin/sh', '/usr/bin/bash', '/usr/bin/sh']
+        .map(shell => shell + " -c '" + command + "'")];
     for (const event of events.slice(2, -1)) {
         assert(['item.started', 'item.updated', 'item.completed'].includes(event.type), 'unexpected independent CLI event');
         const item = event.item;
@@ -79,8 +80,12 @@ function requireToolEvidence(evidence, nonce) {
         assert.equal(typeof item.id, 'string'); assert(item.id.length > 0);
         if (item.type === 'reasoning') { assert.equal(typeof item.text, 'string'); continue; }
         if (item.type === 'agent_message') {
-            assert.equal(event.type, 'item.completed'); assert.equal(message, undefined);
-            assert.equal(completed, 1, 'model message cannot replace actual tool completion');
+            assert.equal(event.type, 'item.completed');
+            assert.equal(typeof item.text, 'string'); assert(item.text.length > 0);
+            // The actual CLI emits progress before/during command execution.
+            // Preserve it in the raw capture without granting it any authority.
+            if (completed === 0) continue;
+            assert.equal(message, undefined);
             message = JSON.parse(item.text); continue;
         }
         assert.equal(item.type, 'command_execution', 'unsupported extra tool cannot establish the witness');

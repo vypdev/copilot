@@ -420,3 +420,36 @@ for (const kind of ['request', 'response', 'CLI capture', 'self-consistent inval
         await assert.rejects(f.run());
     });
 }
+
+
+function compatibilityTrace(change, expected = value()) {
+    const rows = toolEvents(expected).trim().split('\n').map(line => JSON.parse(line));
+    return { provider: 'codex', protocol: 'codex-json-events', stdout: change(rows).map(row => JSON.stringify(row)).join('\n') + '\n' };
+}
+const progressMessage = { type: 'item.completed', item: { id: 'progress-1', type: 'agent_message', text: 'Running the requested workspace program.' } };
+test('ev974-C26 observed CLI compatibility permits retained non-authoritative progress before the witness', () => {
+    api.requireToolEvidence(compatibilityTrace(rows => [rows[0], rows[1], progressMessage, ...rows.slice(2)]), value().nonce);
+});
+test('ev974-C26 observed CLI compatibility permits progress while the single witness is in progress', () => {
+    api.requireToolEvidence(compatibilityTrace(rows => [...rows.slice(0, 3), progressMessage, ...rows.slice(3)]), value().nonce);
+});
+for (const shell of ['/usr/bin/bash', '/usr/bin/sh']) test('ev974-C26 observed CLI compatibility admits only the fixed non-login witness via ' + shell, () => {
+    api.requireToolEvidence(compatibilityTrace(rows => rows.map(row => row.item?.type === 'command_execution'
+        ? { ...row, item: { ...row.item, command: shell + " -c '/usr/local/bin/node runtime-control-witness.cjs'" } } : row)), value().nonce);
+});
+test('ev974-C26 observed CLI compatibility still rejects the independently observed 63-character model nonce', () => {
+    const expected = { ...value(), nonce: 'a'.repeat(64) };
+    const evidence = compatibilityTrace(rows => [rows[0], rows[1], progressMessage, ...rows.slice(2).map(row => {
+        if (row.item?.type === 'command_execution') return { ...row, item: { ...row.item, command: "/usr/bin/bash -c '/usr/local/bin/node runtime-control-witness.cjs'" } };
+        if (row.item?.type === 'agent_message') return { ...row, item: { ...row.item, text: JSON.stringify({ ...expected, nonce: expected.nonce.slice(1) }) } };
+        return row;
+    })], expected);
+    assert.throws(() => api.requireToolEvidence(evidence, expected.nonce), /withheld workspace canary/);
+});
+test('ev974-C26 observed CLI compatibility still rejects duplicate post-witness model responses', () => {
+    assert.throws(() => api.requireToolEvidence(compatibilityTrace(rows => [...rows.slice(0, -1), rows.at(-2), rows.at(-1)]), value().nonce));
+});
+test('ev974-C26 observed CLI compatibility rejects blank progress rather than treating it as witness evidence', () => {
+    const blank = { ...progressMessage, item: { ...progressMessage.item, text: '' } };
+    assert.throws(() => api.requireToolEvidence(compatibilityTrace(rows => [rows[0], rows[1], blank, ...rows.slice(2)]), value().nonce));
+});
