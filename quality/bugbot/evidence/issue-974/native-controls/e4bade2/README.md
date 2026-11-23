@@ -1,5 +1,7 @@
 # Native SDK plans after the fixed mount correction
 
+> Historical public descriptors: account-bearing socket endpoints are held only in the exact private originals. These tip JSON copies are non-executable and do not grant admission. See [original retention and descriptor limits](../README.md). Existing Git history remains unchanged.
+
 Implementation `e4bade2` passes all239 deterministic Node controls with no failure,
 skip or cancellation. Its normal hook passes build/lint and944SDKsuites with
 18,716 passing assertions and35 existing skips. These four new committed plans

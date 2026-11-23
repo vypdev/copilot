@@ -1,5 +1,7 @@
 # Native SDK control preparation for implementation 1f20e9
 
+> Historical public descriptors: account-bearing socket endpoints are held only in the exact private originals. These tip JSON copies are non-executable and do not grant admission. See [original retention and descriptor limits](../README.md). Existing Git history remains unchanged.
+
 These four committed plans authorize only the model-free native controls C32–C35.
 They cannot authorize a corpus campaign or full review and receive no model or
 GitHub credentials. All four actual native controls are unexecuted at preparation.

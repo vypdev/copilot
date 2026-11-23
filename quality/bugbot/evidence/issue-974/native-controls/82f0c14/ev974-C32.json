@@ -118,7 +118,7 @@
     "image": "sha256:d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
     "imageConfigSha256": "c5f9487f31ba356369f7ca1f87e40220720ae54bf8b573b12f53b5c1e78e71f9",
     "hostNodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
-    "socketPath": "/host-account-redacted/.orbstack/run/docker.sock",
+    "socketPath": "<private-host-endpoint>",
     "supervisorSha256": "e19e86dda95fddf6d61cfafdbc2cefba4a8a4612609bd767f46b04dcdd1f19a7",
     "workerUid": 502,
     "workerGid": 20,
@@ -141,5 +141,16 @@
     "selectedCase": "ev974-C32",
     "fixtureCliSha256": "3bf82112127e518b4ea531a8e59e0f5e9325ad61bdebeebee7ca22ca6586741b",
     "harnessSha256": "6aff983fcba8a3cc466ae836d71d8915404ad7685bea9d9c4bab5c20aa60667f"
+  },
+  "historicalPublicDescriptor": {
+    "executable": false,
+    "reason": "Historical observation descriptor only; private original is required for any source-pinned execution. This public copy grants no execution authority.",
+    "originalCommit": "f173e4c724bf21d398ec4586f2dfde0a092f482e",
+    "originalGitBlob": "0943971b1a2e204b71c3b7aa2e975090bd9b1875",
+    "originalBytes": 6075,
+    "originalSha256": "8a010f27ddcfbbb38e6db0cd79429f572af0378fa451567890d4706c69e8b316",
+    "endpointSha256": "f14e53644c8d76dd46de4d5fdee0c1799e7cabbcbedf77ec0aa9ef95f662e140",
+    "privateArchive": "historical20-native-plan-private-originals.zip",
+    "privateArchiveSha256": "bcd062574be4b7477f118b11dabb78a93c8e1a6ffcb03200cd4f89b13ca8c902"
   }
 }
