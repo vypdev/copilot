@@ -158,7 +158,7 @@ export async function executeSetupBatch(input: BatchInput) {
         logInfo(operation.targets.map(target => `${target.repository}: ${target.status}`).join(' · '));
       },
   };
-  const apply = new ApplySetupBatchUseCase({ writer: composition.writer, journal: composition.journal,
+  const apply = new ApplySetupBatchUseCase({ coordinator: composition.coordinator, writer: composition.writer, journal: composition.journal,
     presentation: { active: approved, progress: operation => presentation.progress(operation), review: async () => approved() } });
   const session = new SetupBatchSessionUseCase({ selection, prepare, writer: composition.writer, journal: composition.journal,
     sessionActive: alive, planning: () => input.present('plan'),

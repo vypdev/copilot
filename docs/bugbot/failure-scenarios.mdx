@@ -196,6 +196,60 @@ remain in place and must not be repeated blindly. See the
 
 ## Shared writer acknowledgment
 
+If trusted default lacks the required publisher workflow, prepare a reviewed
+installation using the [explicit publisher proposal route](/security-operations/operations/provisioning#reviewed-bugbot-publisher-proposals).
+The complete workflow/manifest preview and subsequent PR are preparation facts.
+Record the actual merged destination revision and a separately authorized native
+writer/canary run before claiming installation or runtime acceptance. A source
+merge, packed CLI pass, queued/skipped run or correlated receipt cannot stand in
+for those observations or independent producer-code attestation. Setup preserves
+production verification settings; qualification and activation remain separate.
+
+### Prepared, installed, and native-verified publisher states
+
+Use the evidence for the current destination revision to choose the next action:
+
+| State | Evidence required | Next action |
+| --- | --- | --- |
+| Prepared preview | Independently inspected source/default/base and the complete final workflow and manifest receipt; no delivery effects | Review both files and give fresh approval for this exact snapshot |
+| Waiting for merge | The exact prepared commit, owned installation PR and retained delivery receipt | Review and merge the installation PR through the authorized maintainer flow |
+| Installed; native verification pending | The actual trusted-default revision and matching installed workflow, source pin and manifest receipt | Authorize the specific native canary and inspect its actual run |
+| Native-verified publisher | The authorized canary completed for those installed bytes, with matching producer and writer identities and retained outcomes | Retain the evidence chain and assess any separate rollout gates |
+
+The CLI message **“The exact publisher is already present. No empty PR was
+created.”** establishes a matching file inspection. Native verification remains
+pending until its separate evidence is available. A prepared PR or a successful
+test on another source revision cannot advance the installed state.
+
+Keep one linked source, installation and run identity chain:
+
+- **Reviewed source:** full maintainer source commit and the reviewed workflow,
+  Action manifest and Action bundle hashes.
+- **Approved delivery:** destination repository ID, authenticated default branch,
+  reviewed base SHA, exact two final files and approval digest, prepared commit
+  and tree, installation PR and purpose-bound receipt.
+- **Installed destination:** actual merged trusted-default SHA and the installed
+  workflow/blob, pinned Action source and manifest receipt identities read there.
+- **Native observation:** specifically authorized canary PR/head, producer run
+  and attempt, writer workflow/ref/run and attempt, and its completed outcome for
+  that installation. Keep unknown identities explicitly unknown.
+
+A changed default/base, source, actor, credential session or approved file needs
+a fresh inspection and review. Unknown or incomplete workflow inventory blocks
+the proposal; resolve it before preparing another preview. A foreign workflow or
+human-advanced owned branch needs reconciliation rather than replacement.
+If delivery is partial, preserve its operation receipt and inspect known and
+uncertain effects through [publisher recovery](/security-operations/operations/troubleshooting#recover-a-publisher-proposal-operation).
+An uncertain tree or commit POST without an object identity cannot be replayed
+blindly. A completed operation resumes with read-only ref/PR checks.
+
+Run correlation proves which operation produced the observation. Independent
+producer-code attestation needs its own evidence. Record model-profile
+qualification separately under its implementation, drivers and runtime tuple;
+publisher installation and a native writer canary do not authorize activation.
+Keep this rollout's production verification disabled and evaluated-pilot PR
+write attempts at zero.
+
 An accepted status-writer dispatch can omit its run ID. The caller recovers only
 one native run that matches the exact handoff operation, repository, workflow,
 default ref and producer attempt. A recent run on the same PR is insufficient.

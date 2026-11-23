@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "parent": "80bab8cdaecb54e3297274c51066fe4c08f21f84",
+  "scope": "Source and deterministic evidence before the normal contributor commit; fresh exact-head native acceptance still required",
+  "sourceSha256": {
+    "src/application/policies/setup_publisher_installation_policy.ts": "d14a1bac58e8bdc8d4d87ac9430d49db868ce5bba54f7cee55c250fccd3fbe37",
+    "src/infrastructure/setup_publisher_github_source_adapter.ts": "934295b34cf481011fb2ba4e435adf89d9f1cabb8876fa52cc0295fc49d1f740",
+    "src/infrastructure/setup_publisher_github_read_adapter.ts": "1e2f8c35a9295afe65d20c8d9b101dea5c11005bdf48407f44ee160ac533b74b",
+    "src/application/policies/__tests__/setup_publisher_installation.test.ts": "5177ed12d7ac0e73107731a2c818f2c2368202776070b6e3aa8a9737577241b7",
+    "src/infrastructure/__tests__/setup_publisher_github_source_adapter.test.ts": "6d54730c780c7761c684393cd74d5efc423e98de132e1a57e55405bcebb668d3",
+    "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts": "9032e6ba83fc413774ee4a033d9335f2b2e8dfbad70b13c272a9d88743baab13",
+    "src/cli/__tests__/setup_publisher_installation_adapter.test.ts": "3de8ab749d053cb10aa0828247a6b3bb3ee24def65bb9c8647bab75220c19c24"
+  },
+  "prior111LedgerObjectsPreserved": true,
+  "logicalIds": 114,
+  "mappedJestCases": 110,
+  "extractedPackageCases": 4,
+  "newJestTestBudget": 24,
+  "newJestTestsAuthored": 23,
+  "obsoleteUnmappedTreeRejectionReplaced": 1,
+  "normalHooksPendingAtPacketPreparation": true,
+  "scientificCallsAdded": 0,
+  "installation": "NOT_EXECUTED",
+  "production": "disabled",
+  "pilotWrites": 0,
+  "coherentSourceRun": {
+    "suites": 36,
+    "passed": 1519,
+    "failed": 0,
+    "pending": 0,
+    "actualReportSha256": "50c7cb439cecc6ce48c036aadf6ff5e37c2dca027c066066dd3dc53a621c2c76",
+    "jestExit": 1,
+    "exitReason": "Unrelated global coverage floors and unrun web/specification-publication modules; not complete global acceptance",
+    "changedPurePolicyCoveragePercent": {
+      "statements": 100,
+      "branches": 100,
+      "functions": 100,
+      "lines": 100
+    },
+    "publisherCoverageBudgets": {
+      "pureModules": 6,
+      "runtimeModules": 20,
+      "passed": true,
+      "thresholdsUnchanged": true
+    }
+  },
+  "finalLedgerVerification": {
+    "mappedPassed": 110,
+    "mappedTotal": 110,
+    "toolingAssertionsPassed": 31,
+    "typesExit": 0,
+    "lintExit": 0,
+    "wordingClarificationAfterCoherentRun": true,
+    "productionAndTestSourceChangedSinceCoherentRun": false,
+    "prior111ObjectsPreserved": true,
+    "selectedCompanionSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18"
+  },
+  "counterfactuals": {
+    "kind": "Report-parser projections, not feature executions",
+    "oldFalseAccepts": 3,
+    "currentRejects": 3,
+    "mutations": [
+      "omitted",
+      "failed",
+      "pending"
+    ],
+    "subject": "Existing authenticated base-revision drift assertion; old C21 default-branch evidence stays exact",
+    "unmodifiedActualReportPassesBoth": true
+  },
+  "retainedNegativeAttempts": [
+    "Original source: one existing control passes and four causal adversarial controls fail; 91 other assertions filtered, not executed",
+    "First coherent run: 1516 pass and 3 tooling failures reject a duplicated evidence reference; corrected only the newly appended mapping without weakening the guard",
+    "Focused final Jest exits 1 at unrelated global floors; all 1519 selected assertions pass"
+  ],
+  "credentialRuntimeUnchangedFromParent": true,
+  "privatelyRetainedOriginals": {
+    "copilot-goal-998-round17-source-original-red-attempt1.json": {
+      "bytes": 68612,
+      "sha256": "f35a02c733c38ca325a77fd413b529651f45600bfaf6a35cefac8905c0669bd9"
+    },
+    "copilot-goal-998-round17-source-green-attempt1.json": {
+      "bytes": 129537,
+      "sha256": "9701cbb79289c46f865fc5be68ac07abecebead9b91401600d1a6f6d5b34872a"
+    },
+    "copilot-goal-998-round17-credential-and-omission-attempt1.json": {
+      "bytes": 115925,
+      "sha256": "cf8406615fcac05db72dabdfb9e6f469c5e8ee3bd12a164a386d27e88f7e0da9"
+    },
+    "copilot-goal-998-round17-coherent-attempt1-results.json": {
+      "bytes": 10501677,
+      "sha256": "08c105e6d7a3530b017ebda4e5b3563787eaeed1a6addf020c52a1dec23ec87c"
+    },
+    "copilot-goal-998-round17-coherent-attempt2-results.json": {
+      "bytes": 10490161,
+      "sha256": "50c7cb439cecc6ce48c036aadf6ff5e37c2dca027c066066dd3dc53a621c2c76"
+    },
+    "copilot-goal-998-round17-coherent-attempt2-receipt.json": {
+      "bytes": 9753,
+      "sha256": "0936dce0c77e7c5cd8505dab6c70fb6b1992fd04f6e902bc5f52633819c8a5db"
+    },
+    "copilot-goal-998-round17-publisher-budget-attempt1-receipt.json": {
+      "bytes": 13978,
+      "sha256": "c3514d4ff754766d144c84a66afecbe4917100fa0508a91a7bbe0ed3ac82a69a"
+    },
+    "copilot-goal-998-round17-base-drift-evidence-counterfactual-attempt2-receipt.json": {
+      "bytes": 5059,
+      "sha256": "73ce783ba004520b857d980c94c171c9bbc00ab2b13aca990b170e7feb5a7e70"
+    },
+    "copilot-goal-998-round17-source-validation-attempt1-receipt.json": {
+      "bytes": 878,
+      "sha256": "0939489db440d27705e7169365e1f6ba5ccf4f2ac64aafd224003a92ac326335"
+    }
+  }
+}

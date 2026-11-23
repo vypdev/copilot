@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T17:36:07.501897+00:00",
+  "headBefore": "b82ec8c7cedae6461ff71257566029195e9acd84",
+  "nativeFailure": {
+    "run": 44930566153,
+    "job": 136926044516,
+    "verification": 136926550592,
+    "code": "validation.evidence-unavailable",
+    "retryable": false,
+    "retryRequested": false
+  },
+  "cause": "New generated coverage/report archives used .json.gz, outside the unchanged existing generated-artifact contract. The same bytes are now archived as .json.log.gz like the prior packet.",
+  "policyUnchanged": true,
+  "moves": [
+    {
+      "from": "review-round2/reproduced-before-results.json.gz",
+      "to": "review-round2/reproduced-before-results.json.log.gz",
+      "gzipSha256": "1b2b6a434ca34ac7e5fe14cf053a2033240e034fc01a690fe925e840cae6ffe7",
+      "rawSha256": "8419154d7c72cc24cd5e441643ad5d32087e0c89273d463c496cbe706eece816"
+    },
+    {
+      "from": "review-round2/initial-corrected-results.json.gz",
+      "to": "review-round2/initial-corrected-results.json.log.gz",
+      "gzipSha256": "91685025679d157b6eccdff2e79a3702af570743fca23774f48e5b0f25ea9388",
+      "rawSha256": "e2d6a1e3680ec5dd9dd6b198bea745b61b5ce512e1155bf1bd3e5bb8e112ed38"
+    },
+    {
+      "from": "review-round2/expanded-fixture-negative-results.json.gz",
+      "to": "review-round2/expanded-fixture-negative-results.json.log.gz",
+      "gzipSha256": "e1dd986909b8f613c767d40b6131cf536461596f0cfd4301f81160707616cd0f",
+      "rawSha256": "a472e12d826f0bc9b79fd83ba06ec7582209c17c4259a3dcf863529ec816afc9"
+    },
+    {
+      "from": "review-round2/expanded-corrected-results.json.gz",
+      "to": "review-round2/expanded-corrected-results.json.log.gz",
+      "gzipSha256": "98c3ae935a24a5224e1fd63ce6c6bb280b53d21d6019b589276c57e11f067212",
+      "rawSha256": "fd2ff84a29db8c7d31edbc01df5d820f11e3374d37a3e10428884a562fb2a37d"
+    },
+    {
+      "from": "review-round2/expanded-corrected-coverage-final.json.gz",
+      "to": "review-round2/expanded-corrected-coverage-final.json.log.gz",
+      "gzipSha256": "85c4747435013cd8e1ccb709761e5ae87fd4cc03b419e1a5e95bb6a8ba35cfba",
+      "rawSha256": "6237ae101810785d7e3f60646bf17f6c5cae2c06456e6091813a37e8b31d8e0e"
+    },
+    {
+      "from": "review-round2/parent-native-ci-terminal.json.gz",
+      "to": "review-round2/parent-native-ci-terminal.json.log.gz",
+      "gzipSha256": "b928b0bc1dc335dcde61abfb83d6e8d0f4f817d4dd175b62e5a18638cb572a4f",
+      "rawSha256": "8f5d8f1798139049c4712b91de6203b369866d3e87c0d409a4428f611a8a71e0"
+    },
+    {
+      "from": "review-round2/parent-native-verification.json.gz",
+      "to": "review-round2/parent-native-verification.json.log.gz",
+      "gzipSha256": "627d934c3cfcad294076faea5e877e8d6d1829063d7ebc130a0c85d15c3f054d",
+      "rawSha256": "78fc17ef8ae9d9664616b957052122f0abdc15e38d79b6ba91d384d7df9d746d"
+    },
+    {
+      "from": "review-round2/parent-codecov.json.gz",
+      "to": "review-round2/parent-codecov.json.log.gz",
+      "gzipSha256": "62150ab503d64a09383fe8bed172d917f17406b99420031e28811fd0d1e76865",
+      "rawSha256": "0ad306b5515d1631391cd05bdee1bcebf6e0d43abcf518bd7662d20b9bcdbec9"
+    },
+    {
+      "from": "review-round2/parent-addressed-eight-threads.json.gz",
+      "to": "review-round2/parent-addressed-eight-threads.json.log.gz",
+      "gzipSha256": "8d68ca770317038f2a4bf1f760701528a56ed6b9e2634db075b4df18730dc007",
+      "rawSha256": "bfc0d81db8b0c4ff19cd3af943ed5bd3b49a0fdb84122ca5615d2d3723382226"
+    }
+  ],
+  "sourceAndFourBundlesUnchanged": true,
+  "allOriginalGitObjectsReachable": true,
+  "priorNormalHooks": "966SDK/19667PASS35historicalskip/build/lint;temporaryprocess-onlysameNode --no-sparkplug",
+  "finalHeadNativeGatesStillRequired": true,
+  "production": "disabled",
+  "installationEffects": 0,
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0
+}

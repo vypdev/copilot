@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T19:24:59.206600+00:00",
+  "parent": "2d377332ef42491521a0815a1ed194267bed5562",
+  "finding": {
+    "thread": "PRRT_kwDONSeBW866bI7T",
+    "originalFindingCommit": "470f5ce7ba05837af4cd7ac0a20a99ddf6664931",
+    "verdict": "confirmed; validator now implements the selected SDD floor without changing the immutable SDD",
+    "contract": "original64 complete case objects remain identical; every selected SDD case remains mandatory; additional contiguous IDs require existing SDD area/nonempty distinct known requirements/meaningful assertion, unique real test evidence and passed execution in supplied reports; only fixed C55-C58 use package gate"
+  },
+  "additionalCases": [
+    "publisher977-C65",
+    "publisher977-C66"
+  ],
+  "reason": "two meaningful PR-complete journal recovery and failed durability scenarios already implemented and exercised on parent2d",
+  "casesRegistered": 66,
+  "mappedJestCasesPassed": 62,
+  "actualCombined": {
+    "files": 20,
+    "passed": 923,
+    "failed": 0,
+    "pending": 0,
+    "includesValidatorParserTests": 20
+  },
+  "causalProof": {
+    "kind": "actual subprocess, exact original versus corrected validator, identical canonical private parser fixture",
+    "parentExit": 1,
+    "correctedExit": 0,
+    "fixtureStatusesAreSynthetic": true,
+    "featureExecutionClaim": false
+  },
+  "fixtureHistory": "Initial positive extension fixture used macOS /var alias while Node resolved script root to /private/var; retained20-control red19PASS1FAIL and first20-file result922PASS1FAIL cannot alone isolate budget. Diagnostic retained. Fixture root now uses actual realpath. Independent exact-validator counterfactual isolates old budget rejection without missing-assertion errors; corrected final20-file command passes923 and actual62-case mapping. No production path policy changed for the fixture issue.",
+  "parent2dNative": {
+    "static": "SUCCESS",
+    "build": "SUCCESS104files/11actualCLI0effects/API/web",
+    "coverage": "FAIL4 old journal tests hit5s and cleanup hook;965suites/19671PASS+35oldskip",
+    "rawFailureSha256": "e0d7df946f067cae73d912dd38cf612a77b9d61201777ef92248d4d4d11534b3",
+    "journalSourceAndFirstDescribeIdenticalToPassing470": true,
+    "completeLocalInstrumentedIsolation": "73PASS0fail/skip;commandexit1 partialglobalbranchcoverage78.57<82 and unrun global owners; not full coverage acceptance",
+    "cause": "unproven; local OS differs from native",
+    "obsoleteHeadRetry": false
+  },
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8466958,
+      "sha256": "c7fabc981e6db77ed81b868d09a0b3a77a421bbc9e6cd62d121c804ba416add3"
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "runtimeSourcesAndFourBundlesUnchanged": true,
+  "selectedActionSDDUnchanged": true,
+  "types": "PASS",
+  "lint": "PASS",
+  "specifications": "PASS",
+  "graphify": "PASS",
+  "normalHooks": "pending at precommit snapshot",
+  "freshFinalHeadNativeGatesAndFindings": "required",
+  "qualificationModelCalls": 0,
+  "actual174Started": false,
+  "actual42Started": false,
+  "qualifiedProfile": null,
+  "pilotWriteAttempts": 0,
+  "production": "disabled"
+}

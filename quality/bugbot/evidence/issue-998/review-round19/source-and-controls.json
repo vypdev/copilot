@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "kind": "source-bound Round19 controls; no installation or final-head native acceptance",
+  "parent": "4806e074dc31712a8ce9c2c9695805a3e56b7423",
+  "sourceSha256": {
+    "src/infrastructure/setup_installation_github_delivery_adapter.ts": "48fd4d238caa078b25568bc44284bce957b2b031b018884051464e656da9ab00",
+    "src/infrastructure/__tests__/setup_publisher_installation.test.ts": "9adf275ab1044ebf9c1770d734ea0f076016f39ff9d5e4fcb80220771e1d795c",
+    "scripts/validate-setup-publisher-acceptance.cjs": "f1477a5d9306f1424410d557c0fbaa0a3b178ae3bfa6d29010f598c2fd75d20b",
+    "specs/setup-publisher-installation-acceptance.json": "06fb77e330044e3108650fe5764a4f2f73d99df2cb87e12cb45ff64dc1b24952"
+  },
+  "causal": {
+    "originalPassed": 0,
+    "originalFailed": 4,
+    "correctedFullSuitePassed": 87,
+    "correctedFailed": 0,
+    "sameAssertionBytes": true,
+    "controlledResponses": true,
+    "realGitHubEffects": 0,
+    "cases": [
+      "exact operation PR",
+      "duplicate operation PR",
+      "foreign base",
+      "foreign repository"
+    ],
+    "historyFixtureUnrelatedPrs": 1000
+  },
+  "query": {
+    "state": "all",
+    "head": "exact authenticated owner:operation-head",
+    "baseFilter": false,
+    "perPage": 100,
+    "maximumPages": 10,
+    "unknownStopsBeforePost": true,
+    "identityChecksUnchanged": true,
+    "docs": "https://docs.github.com/en/rest/pulls/pulls#list-pull-requests"
+  },
+  "cohort": {
+    "suites": 36,
+    "passed": 1539,
+    "failed": 0,
+    "pending": 0,
+    "mapped": 115,
+    "ledger": 119,
+    "packagedCasesSeparate": 4,
+    "rawJestExit": 1,
+    "rawJestExitScope": "Unexecuted global/web/publication floors; not global or native acceptance",
+    "sourceAndAssertionBytesStable": true
+  },
+  "baseline": {
+    "selectedCompanionSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+    "first118LedgerObjectsUnchanged": true
+  },
+  "budgets": "Existing six pure and20 runtime module coverage floors pass; no thresholds changed",
+  "sourceValidation": [
+    {
+      "name": "types",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "budgets",
+      "exit": 0,
+      "bytes": 151,
+      "sha256": "e8deb0de10c1b79c81cf399d66ea348c09287aafd23c5b22b6e1f21853046ff1"
+    }
+  ],
+  "privateOriginalReceipts": [
+    {
+      "file": "copilot-goal-998-round19-original-red-attempt1-receipt.json",
+      "bytes": 527,
+      "sha256": "c48813043ef34030315f0f99e8f1a040cb328db7f60142b6d9e26b38e1a463a5"
+    },
+    {
+      "file": "copilot-goal-998-round19-corrected-green-attempt1-receipt.json",
+      "bytes": 504,
+      "sha256": "4e0cc674a36d17a7a875bda239cc50dbbf111bdae39daba38d9d9f44d90b36d3"
+    },
+    {
+      "file": "copilot-goal-998-round19-coherent-attempt1-receipt.json",
+      "bytes": 9893,
+      "sha256": "1e7065a463d2feb3926fa16bb1b439e4af776fd045818749bd471954303ebde7"
+    },
+    {
+      "file": "copilot-goal-998-round19-source-validation-attempt1-receipt.json",
+      "bytes": 559,
+      "sha256": "71c729a234bfa749f458810ca7cb4fdac915f93fe05f532e7290740528dd5fee"
+    }
+  ],
+  "nativeParent": "4806 CI/Commit/Verification PASS,28/28 review complete; belongs to parent, not this source",
+  "currentNativeAcceptance": false,
+  "newScientificCalls": 0,
+  "pilotWrites": 0,
+  "installation": "NOT_EXECUTED",
+  "production": "disabled",
+  "deliveryValidation": {
+    "at": "2026-11-23T14:03:44.553908+00:00",
+    "steps": [
+      {
+        "name": "generate-specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "generate:specifications"
+        ],
+        "exit": 0,
+        "bytes": 2493,
+        "sha256": "146da808b6a9420e20fdb2bc40367284dbdf58a15397ff60cc596d0e277f280d"
+      },
+      {
+        "name": "specifications",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:specifications"
+        ],
+        "exit": 0,
+        "bytes": 2484,
+        "sha256": "cf0c81841536f243e9186e6d322c14275db6f39c103fa090869e95044c15be5d"
+      },
+      {
+        "name": "documentation",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:documentation"
+        ],
+        "exit": 0,
+        "bytes": 319,
+        "sha256": "23dfee16bdd4387324aea08fac9577dc68e5bd41ee017c1a300a72cdf94ce0ab"
+      },
+      {
+        "name": "agent-docs",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:agent-docs"
+        ],
+        "exit": 0,
+        "bytes": 218,
+        "sha256": "c7cac2a12d0ff4ef07c5bc0b1404acc8f4569fa3b2c9b53e436622f418bff0d2"
+      },
+      {
+        "name": "docs-page",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:docs-page"
+        ],
+        "exit": 0,
+        "bytes": 208,
+        "sha256": "d0dd6e25d3529bfa8d4edc9f864d1262a292d16d3bdfff90960ce03caa24e76b"
+      },
+      {
+        "name": "workflows",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:workflows"
+        ],
+        "exit": 0,
+        "bytes": 215,
+        "sha256": "411d5670d7d68ba620c0d0a722f10d4df0015fb27ecb0451385be001ebb833b2"
+      },
+      {
+        "name": "graphify",
+        "command": [
+          "graphify",
+          "update",
+          "."
+        ],
+        "exit": 0,
+        "bytes": 3681,
+        "sha256": "66e61381c487f876bc0dac5cb0506d50434b41b9b6697ee32251054941d0b8ad"
+      },
+      {
+        "name": "build",
+        "command": [
+          "pnpm",
+          "run",
+          "build"
+        ],
+        "exit": 0,
+        "bytes": 442189,
+        "sha256": "d27d06d7379d509786071c10dc73bf981df4a4c34f83f45d183755d5630245c1"
+      },
+      {
+        "name": "package",
+        "command": [
+          "pnpm",
+          "run",
+          "validate:npm-package"
+        ],
+        "exit": 0,
+        "bytes": 1004,
+        "sha256": "cd2082e63bd416d8c3faa8dc0a8b4d949d1759d4fa41b833a850bc19507a8d2f"
+      },
+      {
+        "name": "package-smoke",
+        "command": [
+          "pnpm",
+          "run",
+          "smoke:npm-package"
+        ],
+        "exit": 0,
+        "bytes": 1156,
+        "sha256": "1e8eed1f4ec4d84e288c3539f62d23d1ef925ef7a082f75bbbb507a9525f97b2"
+      }
+    ],
+    "bundles": {
+      "build/cli/index.js": "b1469c89afbacaad627d133ee28f1670e36d9be1cc4bbed03470313eaa91aa43",
+      "build/github_action/index.js": "de1884e5f8f3e66fe15cbdbb90209e95c670e786355c28c89bf42f520eafff5b",
+      "build/api/index.js": "22cf88aa71e14a216e9ac0aac487317bfa8af0d7ca90bc898401a6f0279579a3",
+      "build/deployment_recovery/index.js": "66654ce0fab52f9084a86555cb893be7f5cee6832058ef9a66751297f9c71d18"
+    },
+    "scientificCallsAdded": 0,
+    "installation": "NOT_EXECUTED",
+    "pilotWrites": 0,
+    "production": "disabled",
+    "DONE_DO_NOT_REPEAT": true
+  }
+}

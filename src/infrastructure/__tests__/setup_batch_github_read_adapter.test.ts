@@ -14,6 +14,26 @@ function fixture() {
   return { request, remote, adapter, target, transport };
 }
 describe('bounded GitHub setup discovery and namespace inspection', () => {
+  it.each([null, {}, { path: 42 }, { path: null }, { path: '' }, { path: '/absolute' },
+    { path: 'a//b' }, { path: './file' }, { path: 'a/../file' }, { path: 'a/./file' }, { path: 'a/' }, { path: 'a\0b' }])(
+    'rejects an incomplete legacy tree path %j before fetching any known blob', async invalid => {
+    const f = fixture(), content = 'retained human instructions\n';
+    f.request.mockResolvedValueOnce({ data: { truncated: false, tree: [
+      { path: 'AGENTS.md', type: 'blob', mode: '100644', sha, size: Buffer.byteLength(content) }, invalid] } })
+      .mockResolvedValueOnce({ data: { encoding: 'base64', content: Buffer.from(content).toString('base64') } });
+    await expect(f.adapter.files(f.target, 'fixture')).rejects.toMatchObject({ code: 'malformed' });
+    expect(f.request).toHaveBeenCalledTimes(1);
+  });
+  it('retains exact known bytes while accepting ordinary unrelated Git path names', async () => {
+    const f = fixture(), content = 'retained human instructions\n';
+    f.request.mockResolvedValueOnce({ data: { truncated: false, tree: [
+      { path: 'AGENTS.md', type: 'blob', mode: '100644', sha, size: Buffer.byteLength(content) },
+      { path: 'src/human notes #é.txt', type: 'blob', mode: '100644', sha, size: 10 },
+      { path: 'src/literal\\name.txt', type: 'blob', mode: '100644', sha, size: 10 }] } })
+      .mockResolvedValueOnce({ data: { encoding: 'base64', content: Buffer.from(content).toString('base64') } });
+    expect(await f.adapter.files(f.target, 'fixture')).toEqual([{ path: 'AGENTS.md', content }]);
+    expect(f.request).toHaveBeenCalledTimes(2); expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+  });
   it.each(['100644', '100755'])('VSO-10 inventories the existing consumer action with mode %s for preservation', async mode => {
     const f = fixture(); const content = 'custom\r\n';
     f.request.mockResolvedValueOnce({ data: { truncated: false, tree: [{ path: '.github/actions', type: 'tree', mode: '040000', sha },

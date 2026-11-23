@@ -1,0 +1,43 @@
+FAIL src/application/policies/__tests__/setup_publisher_plan_policy.test.ts (5.68 s)
+  ● publisher immutable two-file planning › publisher977-C107: matching manifest hashes cannot authorize duplicate required headings
+
+    expect(received).toThrow(expected)
+
+    Expected message: "Publisher installation review is blocked: installation-unsupported."
+
+    Received function did not throw
+
+      71 |         f.manifest.artifacts[file.path].sha256 = hash(file.content);
+      72 |         f.syncManifest();
+    > 73 |         expect(() => plan(f)).toThrow(new SetupPublisherPlanError('installation-unsupported'));
+         |                               ^
+      74 |       }
+      75 |     }
+      76 |   });
+
+      at Object.<anonymous> (src/application/policies/__tests__/setup_publisher_plan_policy.test.ts:73:31)
+
+FAIL src/application/policies/__tests__/repository_agent_guidance_policy.test.ts
+  ● repository agent guidance policy › publisher977-C107: rejects case-insensitive duplicate required headings while preserving distinct custom labels
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      24 |       if (labels.length > 1) {
+      25 |         for (const duplicate of [labels[0], labels[0].toUpperCase()]) {
+    > 26 |           expect(validRepositoryAgentProfile(withFields([labels[0], duplicate, ...labels.slice(2)]))).toBe(false);
+         |                                                                                                       ^
+      27 |         }
+      28 |       }
+      29 |     }
+
+      at Object.<anonymous> (src/application/policies/__tests__/repository_agent_guidance_policy.test.ts:26:103)
+
+Test Suites: 2 failed, 2 total
+Tests:       2 failed, 137 skipped, 139 total
+Snapshots:   0 total
+Time:        6.102 s
+Ran all test suites within paths "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts", "src/application/policies/__tests__/setup_publisher_plan_policy.test.ts".
+Test results written to: ../copilot-goal-998-duplicate-fields-original-red-attempt1.json

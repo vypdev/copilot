@@ -1,49 +1,24 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
-import type { SetupBatchInstallationReceipt } from '../domain/setup_batch';
 import type { SetupConfiguration } from '../domain/setup';
 import {
-  ISSUE_WORKFLOW_CATALOG,
-  ISSUE_WORKFLOW_KINDS,
-  type IssueWorkflowKind,
-} from '../domain/issue_workflow_profile';
-import {
   REPOSITORY_AGENT_MANIFEST_PATH,
-  REPOSITORY_AGENT_GUIDE_PATH,
   REPOSITORY_AGENT_POINTER_END,
   REPOSITORY_AGENT_POINTER_PATH,
   REPOSITORY_AGENT_POINTER_START,
   REPOSITORY_AGENT_PROFILE_PATH,
-  REPOSITORY_AGENT_SKILL_PATH,
   renderRepositoryAgentArtifacts,
   renderRepositoryAgentPointerBlock,
   type RepositoryAgentArtifact,
+  type ManagedRole,
+  type RepositoryAgentGuidanceManifest as GuidanceManifest,
+  parseRepositoryAgentGuidanceManifest,
+  validRepositoryAgentProfile,
 } from '../application/policies/repository_agent_guidance_policy';
 import { logInfo } from './logger';
-import { isSetupBatchInstallationReceipt } from '../application/policies/setup_batch_policy';
 
-type ManagedRole = RepositoryAgentArtifact['role'] | 'pointer';
-
-const MANAGED_ROLES: Readonly<Record<string, ManagedRole>> = Object.freeze({
-  [REPOSITORY_AGENT_PROFILE_PATH]: 'profile',
-  [REPOSITORY_AGENT_GUIDE_PATH]: 'guide',
-  [REPOSITORY_AGENT_SKILL_PATH]: 'skill',
-  [REPOSITORY_AGENT_POINTER_PATH]: 'pointer',
-});
-
-interface ManagedArtifactRecord {
-  readonly role: ManagedRole;
-  readonly sha256: string;
-}
-
-interface GuidanceManifest {
-  readonly installation?: SetupBatchInstallationReceipt;
-  readonly schemaVersion: 2;
-  readonly generator: { readonly name: '@vypdev/copilot'; readonly contractVersion: 1 };
-  readonly profileDigest: string;
-  readonly artifacts: Readonly<Record<string, ManagedArtifactRecord>>;
-}
+type ManagedArtifactRecord = GuidanceManifest['artifacts'][string];
 
 export interface RepositoryAgentGuidanceCheck {
   readonly id: string;
@@ -277,43 +252,8 @@ function retireRepositoryAgentGuidance(
 function readGuidanceManifest(cwd: string): GuidanceManifest | undefined {
   const manifestPath = path.join(cwd, REPOSITORY_AGENT_MANIFEST_PATH);
   if (!fs.existsSync(manifestPath)) return undefined;
-  try {
-    const parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
-    if (Object.keys(parsed).some(key => !['schemaVersion', 'generator', 'profileDigest', 'artifacts', 'installation'].includes(key))) return undefined;
-    if (parsed.installation !== undefined && !isSetupBatchInstallationReceipt(parsed.installation)) return undefined;
-    if (parsed.schemaVersion !== 2 || !isSha256(parsed.profileDigest)) return undefined;
-    const generator = parsed.generator as Record<string, unknown> | undefined;
-    if (!generator || Object.keys(generator).some(key => !['name', 'contractVersion'].includes(key))
-      || generator.name !== '@vypdev/copilot' || generator.contractVersion !== 1) return undefined;
-    const artifacts = parsed.artifacts;
-    if (!artifacts || typeof artifacts !== 'object' || Array.isArray(artifacts)) return undefined;
-    const records: Record<string, ManagedArtifactRecord> = {};
-    for (const [relativePath, value] of Object.entries(artifacts as Record<string, unknown>)) {
-      if (!isManagedPath(relativePath) || !value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-      const record = value as Record<string, unknown>;
-      if (Object.keys(record).some(key => !['role', 'sha256'].includes(key))) return undefined;
-      if (!['profile', 'guide', 'skill', 'pointer'].includes(String(record.role)) || !isSha256(record.sha256)) return undefined;
-      if (record.role !== expectedManagedRole(relativePath)) return undefined;
-      records[relativePath] = { role: record.role as ManagedRole, sha256: record.sha256 as string };
-    }
-    return {
-      schemaVersion: 2,
-      generator: { name: '@vypdev/copilot', contractVersion: 1 },
-      profileDigest: parsed.profileDigest as string,
-      artifacts: records,
-      ...(isSetupBatchInstallationReceipt(parsed.installation) ? { installation: parsed.installation } : {}),
-    };
-  } catch {
-    return undefined;
-  }
-}
-
-function isManagedPath(value: string): boolean {
-  return Object.prototype.hasOwnProperty.call(MANAGED_ROLES, value);
-}
-
-function expectedManagedRole(relativePath: string): ManagedRole {
-  return MANAGED_ROLES[relativePath];
+  try { return parseRepositoryAgentGuidanceManifest(fs.readFileSync(manifestPath, 'utf8')); }
+  catch { return undefined; }
 }
 
 function pointerBlock(content: string): string | undefined {
@@ -366,10 +306,6 @@ function containsSensitiveGuidance(content: string): boolean {
   return /(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|\/(?:Users|home)\/[^/\s]+\/)/u.test(content);
 }
 
-function isSha256(value: unknown): value is string {
-  return typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value);
-}
-
 function checkId(role: ManagedRole): string {
   return ({
     profile: 'agent-profile-schema',
@@ -379,90 +315,6 @@ function checkId(role: ManagedRole): string {
   })[role];
 }
 
-function validRepositoryAgentProfile(content: string): boolean {
-  try {
-    const parsed: unknown = JSON.parse(content);
-    const profileKeys = ['schemaVersion', 'generator', 'issueWorkflows', 'branches', 'pullRequests', 'deployment'];
-    if (isRecord(parsed) && parsed.installation !== undefined) profileKeys.push('installation');
-    if (!hasExactKeys(parsed, profileKeys)
-      || parsed.schemaVersion !== 2) return false;
-    if (parsed.installation !== undefined && (!hasExactKeys(parsed.installation, ['lifecycleOwner', 'branchNamespace', 'requiresIssue', 'automaticMerge'])
-      || parsed.installation.lifecycleOwner !== 'setup-cli' || parsed.installation.branchNamespace !== 'setup/copilot/<operation-id>'
-      || parsed.installation.requiresIssue !== false || parsed.installation.automaticMerge !== false)) return false;
-    const { generator, issueWorkflows, branches, pullRequests, deployment } = parsed;
-    if (!hasExactKeys(generator, ['name', 'contractVersion'])
-      || generator.name !== '@vypdev/copilot' || generator.contractVersion !== 2) return false;
-    if (!hasExactKeys(issueWorkflows, ['enabled', 'formsEnabled', 'forms'])) return false;
-    const { enabled: rawEnabled, formsEnabled, forms } = issueWorkflows;
-    if (typeof formsEnabled !== 'boolean'
-      || !isStringArray(rawEnabled)
-      || new Set(rawEnabled).size !== rawEnabled.length
-      || rawEnabled.some(kind => !ISSUE_WORKFLOW_KINDS.includes(kind as IssueWorkflowKind))
-      || !isRecord(forms)) return false;
-    const enabled = rawEnabled as IssueWorkflowKind[];
-    if (Object.keys(forms).length !== enabled.length
-      || Object.keys(forms).some(kind => !enabled.includes(kind as IssueWorkflowKind))) return false;
-    if (enabled.some(kind => !validRepositoryAgentWorkflowFact(
-      forms[kind],
-      kind,
-      formsEnabled,
-      isRecord(branches) && branches.issueManagedBranches === true,
-    ))) return false;
-    if (!hasExactKeys(branches, ['remoteLifecycleOwner', 'issueManagedBranches', 'preBranchSdd', 'startLabel', 'readyLabel', 'helpCreatesBranch'])
-      || branches.remoteLifecycleOwner !== 'github-action'
-      || branches.helpCreatesBranch !== false
-      || typeof branches.issueManagedBranches !== 'boolean'
-      || typeof branches.preBranchSdd !== 'boolean'
-      || (branches.preBranchSdd && !branches.issueManagedBranches)
-      || branches.startLabel !== 'in-progress'
-      || branches.readyLabel !== 'branched') return false;
-    if (!hasExactKeys(pullRequests, ['mustLinkIssue']) || pullRequests.mustLinkIssue !== true) return false;
-    return hasExactKeys(deployment, ['agentMayInitiateWithoutExplicitAuthorization', 'launcherLabel'])
-      && deployment.agentMayInitiateWithoutExplicitAuthorization === false
-      && isNonEmptyString(deployment.launcherLabel);
-  } catch {
-    return false;
-  }
-}
-
-function validRepositoryAgentWorkflowFact(
-  value: unknown,
-  kind: IssueWorkflowKind,
-  formsEnabled: boolean,
-  issueManagedBranches: boolean,
-): boolean {
-  if (!hasExactKeys(value, [
-    'template', 'labels', 'formLabels', 'nativeIssueType', 'createsManagedBranch',
-    'branchPrefix', 'requiredFields', 'workflow',
-  ])) return false;
-  const definition = ISSUE_WORKFLOW_CATALOG[kind];
-  return (formsEnabled ? isNonEmptyString(value.template) : value.template === null)
-    && isStringArray(value.labels) && value.labels.every(isNonEmptyString)
-    && isStringArray(value.formLabels) && value.formLabels.every(isNonEmptyString)
-    && value.nativeIssueType === definition.nativeIssueType
-    && value.createsManagedBranch === (definition.branchManaged && issueManagedBranches)
-    && (definition.branchManaged ? isNonEmptyString(value.branchPrefix) : value.branchPrefix === null)
-    && isStringArray(value.requiredFields) && value.requiredFields.every(isNonEmptyString)
-    && (value.workflow === null || isNonEmptyString(value.workflow));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function hasExactKeys<K extends string>(value: unknown, keys: readonly K[]): value is Record<K, unknown> {
-  return isRecord(value)
-    && Object.keys(value).length === keys.length
-    && Object.keys(value).every(key => keys.includes(key as K));
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every(item => typeof item === 'string');
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
-}
 
 function inspectIssueWorkflowProjection(
   cwd: string,

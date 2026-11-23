@@ -42,6 +42,12 @@ requires unchanged target/base/plan identities; otherwise inspect retained PRs
 and start a fresh preview. Do not delete a journal or lock to bypass an active
 setup. Verify the owning process and retained effects before manual recovery.
 
+A failure to read or remove an acquired operation lock is reported even if the
+installation PR was already created. Keep its receipt and known PR; do not repeat
+the delivery. The remaining lock blocks another Apply until its owner is checked
+and a confirmed orphan is recovered. A freshly reviewed resume then reuses the
+existing proved PR.
+
 An interrupted process can leave an exclusive operation lock. Its error links to
 [orphan-lock recovery](/security-operations/operations/troubleshooting#recover-an-orphaned-batch-operation-lock);
 use a maintenance window with all setup owners stopped, preserve the receipt,
@@ -56,6 +62,24 @@ capabilities after plan confirmation; reuse never skips that installation gate.
 Incomplete Secret revision metadata blocks a target during planning, before its
 questionnaire or rendered files are offered for approval.
 
+If preparation stops before any Git object is submitted, resume can retry the
+remaining file work after a new review and permission audit. Completed resource
+effects stay retained. If the final resource checkpoint save fails before file
+delivery starts, the retained preflight proof lets a freshly reviewed resume
+continue file delivery without repeating those resources. A failed proof save
+or previously unknown object preparation still needs inspection. A known commit
+is re-proved rather than recreated. For an
+unfinished ref or PR, recovery checks the exact owned identity and complete PR
+inventory first; a fresh approved attempt can create a confirmed absent target.
+An unknown tree or commit creation without its object ID remains blocked. A
+completed publisher-purpose operation continues to inspect its retained PR
+without creating another ref or PR.
+
+Cancelling publisher token entry or approval returns exit status130. An explicit
+decline returns success without applying. Cancellation during a post-approval
+read stays a cancellation; a changed credential session or inspected identity
+still requires a fresh review.
+
 Setup changes are checked against both the repository coverage budgets and the
 coverage of changed paths, including permission denial, cancellation, incomplete
 inventory and partial recovery. A passing global percentage alone does not prove
@@ -63,3 +87,163 @@ that a new setup or recovery path was exercised. Changed-path validation also
 covers exact request ceilings, malformed metadata, missing package assets,
 receipt cleanup failure and source workflow preservation. Installation and runtime
 verification still require the separate reviewed receipts and workflow evidence.
+
+## Reviewed Bugbot publisher proposals
+
+`copilot setup --publisher-manifest <path>` updates one existing installation
+through a reviewed two-file PR. It inspects GitHub directly and can run outside
+a checkout. It neither initializes local Git nor creates Variables, Secrets,
+access grants, labels, issue types or permission probes.
+
+Use the complete review-only proposal for the selected repository and source.
+Setup independently verifies the authenticated actor, actual relevant grants,
+repository/default/base, compatible manifest/guidance, complete workflow inventory,
+merged maintainer source and source blob hashes. It pins the canonical workflow's
+local Action invocation to that verified source commit. A maintainer merge
+establishes this source review boundary; it is not independent attestation of
+the producer's executable code.
+
+Setup also parses the source Action metadata before accepting its hashes. Its
+required `runs.main` and any declared `runs.pre` or `runs.post` must point to the
+fixed `build/github_action/index.js` bundle, optionally prefixed by `./`. A
+redirect or unsupported metadata blocks inspection even if the proposal hashes
+match. The manifest bytes are hashed exactly as read. Recognizing the supported
+Node20/Node24 metadata formats does not establish actual runtime execution.
+Unrelated `.yml`/`.yaml` directories are ignored as non-workflows; a directory
+colliding with the fixed publisher file, symlinks and unreadable matching blobs
+still block the proposal.
+
+The source workflow must contain exactly one canonical local invocation. Setup
+checks executable YAML scopes, including aliases and quoted references, and
+rejects additional or ambiguous local invocations before preview. The generated
+workflow preserves all other source bytes and pins that executed invocation.
+
+A local or remote step Action, container Action, or reusable-workflow reference that this reader cannot inspect
+keeps publisher inventory unknown and blocks the proposal. A local path, remote
+workflow pin or a
+non-publisher selector alone cannot prove that no publisher already exists.
+An uninspected `run` script also stays unknown: delegated scripts, constructed
+markers and direct GitHub API calls need independent inspection. Missing literal
+markers cannot prove absence.
+Resolve that inventory before preparing a new preview; an older preview cannot
+authorize Apply after this result changes.
+
+An incomplete or malformed Git tree blocks Setup file preparation. Unreadable
+entries cannot establish that an existing manifest is absent or authorize a
+replacement with an empty baseline. Reinspect the immutable default revision
+and complete inventory before reviewing a retry. Ordinary unrelated Git names with
+literal backslashes remain valid. Windows case variants of publisher environment
+markers also block a renamed publisher; source parsing does not prove actual
+Windows platform acceptance.
+
+The credential needs repository contents/PR write access and workflow-editing
+authority, including for preview because that authority forms part of the review.
+Classic credentials need applicable `repo` (or public-repository `public_repo`)
+and `workflow` scopes plus actual repository push permission. Unknown grant
+evidence blocks. Required-permissions headers do not prove granted authority;
+fine-grained credentials whose actual grants cannot be established by this reader
+remain unsupported. No write probe guesses permission. Prefer the environment
+or hidden prompt over a token argument that could enter shell history.
+
+```bash
+copilot setup --publisher-manifest /absolute/path/publisher-proposal.json --dry-run
+```
+
+Review the complete `.github/workflows/copilot_bugbot_status_card.yml` and
+`.copilot/setup-manifest.json` contents, source/default/base and retained effects.
+With issue forms enabled, an installed profile must name the canonical template
+for each enabled workflow kind. A different nonempty template remains unsupported
+even when its manifest hashes match. Reconcile the installed guidance through the
+reviewed setup route before trying publisher preparation again; changing hashes
+does not establish compatibility.
+Displayed untrusted content is escaped and prefixed to keep it inert. Dry-run,
+decline and inspection create no journal, lock, object, ref or PR. Run again
+without `--dry-run` in an interactive terminal and enter the displayed approval
+word only for that exact preview. Credential, grant, source, default/base or file
+drift requires a new review.
+
+Approved delivery uses shared Setup Git delivery, proves the complete prepared
+tree difference, exact parent and nested receipt, then creates one
+`setup/copilot/<operation-id>` ref and one marked PR. It never force-pushes,
+deletes a ref, overwrites a human head, merges a PR or changes production settings.
+The result is **waiting for merge**; matching existing bytes remain
+**verification pending**. Neither proves native writer execution.
+
+Other installation PRs can remain open. Delivery inspects only this operation's
+owned branch and marker. A different head claiming the same marker, a duplicate
+claim or a mismatched commit blocks delivery and requires reconciliation. When
+recovering an already completed PR, Setup verifies the retained prepared commit
+and exact PR before saving **waiting for merge**; it creates no replacement.
+
+Keep the proposal and private receipt to recover a publisher operation:
+
+```bash
+copilot setup --publisher-manifest /absolute/path/publisher-proposal.json --resume-operation <operation-id>
+```
+
+Resume needs current credentials and fresh review of the same purpose, actor,
+repository/default/base, source and approved bytes. An invalid resume UUID is a local input error: correct the ID before inspecting
+repository access or retained effects. Bare `--resume-operation`
+still selects ordinary batch recovery. Legacy v1 records cannot become publisher
+v2 authority. Completed facts and uncertainty appear before approval. Resume
+asks for a fresh explicit confirmation; decline or cancel returns before Apply
+or any journal, lock or delivery write. If a
+tree/commit POST may have succeeded without returning its identity, preserve and
+inspect that uncertainty; Setup does not blindly replay it or invent an object
+to adopt. Known prepared objects/refs/PRs are reused only after exact proof.
+For a partial operation, fresh approval permits creating an uncertain ref or PR
+only after inspection confirms its exact owned identity is absent and current
+authority and snapshot still match. A completed operation only rechecks its
+recorded ref and PR; it never recreates either. See
+[publisher recovery](/security-operations/operations/troubleshooting#recover-a-publisher-proposal-operation).
+
+After merge into trusted default, separately verify the installed revision and
+explicitly authorized native canary. Source integration, a packed CLI pass or a
+queued/skipped run does not complete installation. Rollback is a fresh reviewed
+normal change retaining prior receipts and newer human work.
+
+During publisher resume, changed installation facts produce stale-preview guidance:
+inspect the destination again and review the new preview before approving. A
+completed receipt remains unchanged if its read-only branch or PR proof becomes
+stale. If exclusive-lock initialization fails, setup removes its own identified
+unfinished lock so a later fresh attempt can proceed. A foreign, unverified or
+unremovable lock is retained; follow the documented owner verification procedure
+before orphan-lock recovery.
+
+During file delivery, cancellation is checked again after each asynchronous freshness
+check and after saving each prepare, branch or pull-request intent. Cancelling there
+stops the next provider command. Already completed effects and retained intents stay
+available for inspection and reviewed recovery; cancellation does not roll them back
+or erase an uncertain dispatched outcome. Before invoking any object command, the
+coordinator can prove that a cancellation wrote no object. It saves that proof before
+returning; the legacy preflight receipt or publisher receipt then permits a fresh
+reviewed resume. If that proof save fails, durable preparation stays uncertain and
+no automatic preparation is allowed. A failed state save stops delivery as a journal
+failure.
+
+The file-delivery adapter also checks the current session immediately before each
+Git tree, commit, branch and pull-request write, after its own asynchronous
+freshness and ownership reads. Cancelling during those reads prevents that write.
+Completed objects and branch identities remain in the recovery receipt; cancellation
+does not undo a dispatched request. A known tree without a retained commit remains
+uncertain and must not be recreated automatically. Review the retained facts before
+resuming the same installation operation.
+
+
+### Recovering an older setup pull request
+
+Recovery lists all states for the exact operation owner and setup branch, then
+checks the complete returned candidate identity. Unrelated repository history
+does not consume the operation's scan. Closed, duplicate, foreign or base-moved
+results remain blocked; an unterminated provider response still cannot prove
+absence or authorize another POST. Keep the existing operation/receipt for
+inspection rather than starting a new operation to bypass uncertain effects.
+
+
+When no exact owned PR is found, setup checks open operation-marker claims on
+all heads before creating one. Both reads share ten requests of100results; an
+exhausted, malformed or incomplete scan stays unknown and blocks the write.
+Reconcile a conflicting marker and retry inspection; do not erase retained
+intent or approve an old preview. An existing independently verified exact PR
+can be recovered without creating another one. Cancellation and freshness are
+checked again after that inspection and immediately before POST.

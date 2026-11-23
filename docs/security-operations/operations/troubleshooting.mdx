@@ -513,6 +513,12 @@ additive; cancellation does not roll them back or revoke the operator PAT.
 
 ### Recover an orphaned batch operation lock
 
+A final lock-cleanup error can occur after a known installation PR is already
+created. Preserve that PR and the durable operation receipt. Do not repeat the
+installation or delete its receipt; the same owner checks below apply before
+removing a confirmed orphan. Fresh reviewed resume reuses the existing PR.
+
+
 If setup reports an operation is locked, its error gives the exact private lock
 path and operation ID. The lock contains a PID and nonce; a PID alone cannot
 prove ownership because operating systems reuse it. Setup never automatically
@@ -548,6 +554,57 @@ When current-repository organization reuse reports configuration/access changed
 after review, inspect the credential-health workflow too. Its installation or
 removal changes required bootstrap permissions. Prepare and approve a fresh plan
 instead of applying a previously audited permission set.
+
+## Recover a publisher proposal operation
+
+Use the explicit `--publisher-manifest <path>` route for publisher operations.
+The ordinary batch route retains its own records and cannot adopt this purpose.
+
+If source inspection blocks despite matching hashes, review the source PR’s
+`action.yml`: every declared main/pre/post executable must name the fixed
+`build/github_action/index.js` bundle (`./` is also supported). Select or correct
+the reviewed source instead of changing the proposal hashes to accept another
+entrypoint. An unrelated YAML-named directory is not a workflow, while a directory
+at the fixed publisher path is an unsupported file collision.
+
+Retained-state output includes the validated saved operation's local file URL
+and any known installation PR. Open that record on the machine that ran setup;
+it remains private and is not uploaded. Lookup never creates a missing journal
+or changes recovery authority. A missing, invalid or unreadable record has no
+link, and a link lookup failure does not replace the original operation error.
+The CLI cannot link a native run whose identity it has not observed.
+
+| Result | Next action |
+|---|---|
+| Invalid proposal/options | Use a regular nonsymlink UTF-8 closed-schema proposal no larger than 128 KiB. Remove generic setup, web, batch and automation options. No transport or generic setup has started. |
+| Credentials/authority unverified | Supply a current credential with provable repository/PR/workflow authority; do not infer grants from a required-permissions header. Preview requires authenticated reads too. |
+| Unsupported/foreign installation | Inspect the manifest, complete guidance and workflow inventory. Preserve customized/renamed publishers; this route cannot overwrite them or fabricate a baseline. |
+| Source/default/base changed | Retain prior effects, refresh the proposal and inspect a new complete preview. Previous approval cannot authorize changed bytes or identities. |
+| Resume required/missing | Supply the exact operation ID together with the same proposal. A missing, future, foreign-purpose or legacy journal is not a new publisher approval. |
+| Partial / uncertain | Preserve the private receipt and any known prepared object, ref and PR. Inspect those exact identities before recovery; an unknown tree/commit POST is never blindly repeated. |
+| Waiting for merge | Review the linked installer PR. Default installation and native verification remain pending. |
+| Unchanged / verification pending | No empty PR is created. Inspect the actual installed default revision and separately authorized native run. |
+
+Resume with current credentials and fresh review:
+
+```bash
+copilot setup --publisher-manifest /absolute/path/publisher-proposal.json --resume-operation <operation-id>
+```
+
+For a partial operation with an uncertain ref or PR, Setup first inspects its
+exact operation/target/commit identity. It reuses a matching effect without a
+POST; fresh approval permits creation only when inspection proves absence and
+revalidation still passes. Conflicting identities block. Completed receipts
+remain inspection-only, even when their recorded ref or PR is missing.
+
+Cancellation stops later effects and retains completed/uncertain work; it is not
+a rollback. An unexpected human branch head blocks recovery. Do not delete the
+journal, lock, branch or PR to bypass the check. The shared
+[orphan-lock procedure](#recover-an-orphaned-batch-operation-lock) requires all
+owners stopped and preservation of the matching receipt; resume afterward using
+the publisher command above. Locale controls display only. Unsupported/invalid
+locale or an incomplete catalog selects complete English, not mixed-language
+approval text. Raw provider errors and credentials are not printed.
 
 ## Unsupported stored configuration
 

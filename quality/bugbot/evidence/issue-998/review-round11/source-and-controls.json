@@ -1,0 +1,150 @@
+{
+  "at": "2026-11-22T03:48:53.283043+00:00",
+  "parent": "9d4b8328e5435c5dd141ba4c8b2094d488266ee7",
+  "sourceHashes": {
+    "docs/security-operations/operations/provisioning.mdx": "923ef2455a3e029a7c2e7f1e7d0e6c1477c94f9a6b7765996f19d119acb9560d",
+    "scripts/coverage-budgets.json": "4c5bd011684e5b1167327782021ac3fdf81ac3b946be35d3586808864b29f4d6",
+    "scripts/validate-setup-publisher-acceptance.cjs": "030e22c5acba0496198496ee33823a945fb5aeb1a8af4cdaae025c257fc4fa81",
+    "specs/CATALOG.md": "4b059594beb9bf6c99ed6c85a6ef09a4630ba65fd08a7648f0008c672b4cbeb6",
+    "specs/catalog.json": "6b15eadc2b1ef5503dfdd8272f64db81a923524887a4c866d62b08bd442fc9d3",
+    "specs/organization-configuration-reuse-and-batch-setup.md": "7902165dcd70b6343ed12592bfdcf48a9a0fdeb31bd7c10e2db4a750f172f4b8",
+    "specs/setup-publisher-installation-acceptance.json": "0c503a6da8a1957848226b1759b5ea90e77201210a5a34399417d8f38acdebbe",
+    "src/cli/__tests__/setup_publisher_installation_adapter.test.ts": "10407f8f6e97afbf1add5c128573616986941b8781acd8b33c8551953e80d1b1",
+    "src/cli/setup_publisher_installation_adapter.ts": "c0428331efcb8f595c585c40e356666e4f62db02d1052f8eed3048e727e8233b",
+    "src/infrastructure/__tests__/fixtures/setup_publisher_github_fixture.ts": "83e5ae6c99facfcd2444ade1911e21d05a417881c013a278748a441178fc6ef3",
+    "src/infrastructure/__tests__/setup_publisher_composition.test.ts": "ddac508775d213307a553487d02555adec42c9bc66996792a251b07183ab4d97",
+    "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts": "b2d00500313e1ed3cda8cebb77f345d7b04e7d53a8a3bb27cb7f4185562ccc31",
+    "src/infrastructure/setup_publisher_workflow_inventory.ts": "c771f2c871f2150c77d15b351c36c315ddc0472f76a08cd2bc198cd3f4a10db4",
+    "src/tooling/__tests__/coverage_budget_validator.test.ts": "aa51f6d5522eaf3db5eaa5be102f3922fcd9e11abb4484f2b6a4f83e80f0cd7a",
+    "src/tooling/__tests__/setup_publisher_acceptance_validator.test.ts": "78e4cc566fdda5fa2675e8899e2a774de53036709c5a1d5c655b19116502754f"
+  },
+  "reports": {
+    "red-attempt1": {
+      "numPassedTests": 107,
+      "numFailedTests": 8,
+      "numPassedTestSuites": 0,
+      "numFailedTestSuites": 2,
+      "numPendingTests": 0
+    },
+    "green-attempt1": {
+      "numPassedTests": 142,
+      "numFailedTests": 1,
+      "numPassedTestSuites": 2,
+      "numFailedTestSuites": 1,
+      "numPendingTests": 0
+    },
+    "green-attempt2": {
+      "numPassedTests": 174,
+      "numFailedTests": 0,
+      "numPassedTestSuites": 4,
+      "numFailedTestSuites": 0,
+      "numPendingTests": 0
+    },
+    "coherent-attempt1": {
+      "numPassedTests": 1285,
+      "numFailedTests": 12,
+      "numPassedTestSuites": 26,
+      "numFailedTestSuites": 3,
+      "numPendingTests": 0
+    },
+    "coherent-attempt2": {
+      "numPassedTests": 1298,
+      "numFailedTests": 0,
+      "numPassedTestSuites": 29,
+      "numFailedTestSuites": 0,
+      "numPendingTests": 0
+    }
+  },
+  "sourceCauses": [
+    "opaque runs can delegate publication without literal markers; keep unknown",
+    "malformed resume string throws generic Error; map to existing localized invalid before terminal/provider",
+    "two executable port constructors missing independent per-runtime floor; add20thowner"
+  ],
+  "cohort2": {
+    "suites": 29,
+    "passed": 1298,
+    "failed": 0,
+    "skipped": 0,
+    "mappedJest": 99,
+    "focusedExit": 1,
+    "focusedExitMeaning": "unexecuted global owners; not global acceptance"
+  },
+  "changedModuleCoverage": {
+    "application/ports/setup_installation_delivery_ports.ts": {
+      "lines": 100,
+      "functions": 100,
+      "statements": 100,
+      "branches": 100
+    },
+    "cli/setup_publisher_installation_adapter.ts": {
+      "lines": 100,
+      "functions": 100,
+      "statements": 100,
+      "branches": 100
+    },
+    "infrastructure/setup_publisher_workflow_inventory.ts": {
+      "lines": 100,
+      "functions": 100,
+      "statements": 100,
+      "branches": 100
+    }
+  },
+  "ledger": {
+    "logicalIds": 103,
+    "mappedJest": 99,
+    "extractedPackage": 4,
+    "completePrior100ObjectsPreserved": true,
+    "selectedCompanionSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18"
+  },
+  "negatives": [
+    "red107PASS8FAIL",
+    "green1 142PASS1testexpectedreturnedfailure but missingcoverage entry correctlythrows; expectation corrected",
+    "firstcohort1285PASS12FAIL:4restrictedloopbackEPERMand8oldopaque-scriptpositivefixtures; narrowed positivefixture to no executable steps and added actualcomposition opaque-script blocked proof",
+    "metadataupdatepreflight rejected unknown area before ledger/source writes",
+    "native9d directlog1suite9FAIL;first5stimeoutthen8active-inspectioncascades; localunchanged9PASScannotestablishnativecausefixed"
+  ],
+  "nativeFailure": {
+    "at": "2026-11-22T03:43:03.833141+00:00",
+    "head": "9d4b8328e5435c5dd141ba4c8b2094d488266ee7",
+    "run": 44980148996,
+    "job": 137078669280,
+    "rawBytes": 3208655,
+    "rawSha256": "9c52c5a82998af3a6375e4d419847184341aede85f258cccfa563636f94640fa",
+    "firstGhViewLogIncomplete": true,
+    "suite": "src/infrastructure/__tests__/setup_permission_audit_transactions.test.ts",
+    "firstFailure": "Existing first real-filesystem PAT transaction test exceeds Jest5s; following8fail while activeInspections target remains reserved. Exact awaited operation not logged, cause unproven. No production limit or test timeout change.",
+    "summaries": [
+      "2026-11-22T03:30:54.9843158Z Test Suites: 1 failed, 966 passed, 967 total",
+      "2026-11-22T03:30:54.9843539Z Tests:       9 failed, 35 skipped, 19785 passed, 19829 total",
+      "2026-11-22T03:30:54.9844054Z Time:        625.732 s"
+    ],
+    "retry": false
+  },
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8473573,
+      "sha256": "6a6c322c7524bafe1769523ed44a900e59754664dde92bcd5a6d07a14a16f07e"
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "package": "104files;11actualCLI0effects;API/localwebPASS",
+  "actualDefaultInventory": "pending reevaluation; conservative opaque run change resolves no unknown dependency",
+  "installation": false,
+  "production": "disabled",
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "nativeFinalHeadAcceptance": false
+}

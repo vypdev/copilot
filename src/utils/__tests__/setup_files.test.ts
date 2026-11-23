@@ -6,6 +6,8 @@ import { createDefaultSetupConfiguration } from '../../application/policies/setu
 import { createHash } from 'node:crypto';
 import { inspectRepositoryAgentGuidance, reconcileRepositoryAgentGuidance } from '../repository_agent_guidance';
 import {
+  REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_SKILL_PATH, REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_MANIFEST_PATH,
+  parseRepositoryAgentGuidanceManifest,
   REPOSITORY_AGENT_POINTER_END,
   REPOSITORY_AGENT_POINTER_START,
   renderRepositoryAgentArtifacts,
@@ -45,6 +47,34 @@ describe('setup_files', () => {
 
   beforeEach(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'setup_files_test_')); });
   afterEach(() => { if (fs.existsSync(tmpDir)) fs.rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it.each([REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_SKILL_PATH, 'all'])(
+    'publisher977-C115: incomplete guidance inventory %s cannot make the actual doctor report healthy', omitted => {
+      reconcileRepositoryAgentGuidance(tmpDir, createDefaultSetupConfiguration());
+      const manifestPath = path.join(tmpDir, REPOSITORY_AGENT_MANIFEST_PATH);
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
+        profileDigest: string; artifacts: Record<string, { role: string; sha256: string }>;
+      };
+      expect(parseRepositoryAgentGuidanceManifest(JSON.stringify(manifest))).toBeDefined();
+      expect(inspectRepositoryAgentGuidance(tmpDir)).toContainEqual(expect.objectContaining({ id: 'agent-profile-runtime-parity', status: 'pass' }));
+      for (const target of [REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_SKILL_PATH]) {
+        if (omitted !== 'all' && target !== omitted) continue;
+        delete manifest.artifacts[target];
+        if (target === REPOSITORY_AGENT_PROFILE_PATH) {
+          const invalidProfile = '{"schemaVersion":99}';
+          fs.writeFileSync(path.join(tmpDir, target), invalidProfile);
+          manifest.profileDigest = createHash('sha256').update(invalidProfile).digest('hex');
+        } else fs.unlinkSync(path.join(tmpDir, target));
+      }
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+      const parsed = parseRepositoryAgentGuidanceManifest(JSON.stringify(manifest));
+      const checks = inspectRepositoryAgentGuidance(tmpDir);
+      expect({ parsed: parsed !== undefined,
+        schemaPass: checks.some(check => check.id === 'agent-guidance-manifest' && check.status === 'pass'),
+        parityPass: checks.some(check => check.id === 'agent-profile-runtime-parity' && check.status === 'pass'),
+      }).toEqual({ parsed: false, schemaPass: false, parityPass: false });
+    },
+  );
 
   it('creates the GitHub directories used by setup', () => {
     ensureGitHubDirs(tmpDir);
@@ -447,6 +477,15 @@ describe('setup_files', () => {
     expect(inspectRepositoryAgentGuidance(tmpDir)).toEqual([
       expect.objectContaining({ id: 'agent-guidance-manifest', status: 'warn' }),
     ]);
+  });
+  it('reports an unreadable manifest as unknown ownership and preserves the existing guidance', () => {
+    const manifest = path.join(tmpDir, '.copilot/setup-manifest.json');
+    fs.mkdirSync(manifest, { recursive: true });
+    const guide = path.join(tmpDir, '.copilot/AGENT_GUIDE.md'); fs.writeFileSync(guide, '# Unowned guide\n');
+    expect(inspectRepositoryAgentGuidance(tmpDir)).toEqual([
+      expect.objectContaining({ id: 'agent-guidance-manifest', status: 'warn' }),
+    ]);
+    expect(fs.statSync(manifest).isDirectory()).toBe(true); expect(fs.readFileSync(guide, 'utf8')).toBe('# Unowned guide\n');
   });
 
   it('supports guidance without a generic AGENTS.md discovery pointer', () => {

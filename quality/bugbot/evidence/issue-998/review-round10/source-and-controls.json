@@ -1,0 +1,154 @@
+{
+  "at": "2026-11-22T03:07:35.804687+00:00",
+  "parent": "3552e1445b49a4fc0a969bac2f6f6b13151a4409",
+  "changes": [
+    "coordinator confirmed before-command no-object durable proof",
+    "uninspected remote actions unknown including pins/container actions",
+    "Windows case-insensitive publisher markers",
+    "unrelated literal Git backslashes",
+    "valid oversized JSON receipt test",
+    "actual dependency transport guard resolves in native child"
+  ],
+  "newLogicalIds": [
+    96,
+    97,
+    98,
+    99,
+    100
+  ],
+  "baseline95LedgerObjectsPreserved": true,
+  "selectedCompanionUnchanged": true,
+  "causalNegative": "247PASS12FAIL plus corrected batch1FAIL; initial batch scenario cancelled earlier than intent and is retained separately",
+  "compatibilityNegatives": [
+    "focused338PASS1optionalfieldexpectationFAIL then339PASS",
+    "cohort11246PASS1oldC94expectationFAIL+1realdependencyresolutionSuiteFAIL",
+    "cohort21247PASS1dependencyresolutionSuiteFAIL; actual createRequire also intercepted by Jest"
+  ],
+  "cohort3": {
+    "suites": 27,
+    "passed": 1251,
+    "failed": 0,
+    "skipped": 0,
+    "mappedJest": 96,
+    "registered": 100,
+    "commandExit": 1,
+    "exitReason": "unexecuted global coverage owners; scope modules all100; not final global acceptance"
+  },
+  "changedModuleCoverage": {
+    "src/application/usecases/setup/deliver_setup_installation_use_case.ts": {
+      "lines": 100,
+      "functions": 100,
+      "statements": 100,
+      "branches": 100
+    },
+    "src/infrastructure/setup_publisher_git_reader.ts": {
+      "lines": 100,
+      "functions": 100,
+      "statements": 100,
+      "branches": 100
+    },
+    "src/infrastructure/setup_publisher_workflow_inventory.ts": {
+      "lines": 100,
+      "functions": 100,
+      "statements": 100,
+      "branches": 100
+    }
+  },
+  "mutation": "Private module copy only: removed105000-byte guard detected1FAIL by valid matching receipt. Original interrupted invocation has missinghandle/0byteoutput/noactivechild; not proof. Production guard remains unchanged.",
+  "rawArchivesAdded": 31,
+  "sourceHashes": {
+    "build/cli/index.js": "a37cff430ecb276126593e2494a66191834f73661e811b5764f4451c0b6dc5e0",
+    "docs/security-operations/operations/provisioning.mdx": "f1b4361d6471c02a595c57b0f33f187a126dc7cb5400743f15166af30edfa74e",
+    "scripts/validate-setup-publisher-acceptance.cjs": "2f9270dc385c9a86b1057548ad9c0f8d2eaff2d1e865ed1f0b1a715e7940a49f",
+    "specs/CATALOG.md": "b2a6da91471226623f53bc5b1638b49cd4978ef79c6881ab250b832d7d34977d",
+    "specs/catalog.json": "a820243fb24ed306aab11c7b775e564766f9b604cd33c6385a1e1045cc11ca1d",
+    "specs/organization-configuration-reuse-and-batch-setup.md": "6f6bb465176f2fe8d0a3c0692f8d0d78a8a3cb268c8f0d741fb1966a7a6cdd49",
+    "specs/setup-publisher-installation-acceptance.json": "0b158bef32434c8b2bd9578d47472b7104540fe5113fb10f9666a4f55db00119",
+    "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts": "b06f9244506991ff973ec346c254bba0e05e9b27a76f3e1e29b5c822a852d112",
+    "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts": "d2ae4f1fc0a6947b72134ea18ee12f3921fa7ac69edd647b4585b3c323afd678",
+    "src/application/usecases/setup/deliver_setup_installation_use_case.ts": "8c6b53765f4beee198ad605ad4c8f8519b398c0318be5ff55ef4e6917d825f30",
+    "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts": "2069d4cc5c4c126e9afb32c34c045b1e39a917327b020c5da8028d3ff920c279",
+    "src/infrastructure/__tests__/setup_publisher_application.test.ts": "d6630fa5a85f09e37f52d1fecfec61590724daa2d45e74cf358932a83c8fb1f1",
+    "src/infrastructure/__tests__/setup_publisher_git_reader.test.ts": "58d0ca457347c79fcdd700401dc046d1a1124b43a07cdeac3ecdba3374d37364",
+    "src/infrastructure/__tests__/setup_publisher_installation.test.ts": "7636827ecb1f106f81d4841888c9c6300e2e8a889b055e5ec982f2a814921449",
+    "src/infrastructure/__tests__/setup_publisher_workflow_inventory.test.ts": "c2b33bcef614c70b258a7969ea9b3f8515f86045b1f2d33af1b429f861191713",
+    "src/infrastructure/setup_publisher_git_reader.ts": "ae65ab6f48d6ce316082c06cc981155e9f60d98bd5a24bf4d2444342ebaa4c02",
+    "src/infrastructure/setup_publisher_workflow_inventory.ts": "f49ba2364bcc25fb43a8104cc6815de578ca8747f36c0cfb662d82f76df7c8aa",
+    "src/tooling/__tests__/setup_publisher_acceptance_validator.test.ts": "b183becf61aa7565a58171c4fd2588d46b2665f2638d059a81c9334dfe75ffd2",
+    "src/tooling/__tests__/setup_publisher_package_guard.test.ts": "5ef4589a4d89b6ac6fa80a295117eab2409f2090e769bde3ff9d9df859326aec",
+    "quality/bugbot/evidence/issue-998/README.md": "5583ff7bc0aad827fb3c532862a626b0ef9f95aad2d7073d5982cf6a89eca2f7",
+    "quality/bugbot/evidence/issue-998/review-round10/README.md": "cddafaada165f6088be9e011d62823132bd6b3a62e4fa2cc15deb55e0580ff10"
+  },
+  "bundles": {
+    "cli": {
+      "bytes": 8473231,
+      "sha256": "a37cff430ecb276126593e2494a66191834f73661e811b5764f4451c0b6dc5e0",
+      "changedFromParent": true
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9",
+      "changedFromParent": false
+    },
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "changedFromParent": false
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a",
+      "changedFromParent": false
+    }
+  },
+  "boundary": {
+    "actual174": "UNSTARTED",
+    "actual42": "UNSTARTED",
+    "qualificationCalls": 0,
+    "pilotWriteAttempts": 0,
+    "production": "disabled",
+    "installation": false,
+    "defaultInventory": "Requires fresh complete inventory; remote correction does not resolve implementations or prove absence",
+    "finalNativeHeadAcceptance": false
+  },
+  "finalValidation": {
+    "steps": [
+      {
+        "name": "specifications",
+        "exit": 0,
+        "bytes": 2457,
+        "sha256": "bdf2c6b6f5bf711d954cea4bfd13f712135e93370e155d46003d1f4708562ecc",
+        "path": "/private/tmp/copilot-goal-998-review10-final-validation-attempt1-specifications.log"
+      },
+      {
+        "name": "documentation",
+        "exit": 0,
+        "bytes": 306,
+        "sha256": "5cf4cfef0e1474b4e0e9a4c7aafa03cefce855a2991ca5f1892e14c437eb57a4",
+        "path": "/private/tmp/copilot-goal-998-review10-final-validation-attempt1-documentation.log"
+      },
+      {
+        "name": "types",
+        "exit": 0,
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "path": "/private/tmp/copilot-goal-998-review10-final-validation-attempt1-types.log"
+      },
+      {
+        "name": "lint",
+        "exit": 0,
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "path": "/private/tmp/copilot-goal-998-review10-final-validation-attempt1-lint.log"
+      },
+      {
+        "name": "diff",
+        "exit": 0,
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "path": "/private/tmp/copilot-goal-998-review10-final-validation-attempt1-diff.log"
+      }
+    ]
+  },
+  "archivesTotal": 349
+}

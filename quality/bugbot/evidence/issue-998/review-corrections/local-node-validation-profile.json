@@ -1,0 +1,22 @@
+{
+  "at": "2026-11-21T16:29:39.227207+00:00",
+  "purpose": "Temporary local Git-hook verification profile; not qualification or production runtime",
+  "nodeVersion": "v24.20.0",
+  "nodeExecutableSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+  "wrapperSha256": "ba37b6aec2b18a20b5ccf53c2c4559130f6ae24942d944ef11fb3054f58e5ff7",
+  "flags": [
+    "--no-sparkplug"
+  ],
+  "primarySourceLead": "https://github.com/nodejs/node/issues/62393",
+  "sameFirstSixGcFramesObservedTwice": true,
+  "repositoryOrCIConfigurationChanged": false,
+  "hookCommandsUnchanged": [
+    "build",
+    "test",
+    "lint"
+  ],
+  "assertionsAndBudgetsUnchanged": true,
+  "requireByteIdenticalGeneratedBundles": true,
+  "defaultFinalHeadNativeGatesStillRequired": true,
+  "outcome": "prepared, not yet executed"
+}

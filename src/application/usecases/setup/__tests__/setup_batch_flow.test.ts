@@ -1,3 +1,4 @@
+import { DeliverSetupInstallationUseCase } from '../deliver_setup_installation_use_case';
 import { createHash } from 'node:crypto';
 import { PrepareSetupBatchUseCase, type PrepareSetupBatchRequest } from '../prepare_setup_batch_use_case';
 import { ConfigureSetupBatchTargetUseCase } from '../configure_setup_batch_target_use_case';
@@ -166,7 +167,7 @@ async function sessionFixture() {
     labels: jest.fn(async () => undefined), issueTypes: jest.fn(async () => undefined), prepareCommit: jest.fn(async () => 'c'.repeat(40)),
     branch: jest.fn(async () => undefined), pullRequest: jest.fn(async () => 31) };
   const presentation = { review: jest.fn<Promise<boolean>, [SetupBatchPlan, SetupBatchOperation]>(async () => true), active: jest.fn(() => true), progress: jest.fn() };
-  const apply = new ApplySetupBatchUseCase({ writer, journal, presentation: { ...presentation, review: async () => true } });
+  const apply = new ApplySetupBatchUseCase({ coordinator: new DeliverSetupInstallationUseCase(), writer, journal, presentation: { ...presentation, review: async () => true } });
   const ports = { selection: { execute: jest.fn(async () => ({ token: f.request.token, selected: f.request.selected })) },
     prepare: { execute: jest.fn<ReturnType<PrepareSetupBatchUseCase['execute']>, [PrepareSetupBatchRequest]>(async () => plan) }, writer, apply, journal, presentation, result: jest.fn(async () => 'finish' as 'finish' | 'retry'),
     planning: jest.fn(), possibleMutation: jest.fn(), audit: jest.fn(async () => ({ ready: true } as { ready: boolean; cleanupPending?: boolean })) };
@@ -289,6 +290,17 @@ describe('shared CLI/web batch session', () => {
     const result = await f.session.execute(f.request); expect(result.outcome).toBe('complete');
     expect(f.ports.presentation.review).toHaveBeenCalledTimes(2); expect(f.ports.writer.variables).toHaveBeenCalledTimes(2);
     expect(f.ports.writer.branch).toHaveBeenCalledTimes(3); expect(f.ports.audit).toHaveBeenCalledTimes(3);
+  });
+  it('preserves confirmed pre-POST recovery across renewed review and the mandatory permission audit', async () => {
+    const f = await sessionFixture(), prior = beginSetupBatchOperation(f.plan);
+    f.save({ ...prior, targets: [{ ...prior.targets[0], status: 'partial', reason: 'preflight',
+      effects: ['access', 'variables', 'labels', 'issue-types'] }, { ...prior.targets[1], status: 'verification-pending' }] });
+    f.ports.audit.mockImplementation(async () => {
+      expect(f.ports.presentation.review).toHaveBeenCalledTimes(1); return { ready: true };
+    });
+    const result = await f.session.execute({ ...f.request, resumeOperationId: id });
+    expect(result.outcome).toBe('complete'); expect(f.ports.audit).toHaveBeenCalledTimes(1);
+    expect(f.ports.writer.prepareCommit).toHaveBeenCalledTimes(1); expect(f.ports.writer.variables).not.toHaveBeenCalled();
   });
   it('does not offer unlimited retries for repeatedly incomplete work', async () => {
     const f = await sessionFixture(); f.ports.writer.branch.mockRejectedValue(new Error('timeout')); f.ports.result.mockResolvedValue('retry');

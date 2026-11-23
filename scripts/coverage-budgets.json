@@ -1565,6 +1565,51 @@
         }
       ],
       "successMessage": "review freshness diagnostic coverage: PASS (100% statements, branches, functions and lines)"
+    },
+    {
+      "name": "Reviewed publisher installation",
+      "missingEntryLabel": "reviewed publisher installation module",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/setup_installation_receipt_policy.ts",
+            "src/application/policies/setup_installation_tree_policy.ts",
+            "src/application/policies/setup_publisher_installation_policy.ts",
+            "src/application/policies/setup_publisher_plan_policy.ts",
+            "src/application/policies/setup_publisher_message_catalog.ts",
+            "src/application/policies/setup_token_value_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/setup/apply_setup_publisher_use_case.ts",
+            "src/application/usecases/setup/deliver_setup_installation_use_case.ts",
+            "src/application/ports/setup_installation_delivery_ports.ts",
+            "src/application/usecases/setup/review_setup_publisher_use_case.ts",
+            "src/cli/setup_publisher_proposal_file.ts",
+            "src/infrastructure/setup_batch_journal_adapter.ts",
+            "src/infrastructure/setup_installation_github_delivery_adapter.ts",
+            "src/infrastructure/setup_operation_journal_store.ts",
+            "src/infrastructure/setup_publisher_journal_adapter.ts",
+            "src/infrastructure/setup_publisher_credentials.ts",
+            "src/infrastructure/setup_batch_github_read_adapter.ts",
+            "src/infrastructure/setup_publisher_git_reader.ts",
+            "src/infrastructure/setup_publisher_github_source_adapter.ts",
+            "src/infrastructure/setup_publisher_workflow_inventory.ts",
+            "src/infrastructure/setup_publisher_github_read_adapter.ts",
+            "src/application/usecases/setup/install_setup_publisher_use_case.ts",
+            "src/infrastructure/composition/setup_publisher_installation_composition_root.ts",
+            "src/cli/setup_publisher_installation_adapter.ts",
+            "src/cli/setup_publisher_installation_presenter.ts",
+            "src/domain/setup_publisher_installation.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "reviewed publisher installation coverage: PASS (pure policy/catalog 100%; each new/shared runtime module 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

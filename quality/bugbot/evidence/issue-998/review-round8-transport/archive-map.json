@@ -1,0 +1,14 @@
+{
+  "native-81e-commit-failure.log.gz": {
+    "rawBytes": 88113,
+    "rawSha256": "45fe1aaa591309acb6c8dc3dea9b085e79b7ca9a25bf67ea00f4d81534e9e2a7",
+    "gzipBytes": 14868,
+    "gzipSha256": "39ce372c6a80aa477b60c1fa77ba276fd20681c0f5abb318452697bee6340dbf"
+  },
+  "native-81e-commit-failure-receipt.json.log.gz": {
+    "rawBytes": 3150,
+    "rawSha256": "c236e213521efac72b139b63cedaf4eacf7fc05023d492a3f683e80f3a00665c",
+    "gzipBytes": 902,
+    "gzipSha256": "3edd21b274614610bd9a396cda3fafd7f47b37a6a950cbda4aa04c880364ce96"
+  }
+}

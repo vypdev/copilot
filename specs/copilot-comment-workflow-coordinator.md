@@ -351,3 +351,14 @@ Update user/operator/upgrade documentation, tests, generated bundles, catalog ev
 ### Source candidate dependency correction — #746
 
 The [source candidate readiness amendment](./branch-synchronization-and-conflict-recovery.md#candidate-dependency-readiness-and-failure-facts--746-2026-10-27) owns the incremental source-only frozen-pnpm preparation and closed sync failure facts. Source runtime bootstrap and a trusted fixer build-tool seed remain before the Action. Actual source dependency readiness is established at each candidate verifier boundary, after optional native setup and runtime probes; the initial seed is never a readiness witness. Consumer setup opt-in, runtime-only declarations and generic no-installer behavior remain unchanged. The amendment owns its incremental test budget and separately authorized default-runtime rollout; do not double count it here.
+
+
+### Publisher-route coordination (#998, 2026-11-21)
+
+The publisher route installs only the fixed status workflow and manifest receipt. It does not migrate comment coordination, event admission, reusable workflows or their trust fences. A prepared or merged source feature supplies no evidence that a consumer default has installed the coordinator or passed native event acceptance.
+
+The officially published [publisher companion](./setup-bugbot-publisher-manifest-route.md)
+and [batch delivery owner](./organization-configuration-reuse-and-batch-setup.md#reviewed-publisher-purpose-delivery-998-2026-11-21)
+own the additional 64-case contract and shared delivery changes. This coordination
+note does not complete this SDD's existing external or prospective gates. Actual
+#977 installation/native evidence and #981/#982 observations remain separate.

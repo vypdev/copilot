@@ -872,3 +872,14 @@ are trust-boundaries, self-hosted-runners and the review artifact. Register test
 and the source contract in the catalog; run workflow/docs/specification checks,
 build/lint/type/coverage gates and final-SHA native review. Do not close the policy
 approval or unavailable external-evidence requirements merely because tests pass.
+
+
+### Publisher-route coordination (#998, 2026-11-21)
+
+The new explicit publisher selection dispatches before the ordinary questionnaire, local Git discovery, web session or resource provisioning. Generic setup and doctor retain their current defaults. This route inspects its named GitHub target and may run outside a checkout; its dry-run requires a credential and creates no journal or remote effects.
+
+The officially published [publisher companion](./setup-bugbot-publisher-manifest-route.md)
+and [batch delivery owner](./organization-configuration-reuse-and-batch-setup.md#reviewed-publisher-purpose-delivery-998-2026-11-21)
+own the additional 64-case contract and shared delivery changes. This coordination
+note does not complete this SDD's existing external or prospective gates. Actual
+#977 installation/native evidence and #981/#982 observations remain separate.

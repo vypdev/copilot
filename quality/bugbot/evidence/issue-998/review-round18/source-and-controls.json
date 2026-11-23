@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "kind": "source-bound Round18 controls, not installation or final-head native acceptance",
+  "parent": "397b092fb673b489f99affdfb2c287a49439f4fe",
+  "sourceSha256": {
+    "src/application/policies/repository_agent_guidance_policy.ts": "d7a4e0e14bae36bc2875854a248a4b2c5af7e9bb7573f3e6441ce4c6e98d0650",
+    "src/infrastructure/setup_publisher_github_read_adapter.ts": "eba541049336bbfb489494432aa6a5f8310bb684be02da1906830738c7d15514",
+    "test-support/setup-publisher-package-guard.cjs": "2b484da187aa1258e83731798fa7b6316bb4fb3f35b414cf39a0169821b95531",
+    "src/utils/__tests__/setup_files.test.ts": "787fdc76f994faf1d685fe9162447bc9624bb15a8aef943280299677f3994568",
+    "src/infrastructure/__tests__/setup_publisher_github_read_adapter.test.ts": "23f6c708dc434f4b7c6fb7a415868e61df0dc15b9edc0a1badaf7ccedd816768",
+    "src/tooling/__tests__/setup_publisher_package_guard.test.ts": "8410e61b50fa1845eadf61459f1d3ee38e063acebbb466cf9d0ce575886dce33",
+    "scripts/validate-setup-publisher-acceptance.cjs": "6d2fdf7b45016eb7f39c173f7fe42ed37a0d10ad6ef20aeaf5bb9cd298ded784",
+    "specs/setup-publisher-installation-acceptance.json": "034141c42597676d30b0d8e8bb47f58299e51045fddcf859fd8f0370d5a9ac87"
+  },
+  "coreCausal": {
+    "originalPassed": 1,
+    "originalFailed": 5,
+    "correctedFullSuites": 2,
+    "correctedPassed": 105,
+    "correctedFailed": 0,
+    "redAssertionBytesUnchanged": true,
+    "alreadyCorrectControl": "Fixed publisher-path gitlink rejects on original and corrected reader"
+  },
+  "dnsCausal": {
+    "originalPassed": 4,
+    "originalFailed": 4,
+    "actualLocalQueryEscapes": 4,
+    "firstCorrectionPassed": 14,
+    "firstCorrectionFailed": 4,
+    "firstCorrectionCause": "Public method matcher missed numeric resolve4/resolve6 names; source corrected without changing assertion bodies",
+    "correctedFullTransportPassed": 18,
+    "correctedFailed": 0,
+    "controlledSurfaces": [
+      "callback",
+      "promise",
+      "callback-resolver",
+      "promise-resolver"
+    ],
+    "externalDns": false,
+    "redAssertionBytesUnchanged": true
+  },
+  "cohort": {
+    "suites": 36,
+    "passed": 1535,
+    "failed": 0,
+    "pending": 0,
+    "mapped": 114,
+    "ledger": 118,
+    "packagedCasesSeparate": 4,
+    "rawJestExit": 1,
+    "rawJestExitScope": "Unexecuted global/web/specification-publication floors; not complete global acceptance",
+    "pureChangedPolicyCoverage": {
+      "lines": {
+        "total": 106,
+        "covered": 106,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 28,
+        "covered": 28,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 125,
+        "covered": 125,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 153,
+        "covered": 153,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "sourceAndAssertionBytesStable": true
+  },
+  "budgets": "Reviewed publisher installation: six pure modules100%,20 runtime modules95/90, unchanged thresholds; pass on actual focused report",
+  "baseline": {
+    "selectedCompanionSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+    "first114LedgerObjectsUnchanged": true,
+    "original397Floor114": true,
+    "baseline64Counterfactuals": "Original complete actual1519 report passes;64-only ledger fails; removing both appendix case rows and matching ledger still fails independent114 minimum. Current original two parser fixtures pass under118. Projections are not new feature executions.",
+    "privateOriginalProof": "copilot-goal-998-round18-baseline64-interpretation-attempt1/receipt.json"
+  },
+  "sourceValidation": [
+    {
+      "name": "types",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "publisher-budgets",
+      "exit": 0,
+      "bytes": 151,
+      "sha256": "e8deb0de10c1b79c81cf399d66ea348c09287aafd23c5b22b6e1f21853046ff1"
+    }
+  ],
+  "privateOriginalReceipts": [
+    {
+      "file": "copilot-goal-998-round18-core-original-red-attempt1-receipt.json",
+      "bytes": 384,
+      "sha256": "5816df0a23403935ed8ef703e65c32d44c0ae71d141735d6292950e4e509278d"
+    },
+    {
+      "file": "copilot-goal-998-round18-core-corrected-green-attempt1-receipt.json",
+      "bytes": 345,
+      "sha256": "4266eff166b6101dcadfe7ff9f74ce6cca278f73200f33d2e1179a509b470d15"
+    },
+    {
+      "file": "copilot-goal-998-round18-dns-original-red-attempt1-receipt.json",
+      "bytes": 544,
+      "sha256": "4f57cbdcaeaa69601766fffeb8250b06cb04ad49696c919c6bcc9432afcc8350"
+    },
+    {
+      "file": "copilot-goal-998-round18-dns-corrected-green-attempt1-receipt.json",
+      "bytes": 307,
+      "sha256": "289d570bef79100d5ce9ae91f018d38a7a46bf6ae4688577bfe2316afe3aa0b4"
+    },
+    {
+      "file": "copilot-goal-998-round18-dns-corrected-green-attempt2-receipt.json",
+      "bytes": 393,
+      "sha256": "aa9d087a161b8162a50d7ef86fde04eb6d81f75812378e95edf0355051e2ddfe"
+    },
+    {
+      "file": "copilot-goal-998-round18-coherent-attempt1-receipt.json",
+      "bytes": 10370,
+      "sha256": "3fc583d04f4aa1a8e9b33e48c48257ac5cc1967620d12c3d26534215eb6505c9"
+    },
+    {
+      "file": "copilot-goal-998-round18-source-validation-attempt1-receipt.json",
+      "bytes": 569,
+      "sha256": "f141374840f8d4457617582acadafee77bb31f14db0a826bba88c7c3f3ba2a6e"
+    }
+  ],
+  "currentNativeAcceptance": false,
+  "newScientificCalls": 0,
+  "pilotWrites": 0,
+  "installation": "NOT_EXECUTED",
+  "production": "disabled"
+}

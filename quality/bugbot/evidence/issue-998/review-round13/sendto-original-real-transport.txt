@@ -1,0 +1,5 @@
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        3.143 s
+Ran all test suites matching src/tooling/__tests__/setup_publisher_package_guard.test.ts.

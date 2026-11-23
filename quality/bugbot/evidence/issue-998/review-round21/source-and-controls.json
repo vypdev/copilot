@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "kind": "Round21 source-bound routing-prefix and managed-branch corrections; observation-only native-timeout diagnostics; no installation",
+  "parent": "cf5336ffcbdc66fc2af69ce90b02119836ae071a",
+  "sourceSha256": {
+    "src/application/policies/repository_agent_guidance_policy.ts": "e758085f00b1b49ca72991b2f0e1f243a67da91f5f6ae1a83569140928fcbff5",
+    "src/application/policies/__tests__/repository_agent_guidance_policy.test.ts": "c3fbaef3315daf289c2db9741446b4b844830842c17eb70c12141375c9861343",
+    "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts": "c6e9b8ca60006792369aa4bef7b986c193263dcaf56568970d47f9af07ce4efd",
+    "scripts/validate-setup-publisher-acceptance.cjs": "df4eb503df94a12133cb962273a5e451a8d06ce799c1bbe5a0248df6f09046e2",
+    "specs/setup-publisher-installation-acceptance.json": "74fc5652707d032842fc97fa6297bb78eabd2af351bd38c268a603f5f61dfb28",
+    "specs/organization-configuration-reuse-and-batch-setup.md": "60c06ea490440d60736b799297f57248aa3ed65e82403cc6e3040476b53bbbc2"
+  },
+  "causal": {
+    "newPrefixControlsOriginal": {
+      "passed": 1,
+      "failed": 3,
+      "filtered": 49
+    },
+    "correctedFullGuidanceSuite": {
+      "passed": 53,
+      "failed": 0,
+      "pending": 0
+    },
+    "sameAssertionBytes": true,
+    "testSha256": "67d5ca0d5f8a543093dc342159ac599bcb6595d23bce8405869d42b9423ca735",
+    "C120CustomFixture": "Title/mapping retained, now uses coherent routing prefix; earlier independently mutated form labels were not generated. Original history retained.",
+    "managedBranchControlsOriginal": {
+      "passed": 2,
+      "failed": 4,
+      "filtered": 53
+    },
+    "managedBranchCorrectedFullGuidanceSuite": {
+      "passed": 59,
+      "failed": 0,
+      "pending": 0
+    },
+    "managedBranchSameAssertionBytes": true,
+    "managedBranchTestSha256": "c3fbaef3315daf289c2db9741446b4b844830842c17eb70c12141375c9861343",
+    "stageBoundary": "Prefix pair has identical assertions within its 53-test stage; managed-branch pair has identical assertions within its subsequent 59-test stage. The whole test file differs between these two stages."
+  },
+  "nativeParent": {
+    "run": 45208531201,
+    "job": 137810755853,
+    "result": "967suitesPASS1FAIL;19924PASS1FAIL+35historicalskips",
+    "failure": "One5000ms base-commit-read recovery timeout",
+    "cause": "UNKNOWN",
+    "originalBytes": 3191887,
+    "originalSha256": "ed35334b546ffb92949bc288614731a90c4a2561bff20640ce74121f4b3e00cd",
+    "reruns": 0
+  },
+  "journalObservation": {
+    "existingHelper": "src/infrastructure/__tests__/fixtures/journal_io_diagnostics.cjs",
+    "newAffectedSuite": "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+    "localPassed": 75,
+    "localFailed": 0,
+    "boundOrCompletionPolicyChanges": false,
+    "argumentsPathsContentsCredentialsEnvironmentLogged": false,
+    "rootCauseFixClaimed": false
+  },
+  "cohort": {
+    "suites": 36,
+    "passed": 1576,
+    "failed": 0,
+    "pending": 0,
+    "mapped": 119,
+    "ledger": 123,
+    "separatePackage": 4,
+    "guidancePolicyCoverage": {
+      "lines": {
+        "total": 107,
+        "covered": 107,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 30,
+        "covered": 30,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 127,
+        "covered": 127,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 162,
+        "covered": 162,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "rawJestExit": 1,
+    "rawExitScope": "Global/web/publication floors not executed by this scoped cohort; no global acceptance"
+  },
+  "retainedEnvironmentNegative": "First prefix-stage cohort1554PASS16FAIL, all16 real loopback listen/bind EPERM under sandbox. Correct execution permission yields1570PASS without edits. Six subsequent managed-branch controls produce final1576PASS.",
+  "baseline": {
+    "prior121LedgerObjectsUnchanged": true,
+    "selected64CompanionSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+    "C122ObjectRetainedFromPrefixStage": true
+  },
+  "privateOriginalReceipts": [
+    {
+      "file": "prefix-red1-receipt.json",
+      "bytes": 484,
+      "sha256": "02e5606f53ed727fcd590109a52849197137c15bd55ad59dd60c3f11edc29bbf"
+    },
+    {
+      "file": "prefix-green1-receipt.json",
+      "bytes": 451,
+      "sha256": "8ccef0d1ced990d497a5867b78dafbbfbd3fddd80483be22c5325645ec9a4d81"
+    },
+    {
+      "file": "focused1-receipt.json",
+      "bytes": 420,
+      "sha256": "1995cc7a65fe07a0981d387d01171d9bc287f4a0f8d1447352019e39ba594c2e"
+    },
+    {
+      "file": "copilot-goal-998-round21-coherent-attempt1-receipt.json",
+      "bytes": 9893,
+      "sha256": "35b04656eb8d07cbe9c4bb4cfc6811daba9b21ddfe58fdcc74622464cb65d9fc"
+    },
+    {
+      "file": "copilot-goal-998-round21-coherent-attempt2-receipt.json",
+      "bytes": 9892,
+      "sha256": "9df89b877aca114a53bf34c10060887f423baba62697a7da1f89969fe7329837"
+    },
+    {
+      "file": "copilot-goal-998-round21-source-validation-attempt1-receipt.json",
+      "bytes": 1748,
+      "sha256": "a6301270284786d315a014eaf0c5444d337558f2a7b7530c0ce5d3a3996c7f09"
+    },
+    {
+      "file": "managed-red1-receipt.json",
+      "bytes": 422,
+      "sha256": "ac6bf26f22a08d105b3eb5d5528bf381b4991566f74d0e5520eba0a14e63e48a"
+    },
+    {
+      "file": "managed-green1-receipt.json",
+      "bytes": 451,
+      "sha256": "6c6ce794cf9690cf64c423e419d97ffbef81640aa9ee04279cc1c1eba2bb554c"
+    },
+    {
+      "file": "copilot-goal-998-round21-coherent-attempt3-receipt.json",
+      "bytes": 9892,
+      "sha256": "5a036424883131a1c035ae94702fcdeb3db69f083df34867bb2d1dd0e57e33a2"
+    },
+    {
+      "file": "copilot-goal-998-round21-coherent-attempt4-receipt.json",
+      "bytes": 9892,
+      "sha256": "d051e27d1e98a55f0d35014dae70cfc9bd83f3fcadb782c872218f377e733c0b"
+    },
+    {
+      "file": "copilot-goal-998-round21-source-validation-attempt2-receipt.json",
+      "bytes": 1748,
+      "sha256": "0ea4ecf142352210efedd950c565defafe91895bb29a8f7c7e6a53585a1e2dfe"
+    }
+  ],
+  "sourceValidation": [
+    {
+      "name": "types",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "exit": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "budgets",
+      "exit": 0,
+      "bytes": 151,
+      "sha256": "e8deb0de10c1b79c81cf399d66ea348c09287aafd23c5b22b6e1f21853046ff1"
+    }
+  ],
+  "reviewOfParent": {
+    "check": 137816487025,
+    "result": "COMPLETE_NEUTRAL",
+    "partitions": 29,
+    "findings": [
+      {
+        "thread": "PRRT_kwDONSeBW8669BfB",
+        "comment": 4668869976,
+        "correction": "C122 ordered routing prefix"
+      },
+      {
+        "thread": "PRRT_kwDONSeBW8669Bfl",
+        "comment": 4668870046,
+        "correction": "C123 release/hotfix requires managed branches"
+      }
+    ],
+    "delivery": "Reply and resolve only after these corrections are published."
+  },
+  "newModels": 0,
+  "realGitHubEffects": 0,
+  "installation": "NOT_EXECUTED",
+  "production": "disabled",
+  "pilotWrites": 0
+}

@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T23:54:52.028362+00:00",
+  "localParent": "fdd5897f623ccada409d93d30e695a45a8b3a6e2",
+  "publicParent": "a6ea4dd27c80ab105af06b32d2acb0f5a364e01a",
+  "findings": [
+    "PRRT_kwDONSeBW866drpJ",
+    "PRRT_kwDONSeBW866drpM",
+    "PRRT_kwDONSeBW866drpO"
+  ],
+  "causalRed": {
+    "coordinatorAndValidator": {
+      "passed": 49,
+      "failed": 8
+    },
+    "actualBatchUseCaseWithSemanticWriterFake": {
+      "passed": 19,
+      "failed": 2
+    }
+  },
+  "focusedGreen": {
+    "passed": 78,
+    "failed": 0,
+    "skipped": 0
+  },
+  "coherent": {
+    "files": 26,
+    "passed": 1224,
+    "failed": 0,
+    "skipped": 0,
+    "mappedJestCases": 90,
+    "registeredCases": 94,
+    "coverageCommandExit": 1,
+    "changedCoordinator": {
+      "lines": {
+        "total": 50,
+        "covered": 50,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 9,
+        "covered": 9,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 61,
+        "covered": 61,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 37,
+        "covered": 37,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "globalCoverage": "Not established by focused command; unexecuted owners remain."
+  },
+  "contract": "C94 registers all3 file phases at both await boundaries and ordinary batch composition. All93 previous complete ledger objects and selected companion bytes unchanged. Mandatory baseline published rows cannot use generic future-case checks; contiguous additions remain allowed.",
+  "fixes": [
+    "Check activity after successful asynchronous revalidation and after every retained file intent, immediately before command dispatch; preserve known facts and conservative uncertainty.",
+    "Require every C01-C94 published contract row independently of retained ledger evidence and case count.",
+    "Mark91/93 as historical snapshot floors and current94/90Jest+4package in as-built notes."
+  ],
+  "validation": "generation/specifications/types/lint/documentation/Graphify/build/packagePASS",
+  "package": "104files/11actualCLIinvocations/zeroeffects/API/webPASS",
+  "selectedSddSha256": "6ae57e9efd70d8550efcc9da9d0a043be1765eabe94290a99190278c5bb0bf18",
+  "sourceHashes": {
+    "docs/security-operations/operations/provisioning.mdx": "00d4cbccdbe73f8ed30f7e481a26d8d2fba0006b3baba371ea60e3856a681d85",
+    "scripts/validate-setup-publisher-acceptance.cjs": "e38c00d94d639521a2876bfd1b6e81b359541006a996bfdc179b012638fea134",
+    "specs/CATALOG.md": "6d8d98cb4c6260858c32e8cc497b05d2d893169df850b138997fbd00b22f66f4",
+    "specs/catalog.json": "656a79d0f091dd7431d7e4aae76d22993fba7ef122ae2c6d8c51f6a71f21802c",
+    "specs/organization-configuration-reuse-and-batch-setup.md": "7cb428355d09e940a6d3241703acc3600a9e2a2ac2ed72ecad21f2680ebdae69",
+    "specs/setup-publisher-installation-acceptance.json": "45c54c4c9270580b05a308b25e7b069b445b90fb1602875e3c0ed644ad3861bd",
+    "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts": "6cf2e3c8c30d39b34043db3a91ef0eefdf7bfc64395b3df6a3be94c4f520cf2e",
+    "src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts": "33f83a45c0d888c0ccdb28328e3212f9fe903f3a8ef447f5c4442e6b8f6fc5cc",
+    "src/application/usecases/setup/deliver_setup_installation_use_case.ts": "4689d187a45f99840489599517a16ecfd23105ec9d89afa6ab822552261f6324",
+    "src/tooling/__tests__/setup_publisher_acceptance_validator.test.ts": "58f906eb034915ffccdabd8905e80e949dc044a1e0f60f3a31af66a6d1020bda"
+  },
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8471005,
+      "sha256": "1091cbb8ab680d35690970c8412ef65226114ffeb8099f4fcc418a1d979539a6"
+    },
+    "github_action": {
+      "bytes": 11093575,
+      "sha256": "6d265f8fdfe975604284c2b43b73da9929b31ce650ab5811c65d2ca200c3fdb9"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "newArchives": 26,
+  "totalArchives": 274,
+  "packageEnvironmentNegative": "Initial sandbox denies localhost listen (direct net fixture EPERM); local web diagnostic exits1 with generic Setup failed. Same bytes pass package smoke with localhost admission; no assertion or deadline change. Raw negative retained.",
+  "normalHooks": "Required after this packet; documentation parent normal967SDK19761PASS+35historicalskips/build/lint unchangedbundles is archived.",
+  "nativeAndReview": "Fresh final-head checks/findings required; no merge or source completion inferred from this local packet.",
+  "installation": false,
+  "qualificationModelCalls": 0,
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualifiedProfile": null,
+  "pilotWriteAttempts": 0,
+  "production": "disabled"
+}
