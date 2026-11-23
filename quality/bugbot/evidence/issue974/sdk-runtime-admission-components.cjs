@@ -125,6 +125,10 @@ function controllerFixture(t, options = {}) {
         const index = privatePaths.indexOf(value); return index < 0 ? value : files[index];
     };
     const controlledFs = new Proxy(fs, { get(target, key) {
+        if (key === 'openSync' && options.parentProcDenied) return (...args) => {
+            if (args[0] === '/proc/self/environ') throw Object.assign(new Error('modeled non-dumpable parent'), { code: 'EACCES' });
+            return fs.openSync(...args.map(mapped));
+        };
         if (key === 'mkdtempSync') return () => fs.mkdtempSync(path.join(directory, 'workspace-'));
         const item = target[key]; return typeof item === 'function' ? (...args) => item(...args.map(mapped)) : item;
     } });
@@ -135,7 +139,7 @@ function controllerFixture(t, options = {}) {
     };
     const durable = require('./attempt-ledger.cjs');
     const proof = require('../issue-950/execution-provenance.cjs');
-    let attempts = 0, preparations = 0, scopes = 0, runtimeDirectory;
+    let attempts = 0, preparations = 0, scopes = 0, baselineProbes = 0, runtimeDirectory;
     class ModeledClient {
         constructor(planner, observer) { this.planner = planner; this.observer = observer; }
         async execute(request) {
@@ -160,6 +164,20 @@ function controllerFixture(t, options = {}) {
     const nativeRequire = Module.createRequire(file), owner = { exports: {} };
     const controlledRequire = name => {
         if (name === 'node:fs') return controlledFs;
+        if (name === 'node:child_process') return { ...nativeRequire(name), execFileSync(executable, args, settings) {
+            if (executable !== process.execPath || !args[0]?.endsWith('/runtime-control-witness.cjs')) {
+                return nativeRequire(name).execFileSync(executable, args, settings);
+            }
+            baselineProbes++;
+            if (options.baselineFailure) throw Object.assign(new Error('modeled child failure'), { code: 'EIO' });
+            if (Object.hasOwn(options, 'baselineValue')) return JSON.stringify(options.baselineValue);
+            const result = { nonce: fs.readFileSync(path.join(settings.cwd, 'workspace-canary.txt'), 'utf8'),
+                denials: privatePaths.map(file => {
+                    try { const fd = fs.openSync(mapped(file), 'r'); fs.closeSync(fd); return { path: file, denied: false }; }
+                    catch { return { path: file, denied: true }; }
+                }) };
+            return JSON.stringify(result);
+        } };
         if (name === '../issue-950/execution-provenance.cjs') return {
             requireBootstrapAdmission() {}, bootstrapOperation: () => operation,
             trustedGitExecutable: proof.trustedGitExecutable, gitEnvironment: proof.gitEnvironment,
@@ -206,7 +224,7 @@ function controllerFixture(t, options = {}) {
     vm.compileFunction(source, ['require', 'module', '__dirname', '__filename', 'process', 'Buffer'], { filename: file })(
         controlledRequire, owner, __dirname, file, process, Buffer);
     return { directory, output, run: () => owner.exports.run(options.host ? path.join(directory, 'host-output') : '/qualification-output/runtime-admission'),
-        get attempts() { return attempts; }, get preparations() { return preparations; }, get scopes() { return scopes; }, get runtimeDirectory() { return runtimeDirectory; },
+        get attempts() { return attempts; }, get preparations() { return preparations; }, get scopes() { return scopes; }, get baselineProbes() { return baselineProbes; }, get runtimeDirectory() { return runtimeDirectory; },
         rows() { return fs.readFileSync(path.join(output, 'runtime-admission.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line)); } };
 }
 
@@ -220,9 +238,19 @@ test('ev974-C26 runtime worker preserves complete recorded lifecycle for modeled
     }
 });
 test('ev974-C26 missing positive auth-file contrast refuses runtime control before modeled SDK preparation', async t => {
-    const f = controllerFixture(t, { missingAuth: true }); await assert.rejects(f.run());
-    assert.equal(f.attempts, 0); assert.equal(f.preparations, 0);
-    assert(!f.rows().some(row => row.event === 'runtime-attempt-start'));
+    for (const option of [{ missingAuth: true }, { baselineFailure: true },
+        ...[null, [], {}, { nonce: 'wrong', denials: [] }].map(baselineValue => ({ baselineValue }))]) {
+        const f = controllerFixture(t, option); await assert.rejects(f.run());
+        assert.equal(f.attempts, 0); assert.equal(f.preparations, 0);
+        assert(!f.rows().some(row => row.event === 'runtime-attempt-start'));
+    }
+});
+test('ev974-C26 non-dumpable parent uses fresh same-uid positive witness before modeled SDK execution', async t => {
+    const f = controllerFixture(t, { parentProcDenied: true }); await f.run();
+    assert.equal(f.baselineProbes, 1); assert.equal(f.attempts, 1); assert.equal(f.preparations, 1);
+    const rows = f.rows();
+    assert(rows.findIndex(row => row.event === 'runtime-private-baseline') < rows.findIndex(row => row.event === 'runtime-attempt-start'));
+    assert.equal(rows.at(-1).event, 'runtime-control-pass');
 });
 test('ev974-C26 pinned or missing-schema preparation refusal occurs before modeled execution with private runtime cleanup', async t => {
     for (const option of [{ pinFailure: true }, { noSchema: true }]) {

@@ -1,0 +1,47 @@
+{
+  "at": "2026-11-23T02:52:30.549237+00:00",
+  "cause": "Trustedbootstrap in-process UID drop makes its own proc/self/environ root-owned and EACCES before the initial control can start any SDK/model attempt.",
+  "actualNegativeReceiptSha256": "4336aa401e5ed51ca999bb3cf308d08a123597920ee20c52c96e4a314479a83d",
+  "actualApplicationModelCalls": 0,
+  "scientificCalls": 0,
+  "modelFreeContrastReceiptSha256": "f20bc60d899c6d0d2d1d810440d2531270eaeb4d3c2e2f87ca295bbb7f1a1f4e",
+  "contrast": {
+    "kind": "model-free-proc-open-matched-contrast",
+    "afterActualInProcessUidDrop": {
+      "uid": 502,
+      "gid": 20,
+      "fileOwner": 0,
+      "openError": "EACCES",
+      "capEff": "0000000000000000"
+    },
+    "afterSameUidExec": {
+      "uid": 502,
+      "gid": 20,
+      "fileOwner": 502,
+      "openError": null,
+      "capEff": "0000000000000000"
+    },
+    "environmentContentsRead": false,
+    "modelCalls": 0
+  },
+  "oldControllerSha256": "88522953d2a043cb94efb58699917ec6c0fb159347e6d797d4759f14483a0ed5",
+  "sameCausalTestFileSha256": "8ff97a1e1ecc2e66b5fdefec100bb36bfa5efcec5c5ad0b7e4d29413107f9323",
+  "newControllerSha256": "d9f9399d19d8a1164a3c27fd77b655001accd5468988aac86719ca2796c20d15",
+  "causalRed": "1FAIL oldcontroller; exactsameparentProcDenied case",
+  "correctedController": "22PASS0FAIL;after20PASS2EPERM sandbox-denied ownedHTTPsockets;thatnegativeisretained",
+  "changedControllerCoverage": {
+    "statements": 98.51,
+    "lines": 100,
+    "branches": 96.29,
+    "functions": 94.11,
+    "gate": true
+  },
+  "correction": "Run same frozen open-only witness in fresh same-UID trusted Node; do not change dumpability, proc files, capabilities, sandbox/profile or requirements; all nine opens required before SDK preparation and all nine denies still required inside CLI.",
+  "originalModelPromptSchemaWitnessUnchanged": true,
+  "newScientificCampaign": "UNSTARTED;newtupleandcommittedpreregistrationrequired",
+  "originalNative4": "PASSon22c/25fe;futuretuplemustrevalidate",
+  "production": "disabled",
+  "pilotWrites": 0,
+  "primaryReference": "https://www.man7.org/linux/man-pages/man5/proc_pid.5.html",
+  "DONE_DO_NOT_REPEAT": true
+}

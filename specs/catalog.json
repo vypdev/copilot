@@ -2664,7 +2664,8 @@
         "quality/bugbot/evidence/issue-950/review-progress-follow-up.md",
         "quality/bugbot/evidence/issue-985/README.md",
         "quality/bugbot/evidence/issue974/README.md",
-        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/README.md"
+        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/README.md",
+        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/proc-open-correction/manifest.json"
       ]
     },
     {
@@ -3118,7 +3119,8 @@
         "docs/security-operations/operations/upgrade-rollback.mdx",
         "docs/security-operations/operations/smoke-tests.mdx",
         "docs/development/testing.mdx",
-        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/README.md"
+        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/README.md",
+        "quality/bugbot/evidence/issue-974/controls/sdk-runtime-admission/proc-open-correction/manifest.json"
       ]
     },
     {

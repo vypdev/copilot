@@ -44,10 +44,16 @@ actual complete CLI lifecycle remain private runtime artifacts.
   negative campaign evidence was affected. Further coverage uses fresh isolated
   destinations. Do not present a reconstruction as an original.
 
-`source-and-controls.json` maps every original to a byte-verified lossless
-`.log.gz` archive. No suppression or limit changes. This source packet does not
+The historical `source-and-controls.json` maps every original to a byte-verified lossless
+`.log.gz` archive. The [history index](../historical-gzip-archive.json) now pins all19 archives to immutable source22c94195 and exact blobs/hashes; retrieve them with `git show <archiveRevision>:<path>`. Their original bytes remain reachable, with no history rewrite. No suppression or limit changes. This source packet does not
 establish genuine SDK/model acceptance. The real runtime query, full committed
 590-control regression, global source gates and common image/preregistration
 are still unexecuted/pending here. Actual174/42UNSTARTED,qualifiedprofileNONE,
 qualificationcalls0,pilotwrites0,productiondisabled. Keep every failure and
 unknown prefix; no automatic control or scientific retry is granted.
+
+## Positive proc baseline correction
+
+The [lossless correction packet](proc-open-correction/manifest.json) retains the actual runtime unavailable result on22c/image25fe: CLI14 and native4 passed, but0application/model calls started. The trusted bootstrap drops UID in-process, so its own proc environment is root-owned/non-dumpable. A same-image/profile model-free contrast reproduces EACCES with owner0 and then successful open with owner502 after same-UID exec; both have capabilities0 and read no environment contents. No privilege, dumpability, file permission or filter changes.
+
+The positive contrast now runs the exact frozen witness in a fresh same-UID trusted Node before SDK preparation. Every protected file must open there and must still be denied in the actual CLI tool. Missing files, child failure and malformed output fail closed with a durable baseline failure. The same causal test fails on the old controller and passes after correction;22module controls and the separate bootstrap control remain model-free. The additional budget is26(23CJS,2existingSDK identity controls,1actual runtime query). Controller coverage98.51S/100L/96.29B/94.11F passes. The first20PASS2EPERM local-socket attempt remains retained. New committed source/image/plans and actual technical controls remain necessary;174/42 and actual model calls remain0.

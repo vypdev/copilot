@@ -67,15 +67,20 @@ function workspaceSnapshot(directory, relative = '') {
     });
 }
 
+function requirePrivateBaseline(value, nonce) {
+    assert(value && typeof value === 'object' && !Array.isArray(value));
+    assert.deepEqual(Object.keys(value).sort(), ['denials', 'nonce']);
+    assert.equal(value.nonce, nonce, 'positive witness must read the owned workspace canary');
+    assert.deepEqual(value.denials, privatePaths.map(path => ({ path, denied: false })),
+        'all nine private files must open outside the CLI sandbox');
+}
+
 async function runWorker(output, plan, operation, record) {
     assert.equal(output, '/qualification-output/runtime-admission');
     assert.equal(operation.identity.purpose, 'runtime-admission');
     assert.equal(operation.identity.operationId, 'runtime:admission');
     assert.equal(operation.preflight, false); assert.deepEqual(operation.slot, {});
     fs.writeFileSync(path.join(output, 'private-canary.txt'), randomBytes(32).toString('hex'), { flag: 'wx', mode: 0o600 });
-    // Establish the positive existence/open contrast before asking the model.
-    // Read no protected content; in particular do not disclose live auth data.
-    for (const file of privatePaths) { const fd = fs.openSync(file, 'r'); fs.closeSync(fd); }
     const cwd = fs.mkdtempSync('/tmp/bugbot-sdk-runtime-admission-'), previous = process.cwd();
     const nonce = randomBytes(32).toString('hex');
     fs.writeFileSync(path.join(cwd, 'workspace-canary.txt'), nonce, { flag: 'wx', mode: 0o600 });
@@ -113,6 +118,20 @@ async function runWorker(output, plan, operation, record) {
     try {
         execFileSync(provenance.trustedGitExecutable(), ['init', '--quiet', '--template='], { cwd, env: provenance.gitEnvironment() });
         const before = workspaceSnapshot(cwd);
+        // The bootstrap drops UID in-process, making its own proc files root
+        // owned/non-dumpable. A fresh same-UID Node has the same proc ownership
+        // as an ordinary tool process. Read no protected content or change any
+        // permissions/dumpability; use exactly the frozen open-only witness.
+        try {
+            const baseline = JSON.parse(execFileSync(process.execPath, [path.join(cwd, 'runtime-control-witness.cjs')],
+                { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+            requirePrivateBaseline(baseline, nonce);
+            record({ event: 'runtime-private-baseline', privatePaths: privatePaths.length,
+                allOpened: true, process: 'fresh-same-uid-node', protectedContentsRead: false });
+        } catch (error) {
+            record({ event: 'runtime-private-baseline-failed', reason: error.code ?? error.name });
+            throw error;
+        }
         process.chdir(cwd);
         const response = await createFindingsQueryPort({ cli }).query({ agentId: 'runtime-admission', configuration: plan.detector,
             prompt, signal: operation.signal, options: { expectJson: true, schema, schemaName: 'runtime_admission' } });

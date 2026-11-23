@@ -5375,7 +5375,8 @@ program reads that canary, opens/closes (without reading contents) one existing
 file under each of the nine system-denied roots, and emits raw-descriptor JSON.
 The protected oracle-root file is a dummy created only for this control; no
 independent labels/oracle enter model input. The worker first establishes all
-nine files exist and can be opened from its trusted scope; missing auth or other
+nine files exist and can be opened by the same frozen witness in a fresh
+same-UID trusted Node process outside the CLI sandbox; missing auth or other
 baseline data fails before any model call. Model tools must return the exact
 withheld nonce and nine denials through the ordinary native/local schema.
 Native schema-artifact proof, read-only workspace/output mode and live
@@ -5406,24 +5407,42 @@ corpus `--preflight` remains strictly model-free. No deadline, scientific retry,
 score/label/order/threshold/cohort or production setting changes. Only actual
 same-tuple174PASS admits42, retaining every scientific gate and zero pilot writes.
 
-The additional risk-derived minimum is **25 distinct verification cases**:
+The additional risk-derived minimum is **26 distinct verification cases**:
 13 deterministic CJS controls (plan acceptance; wrong purpose; extra field;
 changed fixture; wrong detector; native/model purpose collision; forged nonce;
 missing denial; readable private root; reordered paths; direct unauthenticated
 entry; scientific bootstrap rejection; complete real workspace mutation/link
 detection), two actual-local-HTTP/modeled-Engine controls for private credential
-selection/dummy input and no-effect foreign-slot/preflight refusal, seven real
+selection/dummy input and no-effect foreign-slot/preflight refusal, eight real
 filesystem/Git/durable-ledger controls with modeled SDK/containment ports
 (complete string/object lifecycle; missing positive baseline; pinned refusal and
 cleanup; provider failure/fabricated nonce without retry; Git metadata mutation;
-confirmed outer completion; interrupted/unconfirmed/malformed evidence), two SDK
+confirmed outer completion; interrupted/unconfirmed/malformed evidence;
+non-dumpable parent with a fresh same-UID positive witness), two SDK
 identity/slot controls extending
-the existing C04 cases, and one actual common-tuple runtime query. The22 CJS
+the existing C04 cases, and one actual common-tuple runtime query. The23 CJS
 controls execute no model. The two SDK controls retain their existing logical
 IDs; the35 qualification controls and174/42 inventories are not enlarged or
 renumbered. Catalog, quality guidance and evidence README include the new driver
 and control source. Global/changed-owner coverage and normal source gates remain
 effective. Build or deterministic success cannot substitute for the actual query.
+
+The first real runtime-control attempt on source22c94195/image25fe retained
+CLI14PASS/native4PASS but failed before any application/model call: the trusted
+bootstrap drops UID in-process, and Linux makes its non-dumpable proc files
+root-owned. A separate same-image/profile matched contrast opens only
+`/proc/self/environ`: after UID drop it receives EACCES with file owner0;
+after a same-UID exec it opens successfully with file owner502. Both workers
+have capabilities0 and neither reads environment contents. This follows
+[Linux proc ownership](https://www.man7.org/linux/man-pages/man5/proc_pid.5.html).
+The positive witness therefore runs as a fresh same-UID Node without changing
+dumpability, file permissions, capabilities, policy or scientific gates. Its
+failure is durably recorded before throwing; malformed output or any denied
+baseline path still prevents SDK preparation. All nine sandbox denials remain
+mandatory. Keep the original unavailable attempt and contrast. A source/driver
+correction requires fresh committed runtime admission, never replay of the old
+plan. Scientific preregistration may precede technical controls, but scientific
+launch MUST wait for actual common-tuple technical PASS.
 
 #### Nested native control retains the masked outer procfs
 

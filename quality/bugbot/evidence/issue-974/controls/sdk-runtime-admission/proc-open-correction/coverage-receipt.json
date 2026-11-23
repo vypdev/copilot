@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "kind": "exact-source AST runtime admission controller coverage;realfilesystemGitledgerandmodeledSDKcontainment;noDockerormodelacceptance",
+  "results": [
+    {
+      "file": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs",
+      "sourceSha256": "d9f9399d19d8a1164a3c27fd77b655001accd5468988aac86719ca2796c20d15",
+      "summary": {
+        "lines": {
+          "total": 111,
+          "covered": 111,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 17,
+          "covered": 16,
+          "skipped": 0,
+          "pct": 94.11
+        },
+        "statements": {
+          "total": 135,
+          "covered": 133,
+          "skipped": 0,
+          "pct": 98.51
+        },
+        "branches": {
+          "total": 27,
+          "covered": 26,
+          "skipped": 0,
+          "pct": 96.29
+        }
+      },
+      "gate": true
+    }
+  ],
+  "measuredSdkRuntimeControllerGateSatisfied": true,
+  "globalChangedModuleCoverageSatisfied": false,
+  "observations": [
+    {
+      "kind": "module-load",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs",
+      "testOnlyExportSuffix": true
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    },
+    {
+      "kind": "modeled-commonjs-controller",
+      "relative": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs"
+    }
+  ],
+  "testSha256": {
+    "quality/bugbot/evidence/issue974/sdk-runtime-admission-components.cjs": "8ff97a1e1ecc2e66b5fdefec100bb36bfa5efcec5c5ad0b7e4d29413107f9323"
+  },
+  "qualificationModelCalls": 0,
+  "nativeSdkAcceptance": false,
+  "production": "disabled"
+}

@@ -1030,7 +1030,7 @@ accept only `corpus-case` and `paired-review`; a stopped runtime-control identit
 cannot qualify a corpus or admit42. Model-free native-control credentials remain
 forbidden. Runtime admission never receives an evidence/GitHub token.
 
-The Bugbot owner counts25 additional verification cases once:22 model-free
+The Bugbot owner counts26 additional verification cases once:23 model-free
 CJS controls, the existing two extended SDK identity/slot controls and one
 separate real Luna/xhigh canary query. Independent same-tuple CLI14 and native
 C32–C35 remain separate mandatory prerequisites, counted by their existing
@@ -1041,6 +1041,11 @@ model-free instrumentation. Instrumentation MUST NOT enter actual native/model
 execution. Actual model-tool acceptance and source-global floors remain separate
 requirements. Retain unavailable/negative prefixes and the exact implementation,
 image, driver and runtime tuple; do not retry an uncertain control automatically.
+The positive protected-file baseline uses a fresh same-UID trusted Node, since
+the bootstrap's in-process UID drop changes its own proc-file ownership. It
+opens/closes the same nine files without reading protected contents or changing
+dumpability, permissions or isolation. Every file must open before model
+preparation; the CLI witness must still deny every file.
 
 #### Single-use identity and namespace admission — issue #974
 
