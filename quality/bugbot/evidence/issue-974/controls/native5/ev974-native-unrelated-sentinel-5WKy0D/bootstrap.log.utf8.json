@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "lossless UTF-8 representation of the unchanged raw log",
+  "originalPath": "quality/bugbot/evidence/issue-974/controls/native5/ev974-native-unrelated-sentinel-5WKy0D/bootstrap.log.txt",
+  "originalRevision": "b8782afbcc7d79aa25f303c4ead8a647d7fbbc99",
+  "originalBytes": 50,
+  "sha256": "63adaae01c9977c46776a7cba8f847b89acb04dc65d09b183919b6e298c23ca9",
+  "encoding": "utf-8",
+  "content": "Expected values to be strictly equal:\n\n143 !== 0\n\n",
+  "retrieval": "encode content as UTF-8 without adding or removing any byte; original raw object remains reachable in Git history",
+  "observedLogIsUnchanged": true
+}

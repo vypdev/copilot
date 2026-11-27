@@ -1,0 +1,33 @@
+{
+  "source": "/private/tmp/copilot-goal-974/src/infrastructure/bugbot/shadow/session.cjs",
+  "sourceSha256": "3234f7356290c1993d6fa6d6754c3ab897f6e40228e2834906d94bf0a344d0f4",
+  "kind": "coverage-only Node component harness; original62 semantic cases plus one explicit provider-transport fault group; fake child/timers are component-only, no qualification/bootstrap/model execution",
+  "summary": {
+    "lines": {
+      "total": 103,
+      "covered": 103,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 22,
+      "covered": 22,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 134,
+      "covered": 134,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 109,
+      "covered": 109,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "changedModuleGate": true,
+  "qualificationModelCalls": 0
+}

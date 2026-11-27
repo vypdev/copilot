@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "kind": "isolated merge/build reproduction with physically independent dependencies; no managed ref or publication",
+  "sourceHead": "5e7faa0e57801d3884449b1aaae2833ffcc446d3",
+  "parent": "a7c23ad169bca92ade652c893f268b5c9ef566ab",
+  "base": "/private/tmp/copilot-goal-974-sync-physical-y3ld7ufj",
+  "root": "/private/tmp/copilot-goal-974-sync-physical-y3ld7ufj/source",
+  "dependenciesCopiedFrom": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/frozen-host/node_modules",
+  "startedAt": "2026-11-21T06:11:37.141802+00:00",
+  "modelCalls": 0,
+  "production": "disabled",
+  "baseline": {
+    "startedAt": "2026-11-21T06:11:48.422212+00:00",
+    "finishedAt": "2026-11-21T06:12:47.689339+00:00",
+    "exitCode": 0,
+    "log": "/private/tmp/copilot-goal-974-sync-physical-y3ld7ufj/original-source-build.log.txt",
+    "bytes": 434243,
+    "sha256": "f05d7fa1e3e8246c87872184cbf3199b8d9224c28ccf1ec4a75bc6a522daf8ff",
+    "hashes": {
+      "build/github_action/index.js": "8e8938796348bee6dcbc753f2496b2b4e519f9427d5cb84e3ecc40152d70bee5",
+      "build/cli/index.js": "c6673345acb748a2f56753d05942c3ed98c4f4f91380901142e11b0ae19e05f6",
+      "build/api/index.js": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "build/deployment_recovery/index.js": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    },
+    "status": "",
+    "expectedHashes": {
+      "build/github_action/index.js": "8e8938796348bee6dcbc753f2496b2b4e519f9427d5cb84e3ecc40152d70bee5",
+      "build/cli/index.js": "c6673345acb748a2f56753d05942c3ed98c4f4f91380901142e11b0ae19e05f6",
+      "build/api/index.js": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "build/deployment_recovery/index.js": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    },
+    "sameBundleBytes": true
+  },
+  "mergeExitCode": 1,
+  "conflicts": [
+    "build/github_action/index.js"
+  ],
+  "preparedStatus": "M  .github/workflows/copilot_bugbot_status_card.yml\nUU build/github_action/index.js\nM  docs/bugbot/failure-scenarios.mdx\nM  docs/development/testing.mdx\nA  quality/bugbot/evidence/issue-976/README.md\nA  quality/bugbot/evidence/issue-976/controls-2.log.gz\nA  quality/bugbot/evidence/issue-976/controls-3.log.gz\nA  quality/bugbot/evidence/issue-976/controls-4.log.gz\nA  quality/bugbot/evidence/issue-976/controls-5.log.gz\nA  quality/bugbot/evidence/issue-976/controls-6.log.gz\nA  quality/bugbot/evidence/issue-976/controls-7.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-build.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-focused.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-generate-specifications.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-graphify.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-official-current-parent-sync-failure.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-reconciliation-plan.json\nA  quality/bugbot/evidence/issue-976/exact-parent-resolution.json\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-agent-docs.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-documentation.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-specifications.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validation.json\nA  quality/bugbot/evidence/issue-976/final-controls.log.gz\nA  quality/bugbot/evidence/issue-976/initial-controls.log.gz\nA  quality/bugbot/evidence/issue-976/original-bundle-rebuild-diagnostic.json\nM  scripts/validate-workflow-contract.cjs\nM  specs/CATALOG.md\nM  specs/bugbot-review-state-reconciliation.md\nM  specs/catalog.json\nM  src/actions/github_action.ts\nM  src/infrastructure/github/__tests__/github_bugbot_status_card_dispatch.test.ts\nM  src/infrastructure/github/__tests__/github_bugbot_status_card_workflow.test.ts\nA  src/infrastructure/github/github_bugbot_status_card_acknowledgment.ts\nM  src/infrastructure/github/github_bugbot_status_card_dispatch.ts\nM  src/infrastructure/github/github_bugbot_status_card_handoff.ts\nM  src/infrastructure/github/github_bugbot_status_card_workflow.ts\nM  src/tooling/__tests__/validate_workflow_contract.test.ts\n",
+  "resolutionBuild": {
+    "startedAt": "2026-11-21T06:12:48.195923+00:00",
+    "finishedAt": "2026-11-21T06:13:46.163549+00:00",
+    "exitCode": 0,
+    "log": "/private/tmp/copilot-goal-974-sync-physical-y3ld7ufj/merged-source-build-before-staging.log.txt",
+    "bytes": 434630,
+    "sha256": "5edc310a79338101ad111abed4f65d9faaebff0807669e65e0596b80b2710ffa",
+    "hashes": {
+      "build/github_action/index.js": "570c07d422cfb632109a6a93124c6b4782928730eb3d956f72c5168d4997e97c",
+      "build/cli/index.js": "c6673345acb748a2f56753d05942c3ed98c4f4f91380901142e11b0ae19e05f6",
+      "build/api/index.js": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "build/deployment_recovery/index.js": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    },
+    "status": "M  .github/workflows/copilot_bugbot_status_card.yml\nUU build/github_action/index.js\nM  docs/bugbot/failure-scenarios.mdx\nM  docs/development/testing.mdx\nA  quality/bugbot/evidence/issue-976/README.md\nA  quality/bugbot/evidence/issue-976/controls-2.log.gz\nA  quality/bugbot/evidence/issue-976/controls-3.log.gz\nA  quality/bugbot/evidence/issue-976/controls-4.log.gz\nA  quality/bugbot/evidence/issue-976/controls-5.log.gz\nA  quality/bugbot/evidence/issue-976/controls-6.log.gz\nA  quality/bugbot/evidence/issue-976/controls-7.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-build.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-focused.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-generate-specifications.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-graphify.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-official-current-parent-sync-failure.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-reconciliation-plan.json\nA  quality/bugbot/evidence/issue-976/exact-parent-resolution.json\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-agent-docs.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-documentation.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-specifications.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validation.json\nA  quality/bugbot/evidence/issue-976/final-controls.log.gz\nA  quality/bugbot/evidence/issue-976/initial-controls.log.gz\nA  quality/bugbot/evidence/issue-976/original-bundle-rebuild-diagnostic.json\nM  scripts/validate-workflow-contract.cjs\nM  specs/CATALOG.md\nM  specs/bugbot-review-state-reconciliation.md\nM  specs/catalog.json\nM  src/actions/github_action.ts\nM  src/infrastructure/github/__tests__/github_bugbot_status_card_dispatch.test.ts\nM  src/infrastructure/github/__tests__/github_bugbot_status_card_workflow.test.ts\nA  src/infrastructure/github/github_bugbot_status_card_acknowledgment.ts\nM  src/infrastructure/github/github_bugbot_status_card_dispatch.ts\nM  src/infrastructure/github/github_bugbot_status_card_handoff.ts\nM  src/infrastructure/github/github_bugbot_status_card_workflow.ts\nM  src/tooling/__tests__/validate_workflow_contract.test.ts\n"
+  },
+  "resolvedStatus": "M  .github/workflows/copilot_bugbot_status_card.yml\nM  build/github_action/index.js\nM  docs/bugbot/failure-scenarios.mdx\nM  docs/development/testing.mdx\nA  quality/bugbot/evidence/issue-976/README.md\nA  quality/bugbot/evidence/issue-976/controls-2.log.gz\nA  quality/bugbot/evidence/issue-976/controls-3.log.gz\nA  quality/bugbot/evidence/issue-976/controls-4.log.gz\nA  quality/bugbot/evidence/issue-976/controls-5.log.gz\nA  quality/bugbot/evidence/issue-976/controls-6.log.gz\nA  quality/bugbot/evidence/issue-976/controls-7.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-build.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-focused.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-generate-specifications.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-graphify.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-official-current-parent-sync-failure.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-reconciliation-plan.json\nA  quality/bugbot/evidence/issue-976/exact-parent-resolution.json\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-agent-docs.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-documentation.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-specifications.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validation.json\nA  quality/bugbot/evidence/issue-976/final-controls.log.gz\nA  quality/bugbot/evidence/issue-976/initial-controls.log.gz\nA  quality/bugbot/evidence/issue-976/original-bundle-rebuild-diagnostic.json\nM  scripts/validate-workflow-contract.cjs\nM  specs/CATALOG.md\nM  specs/bugbot-review-state-reconciliation.md\nM  specs/catalog.json\nM  src/actions/github_action.ts\nM  src/infrastructure/github/__tests__/github_bugbot_status_card_dispatch.test.ts\nM  src/infrastructure/github/__tests__/github_bugbot_status_card_workflow.test.ts\nA  src/infrastructure/github/github_bugbot_status_card_acknowledgment.ts\nM  src/infrastructure/github/github_bugbot_status_card_dispatch.ts\nM  src/infrastructure/github/github_bugbot_status_card_handoff.ts\nM  src/infrastructure/github/github_bugbot_status_card_workflow.ts\nM  src/tooling/__tests__/validate_workflow_contract.test.ts\n",
+  "repeatBuild": {
+    "startedAt": "2026-11-21T06:13:46.512265+00:00",
+    "finishedAt": "2026-11-21T06:14:43.920135+00:00",
+    "exitCode": 0,
+    "log": "/private/tmp/copilot-goal-974-sync-physical-y3ld7ufj/merged-source-build-after-staging.log.txt",
+    "bytes": 434630,
+    "sha256": "db29c1678a6cd138374f4e97badd9191d3baae401dda97ec6fb7395a1d5c8760",
+    "hashes": {
+      "build/github_action/index.js": "570c07d422cfb632109a6a93124c6b4782928730eb3d956f72c5168d4997e97c",
+      "build/cli/index.js": "c6673345acb748a2f56753d05942c3ed98c4f4f91380901142e11b0ae19e05f6",
+      "build/api/index.js": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "build/deployment_recovery/index.js": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    },
+    "status": "M  .github/workflows/copilot_bugbot_status_card.yml\nM  build/github_action/index.js\nM  docs/bugbot/failure-scenarios.mdx\nM  docs/development/testing.mdx\nA  quality/bugbot/evidence/issue-976/README.md\nA  quality/bugbot/evidence/issue-976/controls-2.log.gz\nA  quality/bugbot/evidence/issue-976/controls-3.log.gz\nA  quality/bugbot/evidence/issue-976/controls-4.log.gz\nA  quality/bugbot/evidence/issue-976/controls-5.log.gz\nA  quality/bugbot/evidence/issue-976/controls-6.log.gz\nA  quality/bugbot/evidence/issue-976/controls-7.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-build.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-focused.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-generate-specifications.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-graphify.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-official-current-parent-sync-failure.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-reconciliation-plan.json\nA  quality/bugbot/evidence/issue-976/exact-parent-resolution.json\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-agent-docs.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-documentation.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validate-specifications.log.gz\nA  quality/bugbot/evidence/issue-976/exact-parent-validation.json\nA  quality/bugbot/evidence/issue-976/final-controls.log.gz\nA  quality/bugbot/evidence/issue-976/initial-controls.log.gz\nA  quality/bugbot/evidence/issue-976/original-bundle-rebuild-diagnostic.json\nM  scripts/validate-workflow-contract.cjs\nM  specs/CATALOG.md\nM  specs/bugbot-review-state-reconciliation.md\nM  specs/catalog.json\nM  src/actions/github_action.ts\nM  src/infrastructure/github/__tests__/github_bugbot_status_card_dispatch.test.ts\nM  src/infrastructure/github/__tests__/github_bugbot_status_card_workflow.test.ts\nA  src/infrastructure/github/github_bugbot_status_card_acknowledgment.ts\nM  src/infrastructure/github/github_bugbot_status_card_dispatch.ts\nM  src/infrastructure/github/github_bugbot_status_card_handoff.ts\nM  src/infrastructure/github/github_bugbot_status_card_workflow.ts\nM  src/tooling/__tests__/validate_workflow_contract.test.ts\n"
+  },
+  "sameResolvedAndRepeatedBundleBytes": true,
+  "sameResolvedAndRepeatedWorkspacePaths": true,
+  "candidateCommitted": false,
+  "published": false
+}

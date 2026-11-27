@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T18:59:32.284468+00:00",
+  "reason": "Lossless archival of generated coverage and hook logs after native progress hit existing call budget before all7 assessment batches. No limits, policy, source requirement, preregistration or runtime input changed. Original historical paths are mapped here and immutable parent Git blobs remain available.",
+  "files": [
+    {
+      "originalPath": "quality/bugbot/evidence/issue-974/controls/bundle-restoration-hook-negative.utf8.json",
+      "originalCommit": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+      "originalGitBlob": "86273dff52a95d80d5bdfea57f5c3410e9e0e93d",
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/bundle-restoration-hook-negative.utf8.json.log.gz",
+      "rawBytes": 550290,
+      "rawSha256": "cca7cabcd55cd7767e1e2564f7209669bba9555e8541172ac5353bf891be2b6c",
+      "gzipBytes": 51763,
+      "gzipSha256": "232a23641525b2263392f679f9b26141b99fd95f21e4757f36d3506ba6d890a4",
+      "kind": "generated observational report; no runtime consumer; original bytes retained in gzip and immutable parent Git blob"
+    },
+    {
+      "originalPath": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt2-coverage-final.json",
+      "originalCommit": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+      "originalGitBlob": "38146bc7c63c28a7fa5a59d9243a45ecdf4b2810",
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt2-coverage-final.json.log.gz",
+      "rawBytes": 400845,
+      "rawSha256": "d7a9536694b1680ae865a60481eb8541047f8f270d3cc206fe6e085d70c0d41e",
+      "gzipBytes": 56667,
+      "gzipSha256": "c400c9b7d32c8187f3c0a8b96f4b010f026c8e6d2fc6909788434d1cf8a1db5d",
+      "kind": "generated observational report; no runtime consumer; original bytes retained in gzip and immutable parent Git blob"
+    },
+    {
+      "originalPath": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt1.log.utf8.json",
+      "originalCommit": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+      "originalGitBlob": "ab7f51e220ace6d21e004b07782bcc1225cc3096",
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt1.log.utf8.json.log.gz",
+      "rawBytes": 29866,
+      "rawSha256": "7cdbb672686cd70eb541bc95659a0a7fe33769e2b5c202281bd109f94d34cbc1",
+      "gzipBytes": 8493,
+      "gzipSha256": "e072cf92eb2af5340feb36af5d10bd227ca303b7047f105d4ee4b473890f9f1e",
+      "kind": "generated observational report; no runtime consumer; original bytes retained in gzip and immutable parent Git blob"
+    },
+    {
+      "originalPath": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt2.log.txt",
+      "originalCommit": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+      "originalGitBlob": "0f796ded36fb691eb3489af685af5e4f9dff8160",
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/cjs-coverage-baselines/attempt2.log.txt.log.gz",
+      "rawBytes": 52743,
+      "rawSha256": "d71489a92929575711a7d8b18537e2c5cdec83bb18686a9382a4735ae62e85bd",
+      "gzipBytes": 8793,
+      "gzipSha256": "cc65da32a0093fee19f58e814474abf4994218f058a13c1722c9027e993d9e23",
+      "kind": "generated observational report; no runtime consumer; original bytes retained in gzip and immutable parent Git blob"
+    },
+    {
+      "originalPath": "quality/bugbot/evidence/issue-974/controls/engine-transport-coverage/coverage-final.json",
+      "originalCommit": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+      "originalGitBlob": "ddc02fe9d21b5d8e49cfcf112ad03ffe9a5511f2",
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/engine-transport-coverage/coverage-final.json.log.gz",
+      "rawBytes": 55541,
+      "rawSha256": "656c96c06a55b42c9944c6e8f82dfecc4e26a1e000c8b006fce03b8d38d47a7a",
+      "gzipBytes": 8649,
+      "gzipSha256": "c320317b6c9034333aae874549d370a98e26a7f50ce3f4582096518aded3a8ea",
+      "kind": "generated observational report; no runtime consumer; original bytes retained in gzip and immutable parent Git blob"
+    },
+    {
+      "originalPath": "quality/bugbot/evidence/issue-974/controls/session-transport-coverage/coverage-final.json",
+      "originalCommit": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+      "originalGitBlob": "485df61d22934f4c700c51d5e27dfcf8d855a649",
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/session-transport-coverage/coverage-final.json.log.gz",
+      "rawBytes": 27738,
+      "rawSha256": "77174ff22900fe2d6d1861d7814816f7fe4cd8b3e1eefef35c02ef81becbc43f",
+      "gzipBytes": 4185,
+      "gzipSha256": "eec89f1695bc884fb185f94233169b069ab19258e3a8a5083740383c5c29aba1",
+      "kind": "generated observational report; no runtime consumer; original bytes retained in gzip and immutable parent Git blob"
+    },
+    {
+      "originalPath": "quality/bugbot/evidence/issue-974/controls/supervisor-transport-coverage/coverage-final.json",
+      "originalCommit": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+      "originalGitBlob": "8a702d2e6efaa4108d58572fa607364eba3ea74d",
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/supervisor-transport-coverage/coverage-final.json.log.gz",
+      "rawBytes": 10335,
+      "rawSha256": "fe220627d84ec6c4946fc1a0cd36841c6452022cfa938ac35b8b660bd75aa3e4",
+      "gzipBytes": 1739,
+      "gzipSha256": "2ca543fe782c6707245f6c1b7a13b307e2e4e978cf1141efb864fed0a15abce6",
+      "kind": "generated observational report; no runtime consumer; original bytes retained in gzip and immutable parent Git blob"
+    },
+    {
+      "originalPath": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/coverage-final.json",
+      "originalCommit": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+      "originalGitBlob": "5debb3d06acffff61a276f136d72b6f79f74bcf2",
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/coverage-final.json.log.gz",
+      "rawBytes": 46943,
+      "rawSha256": "6f14b83ad67b72e7beea2a3df3f88d0e499bdfac28f576b41b23c78d4917e3d6",
+      "gzipBytes": 7307,
+      "gzipSha256": "57781d1a3ec14c2519ee70bd8d670c199a5b59a53e08fb9055a3b935435094fe",
+      "kind": "generated observational report; no runtime consumer; original bytes retained in gzip and immutable parent Git blob"
+    },
+    {
+      "originalPath": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/component-ast.log.txt",
+      "originalCommit": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+      "originalGitBlob": "175bbbbd0596f13f848d2eaa595d0ae8620e00f0",
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/component-ast.log.txt.log.gz",
+      "rawBytes": 6033,
+      "rawSha256": "4092a65a8f71e72b8ff6f11eb707007f6502f8a9b2faddf77cfbcdf5f1edc307",
+      "gzipBytes": 1849,
+      "gzipSha256": "526c18c5b741e27e6069ad055ae4f4d4ac5e779c8d512b36903ff4a237c2bce8",
+      "kind": "generated observational report; no runtime consumer; original bytes retained in gzip and immutable parent Git blob"
+    },
+    {
+      "originalPath": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/complete-shadow.log.txt",
+      "originalCommit": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+      "originalGitBlob": "c9c6a4892f6a53dfeefcb1beaaadf8e784a4780d",
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/corpus-transport-coverage/complete-shadow.log.txt.log.gz",
+      "rawBytes": 35614,
+      "rawSha256": "d3f2152ae335bfa97f515f9a09d70c3b5bf982a8340e48302ba91d92bdcd3c66",
+      "gzipBytes": 9625,
+      "gzipSha256": "948575025bb03ec10ce07426c15268aceb2107616cafc9d3a55878992b890f63",
+      "kind": "generated observational report; no runtime consumer; original bytes retained in gzip and immutable parent Git blob"
+    },
+    {
+      "originalPath": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/partial-host-coverage.json",
+      "originalCommit": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+      "originalGitBlob": "66feacba0c1e7111d41860e0a0e1753312e3768e",
+      "archivePath": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/partial-host-coverage.json.log.gz",
+      "rawBytes": 55072,
+      "rawSha256": "bd71dd2d4e6cde9378bd9b9c971b9ae19a554d1f97ec19a98fb0b5db675223a0",
+      "gzipBytes": 9592,
+      "gzipSha256": "b90136d2efc760dc9d0d7831d4115e2bf4552e59f4c4413b982014a5b05b7c77",
+      "kind": "generated observational report; no runtime consumer; original bytes retained in gzip and immutable parent Git blob"
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "actual174Started": false,
+  "actual42Started": false,
+  "pilotWriteAttempts": 0,
+  "production": "disabled"
+}

@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 2,
+  "implementation": "1f20e9c5b46a7b3fdd761fbc07051058bb0dc699",
+  "mode": "shadow",
+  "publication": "dry-run",
+  "production": "disabled",
+  "detector": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "effort": "xhigh"
+  },
+  "verifier": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6.1-sol",
+    "effort": "xhigh"
+  },
+  "evidence": "installed exact Git head and permitted base, official release catalog, matching native CI step metadata",
+  "repositoryCohort": {
+    "manifestSha256": "dab7d62b0419c2da63eae3387be6222e77c114ed32b22dc9a2a9af35fb6afe85",
+    "oracleSha256": "c79302cb376519f60d69e0a080cd65dc29ff35ab256ce17b0e4b218fe69e239a",
+    "order": [
+      "U1",
+      "U2",
+      "F1",
+      "F2",
+      "S1",
+      "S2",
+      "X1",
+      "X2",
+      "M1",
+      "M2",
+      "P1",
+      "P2",
+      "J1",
+      "J2"
+    ],
+    "repetitions": 3,
+    "baselineMinimumAlerts": 3,
+    "baselineMinimumPremises": 2,
+    "minimumStrictlyBetterRepetitions": 2,
+    "maximumAddedP95Ms": 90000,
+    "requireAllExactPositiveControls": true
+  },
+  "corpus": {
+    "sha256": "001223aa255e5af7e10bddab2c8deacd7cacf0b5b3690a5a2034d241274cb9d6",
+    "cases": 174,
+    "concurrency": 6,
+    "outerAttemptsPerCase": 1,
+    "gates": {
+      "precision": 0.9,
+      "recall": 0.85,
+      "f1": 0.87,
+      "exactLocation": 0.8,
+      "severity": 0.8,
+      "category": 0.8,
+      "maxBrier": 0.16
+    },
+    "path": "quality/bugbot/corpus.v2.json",
+    "version": 2
+  },
+  "purpose": "native-control",
+  "lifecycle": "qualification-investigation-v1",
+  "runtime": {
+    "dependencyTreeSha256": "f1813c7d895b49105f727ba1cf85a85e5e519d10b42258a77194c07a9197d7d1",
+    "dependencyEntries": 26170,
+    "os": "linux",
+    "arch": "arm64",
+    "kernel": "7.2.12-orbstack-00394-gbecdd6130068",
+    "node": "v24.20.0",
+    "nodeSha256": "23a5637c2470fde09fcc1acc77c1b92e04e3d7e3e6e80ff7df6f5831958d1477",
+    "gitExecutable": "/usr/bin/git",
+    "gitSha256": "54af380ba6ca1b36305358e99427a31ae4b0af5dc5cb6d0198c6f2f16e97651d",
+    "typescript": "5.9.3",
+    "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+    "git": "git version 2.39.5",
+    "codex": "codex-cli 0.169.1",
+    "executable": "/opt/codex/node_modules/@openai/codex/bin/codex.js",
+    "executableSha256": "e14fc83739c13c1074b12bd1acce4010c893c7f6fbfc1593b4a31d74cabb57af",
+    "nativeExecutable": "/opt/codex/node_modules/@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex",
+    "nativeExecutableSha256": "7a32206a6aa161b678b42f25f9b20f5f7e006497cd98cd02dc8835cbaab3bba0"
+  },
+  "hostRuntime": {
+    "dependencyTreeSha256": "e8bb1b666678ffe4df2c6fd0f0c6fdc524b600752f6db1866ea9713ad37e9311",
+    "dependencyEntries": 26844,
+    "os": "darwin",
+    "arch": "arm64",
+    "kernel": "27.2.0",
+    "node": "v24.20.0",
+    "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+    "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+    "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+    "typescript": "5.9.3",
+    "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+    "git": "git version 2.54.0 (Apple Git-157)"
+  },
+  "inspectedArtifacts": {
+    "configuration.cjs": "ff03c59a19d78e018d6d5a58e0b9aed018215ca323f781858d6ce27654464ffb",
+    "implementation.cjs": "bcfa463a68cebd9a3334dc7196204552bfa85a75fae144390cc5c9c10b8bafdf",
+    "load.cjs": "35a9e9b2219619dccb9ea7cebe9ceb14f49aa05a9bf036a29045cffbf4af2405",
+    "corpus.cjs": "175657587b08cdb313bdb7f58fe471de95219eb30d60afc454813e0e04abe54d",
+    "review.cjs": "6b8e27717b30ae68a9ece2a9703073775b8025912614b1039ae25cab4b4fc85c",
+    "full-review.cjs": "e0a374fb9b451544910a1cab96cda774a88ecc72eae60c454d2dd7238d4f3c5a",
+    "launch-full-review.cjs": "a3f378fe6b90228e8d9a0d37e9be407705d73c4409bae6841a1ac25dd22da4d6",
+    "score-review.py": "1acce4410fe17ea68a93cd07849fb1ee07650849c1910493d152bf0d7131ee76",
+    "../execution-provenance.cjs": "b3684f55df070ab1a79f9b05f40671c9d6b320f39a1c6e0d967f352958248d46",
+    "../qualification-bootstrap.cjs": "36a2ffa685a6dca9be0930c9386cf9a4ac11553e14a0f24d67597ff53b9b3be2",
+    "../../issue974/corpus-selection.cjs": "dea7336a1e4fd8dbe969e966292534a436e97ab30553fbd73c4da4c679992fdb",
+    "../../issue974/attempt-ledger.cjs": "b88d90219eb70b0ec0adcc030c52b2771501f2d6fd3b8979bd216859ba287294",
+    "../../issue974/operation-containment.cjs": "178e9b80879e4074d8d89e2685d1cb5d5f5651ad958931e6ecafeb75760ab11b",
+    "../../issue974/qualification-supervisor.cjs": "e19e86dda95fddf6d61cfafdbc2cefba4a8a4612609bd767f46b04dcdd1f19a7",
+    "../../issue974/qualification-runtime.Dockerfile": "83dfe8c076bfdb6f5e42b5eb046a3c3c3cc7f7afe75a8f4443d50242b3f762a4",
+    "../../issue974/containment-native-fixture.cjs": "62eeded3ae8815e93c7c7183aab77bb0c58f1fa1b7a4260038defb1a5247ebf6"
+  },
+  "containment": {
+    "schemaVersion": 1,
+    "image": "sha256:9b7c5e0906943cf11b7438ebc50bfe012fcebbee215cb251a165f74e384d76f8",
+    "imageConfigSha256": "c5f9487f31ba356369f7ca1f87e40220720ae54bf8b573b12f53b5c1e78e71f9",
+    "hostNodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+    "socketPath": "<private-host-endpoint>",
+    "supervisorSha256": "e19e86dda95fddf6d61cfafdbc2cefba4a8a4612609bd767f46b04dcdd1f19a7",
+    "workerUid": 502,
+    "workerGid": 20,
+    "engine": {
+      "version": "29.8.2",
+      "apiVersion": "1.56",
+      "os": "linux",
+      "arch": "arm64",
+      "kernelVersion": "7.2.12-orbstack-00394-gbecdd6130068"
+    }
+  },
+  "nativeControl": {
+    "schemaVersion": 1,
+    "cases": [
+      "ev974-C32",
+      "ev974-C33",
+      "ev974-C34",
+      "ev974-C35"
+    ],
+    "selectedCase": "ev974-C34",
+    "fixtureCliSha256": "3bf82112127e518b4ea531a8e59e0f5e9325ad61bdebeebee7ca22ca6586741b",
+    "harnessSha256": "6aff983fcba8a3cc466ae836d71d8915404ad7685bea9d9c4bab5c20aa60667f"
+  },
+  "historicalPublicDescriptor": {
+    "executable": false,
+    "reason": "Historical observation descriptor only; private original is required for any source-pinned execution. This public copy grants no execution authority.",
+    "originalBytes": 6075,
+    "originalSha256": "0256eb177172cc4b4c33f7871dc702f8e57027cf2164dc193fb6cc2fb95b4019",
+    "endpointSha256": "f14e53644c8d76dd46de4d5fdee0c1799e7cabbcbedf77ec0aa9ef95f662e140",
+    "privateArchive": "historical20-native-plan-private-originals.zip",
+    "privateArchiveSha256": "bcd062574be4b7477f118b11dabb78a93c8e1a6ffcb03200cd4f89b13ca8c902",
+    "privateLocatorRetention": {
+      "privateOriginalsFile": "source5327-native-descriptor-original-associations-private.json",
+      "bytes": 185695,
+      "sha256": "954ac09304e41c7f0895c8362f3e7eef9b301a6175ec1f47ea64e29f6d8ddb2b",
+      "gitLocatorAssociationsPublic": false
+    }
+  }
+}

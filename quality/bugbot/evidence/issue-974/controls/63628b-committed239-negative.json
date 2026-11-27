@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T02:09:22.891568+00:00",
+  "implementation": "63628bb2ea01b2d9aafb589e3b1245dae54d4778",
+  "outcome": "236PASS/3FAIL/239total/0skip/0cancel",
+  "cause": [
+    "dependency negative control assumes previous runtime source substring; needs explicitly frozen historical helper variant",
+    "dependency rejection now occurs earlier before probes; exact expected diagnostic outdated",
+    "unauthorized IPC fork rejects at host platform assertion before generic private-channel precondition; no grant/import occurred"
+  ],
+  "evidence": {
+    "path": "quality/bugbot/evidence/issue-974/controls/63628b-committed239-negative.log.gz",
+    "bytes": 30047,
+    "sha256": "35d3b3d735c0f7c0b18873b83c3bc6193a32f210cd5ad98501af71331911f078"
+  },
+  "modelCalls": 0,
+  "174": "unstarted",
+  "42": "unstarted",
+  "native4": "unexecuted",
+  "production": "disabled"
+}

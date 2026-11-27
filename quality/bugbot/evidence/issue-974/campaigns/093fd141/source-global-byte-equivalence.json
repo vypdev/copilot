@@ -1,0 +1,104 @@
+{
+  "at": "2026-11-23T03:04:50.720281+00:00",
+  "kind": "Unchanged SDK/extension executable inputs and exact host runtime retain completed global acceptance; new changed CJS controller tested separately",
+  "implementation": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "originalMeasuredImplementation": "22c94195ed38975acaade066473c5fea167ca09d",
+  "sourceAndRuntime": {
+    "source": {
+      "implementation": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+      "tree": "ed80828e40b604064e88c362452d6ee7aa5cd2f7",
+      "sourceSha256": "0a5c634bec5cd27bae4d0840871af74b8d03d8064215a4a8a089bdbd4dc4cafa",
+      "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+      "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1"
+    },
+    "runtime": {
+      "dependencyTreeSha256": "1194a96dfe663eaadd94c4aed429b70de40bebba9757b47fb96b9df211379454",
+      "dependencyEntries": 28335,
+      "os": "darwin",
+      "arch": "arm64",
+      "kernel": "27.2.0",
+      "node": "v24.20.0",
+      "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+      "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+      "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+      "typescript": "5.9.3",
+      "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+      "git": "git version 2.54.0 (Apple Git-157)"
+    },
+    "fixtureCliSha256": "3bf82112127e518b4ea531a8e59e0f5e9325ad61bdebeebee7ca22ca6586741b"
+  },
+  "oldSourceAndRuntime": {
+    "source": {
+      "implementation": "22c94195ed38975acaade066473c5fea167ca09d",
+      "tree": "7ce5bbfcf25c8b2f222c49492093639d3a6f3add",
+      "sourceSha256": "0a5c634bec5cd27bae4d0840871af74b8d03d8064215a4a8a089bdbd4dc4cafa",
+      "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+      "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1"
+    },
+    "runtime": {
+      "dependencyTreeSha256": "1194a96dfe663eaadd94c4aed429b70de40bebba9757b47fb96b9df211379454",
+      "dependencyEntries": 28335,
+      "os": "darwin",
+      "arch": "arm64",
+      "kernel": "27.2.0",
+      "node": "v24.20.0",
+      "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+      "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+      "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+      "typescript": "5.9.3",
+      "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+      "git": "git version 2.54.0 (Apple Git-157)"
+    },
+    "fixtureCliSha256": "3bf82112127e518b4ea531a8e59e0f5e9325ad61bdebeebee7ca22ca6586741b"
+  },
+  "sdkAndExtensionSourceLockCompilerJestScriptsAndSupportIdentical": true,
+  "hostDependencyRuntimeByteIdentical": true,
+  "underlyingGlobalReceipt": "/private/tmp/copilot-goal-974-macos48-runtime-attempt1/final-sdk-global-coverage-attempt2/receipt.json",
+  "underlyingGlobalReceiptSha256": "e4ba12a3f17cbd474c90465c88a72e54b3774a3769dd821e3d234d8f25ddf122",
+  "underlyingCommandExitCode": 0,
+  "sdkTests": {
+    "numPassedTestSuites": 947,
+    "numFailedTestSuites": 0,
+    "numPassedTests": 18786,
+    "numFailedTests": 0,
+    "numPendingTests": 35,
+    "numTotalTests": 18821
+  },
+  "sdkTotalCoverage": {
+    "lines": {
+      "total": 38494,
+      "covered": 37785,
+      "skipped": 0,
+      "pct": 98.15
+    },
+    "statements": {
+      "total": 45093,
+      "covered": 43908,
+      "skipped": 0,
+      "pct": 97.37
+    },
+    "functions": {
+      "total": 7962,
+      "covered": 7807,
+      "skipped": 0,
+      "pct": 98.05
+    },
+    "branches": {
+      "total": 38834,
+      "covered": 36955,
+      "skipped": 0,
+      "pct": 95.16
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "sourceGlobalAcceptance": true,
+  "changedDriverCoveredSeparately": true,
+  "notANewGlobalExecution": true,
+  "rootGitTreeChangesAreExpectedForSeparatelyMeasuredQualityDriverAndDocs": true,
+  "allOriginalCoverageReportsRetained": true
+}

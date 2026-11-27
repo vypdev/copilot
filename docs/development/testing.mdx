@@ -215,6 +215,16 @@ The jobs can overlap when matching runners are available; inspect the Actions
 timeline for queue time as well as execution time. Run the three-platform
 setup matrix by manual dispatch from protected `master`.
 
+Several runner registrations may share one server. The model-free Bugbot
+command fixes Node's concurrent test files at two, matching Jest's existing
+two-worker allocation rather than deriving another allocation from all host
+processors. It runs the same fourteen files and complete case inventory;
+descendant processes are not a global host reservation. Keep native Git/Jest
+deadlines and coverage gates intact. A controlled fanout result cannot explain
+an earlier timeout without the corresponding host telemetry. See the
+[shared-host worker control](https://github.com/vypdev/copilot/tree/develop/quality/bugbot/evidence/issue-974/controls/shared-host-worker-fanout)
+for its before/after observation and limits.
+
 ```bash
 graphify update .
 repowise init . --no-workspace --no-prose --no-agents --no-editor-setup \

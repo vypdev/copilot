@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "kind": "credential-free-image-observation",
+  "image": "sha256:d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+  "pins": {
+    "node": {
+      "path": "/usr/local/bin/node",
+      "sha256": "23a5637c2470fde09fcc1acc77c1b92e04e3d7e3e6e80ff7df6f5831958d1477"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "sha256": "54af380ba6ca1b36305358e99427a31ae4b0af5dc5cb6d0198c6f2f16e97651d"
+    },
+    "typescript": {
+      "path": "/sdk/node_modules/typescript/lib/typescript.js",
+      "sha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+    },
+    "provenance": {
+      "path": "/sdk/quality/bugbot/evidence/issue-950/execution-provenance.cjs",
+      "sha256": "b3684f55df070ab1a79f9b05f40671c9d6b320f39a1c6e0d967f352958248d46"
+    },
+    "codex": {
+      "path": "/opt/codex/node_modules/@openai/codex/bin/codex.js",
+      "sha256": "e14fc83739c13c1074b12bd1acce4010c893c7f6fbfc1593b4a31d74cabb57af"
+    },
+    "native": {
+      "path": "/opt/codex/node_modules/@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex",
+      "sha256": "7a32206a6aa161b678b42f25f9b20f5f7e006497cd98cd02dc8835cbaab3bba0"
+    }
+  },
+  "source": {
+    "implementation": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+    "tree": "e84a29111a074a0059b522f88e69a8cb3e80d4eb",
+    "sourceSha256": "a7f6a6501845159c182c96a881b64626dfdaf00b9f803f48013011653985b1d9",
+    "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+    "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1"
+  },
+  "runtime": {
+    "dependencyTreeSha256": "9519849b6b82468d597781677dcab6fedd7c9f19441d30a2b4fd4ebe29dea8a4",
+    "dependencyEntries": 26170,
+    "os": "linux",
+    "arch": "arm64",
+    "kernel": "7.2.12-orbstack-00394-gbecdd6130068",
+    "node": "v24.20.0",
+    "nodeSha256": "23a5637c2470fde09fcc1acc77c1b92e04e3d7e3e6e80ff7df6f5831958d1477",
+    "gitExecutable": "/usr/bin/git",
+    "gitSha256": "54af380ba6ca1b36305358e99427a31ae4b0af5dc5cb6d0198c6f2f16e97651d",
+    "typescript": "5.9.3",
+    "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+    "git": "git version 2.39.5",
+    "codex": "codex-cli 0.169.1",
+    "executable": "/opt/codex/node_modules/@openai/codex/bin/codex.js",
+    "executableSha256": "e14fc83739c13c1074b12bd1acce4010c893c7f6fbfc1593b4a31d74cabb57af",
+    "nativeExecutable": "/opt/codex/node_modules/@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex",
+    "nativeExecutableSha256": "7a32206a6aa161b678b42f25f9b20f5f7e006497cd98cd02dc8835cbaab3bba0"
+  },
+  "modelCalls": 0,
+  "nativeSdkAcceptance": false
+}

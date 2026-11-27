@@ -99773,6 +99773,7 @@ function buildCodexExecutionPolicy(input) {
         }] : [];
     const argv = [
         'exec',
+        ...(input.runtimeToolEvidence ? ['--json'] : []),
         '--strict-config',
         '--ignore-user-config',
         '--ignore-rules',
@@ -99810,7 +99811,7 @@ function buildCodexExecutionPolicy(input) {
     return {
         argv,
         promptMode: 'stdin',
-        outputProtocol: 'plain-text',
+        outputProtocol: input.runtimeToolEvidence ? 'codex-json-events' : 'plain-text',
         workspaceMode,
         output: outputSchemaPath ? 'native-and-local-json-schema' : 'text',
         environment: { PSModuleAnalysisCachePath: moduleCache },
@@ -112590,6 +112591,93 @@ function generatedPullRequestTitle(sourceTitle, sanitizedSubject, issueNumber, l
     const subject = (sanitizedSubject || 'Update linked issue').slice(0, 256 - prefix.length - suffix.length).trimEnd();
     return `${prefix}${subject}${suffix}`;
 }
+
+
+/***/ }),
+
+/***/ 79148:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.qualificationOperationIdentity = qualificationOperationIdentity;
+exports.sameQualificationOperation = sameQualificationOperation;
+exports.requireQualificationOperationStopped = requireQualificationOperationStopped;
+exports.requireCompleteQualificationOperations = requireCompleteQualificationOperations;
+const digest = /^[a-f0-9]{64}$/u;
+const revision = /^[a-f0-9]{40}$/u;
+const identifier = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
+const identityKeys = ['ownerId', 'operationId', 'planSha256', 'implementation', 'imageSha256', 'purpose'];
+/** Keep data validation separate from the live, process-local cancellation grant. */
+function qualificationOperationIdentity(value) {
+    if (!record(value) || Object.keys(value).length !== identityKeys.length
+        || !identityKeys.every(key => Object.prototype.hasOwnProperty.call(value, key))
+        || !matches(value.ownerId, digest) || !matches(value.operationId, identifier)
+        || !matches(value.planSha256, digest) || !matches(value.implementation, revision)
+        || !matches(value.imageSha256, digest)
+        || !['corpus-case', 'paired-review', 'native-control', 'runtime-admission'].includes(String(value.purpose)))
+        throw invalid();
+    return Object.freeze({
+        ownerId: value.ownerId, operationId: value.operationId, planSha256: value.planSha256,
+        implementation: value.implementation, imageSha256: value.imageSha256,
+        purpose: value.purpose,
+    });
+}
+function sameQualificationOperation(left, right) {
+    const a = qualificationOperationIdentity(left), b = qualificationOperationIdentity(right);
+    return identityKeys.every(key => a[key] === b[key]);
+}
+function requireQualificationOperationStopped(identity, scopeId, value) {
+    qualificationOperationIdentity(identity);
+    if (!matches(scopeId, digest) || !record(value) || Object.keys(value).length !== 3
+        || value.scopeId !== scopeId || value.namespaceInitStopped !== true
+        || !sameQualificationOperation(identity, value.identity))
+        throw invalid();
+}
+/** A complete fixed inventory, one start and one confirmed terminal per slot; no adoption or replay. */
+function requireCompleteQualificationOperations(slots, rows, tuple) {
+    if (!slots.length || slots.some(slot => !matches(slot.operationId, identifier)
+        || !['corpus-case', 'paired-review'].includes(slot.purpose))
+        || new Set(slots.map(slot => slot.operationId)).size !== slots.length)
+        throw invalid();
+    const expected = new Map(slots.map(slot => [slot.operationId, slot]));
+    const started = new Map();
+    const finished = new Set();
+    const scopes = new Set();
+    for (const row of rows) {
+        const identity = qualificationOperationIdentity(row.identity);
+        const slot = expected.get(identity.operationId);
+        if (!slot || slot.purpose !== identity.purpose || !matches(row.scopeId, digest)
+            || identity.planSha256 !== tuple.planSha256 || identity.implementation !== tuple.implementation
+            || identity.imageSha256 !== tuple.imageSha256)
+            throw invalid();
+        if (row.event === 'start') {
+            if (started.has(identity.operationId) || scopes.has(row.scopeId)
+                || row.outcome !== undefined || row.namespaceInitStopped !== undefined)
+                throw invalid();
+            started.set(identity.operationId, row);
+            scopes.add(row.scopeId);
+        }
+        else if (row.event === 'stopped') {
+            const start = started.get(identity.operationId);
+            if (!start || finished.has(identity.operationId) || start.scopeId !== row.scopeId
+                || !sameQualificationOperation(start.identity, identity) || row.outcome !== 'completed'
+                || row.namespaceInitStopped !== true)
+                throw invalid();
+            finished.add(identity.operationId);
+        }
+        else
+            throw invalid();
+    }
+    if (finished.size !== expected.size)
+        throw invalid();
+}
+function record(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function matches(value, pattern) { return typeof value === 'string' && pattern.test(value); }
+function invalid() { return new Error('Qualification operation ownership or stopped-scope evidence is incomplete.'); }
 
 
 /***/ }),
@@ -139943,6 +140031,7 @@ function authorizationForMemberOnlyAutomation(owner, actor, ownerType) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.codexChatGptSessionFile = codexChatGptSessionFile;
 exports.buildAgentCliEnvironment = buildAgentCliEnvironment;
 exports.checkAgentAuthentication = checkAgentAuthentication;
 const node_fs_1 = __nccwpck_require__(87561);
@@ -139970,9 +140059,14 @@ const DEFAULT_AUTHENTICATION_SYSTEM = {
     },
 };
 function hasCodexChatGptSession(environment) {
+    return codexChatGptSessionFile(environment) !== undefined;
+}
+/** Private transport may relocate exactly the session selected by this policy. Never log this path or its bytes. */
+function codexChatGptSessionFile(environment = process.env) {
     const codexHome = environment.CODEX_HOME?.trim()
         || (environment === process.env || environment.HOME ? (0, node_path_1.join)(environment.HOME || (0, node_os_1.homedir)(), '.codex') : undefined);
-    return isCodexChatGptAuth(readAuthFile(codexHome ? (0, node_path_1.join)(codexHome, 'auth.json') : undefined));
+    const file = codexHome ? (0, node_path_1.join)(codexHome, 'auth.json') : undefined;
+    return isCodexChatGptAuth(readAuthFile(file)) ? file : undefined;
 }
 function hasOpenCodeLocalSession(environment) {
     const dataDirectory = resolveOpenCodeDataDirectory(environment);
@@ -140237,6 +140331,8 @@ const agent_source_snapshot_integrity_1 = __nccwpck_require__(5206);
 const agent_private_install_root_1 = __nccwpck_require__(44640);
 const agent_source_snapshot_1 = __nccwpck_require__(59205);
 const agent_execution_plan_1 = __nccwpck_require__(12253);
+const qualification_investigation_admission_1 = __nccwpck_require__(42224);
+const qualification_operation_scope_1 = __nccwpck_require__(45927);
 const MAX_STDERR_BYTES = 8 * 1024;
 function runAgentCli(plan, prompt, signal, onToolDiagnostic) {
     return new Promise((resolve, reject) => {
@@ -140245,6 +140341,13 @@ function runAgentCli(plan, prompt, signal, onToolDiagnostic) {
         try {
             runtimeDirectory = verifyOwnedRuntimeDirectory(plan.runtimeDirectory);
             verifyAdmittedPlan(plan, runtimeDirectory);
+            if (plan.qualificationInvestigation && signal?.aborted) {
+                throw new agent_cli_contracts_1.AgentCliError('Agent CLI execution was cancelled.', 'cancelled');
+            }
+            if (plan.qualificationInvestigation !== undefined
+                && !(0, qualification_investigation_admission_1.isAdmittedQualificationInvestigation)(plan, signal)) {
+                throw new agent_cli_contracts_1.AgentCliError('Qualification investigation plan has no matching in-process admission.', 'configuration');
+            }
             if (plan.brokeredVerification && (plan.capability !== 'findings'
                 || plan.workspaceMode !== 'read-only' || plan.sourceSnapshot || plan.sourceDeadlineMs !== undefined)) {
                 throw new agent_cli_contracts_1.AgentCliError('Invalid brokered verification execution plan.', 'configuration');
@@ -140319,6 +140422,8 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
     let outputBytes = 0;
     let settled = false;
     let terminationError;
+    const contained = (0, qualification_investigation_admission_1.isAdmittedQualificationInvestigation)(plan, signal);
+    let scopeTermination;
     const timers = {};
     const finishResolve = (value) => {
         if (settled)
@@ -140348,6 +140453,14 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
         terminationError = error;
         if (timers.timeout)
             clearTimeout(timers.timeout);
+        if (contained) {
+            // No process-group fallback: escaped or reparented children belong
+            // to the complete operation's namespace. Its private owner must
+            // confirm stop before this execution can settle.
+            scopeTermination = (0, qualification_operation_scope_1.stopQualificationOperationPlan)(plan, signal, signal?.aborted || error instanceof agent_cli_contracts_1.AgentCliError && error.category === 'cancelled' ? 'cancelled' : 'failed');
+            void scopeTermination.then(() => finishReject(error), () => finishReject(new agent_cli_contracts_1.AgentCliError('Qualification operation stop is unconfirmed.', 'process')));
+            return;
+        }
         signalProcessTree(child, 'SIGTERM');
         timers.force = setTimeout(() => {
             if (child.exitCode === null)
@@ -140388,7 +140501,11 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
     const onStdinError = () => beginTermination(new agent_cli_contracts_1.AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = () => finishReject(new agent_cli_contracts_1.AgentCliError('Unable to start agent CLI.', 'process'));
     const onClose = (code) => {
+        if (settled)
+            return;
         if (terminationError) {
+            if (scopeTermination)
+                return;
             finishReject(terminationError);
             return;
         }
@@ -140411,7 +140528,10 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
                 }
                 catch { /* Diagnostic observers cannot change execution semantics. */ }
             }
-            finishResolve(decodeAgentCliOutput(plan.outputProtocol, Buffer.concat(stdoutChunks).toString('utf8')));
+            const stdout = Buffer.concat(stdoutChunks).toString('utf8');
+            if (contained)
+                (0, qualification_operation_scope_1.recordQualificationRuntimeCliEvidence)(plan, signal, stdout);
+            finishResolve(decodeAgentCliOutput(plan.outputProtocol, stdout));
         }
         catch (error) {
             finishReject(error instanceof agent_cli_contracts_1.AgentCliError
@@ -140419,7 +140539,7 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
                 : outputFailure('Agent CLI returned invalid output.', 'unclassified'));
         }
     };
-    if (!plan.brokeredVerification) {
+    if (!plan.brokeredVerification && !(0, qualification_investigation_admission_1.isAdmittedQualificationInvestigation)(plan, signal)) {
         timers.timeout = setTimeout(() => {
             beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI timed out after ${plan.timeoutMs}ms.`, 'timeout'));
         }, plan.timeoutMs);
@@ -140440,7 +140560,34 @@ function decodeAgentCliOutput(protocol, raw) {
     }
     if (protocol === 'json-lines-text-events')
         return decodeJsonLinesTextEvents(raw);
+    if (protocol === 'codex-json-events')
+        return decodeCodexJsonEvents(raw);
     return assertNeverOutputProtocol(protocol);
+}
+function decodeCodexJsonEvents(raw) {
+    if (!raw.endsWith('\n'))
+        throw outputFailure('Agent CLI returned incomplete JSON event output.', 'malformed-json-event');
+    let output, completed = 0;
+    for (const line of raw.split(/\r?\n/u).filter(line => line.trim())) {
+        let event;
+        try {
+            event = JSON.parse(line);
+        }
+        catch {
+            throw outputFailure('Agent CLI returned malformed JSON event output.', 'malformed-json-event');
+        }
+        if (!event || typeof event !== 'object' || Array.isArray(event) || typeof event.type !== 'string'
+            || event.type === 'error' || event.type === 'turn.failed' || completed) {
+            throw outputFailure('Agent CLI returned an invalid JSON event.', 'invalid-json-event');
+        }
+        if (event.type === 'item.completed' && event.item?.type === 'agent_message' && typeof event.item.text === 'string')
+            output = event.item.text;
+        if (event.type === 'turn.completed')
+            completed++;
+    }
+    if (completed !== 1 || !output?.trim())
+        throw outputFailure('Agent CLI returned no text completion events.', 'missing-text-events');
+    return output.trim();
 }
 function decodeJsonLinesTextEvents(raw) {
     const lines = raw.split(/\r?\n/u).map(line => line.trim()).filter(Boolean);
@@ -158969,6 +159116,8 @@ const agent_source_snapshot_policy_1 = __nccwpck_require__(1667);
 const agent_source_snapshot_1 = __nccwpck_require__(59205);
 const agent_source_snapshot_workspace_1 = __nccwpck_require__(24092);
 const agent_private_install_root_1 = __nccwpck_require__(44640);
+const qualification_investigation_admission_1 = __nccwpck_require__(42224);
+const qualification_operation_scope_1 = __nccwpck_require__(45927);
 const DEFAULT_SYSTEM = {
     resolveExecutable(executable, environment) {
         try {
@@ -159006,6 +159155,32 @@ class AgentExecutionPlanner {
     prepare(request) {
         return this.preparePlan(request);
     }
+    /** Trusted qualification composition only; ordinary callers keep prepare(). */
+    prepareQualificationInvestigation(request) {
+        if (request.capability !== 'findings' || request.sourceSnapshot || !request.signal) {
+            throw new agent_cli_contracts_1.AgentCliError('Qualification investigation requires findings, no source snapshot, and explicit cancellation.', 'configuration');
+        }
+        if (request.signal.aborted)
+            throw new agent_cli_contracts_1.AgentCliError('Agent CLI execution was cancelled.', 'cancelled');
+        try {
+            (0, qualification_operation_scope_1.requireQualificationOperationScope)(request.signal);
+        }
+        catch {
+            throw new agent_cli_contracts_1.AgentCliError('Qualification investigation requires its exact live owned operation scope.', 'configuration');
+        }
+        const runtimeToolEvidence = (0, qualification_operation_scope_1.qualificationRuntimeCliEvidenceMode)(request.signal);
+        if (runtimeToolEvidence && request.configuration.provider !== 'codex') {
+            throw new agent_cli_contracts_1.AgentCliError('Runtime tool evidence requires the admitted Codex provider.', 'configuration');
+        }
+        const plan = this.preparePlan(request, undefined, runtimeToolEvidence);
+        try {
+            return (0, qualification_investigation_admission_1.admitQualificationInvestigationPlan)({ ...plan, qualificationInvestigation: true }, request.signal);
+        }
+        catch (error) {
+            (0, node_fs_1.rmSync)(plan.runtimeDirectory, { recursive: true, force: true });
+            throw error;
+        }
+    }
     prepareBrokeredVerification(request, emptyWorkspace) {
         const workspace = (0, node_fs_1.realpathSync)(emptyWorkspace);
         if (request.capability !== 'findings' || request.sourceSnapshot || (0, node_fs_1.readdirSync)(workspace).length !== 0) {
@@ -159013,7 +159188,7 @@ class AgentExecutionPlanner {
         }
         return this.preparePlan(request, workspace);
     }
-    preparePlan(request, brokeredWorkspace) {
+    preparePlan(request, brokeredWorkspace, runtimeToolEvidence = false) {
         const startedAt = performance.now();
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
@@ -159069,6 +159244,7 @@ class AgentExecutionPlanner {
                 runtimeDirectory,
                 ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
                 ...(brokeredWorkspace ? { brokeredVerification: true } : {}),
+                ...(runtimeToolEvidence ? { runtimeToolEvidence: true } : {}),
             });
             stage = 'artifacts';
             const artifacts = materializeArtifacts([
@@ -160254,6 +160430,226 @@ function trustedUnixShellPath(name) {
 
 /***/ }),
 
+/***/ 42224:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.admitQualificationInvestigationPlan = admitQualificationInvestigationPlan;
+exports.isAdmittedQualificationInvestigation = isAdmittedQualificationInvestigation;
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const qualification_operation_scope_1 = __nccwpck_require__(45927);
+// In-process authority, never an environment/configuration/serialized receipt.
+// Only the ordinary planner registers plans, after its complete preflight.
+const admissions = new WeakMap();
+function admitQualificationInvestigationPlan(plan, signal) {
+    if (plan.capability !== 'findings' || plan.workspaceMode !== 'read-only'
+        || plan.sourceSnapshot || plan.sourceDeadlineMs !== undefined || plan.brokeredVerification
+        || plan.childNetwork !== 'deny' || plan.approval !== 'never' || plan.sessionPersistence !== false) {
+        throw new agent_cli_contracts_1.AgentCliError('Qualification investigation requires ordinary read-only findings authority.', 'configuration');
+    }
+    (0, qualification_operation_scope_1.bindQualificationOperationPlan)(plan, signal);
+    // A spread/copy loses admission. Freeze all plan-owned mutable collections
+    // so a registered object cannot later acquire different process authority.
+    Object.freeze(plan.argv);
+    if (plan.launcherArgv)
+        Object.freeze(plan.launcherArgv);
+    Object.freeze(plan.environment);
+    for (const artifact of plan.artifacts)
+        Object.freeze(artifact);
+    Object.freeze(plan.artifacts);
+    Object.freeze(plan.runtimeContract);
+    Object.freeze(plan);
+    admissions.set(plan, signal);
+    return plan;
+}
+function isAdmittedQualificationInvestigation(plan, signal) {
+    return plan.qualificationInvestigation === true && signal !== undefined && admissions.get(plan) === signal
+        && (0, qualification_operation_scope_1.hasQualificationOperationPlan)(plan, signal);
+}
+
+
+/***/ }),
+
+/***/ 45927:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.withQualificationOperationScope = withQualificationOperationScope;
+exports.requireQualificationOperationScope = requireQualificationOperationScope;
+exports.bindQualificationOperationPlan = bindQualificationOperationPlan;
+exports.withQualificationRuntimeCliEvidence = withQualificationRuntimeCliEvidence;
+exports.qualificationRuntimeCliEvidenceMode = qualificationRuntimeCliEvidenceMode;
+exports.recordQualificationRuntimeCliEvidence = recordQualificationRuntimeCliEvidence;
+exports.hasQualificationOperationPlan = hasQualificationOperationPlan;
+exports.qualificationOperationTermination = qualificationOperationTermination;
+exports.stopQualificationOperationPlan = stopQualificationOperationPlan;
+const node_async_hooks_1 = __nccwpck_require__(92761);
+const qualification_operation_scope_policy_1 = __nccwpck_require__(79148);
+const current = new node_async_hooks_1.AsyncLocalStorage();
+const plans = new WeakMap();
+const runtimeCliCapture = new node_async_hooks_1.AsyncLocalStorage();
+const capturedPlans = new WeakMap();
+// The bootstrap gives one complete operation its own namespace. Neither a new
+// async context nor a copied port can make that operation/namespace reusable.
+const consumedIdentities = new Set();
+const consumedNamespaces = new Set();
+/** Immutable bootstrap composition only; never read a grant from configuration or a receipt. */
+async function withQualificationOperationScope(port, execute) {
+    const identity = (0, qualification_operation_scope_policy_1.qualificationOperationIdentity)(port.identity);
+    if (current.getStore() || !(port.signal instanceof AbortSignal)
+        || !/^[a-f0-9]{64}$/u.test(port.scopeId) || typeof port.requestStop !== 'function'
+        || !(port.stopped instanceof Promise))
+        throw unavailable();
+    const source = port, scopeId = source.scopeId, stop = source.requestStop.bind(source);
+    const identityKey = JSON.stringify(identity);
+    if (consumedIdentities.has(identityKey) || consumedNamespaces.has(scopeId))
+        throw unavailable();
+    // Reserve synchronously before callbacks or awaits; terminal failures never
+    // release authority for an unregistered retry. Invalid ports above consume none.
+    consumedIdentities.add(identityKey);
+    consumedNamespaces.add(scopeId);
+    const bound = Object.freeze({ identity, scopeId, signal: source.signal,
+        requestStop: stop,
+        stopped: source.stopped.then(proof => {
+            (0, qualification_operation_scope_policy_1.requireQualificationOperationStopped)(identity, scopeId, proof);
+            return proof;
+        }),
+    });
+    const live = { port: bound, stopping: false, stopped: false };
+    // Attach rejection handling at admission. Unknown stop state still rejects the
+    // awaited terminal below, without producing an unhandled-rejection side path.
+    void bound.stopped.then(() => { live.stopped = true; }, () => undefined);
+    return current.run(live, async () => {
+        let reason = 'failed';
+        let outcome;
+        const abort = () => requestStop(live, 'cancelled');
+        bound.signal.addEventListener('abort', abort, { once: true });
+        try {
+            if (bound.signal.aborted) {
+                reason = 'cancelled';
+                throw unavailable();
+            }
+            const result = await Promise.race([execute(), bound.stopped.then(() => { throw unavailable(); })]);
+            reason = bound.signal.aborted ? 'cancelled' : 'completed';
+            if (reason === 'cancelled')
+                throw unavailable();
+            if (live.stopping || live.stopped)
+                throw unavailable();
+            outcome = { value: result };
+        }
+        catch (error) {
+            outcome = { error };
+        }
+        finally {
+            bound.signal.removeEventListener('abort', abort);
+        }
+        requestStop(live, bound.signal.aborted ? 'cancelled' : reason);
+        await bound.stopped;
+        if (bound.signal.aborted)
+            throw unavailable();
+        if ('error' in outcome)
+            throw outcome.error;
+        return outcome.value;
+    });
+}
+/** Must run before ordinary planner preparation, including CLI version probes. */
+function requireQualificationOperationScope(signal) {
+    const live = current.getStore();
+    if (!live || live.stopping || live.stopped || live.port.signal !== signal || signal.aborted)
+        throw unavailable();
+}
+function bindQualificationOperationPlan(plan, signal) {
+    requireQualificationOperationScope(signal);
+    if (plans.has(plan))
+        throw unavailable();
+    plans.set(plan, current.getStore());
+    const capture = runtimeCliCapture.getStore();
+    if (capture && capture.active && capture.live === current.getStore())
+        capturedPlans.set(plan, capture);
+}
+/** Private runtime-control evidence only: no request field, environment switch or JSON grants this capture. */
+async function withQualificationRuntimeCliEvidence(signal, record, execute) {
+    requireQualificationOperationScope(signal);
+    const live = current.getStore();
+    if (live.port.identity.purpose !== 'runtime-admission' || runtimeCliCapture.getStore()
+        || typeof record !== 'function')
+        throw unavailable();
+    const capture = { live, record, active: true };
+    try {
+        return await runtimeCliCapture.run(capture, execute);
+    }
+    finally {
+        capture.active = false;
+    }
+}
+/** Select framing before any version probe; ordinary purposes retain their existing protocol. */
+function qualificationRuntimeCliEvidenceMode(signal) {
+    requireQualificationOperationScope(signal);
+    const live = current.getStore();
+    if (live.port.identity.purpose !== 'runtime-admission')
+        return false;
+    const capture = runtimeCliCapture.getStore();
+    if (!capture?.active || capture.live !== live)
+        throw unavailable();
+    return true;
+}
+/** Called on actual successful child close, before decoding model text. Critical recording cannot be swallowed. */
+function recordQualificationRuntimeCliEvidence(plan, signal, stdout) {
+    const live = plans.get(plan);
+    if (!matchesPlan(live, signal) || live.stopping)
+        throw unavailable();
+    if (live.port.identity.purpose !== 'runtime-admission')
+        return;
+    const capture = capturedPlans.get(plan);
+    if (!capture?.active || capture.live !== live || plan.provider !== 'codex' || plan.outputProtocol !== 'codex-json-events')
+        throw unavailable();
+    if (capture.record({ provider: plan.provider, protocol: plan.outputProtocol, stdout }) !== undefined)
+        throw unavailable();
+}
+function hasQualificationOperationPlan(plan, signal) {
+    const live = plans.get(plan);
+    return matchesPlan(live, signal) && !live.stopping;
+}
+function matchesPlan(live, signal) {
+    return live !== undefined && !live.stopped && signal !== undefined && live.port.signal === signal;
+}
+/** Existing verifier transport also belongs to this same complete operation.
+ * Ordinary production calls receive no qualification termination capability. */
+function qualificationOperationTermination(signal) {
+    const live = current.getStore();
+    if (!live)
+        return undefined;
+    if (!signal)
+        throw unavailable();
+    requireQualificationOperationScope(signal);
+    return reason => requestStop(live, reason);
+}
+/** The executor requests termination of the entire operation, with no group-only fallback. */
+function stopQualificationOperationPlan(plan, signal, reason) {
+    const live = plans.get(plan);
+    // Cancellation may already have requested stop through the scope's signal
+    // listener. Existing executors must still await that same exact confirmation,
+    // while hasQualificationOperationPlan refuses any new execution.
+    if (!matchesPlan(live, signal))
+        return Promise.reject(unavailable());
+    requestStop(live, reason);
+    return live.port.stopped.then(() => undefined);
+}
+function requestStop(live, reason) {
+    if (live.stopping || live.stopped)
+        return;
+    live.stopping = true;
+    live.port.requestStop(reason);
+}
+function unavailable() { return new Error('Qualification requires its exact live owned operation scope.'); }
+
+
+/***/ }),
+
 /***/ 55362:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -161177,6 +161573,7 @@ const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
 const sensitive_text_1 = __nccwpck_require__(47122);
 const agent_execution_planner_1 = __nccwpck_require__(11800);
+const qualification_operation_scope_1 = __nccwpck_require__(45927);
 const agent_cli_execution_1 = __nccwpck_require__(30248);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const agent_execution_plan_1 = __nccwpck_require__(12253);
@@ -161202,7 +161599,16 @@ function askManagedBugbotShadowTurn(request) {
         const environment = (0, agent_authentication_1.buildAgentCliEnvironment)(configuration.provider, process.env, configuration.modelProvider);
         const executable = (0, agent_executable_invocation_1.resolveAgentExecutablePath)(configuration.executable ?? (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(configuration.provider).executable, environment);
         const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(executable, configuration.provider, environment);
-        return ask({ ...request, runtime: { ...invocation, environment } });
+        const terminate = (0, qualification_operation_scope_1.qualificationOperationTermination)(request.signal);
+        request.onRuntimeAdmission?.(invocation);
+        return ask({ ...request, runtime: { ...invocation, environment, ...(terminate && { onTermination(failure) {
+                        try {
+                            request.onTermination?.(failure);
+                        }
+                        finally {
+                            terminate(failure === 'investigation-canceled' ? 'cancelled' : 'failed');
+                        }
+                    } }) } });
     }
     catch {
         return Promise.resolve({ fact: { failure: 'provider-runtime-unavailable' } });
@@ -242557,7 +242963,12 @@ function ask({ cwd, prompt, schema, threadId, signal, configuration, onInvocatio
         const child = spawn(runtime?.executable ?? (configuration.executable || 'codex'), [...(runtime?.prefixArgs ?? []), ...argv], { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
         let tail = '', stderr = '', output = null, usage = null, actualThread = null, failure = null;
         let completions = 0, bytes = 0, grace, reportedModel, turnStarted = false;
-        const stop = code => { failure ??= code; child.kill('SIGKILL'); };
+        const stop = code => {
+            failure ??= code;
+            try { runtime?.onTermination?.(code); }
+            catch { failure = 'provider-evidence-unavailable'; }
+            finally { child.kill('SIGKILL'); }
+        };
         const cancel = () => stop('investigation-canceled');
         if (signal?.aborted) cancel();
         else signal?.addEventListener('abort', cancel, { once: true });
@@ -242578,7 +242989,7 @@ function ask({ cwd, prompt, schema, threadId, signal, configuration, onInvocatio
                     reportedModel = event.model;
                 }
                 // The provider already completed this turn. Reap a process that fails to exit.
-                grace = setTimeout(() => child.kill('SIGKILL'), 1600);
+                grace = setTimeout(() => runtime?.onTermination ? stop('provider-cli-exit-unconfirmed') : child.kill('SIGKILL'), 1600);
             }
             if (!['item.started', 'item.updated', 'item.completed'].includes(event.type)) return;
             // The CLI emits this startup notice when the explicitly disabled host is unavailable.

@@ -1,0 +1,22 @@
+{
+  "at": "2026-11-20T18:30:09.016179+00:00",
+  "sourceCommit": "f06e37e197d301aef7b04319c35362177ecbf72e",
+  "commandExit": 0,
+  "cases": [
+    "ev974-C22",
+    "ev974-C24"
+  ],
+  "passed": 2,
+  "failed": 0,
+  "skipped": 0,
+  "durationMs": 36849.283833,
+  "rawBytes": 344,
+  "rawSha256": "32a8d7b228c8304034c6c38f75d74bd985a268a50c44cf594f45fa052f0fc5a8",
+  "rawLog": "committed-admission-focused.log",
+  "scope": "Committed source and drivers executed through the shipping TS loader; the only tracked working-tree differences were generated CLI and Action bundles, not executed by these focused controls.",
+  "syntheticEvidenceOnly": true,
+  "qualificationModelCalls": 0,
+  "fullReview": "unstarted",
+  "profileQualified": false,
+  "complete232FinalHeadRun": "pending after bundle/evidence commit"
+}

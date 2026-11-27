@@ -1,0 +1,11 @@
+{
+  "sourceBefore": "5241685e8089c9dace4f829214f694126936525d",
+  "case": "ev974-C25",
+  "outcome": "red",
+  "exitCode": 1,
+  "modelCalls": 0,
+  "rawBytes": 1484,
+  "rawSha256": "dd79fc5c1ff9f7114c46988e45e698c40b984d1e459ea6a80e71c51f3088d924",
+  "compressedSha256": "9fd1e16f999cfa35682975041035b4b719db24e1a1136bda9c6bfdc69a2c9fe6",
+  "log": "../../issue-974/controls/v2-loader-admission-red.log.gz"
+}

@@ -2925,6 +2925,18 @@ older plan. Missing history never means resolved.
 
 ### 11. Security, permissions, and privacy
 
+Late-cancellation amendment: cancellation remains live through every awaited
+stop, metadata, cleanup and observer callback before return. Physical namespace
+stop does not freeze the delivered research outcome. Cancellation during final
+cleanup returns interrupted and appends a durable explicit-cancellation
+`operation-incomplete` record even after an earlier successful stop observation.
+Every issued stop settles before return. Preflight records retain their marker.
+Authority normalization preserves every non-preflight incomplete record; a later
+cancellation or runtime/ownership failure makes the complete operation inventory
+ineligible. Original raw prefixes remain immutable. Exact owned identity and
+confirmed stop still gate cleanup; no timeout, retry, extra process effect,
+privilege or public configuration is introduced.
+
 Allow only authorized repository objects and immutable comparisons. Validate
 path traversal, case/normalization, symlink/gitlink, external links, redirects,
 object type, provider scope and maximum sizes before reads. Keep developer
@@ -4435,3 +4447,1670 @@ does not silently redirect it. Preserve prompt/schema/order/retry/runtime/source
 identity, all existing thresholds and zero evaluated-PR writes. A v1 score cannot
 qualify v2, and a failed new campaign still leaves all 42 full reviews unstarted.
 Production verification remains disabled regardless of the eventual score.
+
+## Proposed change: Preregister and evaluate the Luna xhigh detector on the unchanged 174 case EV 07 corpus
+
+- Status: Ready for implementation — reviewed phase-1 contract; measurements unstarted
+- Catalog capability: bugbot-analysis-and-autofix
+
+### 1. Executive summary
+
+This update preregisters one independently reviewable qualification phase for the Luna xhigh detector on corpus revision 2. It preserves the existing analysis, publication, and autofix contract and all historical corpus evidence. Before any measured call, the exact source, drivers, runtime, prompts, schemas, corpus selection, ordering, and retry policy must be committed and admitted. The result must account for every outer case and actual follow-up, including failure or interruption. A passing detector score can admit the paired full-review phase under its existing rules; it does not qualify or activate a verifier profile. Production verification remains disabled.
+
+### 2. Problem, current behavior, and evidence
+
+#### 2.1 Problem
+
+The previous campaign did not pass the independent detection gate, and its older source pin cannot establish the behavior of the merged implementation or a later correction. Operators need a result tied to the exact reviewed source and execution tuple, with enough retained evidence to distinguish a complete pass from a failed, interrupted, unavailable, or incomplete campaign.
+
+#### 2.2 Current behavior
+
+The existing qualification contract uses committed plans and source/runtime identity checks; campaign score thresholds assess completed evidence and do not impose research deadlines or token ceilings. The quality-observability contract records that corpus revision 2 keeps the 174 IDs, order, and labels unchanged, while preserving revision 1 and historical measurements. It requires a new committed plan selecting and hashing revision 2 before measurement. No revision-2 qualification result is established by the corpus correction itself. See `docs/bugbot/quality-observability.mdx`.
+
+The agent execution contract binds pre-branch SDD work to its immutable source view and applies existing preparation and operation deadlines in that scope. The proposed qualification lifecycle must be a separately authenticated, cancellation-only, read-only route that preserves the normal detector workspace and execution path; it must not broaden ordinary consumer defaults or the SDD source deadline. The runtime contract and its evidence are described in `docs/agents/execution-contract.mdx` and `specs/agent-execution-policy-hardening.md`.
+
+#### 2.3 Evidence and unknowns
+
+The selected tree contains the current owning contract at `specs/bugbot-analysis-publication-and-autofix.md`, the runtime owner at `specs/agent-execution-policy-hardening.md`, the execution guidance at `docs/agents/execution-contract.mdx`, and corpus-revision evidence under `quality/bugbot/evidence/issue-985/`. These establish the contracts and revision relationship cited above; they do not establish that issue #974's campaign has run or passed. The historical failure is context for this proposed delta, not a result for the new source pin. Actual qualification outcome, provider-reported model identity, and usage remain unknown until supported by retained run evidence.
+
+### 3. Actors, surfaces, and terminology
+
+The qualification maintainer prepares and reviews the immutable plan and evidence; the authenticated qualification composition admits the narrowly scoped research operation; the ordinary detector and its provider adapter perform the analysis; and an independent reviewer inspects the complete ledger and score. The evidence README and plan/results artifacts are the operator-facing record, alongside the existing quality-observability documentation.
+
+“Corpus revision 2” means the explicitly selected corrected corpus with the original 174 case IDs, order, and labels. “Outer case” means one of those corpus entries; an application-generated literal follow-up is recorded as part of the actual operation, not silently omitted. “Configured/resolved identity” records the committed selection and runtime resolution; “provider-reported identity” records only what the provider actually reports, and remains unknown if unavailable. “Research lifecycle” means the trusted read-only investigation route with explicit cancellation and descendant cleanup. “Passing corpus” means all unchanged scoring gates pass on complete evidence; it is not verifier-profile qualification.
+
+### 4. Goals, non-goals, and fixed invariants
+
+#### 4.1 Goals
+
+1. Evaluate exactly the explicitly pinned revision-2 corpus using the ordinary detector with the proposed Codex/OpenAI `gpt-6-luna` xhigh configuration, without model substitution or a claim that Sol verification ran.
+2. Make the preregistration and complete outcome independently inspectable: preserve all 174 case outcomes, actual generated-literal follow-ups, attempts, bounded failures, interruptions, observer state, prompt/schema identity, configured and resolved runtime identity, and provider-reported identity when available.
+3. Apply the existing gates unchanged: precision at least 90%, recall at least 85%, F1 at least 87%, exact location, severity, and category each at least 80%, and Brier score at most 0.16. Failed, interrupted, missing, or incomplete evidence cannot admit the paired phase.
+4. Admit the paired full-review phase only after a genuinely passing corpus and only for the same committed implementation, drivers, runtime, and profile. Freeze the full-review driver and admission closure before the corpus run; a failed or incomplete corpus leaves that phase unstarted.
+5. Retain the deterministic controls for source/runtime rejection, next-phase rejection after corpus failure, incomplete-attempt visibility, and acceptance of unknown usage as telemetry. Evaluated PR write attempts remain zero.
+
+#### 4.2 Non-goals
+
+This is a backlog specification delta, not an execution authorization, campaign result, profile qualification, release, or production activation. It does not reopen the earlier delivery, change labels or historical measurements, install a default, enable verification, or claim real provider, human Setup, or platform acceptance. It does not introduce a model fallback, public setting, ambient switch, write-capable research role, artificial empty detector workspace, ad hoc brokered flag, inflated timeout, or replacement executor.
+
+#### 4.3 Fixed invariants
+
+- Preserve revision 1/default behavior, all 174 revision-2 identities/order/labels, the 173 unchanged cases, and every frozen historical measurement. Selection and corpus loading must be coherent; foreign path/hash, wrong count, or changed identities reject before model execution.
+- Commit and independently admit the exact source and runtime tuple, actual CLI and launcher digests, drivers, corpus hashes, prompts, schemas, order, concurrency, and retry policy before measured calls. Preparation/admission is not proof that a process spawned; flags do not prove a provider-reported model or session.
+- Use the ordinary detector, capability, provider, and canonical source workspace. The research route is authenticated, read-only, and cancellation-only. Explicit abort cancels the complete ordinary operation and descendants and cleans owned private artifacts. Source-snapshot, authority, write, or integrity mismatches reject before spawn. Existing consumer defaults, technical version/ACL probes, and pre-branch SDD source deadlines retain their scope.
+- Research elapsed time, turn/read counts, and token usage are telemetry, not investigation cutoffs or grounds to reject supported evidence. Preserve unknown usage as unknown. Do not retry to chase a passing score; preserve first failures, all attempts, and negative admission decisions.
+- Keep the external independently supplied bootstrap/plan pins and sanitized Git admission before imports or CLI probes. A passing detector corpus admits only the same frozen paired phase; zero actual candidates means zero verifier sessions, and phase 42 remains unstarted until genuine corpus passage. This result does not qualify a verifier profile.
+- Production verification stays disabled, defaults and releases remain unchanged, and evaluated PR write attempts stay at zero.
+
+| Requirement | Behavior |
+| --- | --- |
+| EV974-G01 | Select only the explicitly pinned v2 corpus from merged #985; preserve v1/default,174 IDs/order/labels,173 unchanged cases and every frozen historical measurement. |
+| EV974-G02 | Use the ordinary detector/benchmark and its actual generated-literal follow-ups with Codex/OpenAI gpt-6-luna xhigh. Record configured/resolved identities separately from provider-reported identities; unavailable provider identity/usage remains unknown. No model substitution. |
+| EV974-G03 | Durably retain every application CLI attempt, prompt/schema identity, response or bounded failure, observer state, interruption and outer-case outcome. Distinguish preparation/admission from proof of process spawn; do not infer a session or reported model from flags. |
+| EV974-G04 | Research ends on completion, actual failure or explicit cancellation, with the complete ordinary operation and descendants canceled and owned private artifacts cleaned. Research time, turn/read counts or token usage cannot cut the investigation short or reject supported evidence. Write/source-snapshot/authority mismatches reject before spawn. |
+| EV974-G05 | Apply all existing precision/recall/F1/location/severity/category/Brier gates to all 174 cases. Failed, interrupted, missing or incomplete attempts remain visible and cannot admit the paired phase. |
+| EV974-G06 | Freeze one coherent corpus and full-review driver/admission closure before 174. A passing v2 corpus can admit only the same implementation/drivers/runtime/profile to the fixed14-by-three phase. Zero actual candidates entails zero verifier sessions; phase42 remains unstarted until a genuinely passing corpus. |
+| EV974-G07 | Preserve the external independently supplied bootstrap/plan pins, source/lock/compiler/driver/runtime identity and sanitized Git admission before imports or CLI probes. Freeze actual CLI/interpreter/launcher digests and prompt/schema generators before measurement. |
+| EV974-G08 | Preserve first failures, complete ledgers and negative decisions; no rerun to chase a pass. A detector pass is not a qualified verifier profile. Production remains disabled, no default installation/release occurs, and evaluated PR write attempts remain zero. |
+
+### 5. Current versus proposed product journey
+
+The retained owner’s review journey remains in force: pin the review inputs, collect and validate detector output, verify eligible findings, then publish only after validation and freshness checks. This delta adds a separately preregistered qualification journey for the detector on the unchanged EV-07 corpus.
+
+| Stage | Current | Proposed delta | Operator-visible result |
+|---|---|---|---|
+| Admit | The ordinary findings path uses the canonical repository workspace and existing execution bounds. | After the stated prerequisites are merged, admit only the explicitly pinned v2 corpus and trusted research composition. Keep v1 as the default. Reject source, runtime, driver, schema, output, credential, or authority mismatches before child spawn. | The preregistration identifies the exact source and execution tuple before measurement. |
+| Measure | The prior EV-07 campaign is historical evidence from an older source pin. | Run the ordinary detector with the proposed Codex/OpenAI `gpt-6-luna` xhigh configuration against all 174 cases, in the committed order and retry policy. Retain every actual generated-literal follow-up. | One complete, inspectable attempt ledger; provider-reported model and usage remain distinct from configured/resolved identities and may be unknown. |
+| Decide | The retained contract governs ordinary findings and publication. | Apply every unchanged numerical gate to the complete corpus. Failed, interrupted, missing, or incomplete attempts remain visible and cannot admit the paired phase. | Publish the exact score and outcome, including failure; incomplete or failed corpus leaves full review unstarted. |
+| Hand off | Qualification does not activate production verification. | A passing v2 corpus may admit only the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase. | No claim that Sol ran, no verifier qualification from detector results, and production remains disabled. |
+
+Text equivalent: prerequisite merge and exact preregistration -> pinned v2 admission -> 174-case detector measurement and ledger -> gate decision -> either stop with retained evidence or admit the unchanged tuple to the next phase. The retained owner at `specs/bugbot-analysis-publication-and-autofix.md` remains authoritative for finding identity, verification, publication, and autofix behavior.
+
+### 6. Functional behavior and state model
+
+#### 6.1 Qualification path
+
+1. The authenticated qualification composition selects the research lifecycle only after prerequisites are merged. Freeze the final implementation, actual CLI and launcher digests, drivers, corpus, prompts, schemas, order, and retry policy before any measured call.
+2. Load only the explicitly pinned v2 corpus selected from merged #985. Confirm 174 cases, preserved v1/default behavior, the same 174 IDs/order/labels, 173 unchanged cases, and every frozen historical measurement. Reject a foreign path or hash, wrong count, or altered identity set before model execution.
+3. Run the ordinary detector/capability/provider path in its canonical source workspace with read-only provider arguments and the ordinary output contract. Use Codex/OpenAI `gpt-6-luna` xhigh; do not substitute a model. Record configured and resolved identities separately from provider-reported identities. Missing provider identity or usage is unknown, not inferred from flags.
+4. Retain each outer-case attempt, actual generated-literal follow-up, prompt/schema identity, response or bounded failure, observer state, interruption, and outer outcome. Distinguish preparation/admission from evidence that a child process actually spawned. Preserve the first failure and do not rerun to chase a pass.
+5. Score all 174 cases using the unchanged gates: precision at least 90%, recall at least 85%, F1 at least 87%, exact location/severity/category each at least 80%, and Brier at most 0.16. Keep the complete ledger and exact score, including negative decisions.
+6. Only a genuinely passing corpus may admit the identical implementation, drivers, runtime, and profile to the fixed 14-by-three phase. Zero actual candidates means zero verifier sessions. Phase 42 stays unstarted until the corpus passes.
+
+#### 6.2 Alternative, interruption, and recovery behavior
+
+- A source snapshot, write/source mismatch, or authority mismatch rejects before spawn. Preparation or admission alone is not proof of a process launch.
+- Explicit cancellation ends research, cancels the complete ordinary operation and descendants, and cleans owned private artifacts. Research duration, turn/read counts, and token usage cannot end investigation or reject supported evidence. Existing ordinary consumer defaults and technical version/ACL probes retain their current scope.
+- Failed, interrupted, missing, or incomplete attempts remain in the results and block paired-phase admission. Unknown usage is valid optional telemetry. Provider-reported identity stays unknown when unavailable.
+- A detector pass qualifies no verifier profile and authorizes no production activation, default installation, release, or evaluated PR write. Evaluated PR write attempts must be zero.
+
+#### 6.3 State model
+
+| State | Meaning | Allowed next state | Recovery/owner |
+|---|---|---|---|
+| Not admitted | Prerequisites, trusted composition, or source/authority pins are not satisfied. | Admitted only after validation succeeds. | Qualification composition; no child is started on rejection. |
+| Admitted | Exact corpus and preregistration pins are accepted; this does not prove spawn. | Measuring, or rejected before spawn. | Admission boundary records the decision. |
+| Measuring | Outer attempts and any actual follow-ups are being recorded. | Complete, failed, or canceled. | Research owner retains partial ledger and controls explicit cancellation. |
+| Complete | All 174 outer cases and actual follow-ups have terminal outcomes. | Passed or failed gate. | Scorer records the exact result and full ledger. |
+| Failed/canceled/incomplete | Failure, interruption, or missing outcomes prevent a complete passing corpus. | Terminal for this preregistration. | Preserve first failure and artifacts; no pass-chasing rerun or paired phase. |
+| Passed corpus | All unchanged gates pass on complete evidence. | Paired phase admitted with the same frozen tuple. | Qualification owner; no verifier qualification or production activation follows by implication. |
+
+### 7. User-facing configuration
+
+This is a trusted qualification composition, not a new public Action input, CLI option, repository Variable, or ambient environment switch. No caller-supplied model fallback or write-capable exception is added.
+
+| Input | Type and allowed value | Default and scope |
+|---|---|---|
+| Corpus selection | Explicit committed v2 selection with matching path/hash and 174-case identity set | Omitted selection preserves v1/default and historical plan/score bytes; no silent redirect. Selection is frozen for the run. |
+| Detector identity | Codex/OpenAI provider, `gpt-6-luna`, xhigh | Fixed by the preregistration; no model substitution. Configured/resolved and provider-reported identities are recorded separately. |
+| Order and retry policy | Exact committed order and policy | Frozen before measured calls; one outer attempt per case, with ordinary application follow-ups or retries recorded if they actually occur. No rerun to chase a pass. |
+| Usage telemetry | Optional provider-reported usage | Unknown is permitted. Usage cannot stop research, reject supported evidence, or affect scoring/admission. |
+| Cancellation | Explicit cancellation signal | Available to the authorized research operator; on cancellation, stop the operation and descendants and clean owned private artifacts. |
+
+Invalid corpus pins, source/runtime/driver/schema/output pins, or authority reject before spawn. The exact public configuration surface is intentionally not configurable through user-controlled inputs. The selected repository declares `pnpm run validate:specifications` and `pnpm run generate:specifications`; their existence is verified from `package.json`, separately from executed validation.
+
+### 8. Clean Architecture design
+
+#### 8.1 Responsibilities and dependency direction
+
+| Boundary | Owns | Must not own |
+|---|---|---|
+| Domain and pure policy | Corpus identity, gate thresholds, phase-admission decision, terminal outcome classification | Provider calls, process management, or publication effects |
+| Application qualification workflow | Pin validation, measurement orchestration, attempt/follow-up accounting, complete-ledger checks, scoring inputs, and paired-phase admission | Model substitution, mutable corpus selection, or production activation |
+| Semantic execution boundary | Trusted findings-role request, read-only qualification authority, canonical workspace, and cancellation contract | Public switches, ambient authority, or write-capable roles |
+| CLI/process adapter | Actual spawn evidence, bounded response/failure capture, descendant cancellation, and owned-artifact cleanup | Inferring provider identity from configured flags or treating preparation as spawn |
+| Evidence and presentation | Preregistration, complete results ledger, exact score, observer state, interruption, and sanitized recovery facts | Rewriting historical issue-950 evidence or hiding failed/incomplete attempts |
+
+The selected source defines `AgentExecutionPlan` in `src/domain/agent_execution_plan.ts`; planning is composed in `src/infrastructure/agents/agent_execution_planner.ts`; process execution and cancellation are handled in `src/data/repository/agent_cli_execution.ts`; the findings capability adapter is in `src/data/repository/ai/agent_capability_adapter.ts`. The current planner’s brokered verification route requires an empty read-only workspace, while the ordinary findings adapter supplies its request timeout. The proposal therefore requires a narrowly scoped, authenticated, cancellation-only read-only lifecycle through the existing planner and executor while retaining the canonical detector workspace and ordinary detector/capability/provider path. Do not set a brokered flag ad hoc, move detector work to an artificial empty directory, inflate a timeout, or replace detector transport.
+
+The existing independent corpus benchmark uses its remote-free synthetic Git workspace, with only supplied synthetic context in model prompts. Full review MUST retain each real pinned subject checkout; it cannot be moved to an empty brokered workspace. This distinction preserves the existing benchmark protocol and prevents evaluator oracle context from entering model input.
+
+#### 8.2 Contracts and trust boundaries
+
+- Only trusted authenticated qualification composition can select the exception. The plan must bind findings capability, read-only workspace, source/runtime/driver/schema/output identities, credentials isolation, and explicit cancellation authority consistently.
+- Preserve ordinary consumer defaults, pre-branch SDD source deadlines, bounded version/ACL probes, sandbox, credentials, local schema/output validation, and freshness/integrity contracts in their existing scopes.
+- Reject write capability, forged or inconsistent authority, nested/foreign workspace, and ambient provider configuration before child spawn. Preparation/admission must be represented separately from actual process spawn.
+- Research completion, actual failure, or explicit cancellation ends the operation. Cancellation reaches descendants and cleans only owned private artifacts. No elapsed research cutoff, turn/read limit, or token limit may reject supported evidence.
+- Attempt and results artifacts must preserve the frozen inputs, every outer case and actual follow-up, response or bounded failure, unknown telemetry, interruption, and exact gate outcome. Keep prior issue-950 plans and measurements immutable.
+
+#### 8.3 Architecture acceptance
+
+The qualification owner must coordinate the scoped amendment with `specs/agent-execution-policy-hardening.md` and compatible runtime guidance in `docs/agents/execution-contract.mdx`. Validate that selection is unavailable to public configuration and that rejection happens before spawn; cancellation terminates a deterministic long-running child and descendants with cleanup; ordinary and immutable-source deadline behavior remains intact; and read-only execution preserves the canonical workspace. Verification must use actual controlled process/admission operations where required, with no claim that fake tests establish real provider, human setup, or platform acceptance. The actual repository declares `pnpm run validate:specifications`, `pnpm run generate:specifications`, `pnpm run validate:documentation` and `pnpm run validate:agent-docs`; acceptance requires their observed outcomes, separately from command existence.
+
+### 9. UI/UX and content contract
+
+This delta adds one independently reviewable EV-07 detector qualification result to the retained qualification and publication contract in `specs/bugbot-analysis-publication-and-autofix.md` (see “Versioned corpus input correction (#985)”). The run status and its durable evidence must distinguish preregistered, running, passed, failed, incomplete, canceled, and unavailable outcomes. Report the corpus phase as complete only after all 174 outer cases and every actual generated-literal follow-up have terminal outcomes. A passing detector result admits only consideration of the separately gated full-review phase; it does not qualify a verifier profile or enable production.
+
+The evidence README and results view must lead with what happened, what remains unstarted, the impact, the next review action, and links to the exact preregistration and result artifacts. Show aggregate gate outcomes and the exact scores; provide per-case and per-attempt details in the linked ledger. State explicitly when an attempt failed, was interrupted, is missing, or has unknown provider-reported identity or usage. Do not present preparation or admission as proof that a process spawned, configured model identity as provider-reported identity, or a detector pass as evidence that Sol ran. Keep the existing finding/publication surfaces and notification behavior unchanged.
+
+Use plain text labels alongside any status icons, semantic headings, descriptive artifact links, and readable tables on narrow screens. Render evidence as sanitized Markdown and keep raw prompts, credentials, and unrestricted command output out of public summaries. Preserve the existing locale and fallback policy of the owning specification.
+
+### 10. Failure, recovery, and cleanup
+
+Reject source, write-authority, runtime, driver, schema, output-contract, or evidence-integrity mismatches before process spawn. A rejected admission must retain its bounded reason and leave no child process or owned private runtime behind. Distinguish this outcome from an admitted operation whose process actually spawned; flags, plans, or configured argv alone do not establish a session.
+
+Once admitted, the ordinary detector operation and its descendants continue until completion, an actual failure, or explicit cancellation. The research lifecycle has no elapsed-time, turn-count, read-count, or token-usage cutoff. On cancellation, terminate descendants and clean owned private artifacts. Preserve every application CLI attempt, response or bounded failure, observer state, interruption, and outer-case outcome in the durable ledger. Keep one outer attempt per case and the exact preregistered order, concurrency, and retry policy; retain any actual application-generated follow-up or retry, and never rerun to chase a passing score.
+
+A failed, interrupted, missing, or incomplete attempt remains visible and cannot admit the paired phase. A failed or incomplete corpus leaves full review unstarted. A passing corpus can admit only the same frozen implementation, drivers, runtime, and profile to the fixed 14-by-three phase; zero actual candidates means zero verifier sessions. Phase 42 remains unstarted until a genuinely passing corpus. These outcomes are exercised by the lifecycle and admission controls, including `ev974-C03`, `ev974-C07`, `ev974-C12`, and `ev974-C15`.
+
+### 11. Security, permissions, and privacy
+
+The exception applies only to the authenticated qualification composition and its read-only findings route. Retain the canonical detector workspace and ordinary detector, capability, provider, and executor path. Do not expose a public Action input, CLI setting, repository Variable, ambient environment switch, unsupported role, or write-capable route that grants the exception. Reject fixer/write capability and inconsistent or forged authority before any child starts. Preserve ordinary consumer defaults, sandboxing, credential isolation, schema/output validation, and existing technical version, ACL, and pre-branch source-deadline boundaries. The agent-runtime owner must explicitly document the narrow lifecycle exception in its contract and compatible runtime guidance if this route is selected.
+
+Keep independent bootstrap and plan pins, source and lock identity, compiler, driver, runtime, and sanitized Git admission ahead of imports or CLI probes. Freeze actual CLI/interpreter/launcher digests and prompt/schema generators before measurement. Never infer a session or reported model from configuration flags. Preserve unavailable provider-reported identity and usage as unknown; usage is optional telemetry and cannot stop the investigation or disqualify supported evidence. Evaluated PR write attempts remain zero, and production verification remains disabled for every outcome. Authority and boundary controls include `ev974-C04`, `ev974-C05`, `ev974-C06`, and `ev974-C08`.
+
+### 12. Observability and operational UX
+
+The issue974 evidence ledger must make the measurement independently inspectable: selected corpus identity and version, all 174 ordered case identities and labels, frozen historical measurements, source/runtime/driver/profile and prompt/schema identities, configured and provider-reported model identities as separate fields, actual attempts and generated-literal follow-ups, observer state, interruptions, outer-case outcomes, gate calculations, and the final pass/fail/incomplete/unavailable disposition. Preserve unknown usage and provider identity explicitly. Retain the first failure and every negative decision; do not overwrite them with a later run.
+
+Report exact precision, recall, F1, exact location, severity, category, and Brier results against the unchanged gates: precision at least 90%, recall at least 85%, F1 at least 87%, each exact location/severity/category measure at least 80%, and Brier at most 0.16. Account for all cases and attempts even after an early gate failure. Keep v1/default selection and its historical plan and score bytes intact; the explicit v2 selection must preserve the 174 IDs, order, and labels, 173 unchanged cases, and all frozen historical measurements. The pinned corpus and coherent full-review admission are covered by `ev974-C09`, `ev974-C10`, and `ev974-C11`; unchanged gates and phase admission are covered by `ev974-C12` and `ev974-C13`.
+
+Use `quality/bugbot/evidence/issue974/README.md`, `quality/bugbot/evidence/issue974/plan.json`, and `quality/bugbot/evidence/issue974/results.json` as the declared evidence destinations. Summaries and operational guidance must describe how to inspect actual attempts, failures, cancellation, zero-write status, and recovery without exposing credentials or raw prompt contents. The applicable repository commands are declared in `package.json`; executed validation and final native checks must be recorded separately.
+
+### 13. Compatibility, migration, rollout, and rollback
+
+Keep the existing v1 corpus and default behavior unchanged. The v2 corpus is selected only by the exact explicit committed pin in the preregistration; omission retains v1/default and cannot silently redirect a run. Do not modify issue950 plans or data, frozen historical measurements, labels, case order, or the historical 173 unchanged cases. Reject foreign corpus paths or hashes, wrong counts, and changed identity sets before model execution.
+
+Commit the exact final implementation, corpus and driver hashes, actual CLI/launcher digests, prompts/schemas, runtime/profile, order, concurrency, and retry policy before any measured call. Start qualification only after the deterministic prerequisites, causal #985 correction, and independently justified corrections are merged and the full review driver/admission closure is frozen. Preserve the external bootstrap/plan pins and sanitized Git admission. The supplied merged-prerequisite facts identify selected commit `0ddac1011204db6dda45dff0f99e3ef91309c701`; they do not constitute qualification measurements.
+
+This is a backlog specification delta, not a campaign preregistration, execution result, release, or activation authorization. Keep `BUGBOT_VERIFICATION_MODE=disabled`; do not install a new default, release, or activate production verification. A detector pass admits only the specified next phase; it is not verifier-profile qualification. Rollback or a failed/incomplete run must retain its evidence and negative decisions, with no model substitution or pass-seeking rerun.
+
+### 14. Testing strategy and numeric budget
+
+The amendment adds a minimum of 25 distinct deterministic controls across ordinary Jest and the shadow control runner. Count each case once in its owning specification; these controls are additional to, and do not relabel or replace, the existing 216 combined controls. Preserve the four approved budget areas and their existing minimums. The new controls cover investigation lifecycle and authority, explicit v2 admission, corpus scoring and attempt accounting, immutable preregistration, and phase admission. Repeated model calls are corpus measurements, not additional deterministic cases.
+
+Exercise pure authority and selection branches at 100% enumerated coverage. Changed process and planner modules retain at least 95% line and statement coverage and at least 90% branch and function coverage, alongside existing repository gates. Use controlled bootstrap and process operations for admission and cancellation; existing fakes do not prove provider, human Setup, or platform acceptance. Keep measurement evidence distinct from planned controls and deterministic acceptance.
+
+Acceptance includes the issue’s unchanged 174-case EV-07 corpus and all actual generated-literal follow-ups. Freeze the final implementation, corpus and driver hashes, actual CLI and launcher digests, prompts and schemas, ordering, concurrency, and retry policy before any measured call. Account for one outer attempt per case, each actual follow-up, interruption, failure, and incomplete attempt. Preserve optional unknown usage and provider-reported model identity; configuration flags do not prove spawn or reported identity. Apply every existing precision, recall, F1, exact-location, severity, category, Brier, paired-cohort, repetition, positive-control, and post-run latency gate without weakening it. Preserve first failures and negative decisions; do not rerun to chase a pass.
+
+Keep the explicit v2 selection coherent across corpus loading and full-review admission, while omission retains v1/default and frozen historical measurements. Reject source, write, runtime, driver, schema, output, credential, or authority mismatches before spawn. Research continues until completion, actual failure, or explicit cancellation; time, turns, reads, and token usage cannot truncate supported investigation. Cancellation terminates the ordinary operation and descendants and cleans owned private artifacts. Failed, interrupted, missing, or incomplete evidence remains visible and cannot admit the paired phase. A passing v2 corpus admits only the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase; zero actual candidates means zero verifier sessions, and phase42 remains unstarted until the corpus genuinely passes.
+
+Publication acceptance requires that the specification satisfy the repository’s required format; internal and cross-document consistency is checked; and reciprocal catalog ownership, paths, and evidence agree with the generated view. The selected repository actually declares the SDK validation invocations in `package.json`; record executed outcomes without treating their declarations as passing evidence. Structural inventories and derived counts demonstrate consistency only, not semantic completeness, executed acceptance, or qualification.
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Investigation lifecycle and authority | 8 | Observable scenarios in the case inventory. |
+| Explicit v2 admission | 7 | Observable scenarios in the case inventory. |
+| Attempt ledger and independence | 6 | Observable scenarios in the case inventory. |
+| Next-phase gate | 4 | Observable scenarios in the case inventory. |
+| Total | 25 | Distinct inventory cases; repeated executions do not add cases. |
+
+| Case ID | Area | Requirements | Scenario |
+| --- | --- | --- | --- |
+| ev974-C01 | Investigation lifecycle and authority | EV974-G04 | A new comparison control proves ordinary execution retains its existing timer while the explicitly admitted research route has no investigation timer. |
+| ev974-C02 | Investigation lifecycle and authority | EV974-G02, EV974-G04 | The research planner preserves canonical detector workspace, read-only provider argv/schema, credentials isolation and output contract. |
+| ev974-C03 | Investigation lifecycle and authority | EV974-G04 | A deterministic long-running child survives the former investigation boundary, then explicit abort terminates descendants and cleans its owned runtime. |
+| ev974-C04 | Investigation lifecycle and authority | EV974-G04 | The new research entry rejects fixer/write capability before any child starts. |
+| ev974-C05 | Investigation lifecycle and authority | EV974-G04 | Other unsupported roles cannot acquire the research exception through the findings-only route. |
+| ev974-C06 | Investigation lifecycle and authority | EV974-G04, EV974-G07 | An immutable SDD source snapshot/deadline cannot acquire the new exception or lose its existing admission/deadline contract. |
+| ev974-C07 | Investigation lifecycle and authority | EV974-G04 | A forged research plan with workspace-write or inconsistent authority is rejected by the process boundary with no child and exact cleanup. |
+| ev974-C08 | Investigation lifecycle and authority | EV974-G04, EV974-G07 | Nested/foreign workspace and ambient provider configuration still fail the ordinary preflight; no public/environment switch grants the exception. |
+| ev974-C09 | Explicit v2 admission | EV974-G01, EV974-G06 | The explicit committed v2 selection is consumed coherently by corpus loading and full-review admission. |
+| ev974-C10 | Explicit v2 admission | EV974-G01, EV974-G08 | Omitting the new selection retains v1/default and every historical plan/score byte; no silent redirect occurs. |
+| ev974-C11 | Explicit v2 admission | EV974-G01, EV974-G05 | A foreign corpus path/hash, wrong count or changed identity set is rejected before model execution. |
+| ev974-C12 | Explicit v2 admission | EV974-G05, EV974-G06 | V2 cannot weaken any numerical gate, paired cohort/repetition floor, positive-control requirement or post-run latency criterion. |
+| ev974-C13 | Explicit v2 admission | EV974-G07 | Actual v2 public-bootstrap launch rejects foreign source/runtime before modules or the CLI probe execute. |
+| ev974-C14 | Explicit v2 admission | EV974-G07 | Actual v2 public-bootstrap launch rejects foreign driver/bootstrap bytes; no alternative entry can initialize admission. |
+| ev974-C15 | Attempt ledger and independence | EV974-G02, EV974-G03 | Multiple actual generated-literal requests retain distinct starts, prompt/schema identities, observations and terminal response records. |
+| ev974-C16 | Attempt ledger and independence | EV974-G03, EV974-G07 | Failed preparation remains a failed application attempt without falsely claiming a spawned provider session or provider-reported model. |
+| ev974-C17 | Attempt ledger and independence | EV974-G03, EV974-G08 | Provider failure and every actually attempted follow-up are retained without an unregistered retry. |
+| ev974-C18 | Attempt ledger and independence | EV974-G03, EV974-G04, EV974-G05 | Mid-call interruption preserves the durable start and explicit incomplete/failed states, including all unstarted outer-case slots. |
+| ev974-C19 | Attempt ledger and independence | EV974-G02, EV974-G08 | Unknown/high/cumulative usage does not change evidence acceptance; configured flags do not become provider-reported identity. |
+| ev974-C20 | Attempt ledger and independence | EV974-G02, EV974-G03 | V2 input goes through the ordinary prompt builder with expected labels/oracles excluded; the ledger binds actual delivered prompt/schema bytes. |
+| ev974-C21 | Next-phase gate | EV974-G05, EV974-G06 | Failed or incomplete corpus admission launches zero full-review children and retains the actual first failed stage. |
+| ev974-C22 | Next-phase gate | EV974-G06, EV974-G07 | A passing-looking result for a foreign implementation, driver, runtime, corpus or profile tuple cannot admit 42. |
+| ev974-C23 | Next-phase gate | EV974-G03, EV974-G05, EV974-G06 | Missing, duplicate or unterminated attempt records prevent admission even when all outer case IDs claim completion. |
+| ev974-C24 | Next-phase gate | EV974-G05, EV974-G06, EV974-G08 | Authentic complete v2 evidence is independently rescored and can admit the unchanged fixed42-slot protocol, without qualifying or activating the profile. |
+| ev974-C25 | Explicit v2 admission | EV974-G01, EV974-G07 | The authenticated v2 public bootstrap installs the real loader fence, admits only the two separately pinned v2 helper files, and rejects an unregistered neighbor or dependency shadow before it executes. |
+
+### 15. Documentation and discoverability
+
+Update `docs/agents/execution-contract.mdx` with the narrowly authenticated, cancellation-only, read-only investigation lifecycle, its authority boundary, and descendant cleanup. Update `docs/bugbot/quality-observability.mdx` with the preregistration, exact attempt scope, unknown telemetry, failed and canceled outcomes, zero-write result, and recovery guidance. Update `specs/agent-execution-policy-hardening.md` with the explicit scoped runtime-contract amendment if this lifecycle is selected. Preserve ordinary consumer defaults, technical version/ACL probes, and pre-branch source deadlines in their existing scopes.
+
+Create `quality/bugbot/evidence/issue974/README.md`, `quality/bugbot/evidence/issue974/plan.json`, and `quality/bugbot/evidence/issue974/results.json`. The README explains truthful invocation and prerequisites, preregistration, attempt accounting, failure and cancellation, zero writes, recovery, and how to inspect the exact plan and results. The plan records the frozen source/runtime/driver/profile tuple, corpus selection and digest, prompts and schemas, ordering, concurrency, and retry policy before calls. Results retain the complete ledger, outcomes, exact scores, unknowns, and limitations, including failure or unavailability. These are prospective creates, not evidence that the files already exist. Preserve issue950 plans and data as historical evidence.
+
+Register evidence and tests with their appropriate existing catalog owners; do not introduce a synthetic capability or count a case twice. Keep the issue974 file inventory in the host-owned navigation slot. The immutable selected owner is `specs/bugbot-analysis-publication-and-autofix.md`; its retained contract and cases remain in force. The requirements and inventory establish deliverables, not executed validation. Use the repository’s declared specification/catalog and documentation commands, recording actual results.
+
+| Path | Change |
+| --- | --- |
+| docs/agents/execution-contract.mdx | update |
+| docs/bugbot/quality-observability.mdx | update |
+| quality/bugbot/evidence/issue974/README.md | create |
+| quality/bugbot/evidence/issue974/plan.json | create |
+| quality/bugbot/evidence/issue974/results.json | create |
+| specs/agent-execution-policy-hardening.md | update |
+| specs/bugbot-analysis-publication-and-autofix.md | update |
+
+[docs/agents/execution-contract.mdx](../docs/agents/execution-contract.mdx) · [docs/bugbot/quality-observability.mdx](../docs/bugbot/quality-observability.mdx) · [quality/bugbot/evidence/issue974/README.md](../quality/bugbot/evidence/issue974/README.md) · [quality/bugbot/evidence/issue974/plan.json](../quality/bugbot/evidence/issue974/plan.json) · [quality/bugbot/evidence/issue974/results.json](../quality/bugbot/evidence/issue974/results.json) · [specs/agent-execution-policy-hardening.md](agent-execution-policy-hardening.md) · [specs/bugbot-analysis-publication-and-autofix.md](bugbot-analysis-publication-and-autofix.md)
+
+### 16. Acceptance scenarios
+
+1. Given an authenticated qualification composition, when the research route is selected, then the ordinary detector, capability, provider path, and canonical source workspace remain in use with read-only authority and no investigation timer; ordinary execution retains its existing timer (`ev974-C01`, `ev974-C02`).
+2. Given a long-running descendant or explicit abort, when cancellation occurs, then the complete ordinary operation and descendants terminate and owned runtime artifacts are cleaned. Fixer/write capability, unsupported roles, forged authority, nested or foreign workspaces, and ambient provider configuration cannot acquire the exception or start a child (`ev974-C03`, `ev974-C04`, `ev974-C05`, `ev974-C07`, `ev974-C08`). An immutable SDD source snapshot and deadline retain their existing admission contract (`ev974-C06`).
+3. Given the explicitly pinned v2 selection, when corpus loading and full-review admission run, then they consume one coherent selection. Omitting the selection retains v1/default, all historical plan and score bytes, 174 case IDs/order/labels, 173 unchanged cases, and frozen measurements. A foreign path or hash, wrong count, or changed identity set is rejected before model execution, and v2 cannot weaken any score, cohort, repetition, positive-control, or latency gate (`ev974-C09`, `ev974-C10`, `ev974-C11`, `ev974-C12`).
+4. Given the preregistered Luna xhigh detector phase, when the ordinary detector and actual generated-literal follow-ups run, then the evidence accounts for every outer case and actual call, preserves configured/resolved identities separately from provider-reported identity, and leaves unavailable identity or usage unknown. No model substitution occurs; Luna detector evidence does not claim Sol verification. The exact corpus gates apply to all 174 cases, and any failed, interrupted, missing, or incomplete attempt remains visible and blocks paired-phase admission.
+5. Given a source, write, runtime, driver, prompt/schema, output, credential, or authority mismatch, when qualification admission is checked, then it rejects before process spawn. Preparation or admission alone is not proof of spawn. During admitted research, elapsed time, turns, reads, and token usage do not cut off the investigation or reject supported evidence; completion, actual failure, or explicit cancellation ends it, and cancellation cleans the complete operation and descendants.
+6. Given a failed or incomplete corpus, when the next phase is considered, then full review remains unstarted. Given a passing v2 corpus, only the same implementation, drivers, runtime, and profile may enter the fixed 14-by-three phase; zero actual candidates yields zero verifier sessions. Phase42 remains unstarted until the corpus genuinely passes. A detector pass alone does not qualify a verifier profile.
+7. Given the independent external bootstrap and plan pins, when admission is prepared, then source, lock, compiler, driver, and runtime identities and sanitized Git admission are frozen before imports or CLI probes; actual CLI/interpreter/launcher digests and prompt/schema generators are frozen before measurement. Given a passing detector result, production remains disabled, no default installation or release follows, and evaluated PR write attempts are zero.
+8. Given publication review, when the amendment is ready for publication, then required format is satisfied, internal and cross-document consistency is checked, and reciprocal catalog ownership, paths, and evidence agree with the generated view. These are explicit observable publication outcomes; they do not assert that a project command ran or that corpus acceptance passed.
+
+### 17. Requirements traceability
+
+The approved requirements map to the concrete behaviors in the host-retained inventory. EV974-G01 is exercised by the coherent explicit v2 selection, preserved v1/default and historical measurements, and rejection of foreign or altered corpus identity (`ev974-C09`, `ev974-C10`, `ev974-C11`). EV974-G02 is exercised by the ordinary detector and provider path, canonical workspace, actual follow-ups, separate configured/resolved and provider-reported identities, and no substitution (`ev974-C02`). EV974-G03 is exercised by durable accounting of attempts, generated-literal follow-ups, failures, interruption, observer state, and outer-case outcome; preserve the distinction between preparation/admission and actual spawn.
+
+EV974-G04 is exercised by ordinary timer preservation versus the research route without an investigation timer, cancellation and descendant cleanup, pre-spawn rejection, and preservation of existing SDD and ordinary preflight boundaries (`ev974-C01`, `ev974-C03`, `ev974-C04`, `ev974-C05`, `ev974-C06`, `ev974-C07`, `ev974-C08`). EV974-G05 is exercised by unchanged gates and rejection of wrong corpus identity or weakened thresholds (`ev974-C11`, `ev974-C12`), together with the 174-case outcome ledger and the rule that incomplete or failed attempts block phase admission. EV974-G06 is exercised by coherent corpus/full-review selection, immutable v1/default behavior, unchanged gates, same-tuple phase admission, and zero-session behavior where no candidates exist (`ev974-C09`, `ev974-C10`, `ev974-C12`). EV974-G07 is exercised by preserving source snapshot/deadline and ordinary admission boundaries (`ev974-C06`, `ev974-C08`), plus the frozen bootstrap, plan, source/runtime/driver identity, and pre-measurement CLI and generator digests. EV974-G08 is exercised by preserving historical defaults and measurements, making failures and negative decisions durable, withholding phase admission after failure, and keeping production disabled with zero evaluated-PR write attempts (`ev974-C10`).
+
+The complete host-retained inventory contains 25 distinct new controls; references above do not redefine or rename its case identities. Each inventory case must list only requirements whose observable behavior it exercises, and each requirement must map to at least one concrete case. The remaining approved case assertions are retained by the host inventory and must be reconciled against these requirement mappings there. Existing owning case IDs remain references and are not additional definitions. This traceability is structural; it does not claim test execution, semantic completeness, a passing corpus, verifier qualification, or production authorization.
+
+| Requirement | Cases |
+|---|---|
+| EV974-G01 | ev974-C09, ev974-C10, ev974-C11, ev974-C25 |
+| EV974-G02 | ev974-C02, ev974-C15, ev974-C19, ev974-C20 |
+| EV974-G03 | ev974-C15, ev974-C16, ev974-C17, ev974-C18, ev974-C20, ev974-C23 |
+| EV974-G04 | ev974-C01, ev974-C02, ev974-C03, ev974-C04, ev974-C05, ev974-C06, ev974-C07, ev974-C08, ev974-C18 |
+| EV974-G05 | ev974-C11, ev974-C12, ev974-C18, ev974-C21, ev974-C23, ev974-C24 |
+| EV974-G06 | ev974-C09, ev974-C12, ev974-C21, ev974-C22, ev974-C23, ev974-C24 |
+| EV974-G07 | ev974-C06, ev974-C08, ev974-C13, ev974-C14, ev974-C16, ev974-C22, ev974-C25 |
+| EV974-G08 | ev974-C10, ev974-C17, ev974-C19, ev974-C24 |
+
+### 18. Implementation sequence
+
+
+1. Treat the reported merges of #970, #971, #972, #973, and causal #985 as prerequisites to verify against the qualification admission record before any measurement. The supplied update identifies merged PRs #983, #984, #988, #986, and #990 and selected base `0ddac1011204db6dda45dff0f99e3ef91309c701`; these are planning inputs, not measurement evidence. Preserve the existing qualification bootstrap as the launch authority.
+2. Review and implement the narrowly scoped authenticated, cancellation-only, read-only investigation lifecycle through the existing planner and process executor. Keep the ordinary detector, capability, provider path, and canonical source workspace. Coordinate the explicit lifecycle amendment with `specs/agent-execution-policy-hardening.md` and the runtime guidance in `docs/agents/execution-contract.mdx`. Retain ordinary consumer defaults, pre-branch source deadlines, bounded version/ACL probes, and source, runtime, credential, schema, output, and integrity boundaries.
+3. Freeze and independently review the exact implementation, source and lock state, compiler, driver/runtime/profile, actual CLI/interpreter/launcher identities, prompt/schema generators, corpus selection, order, concurrency, retry policy, and full-review admission closure before measured calls. Pin only the explicit v2 corpus derived from merged #985. Keep v1/default, its historical plans and scores, the 174 identities/order/labels, and the 173 unchanged cases intact. Record exact identities and evidence in the new issue974 plan; do not treat flags as proof of a spawned process or provider-reported identity.
+4. Run the ordinary detector and benchmark for the 174-case v2 corpus using the proposed Codex/OpenAI `gpt-6-luna` xhigh configuration. Retain every application CLI attempt and generated-literal follow-up, prompt/schema identity, response or bounded failure, observer state, interruption, and outer-case outcome. Distinguish preparation/admission from proof of spawn, and configured/resolved identity from provider-reported identity. Unknown provider identity and usage remain unknown; do not substitute a model or rerun to chase a pass.
+5. Score the complete corpus against every unchanged precision, recall, F1, exact-location, severity, category, and Brier gate. Preserve failed, interrupted, missing, or incomplete attempts in the ledger. A failed or incomplete corpus does not admit the paired phase. Only a genuinely passing v2 corpus may admit the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase; zero actual candidates means zero verifier sessions, and phase 42 remains unstarted until admission.
+6. Publish the exact plan and complete result, including a failure or unavailable outcome, through the new issue974 evidence artifacts. Update `docs/bugbot/quality-observability.mdx`, `docs/agents/execution-contract.mdx`, and the scoped runtime owner consistently. Keep production verification disabled, evaluated PR write attempts at zero, and release, default installation, and verifier qualification out of this work.
+
+The 25 distinct proposed controls remain in the existing approved inventory and budgets; each is counted once in its owning SDD. They cover the investigation lifecycle/authority boundary, coherent explicit v2 admission and immutable v1 behavior, complete-attempt and gate handling, frozen full-review admission, and source/runtime/driver closure. Existing owner cases remain references, not new definitions. The retained owner contract and its existing test budgets are not replaced by these controls.
+
+### 19. Definition of Done
+
+
+- [ ] The reviewed lifecycle exception is available only through trusted authenticated qualification composition; the ordinary detector path and canonical workspace remain intact, explicit cancellation terminates descendants and cleans owned private artifacts, and unsupported or write-capable routes fail before child spawn.
+- [ ] Source snapshot, authority, workspace, runtime, driver, schema, output, credential, and integrity mismatches reject before spawn. Research ends only on completion, actual failure, or explicit cancellation; elapsed time, turns, reads, and token usage do not cut off investigation or reject supported evidence. Ordinary consumer timers and bounded technical probes retain their existing scopes.
+- [ ] Preregistration pins the exact v2 corpus, implementation and complete driver/runtime/profile closure, prompts and schemas, execution order/concurrency/retry policy, and actual CLI/interpreter/launcher identities before measured calls. The explicit v2 selection is coherent across corpus loading and full-review admission; omission retains v1/default and frozen historical measurements.
+- [ ] The result accounts for all 174 outer cases and every actual generated-literal follow-up, failed or interrupted call, and incomplete attempt. Configured/resolved and provider-reported model identities remain distinct; unavailable provider identity or usage is recorded as unknown. No model substitution or pass-seeking rerun occurs.
+- [ ] All unchanged numerical gates are evaluated over the complete corpus: precision at least 90%, recall at least 85%, F1 at least 87%, exact location, severity, and category each at least 80%, and Brier score at most 0.16. Failed, interrupted, missing, or incomplete evidence stays visible and cannot admit the paired phase.
+- [ ] Deterministic admission controls reject foreign source/runtime, reject a failed corpus at the next phase, preserve incomplete attempts, and accept unknown usage as telemetry. The approved 25 distinct controls remain allocated across their owning specifications without duplicating case counts.
+- [ ] One coherent corpus and full-review driver/admission closure is frozen before 174. Only a passing v2 result may admit the same implementation, drivers, runtime, and profile to the fixed 14-by-three phase. Zero actual candidates produce zero verifier sessions; phase 42 remains unstarted until a genuinely passing corpus. A detector pass is not a qualified verifier profile.
+- [ ] Every result, including a negative or unavailable decision, retains the complete ledger and first failures. Evaluated PR write attempts are zero. Production remains disabled; no default installation, release, or activation follows from this campaign.
+- [ ] The specification satisfies the repository’s required format; internal and cross-document consistency is checked; reciprocal catalog ownership, paths, and evidence agree with the generated view. Use the actually declared specification/catalog and documentation commands and retain their execution evidence.
+- [ ] The new issue974 plan, results, and README are published at their declared paths, and the execution-contract and quality-observability documentation agree with the reviewed contract. Publication and documentation do not imply measurement, execution, qualification, or acceptance.
+
+### 20. References and decisions
+
+
+- This is a bounded amendment to the immutable retained owner `specs/bugbot-analysis-publication-and-autofix.md`. Its detector, publication, approval, recovery, quality-gate, and historical-evidence contracts remain in force.
+- Issue #974 defines the requested qualification question and the unchanged 174-case EV-07 corpus. The supplied planning update reports that prerequisites #970, #971, #972, #973, and causal #985 have merged; confirm that state through the authorized bootstrap and admission evidence before execution. Supplied PR identities and reported integration results are not source measurements or evidence that the #974 campaign ran.
+- `quality/bugbot/evidence/issue-950/ev07-shadow/preregistration.md`, `quality/bugbot/evidence/issue-950/ev07-shadow/campaign-provenance-results.md`, and `quality/bugbot/evidence/issue-950/ev07-shadow/plan.json` are historical pilot evidence. They establish neither qualification of the merged implementation nor the result of this future v2 campaign. Preserve the v1 corpus/default and all frozen historical records.
+- `quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs`, `quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs`, `quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs`, and `quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs` are existing source references supplied for review; inspect their exact selected-revision contents before relying on specific behavior or invocation details.
+- The lifecycle amendment is jointly owned with `specs/agent-execution-policy-hardening.md` and `docs/agents/execution-contract.mdx`. Qualification reporting and operator guidance are also updated in `docs/bugbot/quality-observability.mdx`. Prospective evidence files are declared in the host’s path inventory: `quality/bugbot/evidence/issue974/README.md`, `quality/bugbot/evidence/issue974/plan.json`, and `quality/bugbot/evidence/issue974/results.json`.
+- Decision: admit only the explicitly pinned v2 corpus for this measurement; never redirect v1/default. Use the ordinary Luna detector path and report that this does not establish that Sol ran. Preserve optional unknown usage, actual provider identity where available, first failures, and complete negative evidence.
+- Decision: a passing corpus can only admit the fixed paired phase under the same frozen tuple. It cannot qualify or activate a verifier profile. Production remains disabled and evaluated PR write attempts remain zero.
+- Unresolved operational evidence: exact implementation/driver closure and the specification, consistency and catalog-validation outcomes must be retained with the immutable source and reviewed preregistration; the actual commands are verified in `package.json`. No successful validation, campaign result or product acceptance is implied by the command declarations.
+
+The additional C25 control preserves the original 24 case identities. It reproduces the missing v2-helper module admission after the authenticated bootstrap installs its loader fence. The corrected fence admits only `corpus-selection.cjs` and `attempt-ledger.cjs` when their bytes match the authenticated committed v2 plan; the historical directory/default remains unchanged. A neighboring unregistered module is not admitted, and a v2 helper dependency shadow rejects before imports. This is a model-free integration control, not a corpus measurement.
+
+## Qualification operation containment amendment
+
+- Status: Proposed official revision; no implementation or execution acceptance claimed
+- Date: 2026-11-20
+- Catalog capability ID: bugbot-analysis-and-autofix
+- Owners: Copilot maintainers
+- Scope: Dedicated owned execution scopes for the existing immutable qualification route.
+- Retained owner: specs/bugbot-analysis-publication-and-autofix.md
+- Related issue: https://github.com/vypdev/copilot/issues/974
+- Open product decisions: none; actual immutable image/CLI pins and native runtime acceptance remain execution prerequisites.
+- Existing published content and all prior case definitions are retained verbatim by the host; this is an appendix only.
+
+### 1. Executive summary
+
+Give each COMPLETE outer operation an owned Linux PID namespace, integrate it into the existing authenticated bootstrap and ordinary execution path, and require stopped-scope evidence before outer cleanup or result acceptance. No new benchmark or public consumer mode.
+
+```text
+Authenticate bytes -> own one complete operation scope -> ordinary detector/follow-ups
+ -> completion / actual failure / explicit abort / owner EOF -> stop confirmation
+ -> retain actual outcome -> unchanged corpus/full-review gates
+```
+Text equivalent: authenticate, contain, execute normally, stop, retain evidence, evaluate unchanged gates.
+
+### 2. Problem, current behavior, and evidence
+
+The published bb5a6fe4a3dc3b6c988c7b69f438ea5abe07fc48 is preparation with unchanged38f4 source,233 deterministic Node controls and no174/42 measurement. The valid escaped-session finding survives group cancellation; ignored stdio can settle while a descendant lives, inherited pipes can prevent settlement. Exact negative: https://github.com/vypdev/copilot/pull/997#discussion_r4646554738 . Separate model-free Linux namespace/owner-SIGKILL/EOF prototypes stopped owned descendants and all test containers were removed. They used an unrelated cached application image, not an admitted SDK runtime. No model/provider/native qualification acceptance is inferred. The existing25 case inventory is already reserved in the retained owner; do not redeclare it in this appendix.
+
+### 3. Actors, surfaces, and terminology
+
+The immutable external bootstrap owns scope lifetime. The inner ordinary planner/executor receives a private authenticated cancellation capability. A scope is one complete corpus case or one complete paired review operation, including every actual application follow-up. A stopped scope, completed provider call and qualified profile are distinct facts. Maintainers inspect preregistration, attempt ledger, scope receipts and negative evidence; no evaluated PR mutation is introduced.
+
+### 4. Goals, non-goals, and fixed invariants
+
+| Requirement | Behavior |
+|---|---|
+| EV974-S01 | Authenticate the source/lock/compiler/closed driver/bootstrap and actual image/runtime/CLI/launcher bytes before imports, version probes or model startup; retain the noncircular implementation-then-preregistration commit model. |
+| EV974-S02 | A fixed dedicated Linux PID namespace contains EACH complete outer corpus case or paired ordinary review, including all actual generated-literal follow-ups; integrate only through the existing immutable public bootstrap and normal planner/provider/executor. |
+| EV974-S03 | An exact private plan/signal/owner/operation capability owns cancellation. No public/environment/serialized grant or uncontained fallback can start qualification. Preserve canonical source, read-only, schema and credential boundaries. |
+| EV974-S04 | Explicit abort, outer-owner EOF/death and normal completion release the entire owned scope; confirm stopped namespace before outer cleanup/result acceptance. Group signals, process close or sampled PPIDs do not prove cleanup. |
+| EV974-S05 | Use the reviewed local Docker Engine Unix-socket API and fixed non-TTY owned-stdin lifetime; deny model Docker authority, host PID, privileges and arbitrary mounts/flags. Engine/kernel reports are observations, not independent byte attestation. |
+| EV974-S06 | Retain durable starts, known/uncertain owned IDs and incomplete outcomes. Never replay an unknown operation or clean unrelated/conflicting scopes. Unknown usage and provider identity remain unknown. |
+| EV974-S07 | Keep all174/42 inventories, unchanged numerical/profile/cohort/positive/latency gates and no-outer-retry policy. Existing25 controls and216 older Node controls remain owned by their retained inventories; add6 deterministic and4 actual native SDK controls only. |
+| EV974-S08 | Keep research run/wait unbounded by elapsed time, heartbeat, turns, reads or tokens; technical cleanup escalation follows a real termination request only. Preserve ordinary consumer/source deadlines, optional telemetry, zero pilot writes and disabled production. |
+
+Non-goals: model substitution, alternate detector, generic Docker wrapper, default installation, release, runner/privilege change, production activation, human/platform Setup acceptance or replay to chase a pass. All retained scientific and source-integrity contracts remain effective.
+
+### 5. Current versus proposed product journey
+
+Current process groups do not contain new-session descendants. Proposed scope ownership covers the whole operation through namespace lifetime. Preparation remains separate from admitted runtime, active operation and measurement.
+
+```mermaid
+flowchart LR
+ A[Verified immutable bootstrap] --> B[Owned complete operation]
+ B --> C[Ordinary model call chain]
+ C --> D[Scope stopped and confirmed]
+ D --> E[Retained real outcome]
+ E --> F[Unchanged qualification gates]
+```
+Text equivalent: verified bootstrap owns ordinary execution; stopped-scope confirmation precedes retained outcome and the unchanged scientific gates.
+
+### 6. Functional behavior and state model
+
+Use a trusted, immutable outer qualification bootstrap to own a dedicated Linux PID namespace for EACH complete outer operation: one of the174 corpus cases with all its actual generated-literal follow-ups, or one of the42 complete ordinary paired-review operations with all of its actual detector/verifier calls. Host composition may run on macOS or Linux; this is a verified runtime capability, not a new arbitrary client-OS rule. No persistent runner or service is installed or reconfigured.
+
+The existing public bootstrap remains the only supported qualification entry. Integrate containment into its closed authenticated modes/inventory and existing corpus/full-review orchestration; do not create a parallel benchmark, alternate detector, direct working-tree entrypoint, generic Docker wrapper or environment flag granting authority. Preserve all174 IDs/order/labels, unchanged scoring and gates, configured Luna detector and Sol verifier/xhigh profiles, concurrency and one-outer-attempt policy. Preserve corpus's oracle-free synthetic remote-free workspace and full review's entire real pinned subject source. Never substitute an empty broker workspace for the ordinary full-review detector or deliver independent labels/oracles as model input.
+
+Each operation uses the same reviewed immutable SDK runtime image, source/compiler/dependency/CLI and launcher tuple across both phases. Unique operation/container IDs are observed execution identities, not substitutes for byte identities. Prewrite all planned slots and preserve every real application call/start/preparation/observer/terminal artifact, including generated-literal calls and partial failure. Internal per-slot dispatch is authenticated orchestration of the COMPLETE frozen inventory, not a public case-limit/skip/retry option. A missing slot, interrupted owner or incomplete call chain cannot admit phase42. Zero actual candidates still starts zero verifiers.
+
+States: preparation, containment-admitted, active, stopping, stopped-complete, stopped-failed, interrupted/incomplete and ownership-unknown. An unknown scope cannot be adopted, replayed, cleaned or reported completed. Scope confirmation precedes outer cleanup and accepted terminal result even on normal completion. Prewrite all slots and retain every actually generated call.
+
+### 7. User-facing configuration
+
+No new public Action input, CLI flag, repository Variable, Docker argument list, mutable image tag or ambient grant. Fixed runtime: existing local Docker Engine API via reviewed local Unix socket, non-TTY OpenStdin=true/StdinOnce=true, immutable trusted PID1 exits on control EOF; outer bootstrap alone owns writer. Observed prototype Engine 29.8.2, Linux arm64, kernel 7.2.12-orbstack-00394-gbecdd6130068 is an observation, not byte attestation. Final plan pins actual image/config/source/compiler/dependencies/CLI+launcher/client and records actual host/worker OS/architecture/engine/kernel. HostmacOS/Linux may use verified capability without an arbitrary client-OS gate. Recommended measured mode retains ordinary provider/read-only/schema/credential policy; separate closed native-control purpose may run hash-frozen model-free fixtures but cannot authorize model calls. Incompatible capability blocks startup; no group-only fallback.
+
+### 8. Clean Architecture design
+
+Authenticate the host bootstrap, plan commit/path/hash, source/lock/compiler/closed drivers and physical bytes using trusted sanitized Git BEFORE importing application modules or invoking any runtime/CLI probe. Freeze the complete image by immutable content digest and exact configuration; inside its admitted immutable source/runtime, verify Node/Git/compiler/dependency closure and actual CLI/interpreter/launcher bytes before version probes or models. Preserve the noncircular implementation-commit then preregistration-commit model: an image built from the implementation cannot silently change after the plan is committed. Transport later plan Git objects through verified read-only staging; never treat a working-tree plan or a claimed image tag as authority.
+
+The reviewed plan must close and pin the containment profile: image digest, host launcher bytes, relevant client/engine/kernel observations and explicit trusted-platform assumptions, ownership/correlation, fixed mounts and exact input/output paths. A reported daemon/kernel version is not independent byte attestation of that platform. Model execution gets no Docker socket/client authority, host PID namespace, privileged mode, arbitrary host mounts, broad Docker flags, mutable tag, source/template/workflow override or new repository Variable. Normal backend connectivity and the normal child's read-only/network-denied/native-schema/credential policy retain their distinct scopes. Never bake credentials into an image/build context or expose them in public receipts, argv diagnostics or logs. Use the existing private runtime credential policy only.
+
+The trusted outer owner and the inner ordinary planner/executor must share one authenticated operation-scope cancellation capability bound to the exact plan/signal and owned operation. Pure policy/semantic ports own admission and lifecycle decisions; transport/OS adapters own Docker/process calls; composition owns the verified scope. Preserve existing dependency direction and enforce the actual registration/composition with architecture tests. Serialized receipts, provider fields, public CLI flags and ambient environment cannot grant the cancellation-only exception. Uncontained investigation must fail BEFORE model spawn, rather than falling back to group-only cleanup. Ordinary consumer/source-snapshot defaults and their existing technical deadlines remain unchanged; this is not a new public consumer execution mode.
+
+Pure scope policy owns closed admission and immutable correlations. Semantic application ports expose operation ownership/stop confirmation without Docker DTOs. The OS/container adapter owns process/engine transport; authenticated composition alone binds the exact plan/signal/owner/operation capability. Existing planner/provider/executor remains the real model path. Add executable dependency/composition tests, reject raw HTTP/process imports in application/pure policy, and register every exact driver/helper/supervisor before imports. Do not implement a second execution stack. Runtime image identity is not independent producer/platform attestation.
+
+### 9. UI/UX and content contract
+
+Use existing evidence README/results and static locale/fallback rules; no new web flow or accessibility observation is claimed. Lead with state, retained facts, impact, one primary action, exact plan/scope/attempt links and collapsed diagnostics.
+
+Pending: `Preparing the immutable execution scope. No model has started.`
+Action required: `The runtime does not match the preregistration. Inspect the runtime receipt before preparing again.`
+Failed/blocked: `Execution scope could not be verified. No model started. Inspect the runtime receipt.`
+Partial: `Interrupted. The owned execution scope has stopped. Retained attempts are incomplete; paired reviews have not started.`
+Complete operation: `The operation ended and its owned scope is stopped. Inspect the retained result; qualification gates remain separate.`
+Unknown: `Owned-scope state is unconfirmed. Automatic replay and cleanup are blocked. Inspect the recorded ownership.`
+Use textual states, semantic headings, descriptive links, sanitized bounded names/URLs and narrow-screen readable tables. Do not emit a new progress-comment stream or report model/provider identity from argv.
+
+### 10. Failure, recovery, and cleanup
+
+On explicit abort, stop the ENTIRE owned namespace, including processes that double-fork, reparent or change session/group. Require confirmation that the owned namespace init has terminated and its scope is stopped BEFORE outer runtime cleanup or a terminal completion claim. Do not infer descendant cleanup from a CLI close event, a group KILL request, a single exit code, a sampled PPID tree, or the disappearance of pipes. Normal operation completion must also release the full owned execution scope before its retained result is accepted and the next independent operation is considered complete.
+
+Owner disconnection/abrupt launcher death must stop the scope through a verified lifetime channel, such as an owned stdin/IPC lifetime whose actual engine behavior is tested. Do not add a heartbeat deadline or investigation timeout as a substitute. A cancelled/owner-lost operation is interrupted/incomplete; durable starts without terminals stay visible. A controller must never turn a container exit into successful research completion. Bound technical cleanup/escalation only after an actual termination request; never cap research duration, turns, reads or tokens. Provider failure and explicit interruption remain separate, and unavailable usage/provider-reported model identity stays unknown.
+
+Retain exact owned IDs/labels/image/plan/receipts and all known/uncertain effects. Recovery may inspect and stop ONLY the positively identified owned scope; unknown or conflicting ownership blocks automatic adoption, replay or cleanup. Never touch existing unrelated containers, refs, installations or processes. No blind duplicate operation/model call, force/deletion/rebase of remote branches, or silent retry to find a passing score. If any174 outcome is failed/incomplete, preserve it and leave42 unstarted; another campaign still requires a causal correction and fresh committed preregistration.
+
+### 11. Security, permissions, and privacy
+
+No model-facing Docker socket/client authority, host PID, privileged mode, arbitrary mounts/flags or write-capable authority. Preserve normal child network-denied/read-only native schema and private credentials; backend transport and child network denial have distinct scopes. Never bake credentials into image/context or publish them in logs/argv/receipts. Source/runtime/driver mismatches reject before imports/probes/models. Private capability binds exact plan, live signal, owner and operation; no environment/serialized/model output grants it. Cleanup targets only positively identified owned scopes and never unrelated containers/processes/installations. Actual engine/CLI incompatibility is a retained unavailable result, not permission to relax containment or native sandbox policy.
+
+### 12. Observability and operational UX
+
+Retain exact owned IDs/labels, immutable tuple, purpose, lifecycle transitions, stop confirmation, all durable attempt starts/terminals, observer/preparation artifacts and known/uncertain effects. Keep configured and actually provider-reported model identity separate; unavailable identity/usage remains null/unknown telemetry. An init/container exit cannot become successful research automatically. A missing terminal or lost owner stays interrupted/incomplete and blocks phase42. Keep bounded sanitized diagnostics and actual artifact links; no repeated notifications for unchanged state.
+
+### 13. Compatibility, migration, rollout, and rollback
+
+Append this amendment to the existing owner; retain all original source/history, v1/default corpus, explicit v2 corpus identity,174 IDs/order/labels,173 unchanged cases, frozen measurements, original25 controls and216 older Node controls. No retroactive repair/relabel of negative evidence. Existing consumer/source deadlines and technical version/ACL probes retain their own scopes. One common frozen tuple is required across corpus and full review, with full42 closure frozen before174. Rollback requires a fresh immutable source/plan and cannot reuse old pass evidence for changed bytes. Failed/incomplete174 leaves42unstarted; causal correction and a new committed preregistration are required for any later campaign.
+
+### 14. Testing strategy and numeric budget
+
+This appendix adds exactly the minimum10 distinct cases below, not35 new cases and not a second declaration of the retained25. Six deterministic Node cases extend the combined command from233 to239 (216+17+6). Four actual native model-free SDK cases have a separately declared executable command in `package.json`; no silent skips or fake substitutions. Combined campaign-specific floor is35 =25retained+10new. All10 are presently unexecuted. Pure authority/selection/scope policy targets100% all metrics. Changed runtime/planner/containment modules retain95% statements/lines and90% branches/functions plus unchanged global and changed-path gates. Actual native controls use the admitted SDK image and immutable public bootstrap/ordinary execution path, with explicitly frozen model-free subprocess fixtures only for cancellation; they do not replace actual CLI/version/provider admission or any model measurement.
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Containment admission and orchestration | 6 | Closed immutable tuple, private ownership, complete inventories and no fallback |
+| Actual native contained SDK | 4 | Real SDK scope abort, escaped/inherited descendants, owner death and completion races |
+| Total | 10 | Additional distinct controls; retained25 and older216 counted only by their existing owners |
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| ev974-C26 | Containment admission and orchestration | EV974-S01 | Closed image/runtime/bootstrap/source/CLI pins reject a mismatch before imports, probes or model startup. |
+| ev974-C27 | Containment admission and orchestration | EV974-S02, EV974-S03, EV974-S05 | Arbitrary flags, host PID/socket/privilege/mounts, mutable tags and untrusted authority cannot acquire a scope. |
+| ev974-C28 | Containment admission and orchestration | EV974-S03, EV974-S05 | Exact signal/plan/owner/operation correlation is immutable; a public/environment/serialized grant or foreign scope is rejected. |
+| ev974-C29 | Containment admission and orchestration | EV974-S06, EV974-S07 | A durable interrupted/missing/orphan terminal chain remains incomplete and blocks phase42, without replacing unknown telemetry. |
+| ev974-C30 | Containment admission and orchestration | EV974-S02, EV974-S07 | The fixed complete174/42 inventories, no-outer-retry, same-tuple gates and zero-candidate behavior remain coherent through contained dispatch. |
+| ev974-C31 | Containment admission and orchestration | EV974-S03, EV974-S04, EV974-S08 | Uncontained fallback is forbidden; ordinary consumer and source-snapshot lifecycles/technical probes retain scope, and displayed status cannot report success before stop confirmation. |
+| ev974-C32 | Actual native contained SDK | EV974-S04 | An ignored-stdio new-session descendant is removed on explicit abort before outer cleanup and never yields completed research. |
+| ev974-C33 | Actual native contained SDK | EV974-S04 | Inherited pipes and a double-fork/reparented descendant cannot prevent complete scope cancellation/cleanup. |
+| ev974-C34 | Actual native contained SDK | EV974-S04, EV974-S05, EV974-S06 | Abrupt outer-owner death/disconnection closes its verified lifetime channel, removes the complete scope and preserves incomplete evidence. |
+| ev974-C35 | Actual native contained SDK | EV974-S04, EV974-S06, EV974-S08 | Successful completion and cancellation races retain the correct outcome, exact owned-scope identity and no surviving scope; unrelated running scopes remain untouched. |
+
+The late-cancellation amendment extends C29/C31 with eleven deterministic
+scenarios: four cleanup callbacks, an asynchronous abort during actual Unix HTTP
+inspection, and six normalization controls (clean success, four incomplete
+reason/confirmation pairs and an explicitly marked unrelated preflight). These
+exercise actual source/HTTP/policy behavior with modeled Engine/runtime/admission;
+they do not establish actual native acceptance. C35 additionally completes three
+real SDK namespaces and cancels at `operation-stopped`, `scope-remove-start` and
+`scope-removed`, proving interrupted returned outcomes, durable incomplete
+evidence, all five owned scopes removed and the unrelated sentinel still running.
+The 35 logical IDs and all prior numeric floors and coverage/scientific gates
+remain unchanged. Changed native harness bytes require a fresh common committed
+source/driver/runtime tuple for C32–C35 before any measurement. Documentation,
+evidence and the closed test/driver inventory must retain this distinction.
+
+### 15. Documentation and discoverability
+
+Update runtime/Bugbot owners, execution guidance, quality operations, evidence README/plan/results, architecture/coverage contracts and exact closed source/driver inventory together. Documentation must explain invocation, all states, relevant immutable runtime/CLI prerequisites, unknown ownership, explicit abort/EOF, technical cleanup, negative retention and no-replay recovery. The plan remains deliberately not-preregistered until actual source/runtime pins are committed; no preparation result becomes acceptance.
+
+#### Independent owner-loss removal — C27/C34 amendment
+
+Observed defect: the fixed `AutoRemove=false` policy stops the namespace on
+owner EOF but retains the stopped container. C34's explicit test DELETE does not
+prove independent runtime cleanup. Two separate actual model-free provider
+experiments on the same pinned Engine/image show that original retention and
+automatic removal with `AutoRemove=true`; neither is actual SDK acceptance.
+
+The fixed containment policy MUST enable daemon-owned removal and retain all
+existing privilege, image, mount, credential, network and no-restart boundaries.
+Before start, the outer adapter MUST inspect the complete owned configuration,
+register exact-ID `next-exit` and `removed` observations, and await successful
+HTTP registration acknowledgments. Acknowledgment is not a terminal result.
+The adapter MUST separately establish an acknowledged start or an actual owned
+running observation before admitting an exit result as process execution proof.
+Removal can wake `next-exit` for a never-started container; neither that result
+nor404 alone grants execution or namespace-stop authority.
+
+```mermaid
+flowchart LR
+    C[Create and inspect exact owned scope] --> W[Register exit and removal observations]
+    W --> A[Await both registration acknowledgments]
+    A --> S[Attach owner lifetime and acknowledge start]
+    S --> X[Confirm namespace exit]
+    X --> R[Confirm daemon removal and exact-ID absence]
+    R --> F[Clean host staging and finalize outcome]
+```
+
+Text equivalent: ownership/configuration precedes wait registration and start.
+Exit and removal are distinct observations. Host cleanup and a completed result
+require both; unknown effects retain private evidence and cannot be replayed.
+
+| State | Required evidence and cleanup | Result |
+|---|---|---|
+| Created, never started | Inspect stopped PID0/created state, then remove only the exact owned scope | No process execution claim |
+| Start acknowledged or owned running observed | Registered valid exit result, then valid matching removal result and exact-ID404 | Preserve actual exit/interruption |
+| Start response unknown and already absent |404/removal-woken exit is insufficient | Retain incomplete evidence and staging |
+| Owner dies after running | PID1 observes lifetime EOF; daemon removes after exit | Incomplete operation; independent observer proves cleanup |
+| Protocol, callback or durable record fails | Settle every issued observation; preserve first cause and uncertainty | No success, adoption or blind retry |
+
+Wait metadata MUST be bounded and validated as closed JSON with a nonnegative
+safe-integer exit code and the supported optional runtime error shape. Malformed,
+oversized, truncated, failed or aborted observations MUST NOT become stop proof.
+Cancellation before registration settles both registration and terminal promises.
+Once registered for a started scope, operation abort MUST retain the authoritative
+exit observation through termination. Final cleanup MUST settle the owned request
+and response callbacks, not merely their wrapper promises. Provider payloads and
+host locators remain private; public diagnostics identify the failed boundary.
+In particular, a failed/cancelled lifetime attachment MUST await its actual close
+callbacks before rejecting startup. An error event alone is not quiescence.
+An admitted lifetime retains its private request/socket closure until final cleanup.
+
+Started scopes MUST use daemon removal without a test or host DELETE to fabricate
+acceptance. Created-only removal remains an explicitly inspected path. Unknown
+creation or start is not replayed. The existing technical escalation starts only
+after termination is requested; no research deadline, heartbeat, extra runner
+privilege or configurable bypass is added. The semantic SDK scope API stays the
+same; provider tickets and evidence remain in the containment adapter.
+
+The concrete increment is28 named deterministic scenarios: twelve for wait
+registration, terminal validation, transport failure/cancellation and callback
+closure; fourteen for fast exit, preparation/start cancellation, failed/unknown
+start, ownership, durable faults and distinct started/created removal; two for
+the separate native-host observer. The terminal-schema scenario contains twelve
+invalid forms and the host-observer negative contains six protocol forms.
+These extend the506-control Node command to a planned534; preserve all earlier
+cases,35logical IDs and coverage floors. Actual execution counts and matrix
+expansions MUST be recorded rather than inferred from this budget. A fixed
+ten-second readiness/cleanup bound applies only to these modeled local fixtures,
+never to SDK/model investigation or a measured operation.
+C34 MUST independently register observations for its positively correlated running
+scope, kill the actual outer owner, and observe exit/removal/absence without a test
+DELETE. Fallback test cleanup remains visibly separate and cannot satisfy C34.
+Fresh common committed C32–C35, including the untouched sentinel, remain required.
+
+Update exact driver/test inventories, catalog, quality operations and retained
+evidence together. Full local controls, required changed-module/global coverage,
+normal hooks, documentation/specification validation and Graphify remain required.
+The provider prototypes and deterministic fixtures do not prove actual SDK,
+CLI/read-scope, credential exclusion or scientific qualification. Historical plans
+and negatives stay immutable;174/42 remain unstarted until all their gates pass.
+
+#### POSIX process-fixture cleanup — C03 amendment
+
+C03's SDK process fixture MUST retain the actual child handle returned by its
+ordinary spawn adapter. A leader PID file is diagnostic content, not cleanup
+authority. Missing startup observations MUST NOT prevent termination of that
+captured group. The fixture stop helper MUST attempt force termination in its
+final path even when reading the descendant observation, sending the graceful
+signal or waiting for the graceful marker fails. Only an absent file or process
+is tolerated; other failures remain failures, and the first cause survives a
+later cleanup failure. A malformed owner identity MUST cause no signal.
+
+| Fixture state | Required cleanup | Recorded test outcome |
+|---|---|---|
+| Descendant observation absent | Signal the captured owner's group and force termination | No assertion of graceful descendant completion |
+| Graceful marker/read/signal fails | Force termination and settle known descendant observation | Retain the first failure |
+| Owned group already absent | Accept ESRCH without a retry | Preserve the surrounding test's result |
+
+Cleanup promises are retained per captured child so final cleanup cannot repeat
+a completed signal against a stale numeric PID. Every launched fixture receives
+that cleanup before its private files are removed; the spawn observer is restored
+on exit. Observation, signal and bounded fixture readiness ports belong entirely
+to test support. No production SDK policy, timeout, namespace mechanism,
+configuration or user-facing workflow changes.
+
+The numeric increment is exactly nine deterministic Jest scenarios: two missing
+observation/owner-file cases, one unreadable observation, one failed marker wait,
+three signal/first-error cases, one invalid-owner matrix and one already-absent
+group. The existing real POSIX C03 process control remains and MUST pass with
+captured handles, descendant cancellation and runtime cleanup. The separate Node
+command remains506 controls and the35logical qualification IDs remain unchanged.
+The same nine tests against the extracted original cleanup MUST retain their
+negative result; modeled ports do not prove native namespace acceptance.
+
+Catalog evidence, quality operations and the C03 retained packet MUST describe
+this distinction. Focused SDK controls, normal build/test/lint hooks, type,
+documentation/specification checks and Graphify remain required. Actual fresh
+C32–C35 and the independent runtime/credential/owner-loss prerequisites remain
+separate; fixing this test cleanup does not make174 or42 eligible.
+
+#### Native-control bootstrap admission — C26 amendment
+
+Observed defect: the native-control manifest could supply executable bytes and
+their own digest. Its committed plan bound the harness, but did not independently
+bind that executable to the reviewed public bootstrap. Reopening the supplied
+path at launch also allowed replacement after preparation. This amendment changes
+only native-control host preparation/launch; consumer APIs and measured campaign
+execution keep their existing contracts.
+
+The reviewed host harness MUST capture its own committed host revision, verify
+its executing harness bytes against that revision and derive the bootstrap
+reference from the same Git object tree with replacements disabled. A manifest
+MUST NOT choose that reference. Dirty bootstrap files on disk are not reference
+bytes: canonical committed input remains eligible, while resigning dirty bytes
+or a dirty executing harness cannot grant authority. Each row's
+digest and bounded regular-file snapshot MUST match those reference bytes before
+any child launch. Symlinks, nonregular files, size/content mismatches, replaced
+inodes, growth during inspection and read failures MUST reject and close the opened
+descriptor. The existing seven-field manifest schema remains unchanged; no new
+override, trust flag, timeout, permission or retry is configurable.
+
+Successful preparation MUST retain the verified bytes as private process-local
+authority bound to the actual prepared entry. An environment value, serialized
+lookalike or copied public record MUST NOT grant launch authority. Each launch
+MUST create an exclusive owner-read-only bootstrap copy inside its owned private
+directory and execute that copy, preserving the existing interpreter and argument
+contract. Replacing or deleting the supplied input path after admission MUST NOT
+change the selected executable. Trusted source, manifest interpretation, private
+filesystem staging and the child-process adapter remain distinct boundaries;
+component-only exports and the modeled process port are never execution authority.
+
+```mermaid
+flowchart LR
+    H[Reviewed host checkout] --> P[Independent bootstrap bytes]
+    M[Native-control manifest] --> V[Verify bounded snapshot and committed plans]
+    P --> V
+    V --> A[Private prepared-entry authority]
+    A --> C[Exclusive read-only copy in private directory]
+    C --> N[Native control child]
+    V --> F[Reject before child launch]
+```
+
+Text equivalent: the reviewed host checkout supplies the reference; input rows
+are checked against it and their committed plan. Only an admitted entry can create
+and execute a private copy. Invalid rows fail before a child exists.
+
+The existing Node test surface reports pending plans, preparation failures and
+actual native outcomes separately. For example, `bootstrap must match the
+independently trusted source pin` means that native controls did not start: retain
+the negative input/receipt, prepare reviewed matching bootstrap/plan bytes, and
+freeze a new tuple before another explicit native attempt. A successful component
+preparation is not a native PASS. This amendment creates no progress-comment
+stream or new consumer/localization surface; diagrams have this textual fallback.
+
+C26 gains exactly sixteen deterministic subscenarios: eight canonical/source/authority/copy
+cases, five supplied-file forms and three post-open race/read-failure cases.
+They use real Git and private filesystem effects with a modeled child-process
+port; no bootstrap, Engine, provider or model subprocess is executed. They extend
+the retained490-control command to a planned506, preserve all35 logical IDs and
+all earlier floors, and retain the original negative outcomes. Existing pure,
+runtime/planner/containment, global/changed-path and scientific coverage gates
+remain required. The native harness and test inventory hashes change, so fresh
+common committed C32–C35 source/driver/runtime proof remains mandatory before174.
+
+Acceptance maps the noncanonical self-digest, replaced input and copied-entry
+cases to `native-bootstrap-components.cjs`; its file-form and descriptor controls
+cover rejection and cleanup. `test:bugbot-shadow-verification`, unchanged SDK
+hooks, documentation/specification/catalog checks, exact driver/test inventories
+and the later actual native tuple are all Definition-of-Done requirements. The
+quality operations page and evidence README MUST explain the matching-source
+recovery and component/native distinction. Historical native records remain
+immutable. Credential exclusion, owner-loss cleanup and actual CLI/read-scope
+admission remain separate unresolved prerequisites; this amendment does not mark
+the complete qualification ready.
+
+#### Qualification-image managed filesystem requirements — issue #974
+
+The qualification Dockerfile previously installed no system requirements file.
+Pinned Codex 0.171.0 supports `permissions.filesystem.deny_read` in
+`/etc/codex/requirements.toml`; its exec loader's `--ignore-user-config` excludes
+user configuration while retaining system requirements. These are source facts,
+not observations that a model tool was denied access. Primary sources are the
+[requirements schema](https://github.com/openai/codex/blob/ccf9be8cc458bd6b8336fe84d68d8893f2691a5e/codex-rs/config/src/config_requirements.rs),
+[loader](https://github.com/openai/codex/blob/ccf9be8cc458bd6b8336fe84d68d8893f2691a5e/codex-rs/config/src/loader/mod.rs)
+and [exec composition](https://github.com/openai/codex/blob/ccf9be8cc458bd6b8336fe84d68d8893f2691a5e/codex-rs/exec/src/lib.rs).
+
+EV974-S01 and EV974-S03 additionally require the qualification image to install
+the committed `qualification-requirements.toml` at that fixed system path,
+root-owned and mode0444 beneath canonical protected root-owned parents. The
+contained bootstrap MUST compare its physical descriptor's bounded bytes and
+stable metadata with the implementation's regular Git blob before credential
+loading or application imports. Missing, linked, writable, foreign-owned,
+different, replaced or unreadable files MUST reject admission; descriptors close
+on success and failure. No arbitrary path, per-user override or new public
+configuration is introduced. The image build accepts only Codex0.171.0 until
+another reviewed implementation and exact runtime tuple establish compatibility.
+
+```text
+Committed policy -> immutable image system file -> physical bootstrap admission
+ -> same-tuple CLI/model-tool denial probes -> committed preregistration -> 174
+```
+Text equivalent: installing and admitting the file prepares the runtime; actual
+CLI/model-tool enforcement and the remaining native prerequisites must pass
+before measurement. File admission alone does not permit a campaign.
+
+The fixed policy denies `/proc`, `/sdk`, the private scratch SDK source and
+Codex auth file, the credential/invocation/bundle inputs, independent corpus
+oracles, and qualification output. The complete nine literal entries live
+in the reviewed TOML and its contract test. Subject workspaces remain governed
+by the existing ordinary read-only provider and evidence boundaries. Neither
+the dataset nor a global `/tmp` denial becomes configurable. Existing network,
+tool, credential and oracle exclusion requirements remain effective.
+
+| Operator state | Meaning and next action |
+|---|---|
+| Preparing image | Freeze the reviewed implementation and build its exact runtime; no model work has started. |
+| Policy file rejected | Retain the private negative diagnostic, correct the image/source mismatch and prepare a new reviewed tuple. Credentials remain unloaded. |
+| Policy file admitted; enforcement pending | Inspect `managed-requirements.json`; `enforcementObserved:false` means actual CLI/model-tool exclusion is still required. |
+| Actual tuple accepted | Retain the separate native/CLI/model-tool receipts and commit the complete preregistration before174; this is not a qualified profile. |
+
+The bootstrap owns this admission using Node core and authenticated Git bytes;
+the image owns installation, and Codex owns enforcing its system requirements.
+The closed driver inventories in the bootstrap, implementation and provenance
+loader MUST include the TOML explicitly. The existing loader fence remains
+closed to neighboring files and the public bootstrap exports remain unchanged.
+The exclusive private0600 metadata receipt contains source identity, size,
+digest, owner/mode and `enforcementObserved:false`; it contains no secret bytes.
+Cancellation/owner loss retain the existing incomplete-operation and stopped
+scope rules. There is no retry, fallback or automatic policy migration. A changed
+policy requires a new image, common runtime proof and committed plan; older
+campaigns remain reproducible from their original commits. Consumer flags,
+profiles, research limits, scientific floors and production defaults do not
+change. No new GitHub notification or human/platform acceptance is introduced.
+
+C26 gains **14 distinct deterministic component controls** in
+`managed-requirements-components.cjs`: one valid committed-file admission, four
+missing/link/platform cases, two owner/mode cases, two byte/size cases, two
+descriptor/path race cases, two read/close failure cases and one fixed-policy
+artifact contract. Thirteen use real Git/files with explicitly modeled Linux
+root metadata and are POSIX-only; the artifact case is platform independent.
+They execute no image, CLI, SDK model tool or native denial probe. All previous
+logical case IDs, global/changed-module coverage gates and actual C32–C35
+requirements remain. Acceptance requires those14 cases, complete shadow
+regressions, ordinary SDK hooks, specification/catalog/docs validation and
+Graphify, followed separately by fresh actual common-tuple denial and native
+receipts. Deterministic PASS does not close runtime or scientific acceptance.
+The evidence README and quality operations page document the fixed policy,
+recovery and this distinction; the catalog records both new artifacts.
+
+The component fixture additionally MUST discard every inherited `GIT_*`
+binding before creating or reading its private repository, then explicitly
+disable global/system configuration and replacement objects. A real controlled
+`GIT_DIR` probe reproduced a passing test that nevertheless changed a separate
+owned repository's HEAD and index. Three additional C26 cases cover directory,
+worktree and index redirection, bringing this component file to 17 cases. Each
+uses disposable owned targets and an isolated child that must actually execute
+exactly one selected case with one PASS and zero skips. Clear inherited
+`NODE_TEST_CONTEXT`; exit0 alone cannot prove that the child control ran.
+Preserve the initial ineffective nested-child harness and the corrected
+14 PASS / 3 FAIL contrast separately. The qualification bootstrap already owns
+its independent Git-environment sanitation; this correction changes only test
+fixtures, their source/test identity and documentation, not runtime policy,
+admission rules, credentials, native acceptance or scientific gates.
+
+#### Fixed qualification seccomp profile — issue #974
+
+Status: implementation preparation; application to a real container requires a
+separate reviewed authorization. The earlier authorization covered one exact
+`unshare(USER|NET)` diagnostic only and was consumed. It grants no permission
+for this profile, model calls, a campaign, branch recovery or installation.
+
+Observed evidence on the Darwin arm64 host of the self-hosted runners: the
+Linux arm64 SDK image admits Codex0.171.0 bytes and version, and its committed
+C32–C35 model-free controls pass. The CLI cannot enter its bubblewrap sandbox
+with Docker's built-in seccomp filter. A matched, credential-free, cap-dropALL,
+network-none contrast kept image/user/entrypoint/argv/mounts/capabilities equal:
+the default filter returned EPERM; the one authorized exact unshare rule passed.
+This identifies one blocking cause, not complete CLI compatibility or managed
+filesystem enforcement. Execution was local on that physical Mac, not a GitHub
+Actions job. Previous negatives and original native receipts remain immutable.
+
+The selected correction MUST preserve every field and rule of the semantic
+Moby profiles/seccomp v0.2.3 baseline vendored by Engine8af9fe3. It adds only:
+
+| Operation | Fixed additional permission | Boundary |
+|---|---|---|
+| `clone` | Eight exact arg0 values: SIGCHLD, USER and MNT, plus each combination of PID/IPC/NET | No UTS, CGROUP, TIME, PARENT or arbitrary flags; USER and MNT are mandatory. |
+| `unshare` | Exact arg0 USER, or USER plus NET | No other namespace or sharing flags. |
+| `mount`, `pivot_root` | Private filesystem setup | Kernel checks still require capabilities in the created user namespace; no host SYS_ADMIN is added. |
+| `umount2` | Exact arg1 MNT_DETACH | No additional unmount mode. |
+
+There are13 added rules across five syscall names. Existing setns, clone3,
+default ERRNO and all other baseline rules MUST remain unchanged. The source
+and Apache2.0 attribution/license travel with the fixed data. The reviewed
+profile is exported as immutable compact JSON; whitespace is not an ambient
+choice. A local Node/macOS HTTP negative with the pretty representation is
+retained; compact serialization changes no syscall semantics. This observation
+does not establish a general request-size limit or Docker transport defect.
+
+The [pinned Codex bubblewrap composition](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/linux-sandbox/src/bwrap.rs)
+uses USER/PID/IPC, optionally NET, and private filesystem setup. The
+[vendored bubblewrap implementation](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/vendor/bubblewrap/bubblewrap.c)
+provides the clone/unshare/mount operations. The
+[Moby baseline](https://github.com/moby/moby/blob/8af9fe3/vendor/github.com/moby/profiles/seccomp/default.json)
+is a semantic reference, not independent byte attestation of a daemon's built-in
+profile. No claim of compatibility with another CLI/engine/kernel is made.
+
+The existing Node-core container adapter owns the fixed Engine API payload.
+It MUST send both no-new-privileges and the exact profile bytes, and inspect
+them before start and authority-bearing cleanup. A missing, changed or
+unconfined filter rejects admission. The public bootstrap, source-provenance
+loader and selected-driver inventory MUST admit `qualification-seccomp.cjs`
+before its import; missing, modified or linked bytes reject before application
+imports/probes/scopes. This is the18th contained driver, not a directory grant.
+The profile is primitive data with no input, environment, file lookup or process
+side effects. No new SDK semantic port, public flag, profile field, environment
+grant, arbitrary path, syscall list or Docker selector is introduced.
+
+The closed nine-field containment profile and existing operation lifetime,
+mounts, read-only root, private PID/IPC namespaces, CapDropALL, trusted PID1's
+SETUID/SETGID-only transition and nonzero worker remain unchanged. Kernel
+user-namespace capabilities are distinct from host capabilities. The additional
+mount/namespace syscalls nevertheless widen the per-container kernel surface;
+the explicit review must identify that risk. No unconfined/privileged mode,
+SUID helper, daemon/runner setting, persistent service or fallback is permitted.
+
+```text
+Source/profile controls -> reviewed implementation/image -> exact authorization
+ -> real CLI exclusion + nested SDK containment -> committed campaign plan ->174
+```
+Text equivalent: prepare and verify source, review the concrete per-container
+exception, verify actual CLI isolation and SDK cleanup, then freeze the complete
+scientific preregistration. A namespace diagnostic, image build or deterministic
+PASS alone never admits174. Only the unchanged same-tuple174 PASS admits42.
+
+The canonical progress comment remains the sole GitHub status surface. It MUST
+preserve earlier attempts and expose status before technical details:
+
+| State | Representative first content and next action |
+|---|---|
+| Preparing | `The fixed filter is prepared. No campaign has started. Source checks and the exact image review are next.` |
+| Action required | `The runtime exception is ready for review. Inspect the exact profile, image and bounded operations in the linked review before authorizing application.` |
+| Blocked/failed | `CLI isolation was not established. Retain the linked negative and correct its demonstrated cause; the174 cases remain unstarted.` |
+| Partial | `CLI exclusion passed; SDK containment is still pending. Inspect the separate receipts; do not start174.` |
+| Accepted runtime | `The runtime prerequisites passed on the recorded tuple. Commit the complete preregistration before174; no profile is qualified yet.` |
+
+Each state links to its retained source/receipt/review in the existing comment.
+No new notification, label, check, localization mechanism or evaluated-PR write
+is added. Existing text-first, narrow-view, sanitization and disclosure rules
+apply. No human/platform or accessibility observation is a gate for this Linux
+qualification change. Missing authorization/capability stops before applying the
+exception. A failed or uncertain application retains all effects and cannot
+silently retry, broaden the filter or replace earlier evidence. Rollback is to
+the preceding immutable implementation/image; it does not erase a negative or
+reuse a plan for a different tuple. Nothing changes on the daemon or runners.
+
+The risk-derived minimum is **35 distinct verification cases**, counted once:
+
+| Area | Cases | Required behavior |
+|---|---:|---|
+| Deterministic fixed policy/configuration |5| Preserve the entire baseline; constrain clone; constrain unshare; constrain filesystem additions; reject public override fields. |
+| Actual local HTTP with modeled Engine |4| Send exact bytes with unchanged capabilities; reject missing, changed and unconfined filter inspections before start. |
+| Public immutable bootstrap |3| Reject missing, changed and linked profile modules before imports/probes/scopes. |
+| Fixed worker scratch |5| Exclusive private creation; refuse existing directory and symlink; reject linked temporary parent and ambient temporary-root redirection. |
+| Actual CLI isolation |14| Positive workspace read; denial of each of the nine fixed private roots; controller-directory masking; linked alias denial; write denial; network denial. |
+| Actual common-tuple native SDK |4| Existing C32–C35, with C32 additionally holding a detached nested USER/MNT/PID/IPC/NET bubblewrap workload during abort. |
+| **Total** |**35**| The14 CLI cases and four native cases remain separate runtime acceptance, not deterministic test credit. |
+
+`seccomp-components.cjs` owns the12 deterministic cases. The existing35 logical
+qualification IDs and scientific174/42 inventories stay unchanged. C32 retains
+its original escaped descendant and also MUST record different actual inner
+namespace identities, a live reparented outer launcher and a live nested child
+before cancellation. Whole outer namespace stop/removal then proves cleanup;
+test cleanup cannot supply acceptance. No new native case or scope is counted
+for the nested arm. The other native cases retain their historical assertions,
+including late-callback cancellation and the untouched sentinel.
+
+CLI controls MUST use dummy canaries, never real credential/oracle contents. A
+positive sandbox command marker is required so startup failure cannot masquerade
+as successful denial. Actual ordinary SDK/CLI model-tool composition and
+credential/oracle exclusion remain separate mandatory evidence before174;
+model-free CLI commands alone do not close them. No scientific model retry or
+research deadline is added. Unchanged global/changed-module coverage floors,
+ordinary hooks, architecture/package checks, full deterministic regressions,
+specification/catalog/documentation validation and Graphify remain required.
+The engine component coverage includes the fixed data module and hashes the new
+test source before loading it; instrumentation never enters native execution.
+
+Acceptance maps EV974-S01 to the three bootstrap refusals; EV974-S02/S03 to the
+five policy and four HTTP cases plus actual CLI exclusions; and EV974-S04 to
+fresh C32–C35 including the nested arm. Definition of Done requires all35 on the
+same reviewed tuple, actual SDK model-tool exclusion, final source checks and
+committed scientific preregistration. No preparation state closes acceptance.
+The quality operations page and evidence README MUST describe the fixed filter,
+authorization, distinction between component/native evidence, recovery and
+rollback; the catalog includes source, provenance/license and component tests.
+
+#### Separate authenticated SDK runtime admission
+
+CLI command controls and model-free C32–C35 do not by themselves prove the
+ordinary SDK can complete a real model-tool operation. The existing immutable
+bootstrap gains a closed `runtime-admission` purpose and mode for this remaining
+prerequisite. It is not an Action input, consumer CLI setting, public SDK grant,
+corpus case or paired review. Only its exact committed plan,19 admitted driver
+blobs, common image/runtime/CLI identities and private live operation can run it.
+No alternate provider, executable, workspace selector or retry parameter is
+accepted. Its sole configured profile is the unchanged Luna/xhigh findings
+route, with ordinary prompt construction, planner, CLI, native/local schema,
+private authentication and whole-operation cancellation.
+
+```text
+Committed common source/image -> independent CLI14 and nativeC32–C35 receipts
+ -> committed runtime-admission plan -> one ordinary SDK canary query
+ -> complete committed scientific preregistration ->174
+```
+
+The operator MUST verify the independent CLI/native receipts match the exact
+implementation, image, drivers and runtime before this one control call. The
+worker creates an innocuous remote-free workspace outside the hidden controller
+source. Its random32-byte canary is withheld from the prompt. A fixed reviewed
+program reads that canary, opens/closes (without reading contents) one existing
+file under each of the nine system-denied roots, and emits raw-descriptor JSON.
+The protected oracle-root file is a dummy created only for this control; no
+independent labels/oracle enter model input. The worker first establishes all
+nine files exist and can be opened by the same frozen witness in a fresh
+same-UID trusted Node process outside the CLI sandbox; missing auth or other
+baseline data fails before any model call. Model tools must return the exact
+withheld nonce and nine denials through the ordinary native/local schema.
+Native schema-artifact proof, read-only workspace/output mode and live
+qualification admission MUST be validated before execution, with private runtime
+cleanup on refusal. The retained missing-schema injection first reached one
+modeled execution before a later ledger rejection; the same test now refuses
+before execution after this causal correction. Workspace bytes/entries must
+remain unchanged. Failed or missing evidence is a
+retained unavailable/negative result, never an implicit PASS or automatic retry.
+
+This is composition evidence: a genuine SDK tool read of the withheld canary
+plus the fixed open witness and independent same-tuple CLI enforcement. A model
+assertion alone is insufficient; it is not independent syscall tracing of every
+model action. Preserve that evidentiary distinction. The existing recorded-CLI
+adapter retains actual prompt/schema hashes, pinned preparation and complete
+observer/response lifecycle for exactly one application call. Configured and
+provider-reported model identity remain distinct; missing reported identity is
+null telemetry. Runtime attempts use `runtime-attempt-*` events and their own
+ledger; no corpus-score or prediction file is produced.
+
+The purpose MUST reject every scientific bootstrap entry and the scientific
+complete-slot policy MUST reject its identity, even with a successful stopped
+scope. Native-control plans still receive zero credentials and cannot use this
+mode. Runtime admission selects only normal Codex credentials, never an evidence
+or GitHub token. Extra runtime-admission fields, changed fixture prompt/schema/program digest,
+foreign slot IDs and `--preflight` reject before imports/probes/models. Ordinary
+corpus `--preflight` remains strictly model-free. No deadline, scientific retry,
+score/label/order/threshold/cohort or production setting changes. Only actual
+same-tuple174PASS admits42, retaining every scientific gate and zero pilot writes.
+
+The additional risk-derived minimum is **26 distinct verification cases**:
+13 deterministic CJS controls (plan acceptance; wrong purpose; extra field;
+changed fixture; wrong detector; native/model purpose collision; forged nonce;
+missing denial; readable private root; reordered paths; direct unauthenticated
+entry; scientific bootstrap rejection; complete real workspace mutation/link
+detection), two actual-local-HTTP/modeled-Engine controls for private credential
+selection/dummy input and no-effect foreign-slot/preflight refusal, eight real
+filesystem/Git/durable-ledger controls with modeled SDK/containment ports
+(complete string/object lifecycle; missing positive baseline; pinned refusal and
+cleanup; provider failure/fabricated nonce without retry; Git metadata mutation;
+confirmed outer completion; interrupted/unconfirmed/malformed evidence;
+non-dumpable parent with a fresh same-UID positive witness), two SDK
+identity/slot controls extending
+the existing C04 cases, and one actual common-tuple runtime query. The23 CJS
+controls execute no model. The two SDK controls retain their existing logical
+IDs; the35 qualification controls and174/42 inventories are not enlarged or
+renumbered. Catalog, quality guidance and evidence README include the new driver
+and control source. Global/changed-owner coverage and normal source gates remain
+effective. Build or deterministic success cannot substitute for the actual query.
+
+The first real runtime-control attempt on source22c94195/image25fe retained
+CLI14PASS/native4PASS but failed before any application/model call: the trusted
+bootstrap drops UID in-process, and Linux makes its non-dumpable proc files
+root-owned. A separate same-image/profile matched contrast opens only
+`/proc/self/environ`: after UID drop it receives EACCES with file owner0;
+after a same-UID exec it opens successfully with file owner502. Both workers
+have capabilities0 and neither reads environment contents. This follows
+[Linux proc ownership](https://www.man7.org/linux/man-pages/man5/proc_pid.5.html).
+The positive witness therefore runs as a fresh same-UID Node without changing
+dumpability, file permissions, capabilities, policy or scientific gates. Its
+failure is durably recorded before throwing; malformed output or any denied
+baseline path still prevents SDK preparation. All nine sandbox denials remain
+mandatory. Keep the original unavailable attempt and contrast. A source/driver
+correction requires fresh committed runtime admission, never replay of the old
+plan. Scientific preregistration may precede technical controls, but scientific
+launch MUST wait for actual common-tuple technical PASS.
+
+#### Nested native control retains the masked outer procfs
+
+The first common literal-root tuple retained actualCLI14PASS and native
+C33–C35 PASS, but C32 failed before readiness: its added bubblewrap command
+could not mount a new `/proc` (`EPERM`). A separate two-arm model-free contrast
+kept the same image, fixed filter, UID, capabilities, mounts and five namespace
+flags. The fresh-proc arm reproduced that refusal; the inherited-proc arm
+entered all five different USER/MNT/PID/IPC/NET namespaces with effective
+capabilities0. This isolates a fixture prerequisite; it does not establish a
+model-tool or scientific PASS. Preserve both arms and the native negative.
+
+C32 MUST retain the outer operation's existing procfs and its submount masks.
+It MUST NOT require a fresh procfs mount, remove masks, add capabilities or
+change the fixed seccomp profile. The [kernel procfs contract](https://kernel.org/doc/html/v7.2/filesystems/proc.html#mount-restrictions)
+restricts fresh unprivileged mounts when existing procfs entries are hidden.
+The pinned CLI also has an inherited-procfs fallback; the fixture does not alter
+CLI behavior. The nested process MUST record its actual `/proc/self` PID in the
+outer procfs separately from `process.pid` in its new PID namespace. The worker
+MUST reread that outer process state and require it alive before readiness,
+while retaining the five distinct namespace identities, reparented live
+launcher, original escaped descendant and whole-operation cancellation proof.
+All previous C32–C35 assertions and the existing35 logical IDs remain effective.
+A fresh image and exact committed native plan are required after this causal
+fixture correction; prior receipts retain their original identities/results.
+
+#### Literal private controller root after actual CLI exclusion failure
+
+The approved fixed-filter image at implementation `faea9e2c` produced an actual
+**12 PASS /1 FAIL** CLI result: the positive workspace marker and eight other
+private-root denials passed, but a dummy file inside the controller source was
+readable. The thirteen cases used raw descriptor witnesses. Earlier attempts
+retain a multiline TOML fixture-reader failure and a discarded Node-stream
+witness; an outside-temporary-home contrast refuted the helper-alias warning as
+the missing marker's explanation. No corpus/model call occurred. These
+negatives cannot be relabeled as accepted runtime evidence.
+
+The [pinned glob expansion](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/linux-sandbox/src/bwrap.rs)
+enumerates regular files, so a glob naming the source directory did not mask its
+tree. The worker MUST exclusively create `/tmp/bugbot-contained-worker` inside
+its existing per-operation private tmpfs, using mode0700 and no adoption,
+overwrite or recursive mkdir. `/tmp` MUST be canonical and the actual temporary
+root; redirection rejects before creation. One authenticated worker already
+owns each fresh container, so parallel outer operations have separate namespaces
+and cannot collide at this internal path. A preexisting directory or symlink
+is incomplete startup, never a reusable workspace or retry grant.
+
+The system policy MUST literally deny the complete
+`/tmp/bugbot-contained-worker/source` directory and
+`/tmp/bugbot-contained-worker/home/.codex/auth.json`. Source cloning,
+dependency/driver admission and credential loading retain their order; scratch
+creation remains Node-core code inside the independently pinned bootstrap
+before any application import. No endpoint, port, profile field, flag, mount,
+capability or syscall permission is introduced. The approved fixed seccomp
+export and production defaults remain unchanged.
+
+```text
+Fresh owned namespace -> exclusive fixed private root -> literal source mask
+ -> positive workspace witness plus private-tree denial -> remaining gates
+```
+
+Text equivalent: each complete operation owns a filesystem namespace; its fixed
+private path enables a directory mask without a broad glob scan. Real
+subject/corpus workspaces stay outside the controller root. This does not
+replace subject source with an empty workspace.
+
+Five C26 cases in `worker-scratch-components.cjs` use real owned files with
+modeled Linux paths. They prove creation/refusal behavior, not native isolation.
+The artifact contract retains nine literal roots; CLI acceptance grows to14
+cases by independently proving that original controller directory entries
+cannot be enumerated, as well as denying its file content. Owned witnesses MUST
+use synchronous raw descriptor writes; Node stream compatibility remains
+unproven and is not repaired by relaxing network or seccomp policy. No
+assertion, label, scientific floor or prior failure is removed. The existing35
+logical IDs remain unchanged.
+
+Acceptance requires all568 deterministic regressions on final committed source,
+unchanged source/package/coverage/architecture/spec/catalog/docs gates, and new
+common-tuple14 CLI and four native receipts before scientific preregistration.
+The earlier image and unexecuted native plans remain historical preparation.
+A new policy requires a new image and committed plan. The operator UI says
+`Private source exclusion failed;174 remains unstarted` until actual same-tuple
+denial passes; partial results never say qualified. Keep the existing canonical
+comment and history. Documentation/catalog record the static path, no-adoption
+recovery and component/native distinction. Rollback preserves the preceding
+immutable image, plan and negative inputs.
+
+| Path | Change |
+|---|---|
+| `specs/bugbot-analysis-publication-and-autofix.md` | update |
+| `specs/agent-execution-policy-hardening.md` | update |
+| `quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs` | update |
+| `quality/bugbot/evidence/issue-950/execution-provenance.cjs` | update |
+| `quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs` | update |
+| `quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs` | update |
+| `quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs` | update |
+| `quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs` | update |
+| `quality/bugbot/evidence/issue974/attempt-ledger.cjs` | update |
+| `quality/bugbot/evidence/issue974/corpus-selection.cjs` | update |
+| `quality/bugbot/evidence/issue974/qualification.test.cjs` | update |
+| `quality/bugbot/evidence/issue974/native-bootstrap-components.cjs` | create |
+| `quality/bugbot/evidence/issue974/owner-loss-components.cjs` | create |
+| `quality/bugbot/evidence/issue974/operation-containment.cjs` | create |
+| `quality/bugbot/evidence/issue974/qualification-supervisor.cjs` | create |
+| `quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile` | create |
+| `quality/bugbot/evidence/issue974/qualification-requirements.toml` | create |
+| `quality/bugbot/evidence/issue974/qualification-seccomp.cjs` | create |
+| `quality/bugbot/evidence/issue974/qualification-seccomp.source.json` | create |
+| `quality/bugbot/evidence/issue974/qualification-seccomp.LICENSE` | create |
+| `quality/bugbot/evidence/issue974/seccomp-components.cjs` | create |
+| `quality/bugbot/evidence/issue974/managed-requirements-components.cjs` | create |
+| `quality/bugbot/evidence/issue974/worker-scratch-components.cjs` | create |
+| `quality/bugbot/evidence/issue974/containment-native.test.cjs` | create |
+| `quality/bugbot/evidence/issue974/containment-native-fixture.cjs` | create |
+| `src/domain/agent_execution_plan.ts` | update |
+| `src/application/ports/qualification_operation_scope_ports.ts` | create |
+| `src/application/policies/qualification_operation_scope_policy.ts` | create |
+| `src/infrastructure/agents/qualification_operation_scope.ts` | create |
+| `src/infrastructure/agents/qualification_investigation_admission.ts` | update |
+| `src/infrastructure/agents/agent_execution_planner.ts` | update |
+| `src/data/repository/agent_cli_execution.ts` | update |
+| `src/infrastructure/agents/__tests__/qualification_investigation.test.ts` | update |
+| `quality/bugbot/evidence/issue974/README.md` | update |
+| `quality/bugbot/evidence/issue974/plan.json` | update |
+| `quality/bugbot/evidence/issue974/results.json` | update |
+| `docs/agents/execution-contract.mdx` | update |
+| `docs/bugbot/quality-observability.mdx` | update |
+| `specs/catalog.json` | update |
+| `specs/CATALOG.md` | update |
+| `package.json` | update |
+| `scripts/coverage-budgets.json` | update |
+| `src/architecture/__tests__/agent_output_locale_boundaries.test.ts` | update |
+
+### 16. Acceptance scenarios
+
+Given a foreign source/image/runtime/driver/CLI byte, admission rejects before imports/probes/models. Given a contained ordinary operation with actual follow-ups, one owned scope covers the complete chain. Given explicit abort or abrupt owner loss, all escaped/reparented descendants stop and confirmation precedes outer cleanup. Given inherited pipes, cancellation still settles without a research deadline. Given success/cancel races, retained outcome is truthful, full scope is released and unrelated scopes remain untouched. Given incomplete/unknown effects, no replay, blind cleanup or phase42 occurs. Given authentic complete174pass, only the same tuple may proceed to fixed42; all historical gates/comparisons remain mandatory and activation remains disabled.
+
+### 17. Requirements traceability
+
+| Requirement | Cases |
+|---|---|
+| EV974-S01 | ev974-C26 |
+| EV974-S02 | ev974-C27, ev974-C30 |
+| EV974-S03 | ev974-C27, ev974-C28, ev974-C31 |
+| EV974-S04 | ev974-C31, ev974-C32, ev974-C33, ev974-C34, ev974-C35 |
+| EV974-S05 | ev974-C27, ev974-C28, ev974-C34 |
+| EV974-S06 | ev974-C29, ev974-C34, ev974-C35 |
+| EV974-S07 | ev974-C29, ev974-C30 |
+| EV974-S08 | ev974-C31, ev974-C35 |
+
+Architecture/composition enforces layer ownership; section15 assigns documentation paths. Original25 and216 cases remain references to retained owners, never redefined here. The new native-control purpose and measured-campaign purpose must be distinct in producer and admission receipts.
+
+### 18. Implementation sequence
+
+Official revision/seed validation and same-branch publication -> pure scope policy/semantic ports -> existing bootstrap/image/source/driver integration -> six deterministic controls -> four actual native SDK controls -> complete source/package/build/type/lint/architecture/spec/catalog/docs and final native findings -> exact committed implementation then immutable preregistration -> one174 campaign -> unchanged gates -> same-tuple42 only on actual174pass. Freeze the full42 admission/driver closure before174. No code or runtime image alone is preregistration or qualification.
+
+### 19. Definition of Done
+
+- Every new requirement maps reciprocally to the ten new cases; retained owners/cases remain verbatim and counted once.
+- Actual shared immutable bootstrap, ordinary planner/provider/executor and private whole-operation scope are implemented and architecture-enforced.
+- All original25/216 controls and six new deterministic plus four actual native SDK controls pass without silent skip or weakened coverage.
+- Exact image/config/source/lock/compiler/drivers/runtime/CLI/launcher/prompt/schema/order/retry identities are committed before probes/models; source and runtime mismatch reject before imports.
+- Abort, owner EOF and normal completion stop the entire exact owned namespace before outer cleanup/result acceptance; unknown state remains incomplete without replay.
+- Complete174/42 ledgers, all scientific/comparison gates and optional unknown telemetry remain intact. No token/time/turn/read cap truncates research.
+- Actual build/type/lint/package/architecture/specification/catalog/docs/Graphify and final-SHA native checks/findings are retained; `pnpm run validate:specifications` and `pnpm run generate:specifications` keep the catalog current.
+- No installation, runner/privilege/protection change, release, model acceptance or profile qualification is inferred from preparation. Production disabled; evaluated-pilot PR writes0.
+
+### 20. References and decisions
+
+Retained owning SDD and runtime owner are listed in section15. Primary mechanism: https://www.man7.org/linux/man-pages/man7/pid_namespaces.7.html ; Node detached/session behavior: https://nodejs.org/api/child_process.html#optionsdetached . Selected decision is existing local Docker Engine with verified owned stdin/EOF lifetime; actual immutable SDK image and CLI admission are separate pending evidence. Earlier native preparation failures44817084221 (unknown reference) and44821319812 (25reserved identities redeclared) are retained. This candidate defines only10 new cases and fresh EV974-S requirement identities. It is a proposed appendix, not implemented containment, model measurement, native acceptance, qualified profile or activation authorization.
+
+
+## Post-campaign pre-dispatch failure boundaries
+
+The completed093fd141/07f21a4 campaign remains a valid negative result. Its174
+initial deliveries,200scientific SDK calls and separate technical SDK control
+retain their original identities, attempts and thresholds. Subsequent source
+corrections MUST NOT revise that result or admit phase42. Any future measurement
+requires a new complete tuple, committed preregistration and actual admission.
+
+Existing EV974-S02/S03/S08 and controls C15/C16/C27 also cover the preparation
+interval before a namespace ID is returned and the acceptance recorder's required
+pre-dispatch writes. Explicit cancellation MUST reach initial Engine version,
+image and create requests. The outer cancellation listener is installed before
+the first awaited preparation step. An interrupted create with no confirmed ID
+MUST preserve its exact identity/intent as ownership-unknown and incomplete; it
+cannot claim stopped/removal proof, replay creation or delete another resource.
+
+| Boundary | Required outcome | Retained evidence |
+|---|---|---|
+| Initial version/image request cancelled | HTTP request and response callbacks close before returning | Incomplete operation; no namespace claim |
+| Create reply withheld when cancelled | Cancellation settles before the reply is released | Exact create intent/name/identity; unknown ID; no blind delete or replay |
+| Required observation/preparation write fails before CLI dispatch | Cancel the original owned signal synchronously; no CLI subprocess starts | Original persistence failure and incomplete attempt chain |
+
+SDK lifecycle observers remain optional telemetry that cannot throw into ordinary
+execution. Qualification acceptance writes are owned by the driver: its recorder
+MUST bind the exact original request signal and its trusted abort capability. It
+MUST NOT substitute a new signal, which would lose the live operation admission.
+The corpus, paired-review and technical SDK factories all use that same owned
+cancellation. Review-specific observation writes share the critical recorder
+fence. A later SDK cancellation or terminal persistence error cannot replace the
+first evidence failure. No retry, time/turn/read cap, setting, privilege or model
+path is introduced.
+
+The unchanged35logical control identities gain **five distinct executable
+regression cases**: three real SDK planner/client/executor controls with a local
+shell (positive delivery; failed started observation; failed admitted observation),
+and two actual Unix-HTTP controls with modeled Engine replies (held version and
+held create). The same regression definitions MUST expose the old dispatch/stall
+and pass after correction. Scope confirmations in these fixtures are modeled;
+they establish no native namespace, Docker, provider, model or qualification
+acceptance. Existing durability/transport suites and their cancellation-before-
+creation case remain required; pre-aborted preparation records incomplete with
+zero create requests. Original coverage, full source/driver checks, normal hooks,
+package, documentation and final native gates remain in force.
+
+Traceability: C15/C16 -> critical recorder and three actual factories -> real SDK
+regressions; C27 -> host Engine adapter -> held-response and existing protocol
+controls. Operator guidance documents unknown creation effects and first-error
+retention. SDK production modules remain unchanged; changed driver identities
+must be frozen afresh before any future model measurement.
+
+
+## Post-campaign policy coherence and durable collector decisions
+
+The valid negative093fd141/07f21a4 result and its exact measured tuple remain
+unchanged. No operational correction admits42 or repeats174. The35logical
+qualification-control identities and all numerical scientific gates remain fixed.
+
+Schema-v2 policy MUST require containment before validating its image and both
+runtime closures. A missing, null or false containment cannot become an admitted
+v2 plan or reach a CLI probe through an uncontained fallback. Legacy v1 retains
+its own corpus/lifecycle contract; model-free provenance fixtures use a coherent
+v1 tuple when exercising that historical uncontained route. Every negative
+mutation control MUST begin with an otherwise valid v2 closure, so an unrelated
+missing containment cannot accidentally satisfy its assertion.
+
+A rejected corpus worker MUST prevent a passing corpus-score and finish record,
+even if every in-memory prediction exists and the score passes. This includes
+failure to append the final terminal case row and failure to record the collector
+error itself. Retain the durable prefix and complete prediction facts separately
+from the passing decision. The ordinary downstream full-review ledger checks
+remain required and cannot be replaced by the in-memory result.
+
+The approved fixed13-rule filter stays byte-identical, SHA256
+fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b. Its
+clone additions constrain arg0; [Linux clone ABI documentation](https://man7.org/linux/man-pages/man2/clone.2.html)
+places the flags in arg1 on s390. The containment profile MUST reject s390/s390x
+before the filter is used. Existing observed-engine/image tuple checks still
+reject a contradictory declaration before create. No added rule, capability,
+runner change or new filter execution is introduced. Architecture controls are
+model-free profile admission; they do not claim an actual s390 kernel run.
+
+```text
+v2 plan -> mandatory containment/runtime closure -> supported engine tuple -> fixed filter
+legacy predictions -> durable terminal rows -> no worker rejection -> scientific score decision
+```
+
+Text equivalent: policy first admits a coherent contained tuple; predictions
+can produce PASS only when collection succeeds and the existing score gates pass.
+User-visible incomplete/failed output MUST preserve that distinction, including
+when the diagnostic write also fails. There is no new setting or schema, default
+runner change, model path or permission.
+
+The qualification Docker build context MUST be an owned enclosing staging
+directory containing the sanitized implementation checkout at `sdk-source/`,
+including its own credential-free Git objects. The Dockerfile is supplied
+separately or at that staging root. Existing successful build receipts use this
+layout. The COPY instruction remains unchanged; correcting the documented context
+does not establish a new image/runtime or authorize another build/campaign.
+
+Historical compressed-evidence retrieval MUST use each entry's archiveRevision
+and path. A global example revision cannot cover later entries. Verification
+checks compressed and decoded hashes against the actual pinned Git object.
+Exact originals and historical negative runs remain retained. Redacting a current
+host-endpoint descriptor does not erase its reachable Git history; no force-push
+or claim of historical erasure is authorized by these source corrections.
+
+The unchanged C27/C31 obligations gain **eight distinct regression cases**:
+three absent-containment values, two final-row/diagnostic-write failures, two
+reversed-ABI rejections and one two-revision retrieval control. The same final
+test bytes MUST expose eight failures on the original source and eight passes
+after correction. The original-source read overlay is restricted to the local
+model-free test process and cannot enter a qualification bootstrap, CLI or model
+execution. Existing complete shadow, AST95/90, pure-policy, normal hooks, SDK,
+package/docs and final-head native gates remain in force.
+
+Traceability: C27 -> EV974-S02/S03/S05 -> policy/host admission and architecture
+controls; C31 -> EV974-S03/S04/S08 -> actual corpus source with modeled CLI ports,
+real private ledgers and two-revision retrieval. Operator documentation records
+context layout, durable failure, unsupported ABI and the unchanged negative
+scientific result. No new case identity or scientific observation is inferred.
+
+
+### Failed force-stop and image-bound orphan reaping — #997 review of de62ed
+
+**Scope and evidence.** This is an operational correction to EV974-S01/S04/S05/S06,
+not a detector correction or a new campaign. The complete original174 result on
+093fd141/07f21a4/c5d0 remains negative;42 remains not admitted. Two actual Unix-HTTP
+components reproduce a hanging stop when Engine KILL returns500 or loses its
+response. A credential-free Linux process experiment, using the same inert
+20-orphan worker in both arms, observes20 unreaped zombies with the former Node
+PID1 and zero with image-bundled tini. Its worker stays root and imports no SDK;
+it proves reaping only, not UID-drop, native SDK or scientific admission.
+
+**Lifecycle and architecture.** The Engine adapter MUST race pending stopped-state
+confirmation against a known failed force-stop. On that failure it rejects with
+the retained cause, closes/drains its owned channels and leaves stopped/removal
+unconfirmed. It MUST NOT DELETE a running scope or emit stopped/removed evidence.
+The existing technical escalation follows a real stop request; there is no new
+research deadline, retry, generic cleanup or ownership authority.
+
+The admitted immutable image MUST include /usr/bin/tini as PID1 with the fixed
+argv `tini -- /usr/local/bin/node /qualification-supervisor.cjs <uid> <gid>`.
+The Node supervisor is its direct primary child and retains private IPC and
+owned-stdin lifetime. Tini reaps adopted children while work is active. Primary
+supervisor exit ends tini; Linux then kills the remaining PID namespace. Outer
+Engine stopped confirmation is still required. The worker bootstrap verifies
+both PID1 argv and its unchanged direct supervisor parent before identity drop
+or application import. Trust derives from the admitted image digest and closed
+source checks; proc observations alone are not byte attestation.
+
+```mermaid
+flowchart LR
+ O[Outer owned lifetime] --> I[Image-bound tini PID1]
+ I --> S[Private Node supervisor]
+ S --> W[Verified bootstrap and ordinary worker]
+ W --> D[Descendants adopted and reaped by init]
+ S --> X[Primary exit ends namespace]
+ X --> C[Outer stop confirmation before acceptance]
+```
+Text equivalent: the outer lifetime controls the private supervisor under the
+image init; init reaps orphans during execution and exits with its primary child;
+outer confirmation still owns accepted cleanup. Model stdout never grants IPC
+authority. Pure selection/authority policies retain their boundaries; OS reaping
+belongs to the image/supervisor and failure propagation to the Engine adapter.
+
+**Configuration and migration.** Engine HostConfig.Init is explicitly false and
+inspected: no daemon-injected executable is accepted outside the image digest.
+The existing nine-field containment profile, two mounts, SETUID/SETGID capability
+set, network policy, fixed13-rule seccomp bytes/SHAfb324 and closed scientific
+driver inventory remain unchanged. No user flag, schema, privilege or runner
+change is added. The initializer bytes are pinned by the new image identity.
+Changed image/source/driver bytes require a fresh common committed tuple and
+C32–C35 admission before any future measurement; old admission never transfers.
+Rollback selects a preceding immutable tuple and cannot reuse its scientific
+result for changed bytes. No new model campaign is authorized by this correction.
+
+**Operator and privacy UX.** Retain the existing unconfirmed-state copy: `Owned-scope
+state is unconfirmed. Automatic replay and cleanup are blocked.` The operator
+inspects the exact owned ID and first failure; no elapsed-time retry or broad
+container search is prescribed. Successful reaping has no separate success
+notification and cannot turn an incomplete operation into completed research.
+Historical snapshots MUST lead with archive framing and preserve exact original
+bytes/digests. Original scientific execution identities stay explicit. Public
+privacy summaries omit unnecessary old blob/path and commit-graph associations;
+the exact mapping is retained privately. Earlier hosted versions/caches remain
+pending GitHub Support purge and MUST NOT be described as fully erased.
+
+**Numeric test budget and acceptance.** Preserve35 logical control IDs and all
+previous controls. Extend C27 with16 distinct deterministic cases: two failed
+KILL outcomes, ten exact bootstrap/init/parent admission cases and four new
+supervisor init/parent cases. Retain one additional native process experiment
+with two implementation arms and the identical20-orphan worker; do not count
+its two arms as two independent feature cases. Required acceptance: HTTP500 or
+lost KILL response rejects without pending owned waits or DELETE; valid init and
+parent pass while mismatches/reparenting/proc failure reject; the old Linux arm
+exposes zombies and corrected arm reaps them while the worker remains active.
+A failed setup attempt is retained and does not count as either experimental arm.
+
+Run the complete deterministic shadow command without skips and exact-source
+Engine/supervisor component95/90 gates. Keep pure100%, existing global/changed-path,
+normal build/test/lint, package/docs/specification and final-head native gates.
+Fresh actual native SDK C32–C35 and runtime admission are separate pending gates,
+never inferred from these model-free fixtures. Documentation deliverables are
+quality operations, driver execution guidance and a bounded source/control packet
+with all negatives. Catalog test ownership and Graphify are updated together.
+Traceability: EV974-S04/S06 -> Engine adapter/failed-KILL controls; EV974-S01/S04/S05
+-> image/supervisor/bootstrap init-parent controls and native process contrast;
+EV974-S06/S07 -> historical archive framing and private-original retention.
+
+
+#### Source5327 review: independent CLI evidence
+
+Observed defects: a correct withheld nonce plus model-authored denial JSON was
+accepted without independently retaining the witness command; the host accepted
+a pass-only inner ledger. The historical093fd141 technical receipt is immutable.
+It proves the ordinary workspace nonce read, while the nine private-open results
+are model-reported and do not independently establish all nine witness attempts.
+The174 negative, its tuple,200 scientific SDK invocations and one separate
+historical technical invocation are not altered or repeated. No new genuine
+query or scientific campaign is authorized by this operational correction.
+
+Current runtime admission MUST use protocol2 in its exact committed private plan;
+protocol1 cannot be reused. The live runtime-admission scope additionally binds a
+private, process-local evidence callback to the actual admitted plan and signal.
+Only this composition selects Codex --json framing. Ordinary consumers, native
+controls and scientific slots retain their existing output framing. No public
+request field, environment option, receipt JSON or copied plan grants capture.
+Capture MUST run on successful actual child close before decoding model text.
+A failed or asynchronous recorder, expired/nested lease, copied plan, foreign
+signal or other provider cannot produce an accepted result. Existing output-size,
+cancellation, UID/capability, namespace and credential boundaries are unchanged.
+
+The fixed CLI protocol distinguishes command_execution from agent_message in
+[the pinned CLI event schema](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/exec/src/exec_events.rs).
+The controller MUST independently require one started/completed fixed open-only
+witness command, matching ID/command, exit0, completed status, exact withheld
+nonce and all nine denials in the command's actual aggregated output. A model
+message, guessed nonce, missing/extra tool, failed command or incomplete event
+stream cannot replace that observation. Direct fixed command or its reviewed
+/bin/bash or /bin/sh non-login -c wrapper is accepted; other shell expressions
+remain unavailable. The final model JSON is checked separately. This observes
+CLI tool events, not independent kernel syscall tracing. The new protocol has
+not yet been executed with a real model and cannot be reported as native PASS.
+
+The raw CLI evidence is a private, fsynced artifact, not public model input.
+Retain invalid or duplicate captured stdout before rejecting it, so a negative
+cannot silently lose its actual observed output. The
+host MUST validate the exact ordered start, positive baseline, six ordinary
+attempt records, independent CLI artifact event and terminal pass. It repeats
+worker-context provenance, all request/response artifact digest and ordinary
+lifecycle checks, exactly one configured call, actual captured-event validation,
+unchanged workspace and zero scientific/GitHub effects. Missing, duplicate,
+reordered, tampered, foreign or pass-only records are unavailable, never a PASS.
+Operators keep the original negative and reconcile its source/plan/image tuple;
+there is no automatic retry, deadline increase or model substitution.
+
+```mermaid
+sequenceDiagram
+  participant B as Reviewed bootstrap
+  participant S as Live SDK scope
+  participant C as Actual CLI child
+  participant H as Host verifier
+  B->>S: Protocol2 and exact private callback
+  S->>C: Fixed read-only findings query with JSON events
+  C-->>S: Command start/completion and distinct model text
+  S->>S: Validate and fsync independent tool artifact
+  S-->>H: Complete inner ledger and actual artifacts
+  H->>H: Revalidate order, provenance, hashes and witness
+```
+
+Textual equivalent: bootstrap binds the private scope, the actual CLI emits its
+own tool records, critical capture validates and persists them, then the host
+revalidates the complete result. Any missing stage remains unavailable.
+
+The additional numeric budget is55 model-free assertions:36 CJS controls
+(two causal worker/host negatives, one positive independent trace,17 trace
+adversaries, one framing/protocol group, eight inner-sequence adversaries,
+four artifact-byte adversaries, one durable invalid-output negative, one
+reasoning/command-update positive and one durable duplicate-capture negative);18 SDK controls (six private capture/planner/
+executor cases and twelve Codex decoder cases); one public-bootstrap schema1
+containment/import adversary. The runtime component file now has58 controls,
+preserving its22 original controls. Logical35 qualification IDs and174/42
+inventories remain frozen. Pure/capture policy retains100% all metrics; changed
+runtime modules retain95% statements/lines and90% branches/functions, plus
+source-global, build, documentation, architecture, normal hooks and final-head
+native review gates. Real model-tool validation is a separate unmet prerequisite.
+
+The bootstrap MUST reject schema1 plus containment before importing any helper,
+including a checkout-supplied helper absent from that schema's admitted inventory.
+Current public historical descriptors omit unnecessary original commit/blob/path
+lookup associations; exact originals remain private. Current sanitized gzip
+locators, measured scientific identities, bytes and digests remain retrievable.
+The canonical artifact map resolves immutable result.json's recorded canonical141
+path to its exact historical bytes without rewriting that receipt. GitHub-hosted
+purge remains pending; current minimization is no claim that caches are deleted.
+Documentation updates cover execution, quality observation, immutable retrieval
+and current operational limitations; catalog evidence remains tied to these
+actual source/test paths. No new configuration or migration authority is added.
+
+
+#### Source626e observation: CLI progress and fixed shell paths
+
+One separately preregistered protocol2 technical call ran on source626e,
+private runtime9f221, native-control preregistration817dd and immutable image
+1f0365. The authorized fixed13 filter and containment boundaries were unchanged.
+The same source/image/runtime passed CLI14 and native C32–C35; all12 earlier
+owned IDs and the one runtime scope subsequently returned fresh404. These were
+Linux ARM containers on the Mac listener host, not a GitHub Actions job.
+
+The actual captured CLI command completed with exit0 and independently recorded
+all nine protected open denials after the trusted positive baseline opened all
+nine. No protected contents were read. The CLI also emitted an agent_message
+progress item before the command and selected /usr/bin/bash -c. The original
+controller rejected this supported framing. Independently, the final model
+message returned a63-character nonce for the64-character tool nonce. The
+original whole canary is FAIL_NOT_ADMITTED and MUST remain so; its attempt,
+private original capture, failure and exact identities cannot be relabelled.
+
+Accept nonempty completed agent_message progress only before actual witness
+completion, retaining the entire raw capture without treating progress as tool
+or final-response evidence. Still require the one matching started/completed
+witness and a distinct final model JSON after completion. Duplicate final
+messages, missing final JSON and a wrong final nonce remain rejected. Extend
+only the closed non-login fixed-command wrapper list with /usr/bin/bash and
+/usr/bin/sh beside /bin/bash and /bin/sh. Other commands, login shells, extra
+tools, missing starts, nonzero exits, readable private paths and incomplete
+framing retain their existing rejection. The SDK decoder and public framing,
+existing output bounds, configuration, credentials and privileges do not change.
+
+```mermaid
+flowchart LR
+  P[Retained progress: no authority] --> W[One actual fixed witness]
+  W --> D[Nine independent denials]
+  D --> N[Separate final nonce equality]
+  N --> F[Original canary: FAIL,63 versus64]
+```
+
+Operator content must state: CLI witness observed; final nonce mismatch;
+runtime admission failed; no automatic retry. Do not call partial boundary
+observations an admitted runtime or scientific result. This correction grants
+no further genuine query. The historical original technical invocation and this
+one additional failed technical invocation remain separate from the unchanged
+200 scientific invocations and original174negative. The42 reviews remain
+unstarted/not admitted; profilesNONE,pilotwrites0,productiondisabled.
+
+The incremental budget is exactly7 model-free controller assertions: progress
+before command1, progress during command1, the two fixed /usr/bin wrappers2,
+actual-shaped final nonce mismatch1, duplicate final responses1 and blank
+progress1. The identical assertions produce2PASS/5FAIL on626e, then all65 current
+runtime components pass after correction. The intermediate63PASS/2EPERM local
+socket result remains retained; corrected execution permission yields65PASS
+without test/source edits. Exact AST coverage is100%lines,99.13%statements,
+95%branches,96%functions; the existing95/90 floors remain unchanged. All58 prior
+components, the earlier55-assertion amendment,18 SDK controls, schema1 bootstrap
+control and35 logical/scientific case identities remain intact. Documentation,
+catalog, Graphify, normal hooks, complete committed-source and final-head native
+reviews remain required. No new installation or migration path is added.
+
+
+#### Source626e completed review: pre-creation cleanup and first failure
+
+The complete54-partition review identifies two reproducible operational faults.
+Owned staging MUST enter its cleanup-protected region before chmod or input
+directory creation. Resolve the system temporary parent before creating the
+owned directory so no fallible post-creation path resolution escapes cleanup.
+If setup fails before any Engine side effect, remove only that owned directory,
+retain incomplete evidence and propagate the setup failure. Unknown container
+creation/lifetime still retains staging under the existing ownership rule.
+
+When verifier transport rejects and terminal-ledger persistence also fails,
+the caller MUST receive the original transport error. Terminal persistence is
+best-effort only on this rejection path; its missing durable row remains
+incomplete evidence and MUST NOT admit a review or conceal failure. Start,
+request, success response and critical capture persistence keep their existing
+mandatory boundaries. No error payload, credential or private path is logged.
+
+| Failure | Retained fact | Outcome |
+|---|---|---|
+| chmod/input setup before Engine creation | Incomplete event; no scope | Owned staging removed; original failure |
+| Verifier rejects; terminal row also fails | Start without complete terminal evidence | Original transport error; admission incomplete |
+| Unknown Engine creation/lifetime | Existing owned identity/uncertainty | Keep staging; existing stopped-scope recovery |
+
+The incremental budget is four model-free physical controls: real temporary
+staging with injected chmod failure and input-mkdir failure2; verifier transport
+plus terminal-write failure with active and aborted signals2. The same four
+assertion bodies fail0PASS/4FAIL before correction and pass4/4 afterward. They
+extend the earlier7 observed-CLI controls without recounting the35 logical
+qualification IDs,174 scientific cases or42 paired slots. Existing95% lines/
+statements and90% branches/functions CJS floors and all source/native gates
+remain mandatory. A platform-aware scope-module exclusion is verified by the
+normal architecture scan; no real Windows execution is inferred.
+
+The public archive index MUST omit the original revision/path associations;
+retain its exact pre-minimization bytes privately. All129 sanitized mirror
+entries, gzip/decoded bytes and digests stay exact. The report accurately states
+that the private plan path is intentionally omitted. Previously published
+versions and cached original data still await Support5044568; removing current
+locators does not establish hosted erasure. Existing execution/quality docs and
+catalog evidence MUST explain these operational limits. No public setting,
+schema, privilege, retry, model query, installation or activation changes.
+The actual failed nonce canary remains failed; scientific174negative and42not
+admitted are unchanged. Update Graphify and require final reviewed-source CI.
+
+
+### Post-campaign c225 review: pre-dispatch staging and credential evidence
+
+This is an implementation correction to EV974-S03/S06 and an extension of
+existing C27 evidence, with no new capability or logical case IDs. Successful
+synchronous scope retention precedes the flag that preserves a possible Engine
+create effect. A failure before that point has no dispatched create request and
+releases its owned private staging; genuine unknown creation/lifetime effects
+remain retained with their ownership records.
+
+The existing C27 component includes two pre-dispatch failure subscenarios and
+nine credential configurations. Independent literal expectations verify review
+evidence-token sources and precedence, absence, and exclusion from corpus and
+preflight packets. Original behavior and three deliberate mutants are retained
+in the [c225 review packet](../quality/bugbot/evidence/issue-974/controls/completed-c225-review/README.md).
+These eleven subscenarios do not increase the35logical-case inventory or replace
+actual native controls, source/module coverage or scientific admission. The
+174negative result and unstarted42 remain unchanged. No new measurement, SDK
+query, privilege, runtime profile, public flag or production activation occurs.
+
+### Model-free worker allocation on a shared runner host
+
+The repository's model-free shadow command MUST retain its complete fourteen
+test files while setting Node file concurrency to two. Multiple Ubuntu runner
+registrations share one physical server, as confirmed by the maintainer;
+Node's processor-derived default does not reserve those processors for its job.
+This is an allocation for test files, not a global descendant-process limit.
+The three independent source CI jobs, placement, permissions, native Git and
+Jest deadlines, assertions, coverage floors and all qualification identities
+remain unchanged. There is no new operator setting or installation-template
+change. Rollback is the ordinary source commit; it does not replay a campaign.
+
+The incremental verification budget is **two local runner-control scenarios**:
+the original default exceeds two simultaneous held fixtures, and the explicit
+two-worker command admits at most two while completing every identical fixture.
+Use release-marker identities rather than latency assertions; retain a failed
+control separately. These scenarios are not new IDs in the 35-case qualification
+inventory. Require the unchanged 653-case model-free suite, both SDK suites that
+failed in 7d6, ordinary source/delivery validation and exact-head native CI.
+The [worker-control packet](../quality/bugbot/evidence/issue-974/controls/shared-host-worker-fanout/README.md)
+and contributor testing guide distinguish bounded fanout from missing historical
+host pressure/timing evidence: this correction does not itself prove the cause
+of the earlier Git or malformed-file timeout. The current required CI remains
+failed until a changed-source native result establishes otherwise. Preserve
+the 174 negative outcome, 42 unstarted slots, all attempts and production disabled.
+
+### Independently reviewed native inventory — completed 7d6 review
+
+Observed C26 gaps: the four native records could select another self-consistent
+plan revision without a separate expected identity, and the component Git fixture
+inherited repository-binding environment values. The external host's committed
+harness/bootstrap reference remains necessary but does not independently pin
+the selected plan tuple. This amendment changes only explicit model-free native
+preparation and its owned component fixture; no consumer SDK or scientific
+prediction, scorer, threshold, measured source or runtime privilege changes.
+
+| Input | Contract | Failure and migration |
+|---|---|---|
+| `COPILOT_NATIVE_CONTROL_PLANS` | Existing private four-record inventory path; seven fields per row unchanged. | Missing input fails the explicit command; no native skip or automatic retry. |
+| `COPILOT_NATIVE_CONTROL_PLANS_SHA256` | Required separately reviewed lowercase 64-hex SHA-256 of exact inventory bytes, supplied by the trusted operator for this invocation. No default, precedence fallback or persistence. | Missing/malformed/mismatched input fails before parsing records, reading selected plans or starting children. Existing invocations must obtain this pin from independent review. |
+
+The harness MUST compare the exact inventory bytes to that external reviewed
+pin before interpreting any row. This binds every repository, plan revision,
+path and digest in all four records; a self-consistent replacement file MUST NOT
+choose its own authority. The operator MUST NOT derive the expected pin from
+unreviewed input at launch. A deliberately reviewed new tuple needs its own
+independent pin and subsequent native acceptance; it cannot inherit a historical
+PASS. The existing committed-host bootstrap pin, physical snapshot checks and
+process-local prepared-entry capability all remain required.
+
+Textual flow: separately reviewed inventory digest -> exact byte comparison ->
+committed host/bootstrap and selected plan admission -> private entry -> native
+launch. For example, `native-control inventory differs from independently
+reviewed digest` means no native child started: retain the rejected input and
+reconcile it against the independently reviewed tuple. Do not repair this by
+automatically hashing the rejected file or substituting a socket endpoint.
+Historical public descriptors remain non-executable; retained private originals
+and rewritten public locators are distinct from unchanged archive payload bytes.
+
+The C26 incremental budget is **seven distinct model-free controls**: missing
+pin, malformed pin, self-consistent alternate plan rejection, separately reviewed
+replacement admission, and three real owned-repository contrasts for inherited
+`GIT_DIR`, `GIT_WORK_TREE` and `GIT_INDEX_FILE`. The fixture MUST remove inherited
+`GIT_*` names case-insensitively before setting controlled configuration, and the
+three contrasts MUST preserve the decoy repository's HEAD, index and status.
+These controls extend the complete 653 command to **660**, preserve35 logical
+IDs and every existing coverage/native/scientific gate, and exercise no Engine,
+model or qualification campaign. The original six failing assertions and the
+same corrected seven cases remain inspectable in the
+[completed 7d6 review packet](../quality/bugbot/evidence/issue-974/controls/completed-7d6-review/README.md).
+Acceptance maps these requirements to `native-bootstrap-components.cjs`; the
+evidence README documents independent pin supply and fail-closed migration.
+Normal source/package checks and exact-head native CI remain required before
+merge. Rollback is an ordinary source commit; no campaign or installation is
+automatically repeated. No new public UI, Action input, release or activation is
+introduced.

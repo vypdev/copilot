@@ -22,6 +22,7 @@ export function buildCodexExecutionPolicy(input: ProviderExecutionPolicyInput): 
     }] : [];
     const argv = [
         'exec',
+        ...(input.runtimeToolEvidence ? ['--json'] : []),
         '--strict-config',
         '--ignore-user-config',
         '--ignore-rules',
@@ -59,7 +60,7 @@ export function buildCodexExecutionPolicy(input: ProviderExecutionPolicyInput): 
     return {
         argv,
         promptMode: 'stdin',
-        outputProtocol: 'plain-text',
+        outputProtocol: input.runtimeToolEvidence ? 'codex-json-events' : 'plain-text',
         workspaceMode,
         output: outputSchemaPath ? 'native-and-local-json-schema' : 'text',
         environment: { PSModuleAnalysisCachePath: moduleCache },

@@ -1,0 +1,1 @@
+{"rawUtf8": "✔ ev974-C31 collector failure aborts every owned sibling and waits for stopped scopes before returning failure (401.684583ms)\n✔ ev974-C31 corpus collector failure aborts siblings and awaits their confirmed stops (1137.694709ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 1640.700084\n"}

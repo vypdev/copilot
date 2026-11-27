@@ -1,0 +1,29 @@
+{
+  "scope": {
+    "event": "scope-created",
+    "identity": {
+      "ownerId": "322069d0868e0b4ce64fa37053025a1dcaf87dd29b3945c02f87dac5ea4e14c2",
+      "operationId": "control:ev974-C34",
+      "planSha256": "811588031c386c3049e5c006bd6dbab97dd4e2964df49949008e1899d29f21d2",
+      "implementation": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+      "imageSha256": "d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+      "purpose": "native-control"
+    },
+    "scopeId": "e63116dd5b934d7be614cb0e016bffb43c22747c6adfb342180f500689e005b1",
+    "name": "copilot-qualification-1019f19ad07ac374595568dfa5854e7071c2eef1d4895f37bfb4c25d47dccb6c"
+  },
+  "state": {
+    "Status": "running",
+    "Running": true,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 2623877,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-11-21T05:06:31.152155457Z",
+    "FinishedAt": "0001-01-01T00:00:00Z"
+  },
+  "modelCalls": 0
+}

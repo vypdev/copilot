@@ -1,0 +1,21 @@
+FAIL src/infrastructure/agents/__tests__/qualification_investigation.test.ts (9.834 s)
+  ● ev974-C03 keeps a real child past its ordinary bound, then cancels descendants and cleans runtime
+
+    Controlled process fixture did not reach its expected state.
+
+      26 |     const fixtureDeadline = Date.now() + 5_000;
+      27 |     while (!predicate()) {
+    > 28 |         if (Date.now() >= fixtureDeadline) throw new Error('Controlled process fixture did not reach its expected state.');
+         |                                                  ^
+      29 |         await new Promise(resolve => setTimeout(resolve, 10));
+      30 |     }
+      31 | }
+
+      at until (src/infrastructure/agents/__tests__/qualification_investigation.test.ts:28:50)
+      at Object.<anonymous> (src/infrastructure/agents/__tests__/qualification_investigation.test.ts:110:13)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 skipped, 8 total
+Snapshots:   0 total
+Time:        10.039 s
+Ran all test suites matching src/infrastructure/agents/__tests__/qualification_investigation.test.ts with tests matching "ev974-C03".

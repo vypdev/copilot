@@ -1,0 +1,52 @@
+{
+  "at": "2026-11-21T04:35:30.316702+00:00",
+  "reason": "explicitly cancel the model-free C35 sentinel after reproducing the impossible C34 parent=1 precondition; not acceptance or a research deadline",
+  "host": {
+    "pid": 92423,
+    "uid": 502,
+    "argv": "<private-node-runtime> /private/tmp/copilot-goal-974-native-fixture-64da6ec-2drqklp0/reviewed-bootstrap.cjs /private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/frozen-host df779284840992fffe55bbad65fbdf74142af9ca quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C34.json 3e045b9d86a3dd40046badd13eb52c2fd74a4fcc15282dd6e4170da00ad0be16 36a2ffa685a6dca9be0930c9386cf9a4ac11553e14a0f24d67597ff53b9b3be2 native-control /private/tmp/copilot-goal-974-native-fixture-64da6ec-2drqklp0/native-controls-attempt4-tmp/ev974-native-unrelated-sentinel-MNVwyK/output"
+  },
+  "scope": {
+    "event": "scope-created",
+    "identity": {
+      "ownerId": "0a792d69abaa4e79f283ea7839f4ffbddb7db6e54a033f7d6fc26c5e3932ea3f",
+      "operationId": "control:ev974-C34",
+      "planSha256": "3e045b9d86a3dd40046badd13eb52c2fd74a4fcc15282dd6e4170da00ad0be16",
+      "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+      "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+      "purpose": "native-control"
+    },
+    "scopeId": "793faddedac540f97c120e64a8b3ebddc593814189a051cc11d8f327cb461009",
+    "name": "copilot-qualification-fa690228754255a8d5dba8d30ab06c6850dd42b3a05541212700522772719f04"
+  },
+  "leader": {
+    "pid": 184,
+    "state": "R",
+    "ppid": 12,
+    "group": 184,
+    "session": 184
+  },
+  "descendant": {
+    "caseId": "ev974-C34",
+    "pid": 191,
+    "state": "R",
+    "ppid": 184,
+    "group": 191,
+    "session": 191
+  },
+  "signal": "SIGTERM",
+  "modelCalls": 0,
+  "acceptanceEvidence": false,
+  "historicalPublicDiagnostic": {
+    "kind": "derived-public-copy-with-private-runtime-path",
+    "executable": false,
+    "originalBytes": 1867,
+    "originalSha256": "1fb49985b9c7b26e310759db5b9a97e824601da91159516dc9797af5e59b6da5",
+    "privateRetainedName": "native4-sentinel-diagnostic-private-original.json",
+    "historyRewritten": true,
+    "acceptanceGranted": false,
+    "historyRedactionSummary": "history-redaction.json",
+    "hostedOriginalPurgeVerified": false,
+    "supportCase": 5044568
+  }
+}

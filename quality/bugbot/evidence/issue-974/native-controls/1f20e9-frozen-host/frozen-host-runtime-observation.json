@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "kind": "frozen qualification host dependency copy",
+  "repository": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/frozen-host",
+  "from": "/private/tmp/copilot-goal-974",
+  "head": "3d53cdbbb19627494f0aa1eef7bd9a035745c841",
+  "implementation": "1f20e9c5b46a7b3fdd761fbc07051058bb0dc699",
+  "source": {
+    "implementation": "1f20e9c5b46a7b3fdd761fbc07051058bb0dc699",
+    "tree": "62b34af59b77f2e2d739f20dbca6c269920b640a",
+    "sourceSha256": "a7f6a6501845159c182c96a881b64626dfdaf00b9f803f48013011653985b1d9",
+    "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+    "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1"
+  },
+  "runtime": {
+    "dependencyTreeSha256": "cabf91bec28ce54e95078a3ad787ca37810ff3e4521bd7f57a8fe2b6ea2eecef",
+    "dependencyEntries": 26844,
+    "os": "darwin",
+    "arch": "arm64",
+    "kernel": "27.2.0",
+    "node": "v24.20.0",
+    "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+    "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+    "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+    "typescript": "5.9.3",
+    "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+    "git": "git version 2.54.0 (Apple Git-157)"
+  },
+  "ordinaryHooksRunHere": false,
+  "modelCalls": 0,
+  "production": "disabled"
+}

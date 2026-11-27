@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-11-21T03:29:38.456083+00:00",
+  "finishedAt": "2026-11-21T03:34:55.875671+00:00",
+  "implementation": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+  "exitCode": 0,
+  "counts": {
+    "tests": 239,
+    "pass": 239,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "log": "/private/tmp/copilot-goal-974-post-engine239-attempt1.log",
+  "logBytes": 25905,
+  "logSha256": "909e1cba61b8fe1020e5137b44f3f9e8c52526a74aa7a9656d32c661c2a5cb36",
+  "hostV8Coverage": "/private/tmp/copilot-goal-974-post-engine239-attempt1-v8",
+  "allChangedModuleCoverageSatisfied": false,
+  "nativeSdkAcceptance": false,
+  "qualificationModelCalls": 0,
+  "174": "unstarted",
+  "42": "unstarted",
+  "production": "disabled"
+}

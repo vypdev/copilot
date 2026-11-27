@@ -1,0 +1,684 @@
+{
+  "schemaVersion": 1,
+  "kind": "Public descriptor of an already committed and executed private scientific plan; never an execution grant",
+  "originalPlanSha256": "312c4501082d97fbb5acd7c1f3801f179d085c553f2bd6d15c47bcd373a00db1",
+  "redactions": [
+    {
+      "jsonPointer": "/containment/socketPath",
+      "reason": "private host account endpoint; original endpoint identity retained by SHA-256",
+      "replacement": "privateSocketPathSha256"
+    }
+  ],
+  "plan": {
+    "schemaVersion": 2,
+    "implementation": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+    "mode": "shadow",
+    "publication": "dry-run",
+    "production": "disabled",
+    "detector": {
+      "provider": "codex",
+      "modelProvider": "openai",
+      "model": "gpt-6-luna",
+      "effort": "xhigh"
+    },
+    "verifier": {
+      "provider": "codex",
+      "modelProvider": "openai",
+      "model": "gpt-6.1-sol",
+      "effort": "xhigh"
+    },
+    "evidence": "installed exact Git head and permitted base, official release catalog, matching native CI step metadata",
+    "repositoryCohort": {
+      "manifestSha256": "dab7d62b0419c2da63eae3387be6222e77c114ed32b22dc9a2a9af35fb6afe85",
+      "oracleSha256": "c79302cb376519f60d69e0a080cd65dc29ff35ab256ce17b0e4b218fe69e239a",
+      "order": [
+        "U1",
+        "U2",
+        "F1",
+        "F2",
+        "S1",
+        "S2",
+        "X1",
+        "X2",
+        "M1",
+        "M2",
+        "P1",
+        "P2",
+        "J1",
+        "J2"
+      ],
+      "repetitions": 3,
+      "baselineMinimumAlerts": 3,
+      "baselineMinimumPremises": 2,
+      "minimumStrictlyBetterRepetitions": 2,
+      "maximumAddedP95Ms": 90000,
+      "requireAllExactPositiveControls": true
+    },
+    "corpus": {
+      "sha256": "001223aa255e5af7e10bddab2c8deacd7cacf0b5b3690a5a2034d241274cb9d6",
+      "cases": 174,
+      "concurrency": 6,
+      "outerAttemptsPerCase": 1,
+      "gates": {
+        "precision": 0.9,
+        "recall": 0.85,
+        "f1": 0.87,
+        "exactLocation": 0.8,
+        "severity": 0.8,
+        "category": 0.8,
+        "maxBrier": 0.16
+      },
+      "path": "quality/bugbot/corpus.v2.json",
+      "version": 2
+    },
+    "purpose": "qualification",
+    "lifecycle": "qualification-investigation-v1",
+    "runtime": {
+      "dependencyTreeSha256": "daaa6b70565b0eabaafa37ee455738e347619f76eb19c155169b0c3565fe874d",
+      "dependencyEntries": 26170,
+      "os": "linux",
+      "arch": "arm64",
+      "kernel": "7.2.12-orbstack-00394-gbecdd6130068",
+      "node": "v24.20.0",
+      "nodeSha256": "23a5637c2470fde09fcc1acc77c1b92e04e3d7e3e6e80ff7df6f5831958d1477",
+      "gitExecutable": "/usr/bin/git",
+      "gitSha256": "54af380ba6ca1b36305358e99427a31ae4b0af5dc5cb6d0198c6f2f16e97651d",
+      "typescript": "5.9.3",
+      "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+      "git": "git version 2.39.5",
+      "codex": "codex-cli 0.171.0",
+      "executable": "/opt/codex/node_modules/@openai/codex/bin/codex.js",
+      "executableSha256": "0e0c66f50074965a40cbd12f625b0a35963baf41bbd8c201a93e32fddbe2e073",
+      "nativeExecutable": "/opt/codex/node_modules/@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex",
+      "nativeExecutableSha256": "9ba12ec7712e2905b2ea00791f4ebddc9528629cc955d11d25272de445e10643"
+    },
+    "hostRuntime": {
+      "dependencyTreeSha256": "1194a96dfe663eaadd94c4aed429b70de40bebba9757b47fb96b9df211379454",
+      "dependencyEntries": 28335,
+      "os": "darwin",
+      "arch": "arm64",
+      "kernel": "27.2.0",
+      "node": "v24.20.0",
+      "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+      "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+      "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+      "typescript": "5.9.3",
+      "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+      "git": "git version 2.54.0 (Apple Git-157)"
+    },
+    "inspectedArtifacts": {
+      "configuration.cjs": "ff03c59a19d78e018d6d5a58e0b9aed018215ca323f781858d6ce27654464ffb",
+      "implementation.cjs": "d96c469f0b3f46e8e24a050153655e7e6c363f8c40bf4114fb838f54c86dd035",
+      "load.cjs": "35a9e9b2219619dccb9ea7cebe9ceb14f49aa05a9bf036a29045cffbf4af2405",
+      "corpus.cjs": "1805467c7ab8dbb57b4c581b0e41b429c19f9f606ba368c11fff88e90965aeea",
+      "review.cjs": "6b8e27717b30ae68a9ece2a9703073775b8025912614b1039ae25cab4b4fc85c",
+      "full-review.cjs": "0af69b793e42757b7fb02869321512ce0f8337539b917ba879e6b100be9fd19c",
+      "launch-full-review.cjs": "a3f378fe6b90228e8d9a0d37e9be407705d73c4409bae6841a1ac25dd22da4d6",
+      "score-review.py": "1acce4410fe17ea68a93cd07849fb1ee07650849c1910493d152bf0d7131ee76",
+      "../execution-provenance.cjs": "ff923ec0115afdaa4840690055521a1e4f890eb77cd29109bf04c2ea68f6d91c",
+      "../qualification-bootstrap.cjs": "05f8507de1ccef7e5e93deabfe3e0727eb6b163bf24a551120dfb7c618c44191",
+      "../../issue974/corpus-selection.cjs": "dea7336a1e4fd8dbe969e966292534a436e97ab30553fbd73c4da4c679992fdb",
+      "../../issue974/attempt-ledger.cjs": "f8812728ecdbe99c072c2ae49eb78ef0c5ebc1e8e5a50e45925b340389420c4b",
+      "../../issue974/operation-containment.cjs": "608d81d0f9024556a1ae413a75c93434f2474711ce0f944788c9da89e55bb94f",
+      "../../issue974/qualification-seccomp.cjs": "7c77f4881d061f754725791460faebfec35da5edccb2181d75fb8a31b7970688",
+      "../../issue974/qualification-supervisor.cjs": "c886a99a75e12068d1eb34dc01e2df4c420b43d2f2819c65a31bcaaddbe2d26a",
+      "../../issue974/qualification-runtime.Dockerfile": "b2f58e85af72472fe0a416be9d4ae2707159ecba1780d5651fb28817ae943697",
+      "../../issue974/qualification-requirements.toml": "7862fc5acbefd63808622919479abb2e1073f052add56e71f807d783f1c22c5b",
+      "../../issue974/containment-native-fixture.cjs": "3002870125ebdde14782adb1b80de192ecd6ba3bf28c3e19a7a1935a1dfd83a3",
+      "../../issue974/sdk-runtime-admission.cjs": "d9f9399d19d8a1164a3c27fd77b655001accd5468988aac86719ca2796c20d15"
+    },
+    "containment": {
+      "schemaVersion": 1,
+      "image": "sha256:c5d0f155dd148f617be6417ffa5967ee3b1cde3f08bfcb04f29096b8e951c2a9",
+      "imageConfigSha256": "c5f9487f31ba356369f7ca1f87e40220720ae54bf8b573b12f53b5c1e78e71f9",
+      "hostNodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+      "supervisorSha256": "c886a99a75e12068d1eb34dc01e2df4c420b43d2f2819c65a31bcaaddbe2d26a",
+      "workerUid": 502,
+      "workerGid": 20,
+      "engine": {
+        "version": "29.8.2",
+        "apiVersion": "1.56",
+        "os": "linux",
+        "arch": "arm64",
+        "kernelVersion": "7.2.12-orbstack-00394-gbecdd6130068"
+      },
+      "privateSocketPathSha256": "f14e53644c8d76dd46de4d5fdee0c1799e7cabbcbedf77ec0aa9ef95f662e140"
+    },
+    "scientificPreregistration": {
+      "schemaVersion": 1,
+      "preparedAt": "2026-11-23T03:08:06.341475+00:00",
+      "status": "PREREGISTERED_UNEXECUTED;noresultsinthisplan",
+      "proposedProfile": "Luna-to-Sol/xhigh;detectorphasealonecannotqualifyverifier",
+      "initialPrompts": {
+        "path": "quality/bugbot/evidence/issue974/preregistration-initial-prompts.json",
+        "sha256": "3a3b05111e8edc934c7b482e3ed7e9eb24b4d1fc2e3d3d2d7bea13cb3ee79b83",
+        "cases": 174,
+        "capturesOrdinaryFindingsAdapter": true,
+        "containsOnlyHashesAndCaseIds": true,
+        "preparationModelCalls": 0
+      },
+      "promptSchemaAndConditionalFollowupGenerators": [
+        {
+          "path": "src/application/policies/agent_execution/codex_execution_plan_policy.ts",
+          "sha256": "2d6a5f1c724edd763516e923549ff0d1e07be14acb9af6e8f471292bde9f1e0a",
+          "bytes": 3737
+        },
+        {
+          "path": "src/application/policies/agent_execution/codex_output_schema_policy.ts",
+          "sha256": "6e7e8eaa6d97cde77c66d93449dd59893788d9eaa466214b13dc3613fece9a86",
+          "bytes": 2475
+        },
+        {
+          "path": "src/application/policies/agent_prompt_envelope_policy.ts",
+          "sha256": "3b9b225ce655d11e31812991cb6bbcb11fa96cd261c9261752c98421663e3b81",
+          "bytes": 1263
+        },
+        {
+          "path": "src/application/policies/bugbot_python_literal_witness_policy.ts",
+          "sha256": "39eca7616da8a8c14e31fa70e309e3e2ddfe43047f1bc805b0a71cbd883efdd3",
+          "bytes": 8939
+        },
+        {
+          "path": "src/application/usecases/steps/commit/bugbot/schema.ts",
+          "sha256": "3b2f0beb7c4d968cd4db59abf838e0ccdd00e38eda92e72dc571b00172cb45c3",
+          "bytes": 9014
+        },
+        {
+          "path": "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts",
+          "sha256": "5235d39aac5bdaaba2c5797ba12f667a1f45eae96bf53c7d9bec97f7362bb4b9",
+          "bytes": 10954
+        },
+        {
+          "path": "src/data/repository/ai/agent_capability_adapter.ts",
+          "sha256": "7c86f721b9474fab9820560efcc73474e0db059aa36857a8c3c47a084a29b29c",
+          "bytes": 2643
+        },
+        {
+          "path": "src/data/repository/ai/findings_agent_adapter.ts",
+          "sha256": "a57752942b0a4a701bb3808a5d532a2e6340013003cd15dd11f70fbf68b48c1a",
+          "bytes": 2566
+        },
+        {
+          "path": "src/infrastructure/bugbot/shadow/broker.cjs",
+          "sha256": "3108ccedf3a93fd84319208a622d02f5388d6095b2f5daa252abba57b3472a8f",
+          "bytes": 18353
+        },
+        {
+          "path": "src/infrastructure/bugbot/shadow/git.cjs",
+          "sha256": "7327032365db442edce4bc846462340b698a1b590b425a1b5d3aad249a5fa297",
+          "bytes": 2175
+        },
+        {
+          "path": "src/infrastructure/bugbot/shadow/hash.cjs",
+          "sha256": "4cb39b8af872b46bf832ab0c5f3b751698f002e86d8ccc76a690777af85a8d6e",
+          "bytes": 162
+        },
+        {
+          "path": "src/infrastructure/bugbot/shadow/installed_official.cjs",
+          "sha256": "1512624f8114af91c466638eb92a250a750265c59543a8d3a7e9e2ed978a98bb",
+          "bytes": 9664
+        },
+        {
+          "path": "src/infrastructure/bugbot/shadow/prompt.cjs",
+          "sha256": "42e2802c10c9cce5ce38b8abb017bbafb13bc1ed9c0015c88c8cf1ade5f69e26",
+          "bytes": 6257
+        },
+        {
+          "path": "src/infrastructure/bugbot/shadow/run.cjs",
+          "sha256": "8a3b0ecfa4d4665ef58a6620169d8b9a10954d0a03e8485000a9cb9a80b64caf",
+          "bytes": 7777
+        },
+        {
+          "path": "src/infrastructure/bugbot/shadow/schema.cjs",
+          "sha256": "5b929f7df5c912308ea8199dcd7d4553f1780cd1a8f361fa5b0ffe39b4146ea8",
+          "bytes": 2136
+        },
+        {
+          "path": "src/infrastructure/bugbot/shadow/session.cjs",
+          "sha256": "3234f7356290c1993d6fa6d6754c3ab897f6e40228e2834906d94bf0a344d0f4",
+          "bytes": 9437
+        },
+        {
+          "path": "src/infrastructure/bugbot/shadow/source_cache.cjs",
+          "sha256": "8c91067f7dc33659219c834dcb281ab779c370d98847ae48261089a3c81d7b75",
+          "bytes": 1090
+        },
+        {
+          "path": "src/prompts/answer_issue_help.ts",
+          "sha256": "77c623ce6be9056a192b8e4c68fafb1662f7fa9577fb320efdb80d16167a1f75",
+          "bytes": 2545
+        },
+        {
+          "path": "src/prompts/branch_sync_conflicts.ts",
+          "sha256": "bc3ee190d4c14c5dde1664bd417ff37638639ae82b61dfdaa8c80148eee2aba3",
+          "bytes": 2448
+        },
+        {
+          "path": "src/prompts/bugbot.ts",
+          "sha256": "f2c8df00f6d4b9df23882a52166df2bc35e7973d693da8332e8c367ccb286178",
+          "bytes": 18381
+        },
+        {
+          "path": "src/prompts/bugbot_async_statement_evidence.ts",
+          "sha256": "f6583e987d80c0935caef27f7c0fe634e47ed3e8dd3e4dfa2a6e1caafc031dba",
+          "bytes": 4653
+        },
+        {
+          "path": "src/prompts/bugbot_fix.ts",
+          "sha256": "c4c31781be1d3d57c4f1f111d2d396f69ee35835f3b587126b39172d2223c7d6",
+          "bytes": 1881
+        },
+        {
+          "path": "src/prompts/bugbot_fix_intent.ts",
+          "sha256": "029928b9ef9f7587de5987093a68f51db684492c37050cd5081aa208271e8503",
+          "bytes": 2346
+        },
+        {
+          "path": "src/prompts/bugbot_json_value_evidence.ts",
+          "sha256": "f603af8cfc2dedc1604522fa74f4f5d371c3ac2b924afe040007a0dab78df2b5",
+          "bytes": 2701
+        },
+        {
+          "path": "src/prompts/bugbot_resource_authority.ts",
+          "sha256": "6d36da57c418bbe14c77bc59da056eb94e32bd12dbe332736f68c2da267a0fa5",
+          "bytes": 3165
+        },
+        {
+          "path": "src/prompts/check_comment_language.ts",
+          "sha256": "d39163c85a1d9c20733d9b30247725b716311d1d008d83f817f5bbc36e7a2eaa",
+          "bytes": 1620
+        },
+        {
+          "path": "src/prompts/check_progress.ts",
+          "sha256": "6ebb2ddb8f7bb4ed3e1d8d7c7d23043376be74b9797557813689c7b4e7fc66f2",
+          "bytes": 5306
+        },
+        {
+          "path": "src/prompts/cli_do.ts",
+          "sha256": "682978c63e140b9baa7146cc71db25202ecf2bc426d14ee7769801d8266da4a0",
+          "bytes": 388
+        },
+        {
+          "path": "src/prompts/fill.ts",
+          "sha256": "89b15cac94d39076b0fd61d795d844071e05458b2389e06eddccf41c45c29661",
+          "bytes": 2274
+        },
+        {
+          "path": "src/prompts/index.ts",
+          "sha256": "1bc73b8c0ecf71637e7ea3232a8589f670f5a4b812f6496418b3ed1c105060f2",
+          "bytes": 5576
+        },
+        {
+          "path": "src/prompts/localize_message_catalog.ts",
+          "sha256": "dc9d99daa0dac933e13f2a72f536a5d0822fedf4e62ebb7baae8f316f0e7e83d",
+          "bytes": 1284
+        },
+        {
+          "path": "src/prompts/progress_scope.ts",
+          "sha256": "cb04c0438d55f8dabc29a5eb5a5f084296097148f5d9a8a18d19a9d80b584bc3",
+          "bytes": 7160
+        },
+        {
+          "path": "src/prompts/recommend_steps.ts",
+          "sha256": "e6ee171e3ca45ae1e2038a43c04a532f0e23df64e6df8e23ed75af987fe1e049",
+          "bytes": 3048
+        },
+        {
+          "path": "src/prompts/think.ts",
+          "sha256": "19046fe96d39df3a9e5db9b40636695bda14c4105f3f45506dc1681c905b737c",
+          "bytes": 2668
+        },
+        {
+          "path": "src/prompts/update_pull_request_description.ts",
+          "sha256": "9b46676c914de24a4a7dc12dd497d53b825a23a949141cae7c08f962fc1bdeb8",
+          "bytes": 5215
+        },
+        {
+          "path": "src/prompts/user_request.ts",
+          "sha256": "63ad1f2c0cba0ae919edeb82c7f1c9044a8b3986daa6884a21dcdd51af83af70",
+          "bytes": 1143
+        },
+        {
+          "path": "src/tooling/bugbot_benchmark.ts",
+          "sha256": "77a468f7e8cbf5cbd206eb5eb27660f826cfa21111e93181b07e7d8bb80ca194",
+          "bytes": 5543
+        },
+        {
+          "path": "src/tooling/bugbot_benchmark_runner.ts",
+          "sha256": "a65a8b0a1acdb9fda5fc490c6d7044da67b97c68891af1b267f20b373cbcf348",
+          "bytes": 4816
+        },
+        {
+          "path": "src/tooling/bugbot_quality_eval.ts",
+          "sha256": "d2c330b94ad8cc8f3b52ad8dad7afa3f0545dbf172da01950f71d6ab6839b408",
+          "bytes": 6109
+        }
+      ],
+      "fullReviewClosure": {
+        "manifestPath": "quality/bugbot/evidence/issue-950/v4/manifest.json",
+        "manifestSha256": "dab7d62b0419c2da63eae3387be6222e77c114ed32b22dc9a2a9af35fb6afe85",
+        "oracleSha256": "c79302cb376519f60d69e0a080cd65dc29ff35ab256ce17b0e4b218fe69e239a",
+        "subjects": [
+          "U1",
+          "U2",
+          "F1",
+          "F2",
+          "S1",
+          "S2",
+          "X1",
+          "X2",
+          "M1",
+          "M2",
+          "P1",
+          "P2",
+          "J1",
+          "J2"
+        ],
+        "repetitions": 3,
+        "dispatchOrder": "repetition-major,within each repetition original subject order",
+        "concurrency": 3,
+        "normalDetectorCandidatesOnly": true,
+        "zeroCandidatesMeansZeroVerifierCalls": true,
+        "sourceAndMatchingNativeCIProfile": true,
+        "postRunMaximumAddedP95Ms": 90000
+      },
+      "orderAndRetries": {
+        "corpusOrder": [
+          "ts-null-dereference",
+          "py-command-injection",
+          "go-leaked-goroutine",
+          "sql-unbounded-query",
+          "java-close-resource",
+          "rust-safe-change",
+          "docs-only",
+          "ts-authorization-bypass",
+          "ts-safe-optional-chain",
+          "py-mutable-default",
+          "py-parameterized-query",
+          "go-ignored-write-error",
+          "go-cancellable-send",
+          "sql-string-concatenation",
+          "sql-bounded-query",
+          "java-try-with-resources",
+          "rust-unchecked-input",
+          "rust-result-propagation",
+          "actions-untrusted-checkout",
+          "actions-readonly-metadata",
+          "shell-unquoted-path",
+          "shell-quoted-path",
+          "terraform-public-database",
+          "terraform-private-database",
+          "react-stale-effect",
+          "react-complete-dependencies",
+          "csharp-path-traversal",
+          "csharp-contained-path",
+          "kotlin-blocking-coroutine",
+          "kotlin-io-dispatcher",
+          "py-coverage-config-branch",
+          "py-http10-reconnect",
+          "docs-correct-regression-total",
+          "py-short-circuit-unhashable",
+          "py-helper-retry-validation",
+          "ts-exclusive-render-branches",
+          "py-short-circuit-unsafe-order",
+          "ts-composed-duplicate-ids",
+          "kt-compose-owned-loader",
+          "kt-compose-external-loader",
+          "kt-compose-failed-startup-error",
+          "kt-compose-failed-startup-stuck",
+          "ts-viewport-version-without-cleanup",
+          "kt-compose-preferred-width-narrow",
+          "kt-compose-required-width-overflow",
+          "kt-compose-fill-before-cap",
+          "kt-compose-cap-before-fill",
+          "kt-compose-padded-preferred-width",
+          "android-listed-minor-platform",
+          "android-absent-platform-package",
+          "external-package-unverified-inventory",
+          "android-stale-inventory-current-install",
+          "android-unrelated-green-job",
+          "kt-resolved-sql-subclass",
+          "jvm-type-hierarchy-unavailable",
+          "jvm-current-contract-over-stale-docs",
+          "jvm-unrelated-runtime-wrapper",
+          "jvm-passing-mock-not-counterevidence",
+          "kt-broad-catch-swallows-cancellation",
+          "test-indirect-binding-propagates",
+          "test-parameterized-fallback-reaches-stub",
+          "test-bound-callback-reaches-stub",
+          "test-delegate-bypasses-stub",
+          "test-empty-participants-skip-stub",
+          "test-recovery-swallows-bound-failure",
+          "action-declared-matcher-input",
+          "action-renamed-input-current-version",
+          "action-input-contract-unavailable",
+          "action-undeclared-matcher-alias",
+          "action-old-input-on-new-version",
+          "action-declared-input-wrong-value",
+          "kt-email-unicode-empty-label-guard",
+          "ts-email-caller-empty-label-guard",
+          "ts-email-normalization-before-guard",
+          "ts-email-existential-label-defect",
+          "ts-email-ignored-validator-result",
+          "ts-email-normalization-after-guard",
+          "kt-wasm-parameter-closure",
+          "kt-wasm-size-count-parameters",
+          "kt-wasm-object-parameter",
+          "kt-wasm-binding-evidence-unavailable",
+          "kt-wasm-missing-direct-identifier",
+          "kt-wasm-missing-callback-identifier",
+          "action-self-ref-bootstrap",
+          "action-self-ref-version-policy",
+          "action-workspace-ref-after-checkout",
+          "action-reference-contract-unavailable",
+          "action-self-ref-explicit-suffix",
+          "action-workspace-ref-before-checkout",
+          "action-self-ref-unsupported-host",
+          "md-link-root-self",
+          "md-link-nested-self",
+          "md-link-companion",
+          "md-link-root-relative",
+          "md-link-evidence-unavailable",
+          "md-link-extra-specs-directory",
+          "md-link-missing-fragment",
+          "md-link-renderer-drops-directory",
+          "request-transform-coil",
+          "request-transform-middleware",
+          "request-transform-unknown",
+          "request-transform-write",
+          "request-transform-bypass",
+          "request-transform-overwrite",
+          "request-transform-mock",
+          "request-transform-utf8",
+          "generated-source-literal",
+          "generated-source-leading-newline",
+          "generated-source-escaped",
+          "generated-source-dedent",
+          "generated-source-wrong-literal",
+          "generated-source-wrong-leading-newline",
+          "generated-literal-independent-shell",
+          "generated-literal-independent-contract",
+          "session-source-signed-bootstrap",
+          "session-source-storage-alias",
+          "session-source-opaque-bootstrap",
+          "session-source-expired-refresh",
+          "session-source-prefix-gap",
+          "session-source-setup-unavailable",
+          "unittest-discovery-delegated-wildcard",
+          "unittest-discovery-nested-working-directory",
+          "unittest-discovery-literal-argv-pattern",
+          "unittest-discovery-excluded-by-pattern",
+          "unittest-discovery-wrong-start-directory",
+          "unittest-discovery-runner-unavailable",
+          "kotlin-json-implicit-nullable-omission",
+          "kotlin-json-explicit-nullable-omission",
+          "kotlin-json-implicit-missing-nonnullable",
+          "kotlin-json-implicit-nullable-default",
+          "kotlin-json-explicit-nullable-default",
+          "kotlin-json-inherited-implicit-policy",
+          "kotlin-json-different-instance-policy",
+          "kotlin-json-unavailable-policy",
+          "ktor-routing-installed-root",
+          "ktor-routing-delegated-root",
+          "ktor-routing-configured-root",
+          "ktor-routing-child-subtree",
+          "ktor-routing-different-application",
+          "ktor-routing-unavailable-implementation",
+          "py-pep758-314-two",
+          "py-pep758-314-three",
+          "py-pep758-314-group",
+          "py-pep758-314-parenthesized-as",
+          "py-pep758-313-list",
+          "py-pep758-313-group",
+          "py-pep758-314-list-as",
+          "py-pep758-314-group-as",
+          "py-pep758-mixed-range",
+          "py-pep758-unknown-range",
+          "py-pep758-stale-parser",
+          "py-pep758-unbound-handler",
+          "snapshot-recovery-explicit-retain",
+          "snapshot-recovery-disposable-retain",
+          "snapshot-recovery-disposable-clean",
+          "snapshot-recovery-published-report",
+          "snapshot-recovery-published-cleanup",
+          "snapshot-recovery-existing-destination",
+          "snapshot-recovery-changed-ownership",
+          "snapshot-recovery-policy-unavailable",
+          "snapshot-recovery-incomplete-manifest",
+          "snapshot-recovery-completed-destination",
+          "fixture-values-db-file-parent",
+          "fixture-values-db-file-peer",
+          "fixture-values-db-directory-peer",
+          "fixture-values-db-directory-child",
+          "fixture-values-ids-default-asc",
+          "fixture-values-ids-default-inverted",
+          "fixture-values-ids-override-asc",
+          "fixture-values-ids-override-inverted",
+          "fixture-values-ids-default-desc",
+          "fixture-values-ids-desc-inverted",
+          "fixture-values-ids-filtered",
+          "fixture-values-ids-unfiltered"
+        ],
+        "corpusConcurrency": 6,
+        "outerAttemptsPerCase": 1,
+        "automaticCampaignRetry": false,
+        "ordinaryGeneratedLiteralFollowups": "retainedandexactlysourcepinned;notnewouterattempts",
+        "actualFollowupPromptSchemaHashes": "recordeveryactualrequest;unknownconditionalcontentnotpreinvented",
+        "failureOrInterruption": "retainallprefixes;no42admission;newcampaignrequirescausalcorrectionandnewprereg"
+      },
+      "sourcePrerequisites": [
+        {
+          "pr": 983,
+          "mergeCommit": "4736cd4f0b28b2ae2579434904c6ce7b5bdea58e",
+          "head": "845be8a8de7dc9441d42589bbf1e2d91ac08fdc6",
+          "merged": true,
+          "url": "https://github.com/vypdev/copilot/pull/983",
+          "implementationContainsMergedPrerequisite": true
+        },
+        {
+          "pr": 984,
+          "mergeCommit": "c6590bd8e03aced19250d681788f53268dede600",
+          "head": "6e6e79cb8695bc9ef9b5b415ee20409984b788c2",
+          "merged": true,
+          "url": "https://github.com/vypdev/copilot/pull/984",
+          "implementationContainsMergedPrerequisite": true
+        },
+        {
+          "pr": 988,
+          "mergeCommit": "0ddac1011204db6dda45dff0f99e3ef91309c701",
+          "head": "26e9dd8ede0490774d59bae946156514c43f6d20",
+          "merged": true,
+          "url": "https://github.com/vypdev/copilot/pull/988",
+          "implementationContainsMergedPrerequisite": true
+        },
+        {
+          "pr": 986,
+          "mergeCommit": "25eaba3a641abb05d1ac2847917c97863e5a714f",
+          "head": "3a65757b7482c22d9fc29a3161a7e92be8e3718e",
+          "merged": true,
+          "url": "https://github.com/vypdev/copilot/pull/986",
+          "implementationContainsMergedPrerequisite": true
+        },
+        {
+          "pr": 990,
+          "mergeCommit": "6382d54a823461b817b52407090dd9a9d92a973d",
+          "head": "99c90b491fccf464c8cb2bf70e031ca799508b44",
+          "merged": true,
+          "url": "https://github.com/vypdev/copilot/pull/990",
+          "implementationContainsMergedPrerequisite": true
+        }
+      ],
+      "preMeasurementRequirements": {
+        "fullSourceShadowPass": 591,
+        "fullGlobalSdkAndExtensionGates": true,
+        "cli14": {
+          "scriptSha256": "4adf86d0d09d31e91305ff00217f94d7a1b748a26383cc605d2aa57832c02c70",
+          "requiredPasses": 14
+        },
+        "nativeControls": [
+          {
+            "caseId": "ev974-C32",
+            "planPath": "quality/bugbot/evidence/issue-974/native-controls/macos-sdk-proc-baseline-cli171/ev974-C32.json",
+            "planSha256": "e148c87bb0f62d16e26562655116c17ac3ac9e28e8cefd67ce8353fd632a9a8f"
+          },
+          {
+            "caseId": "ev974-C33",
+            "planPath": "quality/bugbot/evidence/issue-974/native-controls/macos-sdk-proc-baseline-cli171/ev974-C33.json",
+            "planSha256": "06cdadd104739760e130cdc6d1f5c3010e9ded2eba8b8945c9880c40ea19dec1"
+          },
+          {
+            "caseId": "ev974-C34",
+            "planPath": "quality/bugbot/evidence/issue-974/native-controls/macos-sdk-proc-baseline-cli171/ev974-C34.json",
+            "planSha256": "5e2a1321f135e5bc2d177996e8e5c8bffe43cbf470fc243f6b9159f0880e6c32"
+          },
+          {
+            "caseId": "ev974-C35",
+            "planPath": "quality/bugbot/evidence/issue-974/native-controls/macos-sdk-proc-baseline-cli171/ev974-C35.json",
+            "planSha256": "8029091ac3630a61c25f861ce8f456936e5571bf7bf8f3b3a60821ba59c03189"
+          }
+        ],
+        "ordinarySdkRuntimeControl": {
+          "planPath": "quality/bugbot/evidence/issue-974/native-controls/macos-sdk-proc-baseline-cli171/runtime-admission.json",
+          "planSha256": "f8eaf6d7f361e2cb249ae80279570001bacf5e7c0e33ff91a65b2ab861d0d650"
+        },
+        "runtimeControlFixture": "separatenonce/openwitness;nogenuinecontrolevidenceclaimedbypreregistration",
+        "sameImplementationImageDriversAndHostWorkerRuntimes": true,
+        "approvedProfileSha256": "fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b",
+        "approvedParentReviewSha256": "55471224cb95a77b0d53033077dfd2d048cb2db6795f11236c2306082a72b050",
+        "sourceGlobalEvidence": {
+          "kind": "unchanged-covered-SDK/extension-bytes-and-host-runtime",
+          "receiptSha256": "461791f1e1db74e59071cd6d56be10cbf1c488930cd7a4b051a5d786a7720174",
+          "underlyingGlobalReceiptSha256": "e4ba12a3f17cbd474c90465c88a72e54b3774a3769dd821e3d234d8f25ddf122",
+          "newChangedDriverControlCoverageSha256": "74e5cb5dc5f4b1e48562dbe11f4dd87cec0b6de570142d9c8a4056c83a7927a7",
+          "noNewGlobalExecutionClaimed": true
+        }
+      },
+      "localExecution": {
+        "actualGitHubActionsJob": false,
+        "host": "physicalDarwinARM64AppleSiliconrunnerhost;existinglocalEngine",
+        "remoteRecoveryAndPublication": "separateauthority;notaninventedlocalmeasurementprerequisite"
+      },
+      "pilotWriteAttemptsRequired": 0,
+      "production": "disabled",
+      "causalRuntimeCorrection": {
+        "negativeSource": "22c94195ed38975acaade066473c5fea167ca09d",
+        "negativeImage": "sha256:25fe34d998a2991755e2bd77a6d42859f8dbf7c776239162301c14f0f7e5e58a",
+        "negativeApplicationModelCalls": 0,
+        "cause": "in-processUIDdrop proc-fileownership;freshsameUIDpositivewitness",
+        "originalRuntimeNegativeReceiptSha256": "4336aa401e5ed51ca999bb3cf308d08a123597920ee20c52c96e4a314479a83d",
+        "modelFreeMatchedContrastSha256": "f20bc60d899c6d0d2d1d810440d2531270eaeb4d3c2e2f87ca295bbb7f1a1f4e",
+        "profileAndScientificGatesUnchanged": true
+      }
+    }
+  },
+  "actualExecutionStartedAt": "2026-11-23T03:22:04.581217+00:00",
+  "originalPreregistrationCommittedBeforeAnyScientificCall": true,
+  "privatePreregistrationCommit": "07f21a4cadbd1dbaf03566c57a8033f85e9ff760",
+  "preregistrationVisibility": "private original; identity retained without a public original path/blob lookup",
+  "privateHistoricalLocatorRetention": {
+    "privateOriginalsFile": "source5327-current-descriptor-original-associations-private.json",
+    "bytes": 174658,
+    "sha256": "a7158a2fd7ccbc5b2296b9e6e64c23349761c3acf0df6f07282e0d27ef955e10",
+    "gitLocatorAssociationsPublic": false
+  }
+}

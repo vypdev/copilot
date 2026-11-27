@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "kind": "actual SDK native partial result and causal C34 fixture correction",
+  "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+  "nativePlanRevision": "df779284840992fffe55bbad65fbdf74142af9ca",
+  "tests": {
+    "total": 4,
+    "pass": 2,
+    "fail": 2,
+    "skip": 0,
+    "cancel": 0
+  },
+  "acceptedCases": [
+    "ev974-C32",
+    "ev974-C33"
+  ],
+  "unmetCases": [
+    "ev974-C34",
+    "ev974-C35"
+  ],
+  "runs": [
+    {
+      "directory": "ev974-native-ev974-C32-wolO4r",
+      "scope": {
+        "event": "scope-created",
+        "identity": {
+          "ownerId": "33046769b04e6cc8b2ec9be5b0e50bf12e6d33ecf036363b7d17804fdbf3c9e5",
+          "operationId": "control:ev974-C32",
+          "planSha256": "57eae549b5205c6ea52554e31699e8f23934d8fe4612896bb39c4d1bcd2a20f3",
+          "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+          "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+          "purpose": "native-control"
+        },
+        "scopeId": "3db8841cc4ebb7acd47814c922f76a9b34309eb53cf39bb7db6532f6ccb0fa5c",
+        "name": "copilot-qualification-aceafd13414ee6dcbeea300ded93b44fbcf22015c02081e70a2ff54078b547f3"
+      },
+      "stopped": {
+        "event": "scope-stopped",
+        "identity": {
+          "ownerId": "33046769b04e6cc8b2ec9be5b0e50bf12e6d33ecf036363b7d17804fdbf3c9e5",
+          "operationId": "control:ev974-C32",
+          "planSha256": "57eae549b5205c6ea52554e31699e8f23934d8fe4612896bb39c4d1bcd2a20f3",
+          "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+          "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+          "purpose": "native-control"
+        },
+        "scopeId": "3db8841cc4ebb7acd47814c922f76a9b34309eb53cf39bb7db6532f6ccb0fa5c",
+        "namespaceInitStopped": true,
+        "exitCode": 143,
+        "started": true,
+        "actualImage": "sha256:dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+        "namespaceState": {
+          "running": false,
+          "pid": 0,
+          "restarting": false,
+          "status": "exited"
+        }
+      },
+      "removed": true,
+      "evidence": {
+        "leader.json": {
+          "pid": 184,
+          "state": "R",
+          "ppid": 12,
+          "group": 184,
+          "session": 184
+        },
+        "descendant.json": {
+          "caseId": "ev974-C32",
+          "pid": 191,
+          "state": "R",
+          "ppid": 1,
+          "group": 191,
+          "session": 191
+        },
+        "sdk-ready.json": {
+          "schemaVersion": 1,
+          "caseId": "ev974-C32",
+          "scopeId": "3db8841cc4ebb7acd47814c922f76a9b34309eb53cf39bb7db6532f6ccb0fa5c",
+          "identity": {
+            "ownerId": "33046769b04e6cc8b2ec9be5b0e50bf12e6d33ecf036363b7d17804fdbf3c9e5",
+            "operationId": "control:ev974-C32",
+            "planSha256": "57eae549b5205c6ea52554e31699e8f23934d8fe4612896bb39c4d1bcd2a20f3",
+            "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+            "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+            "purpose": "native-control"
+          },
+          "realCli": {
+            "version": "codex-cli 0.169.1",
+            "proof": {
+              "executableSha256": "e14fc83739c13c1074b12bd1acce4010c893c7f6fbfc1593b4a31d74cabb57af",
+              "nativeExecutableSha256": "7a32206a6aa161b678b42f25f9b20f5f7e006497cd98cd02dc8835cbaab3bba0"
+            }
+          },
+          "fixtureCliSha256": "3bf82112127e518b4ea531a8e59e0f5e9325ad61bdebeebee7ca22ca6586741b",
+          "preparedVersion": "codex-cli 0.169.1 model-free-native-fixture",
+          "qualificationInvestigation": true,
+          "sdkSettled": true,
+          "descendant": {
+            "pid": 191,
+            "state": "S",
+            "ppid": 1,
+            "group": 191,
+            "session": 191
+          },
+          "result": "{\"ok\":true}",
+          "modelCalls": 0
+        }
+      }
+    },
+    {
+      "directory": "ev974-native-ev974-C33-P2rMwq",
+      "scope": {
+        "event": "scope-created",
+        "identity": {
+          "ownerId": "a52ca36317425a9bcd17b789673e1c70485b2ad489bcee3c1967ba1d06d8f66e",
+          "operationId": "control:ev974-C33",
+          "planSha256": "ac0003288b1900a16702b7ea668326fe2876c45d1d42343529a494f8565d9b5f",
+          "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+          "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+          "purpose": "native-control"
+        },
+        "scopeId": "759c732752aaf5053ca18d5184df902232121b2742806d2e55d5865250b17534",
+        "name": "copilot-qualification-447371eb9a5425c63796006eacdcccd23683777f4e77c84e1ed3f39137ec9ddf"
+      },
+      "stopped": {
+        "event": "scope-stopped",
+        "identity": {
+          "ownerId": "a52ca36317425a9bcd17b789673e1c70485b2ad489bcee3c1967ba1d06d8f66e",
+          "operationId": "control:ev974-C33",
+          "planSha256": "ac0003288b1900a16702b7ea668326fe2876c45d1d42343529a494f8565d9b5f",
+          "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+          "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+          "purpose": "native-control"
+        },
+        "scopeId": "759c732752aaf5053ca18d5184df902232121b2742806d2e55d5865250b17534",
+        "namespaceInitStopped": true,
+        "exitCode": 143,
+        "started": true,
+        "actualImage": "sha256:dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+        "namespaceState": {
+          "running": false,
+          "pid": 0,
+          "restarting": false,
+          "status": "exited"
+        }
+      },
+      "removed": true,
+      "evidence": {
+        "leader.json": {
+          "pid": 184,
+          "state": "R",
+          "ppid": 12,
+          "group": 184,
+          "session": 184
+        },
+        "descendant.json": {
+          "caseId": "ev974-C33",
+          "pid": 198,
+          "state": "R",
+          "ppid": 1,
+          "group": 198,
+          "session": 198
+        },
+        "sdk-ready.json": {
+          "schemaVersion": 1,
+          "caseId": "ev974-C33",
+          "scopeId": "759c732752aaf5053ca18d5184df902232121b2742806d2e55d5865250b17534",
+          "identity": {
+            "ownerId": "a52ca36317425a9bcd17b789673e1c70485b2ad489bcee3c1967ba1d06d8f66e",
+            "operationId": "control:ev974-C33",
+            "planSha256": "ac0003288b1900a16702b7ea668326fe2876c45d1d42343529a494f8565d9b5f",
+            "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+            "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+            "purpose": "native-control"
+          },
+          "realCli": {
+            "version": "codex-cli 0.169.1",
+            "proof": {
+              "executableSha256": "e14fc83739c13c1074b12bd1acce4010c893c7f6fbfc1593b4a31d74cabb57af",
+              "nativeExecutableSha256": "7a32206a6aa161b678b42f25f9b20f5f7e006497cd98cd02dc8835cbaab3bba0"
+            }
+          },
+          "fixtureCliSha256": "3bf82112127e518b4ea531a8e59e0f5e9325ad61bdebeebee7ca22ca6586741b",
+          "preparedVersion": "codex-cli 0.169.1 model-free-native-fixture",
+          "qualificationInvestigation": true,
+          "sdkSettled": false,
+          "descendant": {
+            "pid": 198,
+            "state": "S",
+            "ppid": 1,
+            "group": 198,
+            "session": 198
+          },
+          "result": null,
+          "modelCalls": 0
+        }
+      }
+    },
+    {
+      "directory": "ev974-native-owner-loss-83Y7li",
+      "scope": {
+        "event": "scope-created",
+        "identity": {
+          "ownerId": "535d71793cb56d378696a5413deb316f4acaca989a1fe7d23760499f63965fc5",
+          "operationId": "control:ev974-C34",
+          "planSha256": "3e045b9d86a3dd40046badd13eb52c2fd74a4fcc15282dd6e4170da00ad0be16",
+          "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+          "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+          "purpose": "native-control"
+        },
+        "scopeId": "96e2d2eebf93bfb60b05a1463de17458af692ca3c995ff7d2740ef4a13791a0d",
+        "name": "copilot-qualification-e99ecbb90bd4aaf66043a94d187477cff6f58eaaed0f4ccecc69aa58e894485b"
+      },
+      "stopped": {
+        "event": "scope-stopped",
+        "identity": {
+          "ownerId": "535d71793cb56d378696a5413deb316f4acaca989a1fe7d23760499f63965fc5",
+          "operationId": "control:ev974-C34",
+          "planSha256": "3e045b9d86a3dd40046badd13eb52c2fd74a4fcc15282dd6e4170da00ad0be16",
+          "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+          "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+          "purpose": "native-control"
+        },
+        "scopeId": "96e2d2eebf93bfb60b05a1463de17458af692ca3c995ff7d2740ef4a13791a0d",
+        "namespaceInitStopped": true,
+        "exitCode": 1,
+        "started": true,
+        "actualImage": "sha256:dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+        "namespaceState": {
+          "running": false,
+          "pid": 0,
+          "restarting": false,
+          "status": "exited"
+        }
+      },
+      "removed": true,
+      "evidence": {
+        "leader.json": {
+          "pid": 184,
+          "state": "R",
+          "ppid": 12,
+          "group": 184,
+          "session": 184
+        },
+        "descendant.json": {
+          "caseId": "ev974-C34",
+          "pid": 191,
+          "state": "R",
+          "ppid": 184,
+          "group": 191,
+          "session": 191
+        },
+        "worker-failure.json": {
+          "schemaVersion": 1,
+          "caseId": "ev974-C34",
+          "name": "Error",
+          "message": "Model-free native fixture did not become ready.",
+          "category": null,
+          "preflightStage": null,
+          "modelCalls": 0
+        }
+      }
+    },
+    {
+      "directory": "ev974-native-unrelated-sentinel-MNVwyK",
+      "scope": {
+        "event": "scope-created",
+        "identity": {
+          "ownerId": "0a792d69abaa4e79f283ea7839f4ffbddb7db6e54a033f7d6fc26c5e3932ea3f",
+          "operationId": "control:ev974-C34",
+          "planSha256": "3e045b9d86a3dd40046badd13eb52c2fd74a4fcc15282dd6e4170da00ad0be16",
+          "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+          "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+          "purpose": "native-control"
+        },
+        "scopeId": "793faddedac540f97c120e64a8b3ebddc593814189a051cc11d8f327cb461009",
+        "name": "copilot-qualification-fa690228754255a8d5dba8d30ab06c6850dd42b3a05541212700522772719f04"
+      },
+      "stopped": {
+        "event": "scope-stopped",
+        "identity": {
+          "ownerId": "0a792d69abaa4e79f283ea7839f4ffbddb7db6e54a033f7d6fc26c5e3932ea3f",
+          "operationId": "control:ev974-C34",
+          "planSha256": "3e045b9d86a3dd40046badd13eb52c2fd74a4fcc15282dd6e4170da00ad0be16",
+          "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+          "imageSha256": "dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+          "purpose": "native-control"
+        },
+        "scopeId": "793faddedac540f97c120e64a8b3ebddc593814189a051cc11d8f327cb461009",
+        "namespaceInitStopped": true,
+        "exitCode": 143,
+        "started": true,
+        "actualImage": "sha256:dfa44da82fdabfe499c0ac025a9a5a6a435fb07c173166de59a076b44c1cd71a",
+        "namespaceState": {
+          "running": false,
+          "pid": 0,
+          "restarting": false,
+          "status": "exited"
+        }
+      },
+      "removed": true,
+      "evidence": {
+        "leader.json": {
+          "pid": 184,
+          "state": "R",
+          "ppid": 12,
+          "group": 184,
+          "session": 184
+        },
+        "descendant.json": {
+          "caseId": "ev974-C34",
+          "pid": 191,
+          "state": "R",
+          "ppid": 184,
+          "group": 191,
+          "session": 191
+        }
+      }
+    }
+  ],
+  "cause": "C34 keeps its SDK CLI leader alive but directly parents the detached descendant. The worker requires descendant.ppid===1 before sdk-ready. Actual leader.pid184 and descendant.ppid184 confirm this impossible precondition; the native private diagnostic records readiness failure. C35 uses C34 as its unrelated sentinel and cannot proceed.",
+  "explicitStop": "After reproducing the same live-parent relation in the C35 sentinel, operator sent SIGTERM only to the positively identified owned host bootstrap; raw PID/user/argv/scope proof retained. This is a diagnostic stop, not acceptance or an investigation deadline. C35 target operations remain unstarted.",
+  "correction": "C34 now uses the same short-lived intermediate as C33; its descendant becomes orphaned while the SDK leader remains live. C32/C33/C35 target behavior and all readiness/stop assertions remain intact.",
+  "correctedFixtureSha256": "58137e5d408fb75566cab09d36e02b3d3eafa410fd99d0c7d72dfec666c49731",
+  "supportingSemanticDiagnosticVariants": "4PASS after source correction; no native acceptance inferred",
+  "qualificationModelCalls": 0,
+  "fullNativeGatePassed": false,
+  "174": "unstarted",
+  "42": "unstarted",
+  "production": "disabled"
+}

@@ -7,7 +7,7 @@ export const AGENT_OUTPUT_MAX_BYTES = 4 * 1024 * 1024;
 
 export type AgentWorkspaceMode = 'read-only' | 'workspace-write';
 export type AgentPromptMode = 'stdin' | 'final-argv';
-export type AgentOutputProtocol = 'plain-text' | 'json-lines-text-events';
+export type AgentOutputProtocol = 'plain-text' | 'json-lines-text-events' | 'codex-json-events';
 export type AgentOutputContract = 'text' | 'local-json-schema' | 'native-and-local-json-schema';
 
 export interface AgentManagedArtifact {
@@ -41,6 +41,8 @@ export interface AgentExecutionPlan {
     readonly output: AgentOutputContract;
     readonly timeoutMs: number;
     readonly brokeredVerification?: true;
+    /** Internal planner admission; this marker alone conveys no authority. */
+    readonly qualificationInvestigation?: true;
     readonly maxPromptBytes: number;
     readonly maxOutputBytes: number;
     readonly environment: Readonly<Record<string, string>>;

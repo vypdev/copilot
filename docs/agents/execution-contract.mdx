@@ -66,7 +66,72 @@ These let the sandbox locate its system tools on Linux and Windows. Model,
 GitHub, Git, SSH, proxy, and home/configuration variables are excluded. The
 list is fixed by Copilot and cannot be expanded through repository inputs.
 
-The hard maxima are 15 minutes, 512 KiB of prompt bytes, and 4 MiB of combined process output. Structured tasks declare a JSON Schema. Before Codex starts, Copilot requires a closed object schema in which every property is required, optional values are nullable, nested objects reject additional properties, and arrays define their items. Copilot then validates the returned response locally as well. An incompatible contract, invalid or oversized output, and prose-wrapped JSON are rejected; removed response shapes have no legacy conversion path.
+Ordinary execution has hard maxima of 15 minutes, 512 KiB of prompt bytes, and 4 MiB of combined process output. Structured tasks declare a JSON Schema. Before Codex starts, Copilot requires a closed object schema in which every property is required, optional values are nullable, nested objects reject additional properties, and arrays define their items. Copilot then validates the returned response locally as well. An incompatible contract, invalid or oversized output, and prose-wrapped JSON are rejected; removed response shapes have no legacy conversion path.
+
+### Qualification investigation
+
+The internal qualification composition can request a cancellation-only findings
+investigation after authenticating its committed source, driver, runtime and
+plan. It uses the ordinary detector, provider, canonical source workspace,
+read-only sandbox, credentials isolation and schema/output acceptance. It has no
+investigation timer, turn/read ceiling or token budget. Each complete corpus
+case or paired review has one admitted Linux PID namespace, including every
+detector/verifier follow-up. Explicit cancellation releases the entire scope,
+including descendants that change session or become reparented.
+
+```text
+Pinned qualification admission -> owned operation -> normal planner/executor
+  -> completion / failure / cancellation -> namespace stopped -> accepted result
+```
+
+The internal planner binds a frozen plan to its exact cancellation signal in
+memory. A copied/serialized plan, forged marker, different signal, write role,
+immutable SDD source snapshot or inconsistent authority cannot acquire that
+exception. Public inputs and environment variables do not select it. Trusted
+code in that process remains part of the qualification trust boundary. The live
+scope must exist before planner preparation or a CLI probe. Qualification has
+no uncontained or process-group fallback. Model execution gets no engine socket,
+client authority, host PID access or arbitrary host mounts.
+
+Each complete operation identity and namespace is admitted once per private SDK
+worker. Both are reserved before invoking its callback, so parallel calls, copied
+ports and completed or failed authorizations cannot repeat preparation or CLI
+version probes. Distinct operations keep separate asynchronous contexts and can run
+concurrently. Structural port rejection does not consume a later valid admission.
+Retain the first operation's evidence and inspect its outcome; do not retry with a
+copied authorization. Scientific repeats still need a causal correction and a new
+committed preregistration. This rule adds no user or environment setting.
+
+The same immutable bootstrap has a separate private `runtime-admission`
+prerequisite for one ordinary Luna/xhigh findings canary after independent
+same-tuple CLI and native acceptance. It uses the same live scope and normal
+planner, read-only sandbox, schema and private Codex authentication. Its withheld
+workspace nonce, protected-file open/close witness and complete durable attempt
+remain separate from scientific cases. Before model preparation, a fresh
+same-UID trusted Node must open all nine files with that frozen witness. This
+avoids the proc ownership change caused by the bootstrap's in-process UID drop;
+no dumpability, permissions or sandbox settings change. Model-free native fixtures still receive
+no credentials; this control receives no GitHub/evidence token. A completed
+runtime identity cannot satisfy the scientific slot ledger or admit42. See the
+[qualification control and evidence boundary](../bugbot/quality-observability).
+
+The immutable outer bootstrap alone owns the non-TTY stdin lifetime. Owner
+death/EOF stops the namespace. Normal completion also waits for an observed
+stopped namespace before outer cleanup and result acceptance. A provider
+response, process close, missing pipe or sampled process tree cannot supply that
+proof. Unknown create/start/stop effects remain incomplete and cannot be replayed
+or adopted automatically. Recovery addresses only positively correlated owned
+IDs. Technical KILL escalation follows an actual stop request and never limits
+active investigation.
+
+Ordinary execution and immutable pre-branch SDD source deadlines retain their
+existing limits. Technical version/ACL probes, credential, artifact and output
+integrity checks also remain in force. Planner admission does not prove that a
+process spawned or that the provider reported a model identity. Qualification
+records unavailable model identity and usage as unknown and preserves failed or
+interrupted attempts. See [qualification evidence and recovery](../bugbot/quality-observability).
+This internal route does not activate production verification or install a new
+default.
 
 For Codex, the native schema preserves that closed JSON shape while string
 length bounds are enforced locally from the complete original schema. This
@@ -91,6 +156,13 @@ manifest/version, workspace and output modes, artifact hashes, duration, byte
 count, and semantic result category. Prompts, response content, model names,
 argv, environment values, paths, raw stderr, and user identity are excluded by
 the observer contract.
+
+Qualification acceptance recording is a separate driver responsibility. Its
+required pre-dispatch writes close the original owned cancellation signal when
+persistence fails, before the CLI subprocess starts. It retains the first evidence
+error; it neither replaces the admitted signal nor changes the SDK observer's
+telemetry contract. Initial Engine metadata/create cancellation retains unknown
+creation effects as incomplete without replay or blind cleanup.
 
 The reviewed runtime baseline is Codex `codex-cli 0.156.1`, OpenCode `1.18.3`, and Cursor Agent `2026.09.10-fd3934a`. An available runtime may report any non-empty version and is never silently replaced; an incompatible command surface fails terminally with no provider fallback. See [Agent input reference](/agents/input-reference) and [Agent failure policy](/agents/failure-policy).
 
@@ -385,3 +457,56 @@ or complete byte coverage and Git blob hashing. A missing side, omitted slice, s
 attempt, crossed profile, late failure or exhausted capacity prevents partial
 publication. `progress-inventory-incomplete` exposes bounded localized diagnostics
 with exact or lower-bound counts. Existing framed-v1 wire behavior remains compatible.
+
+
+### Source5327 review: independent CLI evidence
+
+The historical runtime canary proved workspace access; its nine private-open
+denials were reported by the model without an independently captured command.
+That receipt and the174 negative remain unchanged. Current private runtime plans
+require protocol2 and a complete, independent CLI command-event artifact: one
+fixed witness command, actual successful completion and all nine open denials.
+The host also rechecks the complete attempt sequence and actual artifact bytes.
+Model text or a pass-only record cannot establish success. Missing or changed
+evidence remains unavailable and is retained without automatic retry.
+
+This composition is private to the reviewed bootstrap and live SDK scope; there
+is no new consumer setting, receipt grant or installation authority. Ordinary
+requests keep their existing output framing and isolation. The new source has
+model-free controls but no new real-model execution or native admission. It does
+not repeat the174 measurement, admit42 or enable production. Current sanitized
+artifact locators retain original byte/digest retrieval; the canonical141 map
+resolves the historical text without changing its immutable result receipt.
+Hosted original-cache deletion still depends on GitHub Support.
+
+
+### Source626e: observed CLI progress and a failed technical canary
+
+A separate one-call protocol2 canary ran on626e/image1f0365 after CLI14 and four
+native SDK controls passed. Its independent CLI artifact records the fixed
+program's successful completion and all nine protected open denials; the
+trusted positive baseline opened all nine, without reading their contents.
+The actual CLI emits progress before the command and uses /usr/bin/bash -c.
+The controller now retains that progress without trusting it and permits only
+the same fixed non-login command via the two /usr/bin shell spellings.
+
+The original canary still failed: the final model JSON copied63 characters of
+the64-character tool nonce. Exact final equality remains mandatory. The seven
+new deterministic controls pass within65 components, including this negative;
+there is no new real-model PASS or automatic retry. The additional technical
+invocation remains separate from the original technical invocation and the
+unchanged200 scientific invocations. Original174negative/42notadmitted,
+profilesNONE,pilotwrites0,productiondisabled. All13 owned container IDs checked
+across these technical steps are absent. The executions are Linux ARM containers
+on the Mac listener host, not GitHub Actions jobs. The issue974 evidence packet records hashes, exact identities and limitations.
+
+
+Owned qualification staging is removed if permission or input-directory setup
+fails before container creation. Unknown container effects retain their staging
+for inspection. If verifier transport and its terminal record both fail, the
+original transport failure is returned; missing terminal evidence remains
+incomplete and cannot qualify a review. These are source-level recovery rules,
+not a new native-runtime admission or authorization to retry a failed canary.
+Public archive indexes use sanitized mirror retrieval identities; original
+revision/path mappings remain private. Old cached views remain pending GitHub
+Support5044568 and are not claimed erased by source minimization.

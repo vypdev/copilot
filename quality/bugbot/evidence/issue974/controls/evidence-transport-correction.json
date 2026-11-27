@@ -1,0 +1,72 @@
+{
+  "at": "2026-11-20T19:49:41.054913+00:00",
+  "headBefore": "38f4c046ecb89f7b79c9778f4123ada8053f2069",
+  "nativeFailure": {
+    "check": 136523742760,
+    "run": 44803900644,
+    "reason": "progress generated-artifact policy recognizes issue-<number>/*.log.gz; historical issue974 evidence directory does not match",
+    "code": "validation.evidence-unavailable"
+  },
+  "policyUnchanged": true,
+  "moves": [
+    {
+      "from": "quality/bugbot/evidence/issue974/controls/5241685-bundle-evidence-commit.log.gz",
+      "to": "quality/bugbot/evidence/issue-974/controls/5241685-bundle-evidence-commit.log.gz",
+      "compressedSha256": "58853dba102180256befcc577d924c72c424b96a940a9aeb1d389c5666f07816",
+      "rawSha256": "4bc15dc6f1ce42eb76368e212e8029980834ae9ef1437dc67c51ee02c706a7ec",
+      "rawBytes": 536133
+    },
+    {
+      "from": "quality/bugbot/evidence/issue974/controls/5241685-committed-controls.log.gz",
+      "to": "quality/bugbot/evidence/issue-974/controls/5241685-committed-controls.log.gz",
+      "compressedSha256": "2b130bc46844aab72ede251d276c99d8ef211ab918eda1ba51b8217ea1decb51",
+      "rawSha256": "3875aa8113f8ce567559549447ad52589a2307ce370f96435cece3d41ac3dc29",
+      "rawBytes": 24987
+    },
+    {
+      "from": "quality/bugbot/evidence/issue974/controls/5241685-native-static-failure.log.gz",
+      "to": "quality/bugbot/evidence/issue-974/controls/5241685-native-static-failure.log.gz",
+      "compressedSha256": "25e8f6cdc8d5316de9e77005b6b3039ae7d9d93257863ed5c4bcd7bb30b5555c",
+      "rawSha256": "65b3126bcd93e4cdd675cc40fe25eaf60484e60fe45187cae1f54e54414f7e5d",
+      "rawBytes": 16230
+    },
+    {
+      "from": "quality/bugbot/evidence/issue974/controls/lifecycle-incomplete-global-coverage.log.gz",
+      "to": "quality/bugbot/evidence/issue-974/controls/lifecycle-incomplete-global-coverage.log.gz",
+      "compressedSha256": "b53b2e539bdbd1d8972f61ade2e4cd0b9de78a5a30b0e0a6d4252dfbad9d9510",
+      "rawSha256": "d284c9213fecaa664690f5afe553becb278ad02697b125e825be9fe0e4ca4d00",
+      "rawBytes": 1990
+    },
+    {
+      "from": "quality/bugbot/evidence/issue974/controls/lifecycle-scoped-coverage.log.gz",
+      "to": "quality/bugbot/evidence/issue-974/controls/lifecycle-scoped-coverage.log.gz",
+      "compressedSha256": "d4e1a8ba00aa9aed3834f538459f49184e4255588c33febeb3f4d6f2f9b1581d",
+      "rawSha256": "3393e5828e8f53db495ddf3c04ec423d201724c733520d1d5430a807ffac2992",
+      "rawBytes": 1855
+    },
+    {
+      "from": "quality/bugbot/evidence/issue974/controls/source-commit.log.gz",
+      "to": "quality/bugbot/evidence/issue-974/controls/source-commit.log.gz",
+      "compressedSha256": "724d466880bd6dae3d00894ca41a545c054a070e1fabb671ab9287a2336228c1",
+      "rawSha256": "ca15605f80107394e75291ed20f27e75275b4cd9caead7659302f2f1acb7aa8a",
+      "rawBytes": 535223
+    },
+    {
+      "from": "quality/bugbot/evidence/issue974/controls/v2-loader-admission-green.log.gz",
+      "to": "quality/bugbot/evidence/issue-974/controls/v2-loader-admission-green.log.gz",
+      "compressedSha256": "6be39570b0967a853c47ac33c0d34480ce63f4388da80155dff2d944a7abbc3b",
+      "rawSha256": "4f66ca9e648302b2a6e4893b942596d77656104acc0a5bf58ac5a0b1df66d5c2",
+      "rawBytes": 273
+    },
+    {
+      "from": "quality/bugbot/evidence/issue974/controls/v2-loader-admission-red.log.gz",
+      "to": "quality/bugbot/evidence/issue-974/controls/v2-loader-admission-red.log.gz",
+      "compressedSha256": "9fd1e16f999cfa35682975041035b4b719db24e1a1136bda9c6bfdc69a2c9fe6",
+      "rawSha256": "dd79fc5c1ff9f7114c46988e45e698c40b984d1e459ea6a80e71c51f3088d924",
+      "rawBytes": 1484
+    }
+  ],
+  "preservedOriginalBytes": true,
+  "sourceDriversAndCanonicalPlanRemain": "quality/bugbot/evidence/issue974",
+  "qualificationCalls": 0
+}

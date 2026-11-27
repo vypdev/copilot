@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-22T01:11:00.438966+00:00",
+  "parent": "4a8cce78c6259e2b3ba314e4d8b23d67322b6f50",
+  "findings": [
+    "PRRT_kwDONSeBW866dMuI"
+  ],
+  "sourceHashes": {
+    "build/cli/index.js": "3c2917ab977191e3c4bf24c2cfcd8e8be3c396bfe14458866c7fecfc51888afd",
+    "build/github_action/index.js": "dc571fbe4cd5489cdeedd508a7ecbb1ffdddf67895ff23a6159a65afbf79cdae",
+    "docs/agents/execution-contract.mdx": "431915dc2a0907432b77a0050a6ecfb9e4d69e984a8360e9fd50cd95ef029d40",
+    "docs/bugbot/quality-observability.mdx": "c703b1d01e2b8d0de69198083187b9a6ccda4672e6b85b95e5f7334edb621d87",
+    "specs/CATALOG.md": "9b5dcc9ef8b128ab2c4e57d544d99ffe7ff218047fa71fe41765149d725c2732",
+    "specs/agent-execution-policy-hardening.md": "9e482b34d347f4c579c3c914a8eeaa9cf551278b7ed3ce0389fdd3c26b33cf76",
+    "specs/catalog.json": "6a62cc4225449fc8dc66f97f29300963f9aec5a5b11a5c153c8b87c52fcda11e",
+    "src/application/ports/qualification_operation_scope_ports.ts": "9b71b92fb314de91638c97055b85c4902be38c7a4eb7a0b62132937eecedf7c2",
+    "src/infrastructure/agents/__tests__/qualification_investigation.test.ts": "3bea333069e1168ebd982e7a1708506b22a513cc41c805bb869ab0a5ce9d656a",
+    "src/infrastructure/agents/qualification_operation_scope.ts": "705158cab2c351d533d73014be9f67b0e6fbb1f26ad47a4e445ba814c592bd04",
+    "src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts": "cec73b227a5ce3a477ddf8d2b078b8aa7fb21cff7247a1ce63b6b0eb8448005c"
+  },
+  "testHelperHashes": {
+    "src/infrastructure/agents/__tests__/qualification_investigation.test.ts": "3bea333069e1168ebd982e7a1708506b22a513cc41c805bb869ab0a5ce9d656a",
+    "src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts": "cec73b227a5ce3a477ddf8d2b078b8aa7fb21cff7247a1ce63b6b0eb8448005c"
+  },
+  "causalRed": {
+    "passed": 17,
+    "failed": 10,
+    "skipped": 0
+  },
+  "focusedGreen": {
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0,
+    "commandExit": 1,
+    "boundary": "Changed scope and pure identity policy100allmetrics. Focused command exits1 for unexecuted global owners, not full coverage acceptance."
+  },
+  "curated": {
+    "files": 3,
+    "passed": 67,
+    "failed": 0,
+    "existingUnchangedSkipped": 1
+  },
+  "precommitShadowCommand": {
+    "exit": 1,
+    "registered": 479,
+    "passed": 456,
+    "failed": 23,
+    "skipped": 0,
+    "cancelled": 0,
+    "allFailureCause": "SDK edits differ from pinned HEAD4a at scopeports.ts; proper source fence, not accepted full validation."
+  },
+  "postCommitShadowCommand": "Required on exact clean new SDK commit before publication; its raw output/metadata must be retained separately, with native final-head verification still required.",
+  "coverage": {
+    "src/infrastructure/agents/qualification_operation_scope.ts": {
+      "lines": {
+        "total": 64,
+        "covered": 64,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 17,
+        "covered": 17,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 85,
+        "covered": 85,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 52,
+        "covered": 52,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "src/application/policies/qualification_operation_scope_policy.ts": {
+      "lines": {
+        "total": 42,
+        "covered": 42,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 12,
+        "covered": 12,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 49,
+        "covered": 49,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 59,
+        "covered": 59,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "componentModuleGatesSatisfied": true,
+  "globalChangedModuleGateSatisfied": false,
+  "newJestCases": 12,
+  "cases": "4concurrent aliases with actualordinaryplannerpreparation spies;6terminal reuses(completed/failed byport/identity/namespace);1distinctparallel;1structuralfailuredoesnotconsume. ExistingC04 proof expands;35logicalIDsunchanged.",
+  "fix": "Reserve canonical sixfieldidentity and namespace synchronously after structuralportvalidation, before callback/await; neither is released after completion/failure/cancellation. No objectclone/relabel/reset/userconfig/retry grants another operation.",
+  "fixtures": "Each independent semantic scope now gets fresh identity+namespace and stableproof snapshot; existinginvalidproof tests retainexactidentitycomparison. Allnewtests identical betweenactualred/green.",
+  "contract": "MutableSDKownerSDD, executioncontract, qualityobservability, portcomment andcatalogupdated. SelectedBugbotSDD/corpora/frozenplans/35logicalIDsunchanged.",
+  "package": "104files; actual CLI + typedBugbotAPI + isolatedlocalwebsessionPASS. Publisher11-controlroute belongs to PR999, not this SDKbranch.",
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c",
+      "changedFromParent": false
+    },
+    "cli": {
+      "bytes": 8350693,
+      "sha256": "3c2917ab977191e3c4bf24c2cfcd8e8be3c396bfe14458866c7fecfc51888afd",
+      "changedFromParent": true
+    },
+    "github_action": {
+      "bytes": 11109809,
+      "sha256": "dc571fbe4cd5489cdeedd508a7ecbb1ffdddf67895ff23a6159a65afbf79cdae",
+      "changedFromParent": true
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a",
+      "changedFromParent": false
+    }
+  },
+  "archives": 31,
+  "bounds": "ActualJestasynccontexts, SDKplanner/resolution/version seams, ownedprivateGit/files and semanticstoppednamespace promises. No realLinuxnamespace,providerexecution,quiescence,latecancelreason or credentialreadscope proof. SDK/2bundleschanged,newexacttuple/nativeproofrequired.",
+  "normalHooksAndFinalNative": "required",
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "qualifiedProfile": null,
+  "production": "disabled",
+  "normalHookNegative": {
+    "passed": 18766,
+    "failed": 2,
+    "historicalSkipped": 35,
+    "commitCreated": false,
+    "cause": "Three independent verifier-termination test rows reused one logical identity and namespace; the new single-use admission correctly rejects the second and third before callback entry."
+  },
+  "fixtureCorrection": {
+    "passed": 85,
+    "failed": 0,
+    "existingUnchangedSkipped": 1,
+    "suites": 4,
+    "change": "Each independent verifier termination scenario receives a distinct identity and namespace. Existing stop/reason/diagnostic assertions remain intact. No new test or relaxed production validation.",
+    "testSha256": "cec73b227a5ce3a477ddf8d2b078b8aa7fb21cff7247a1ce63b6b0eb8448005c"
+  },
+  "evidenceTransport": {
+    "losslessRenames": 22,
+    "contract": "Existing generated-evidence .log.gz classification; no binary-integrity policy or limit changes.",
+    "archivesBefore": 26,
+    "archivesAfter": 31,
+    "postCommit479": "Still required on exact clean final source before push."
+  }
+}

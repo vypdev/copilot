@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "run": 44870656316,
+  "job": 136744193299,
+  "url": "https://github.com/vypdev/copilot/actions/runs/44870656316/job/136744193299",
+  "code": "unexpected-paths",
+  "stage": "verification",
+  "added": 1,
+  "generatedBundles": 1,
+  "sdkSuitesPassed": 944,
+  "sdkAssertionsPassed": 18744,
+  "preexistingSkipped": 35,
+  "extensionFilesPassed": 385,
+  "rawBytes": 3798070,
+  "rawSha256": "0a347b4602633f4d8f78edd0f8751d97ced7c9927c5ed6d1ee2ed0b3085f9b16",
+  "localRawLogRetained": "/private/tmp/copilot-goal-974-official-sync-failure.raw.log",
+  "exactUnexpectedPathNotDisclosedByNativeDiagnostic": true,
+  "localPhysicalResolutionIsReproducible": true,
+  "initialSymlinkDiagnosticNotEquivalentToNativeWorkspace": true,
+  "normalProtectedChecksStillRequired": true,
+  "qualificationModelCalls": 0,
+  "production": "disabled"
+}

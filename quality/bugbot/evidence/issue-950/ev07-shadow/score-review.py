@@ -55,6 +55,97 @@ if (len(STARTS) != 1 or STARTS[0].get("plan") != PLAN_SHA256
     raise ValueError("full-review plan provenance mismatch")
 STARTED = {(row["id"], row["repetition"]) for row in SLOTS if row["event"] == "slot-start"}
 EXITS = {(row["id"], row["repetition"]): row["exit"] for row in SLOTS if row["event"] == "slot-finish"}
+CONTAINED = bool(SELECTED_PLAN.get("containment"))
+if CONTAINED:
+    expected_slots = [(id, repetition) for repetition in range(1, PLAN["repetitions"] + 1) for id in PLAN["order"]]
+    planned = [(row.get("id"), row.get("repetition")) for row in SLOTS if row["event"] == "slot-planned"]
+    if (planned != expected_slots or len(expected_slots) != 42
+            or len(STARTED) != sum(row["event"] == "slot-start" for row in SLOTS)
+            or len(EXITS) != sum(row["event"] == "slot-finish" for row in SLOTS)
+            or not STARTED.issubset(set(expected_slots)) or not set(EXITS).issubset(STARTED)):
+        raise ValueError("full-review fixed42 inventory mismatch")
+    for row in SLOTS:
+        if row["event"].startswith(("scope-", "operation-")):
+            if (row.get("slot", {}).get("id"), row.get("slot", {}).get("repetition")) not in STARTED:
+                raise ValueError("full-review orphan operation inventory")
+    finishes = [row for row in SLOTS if row["event"] == "finish"]
+    SCHEDULER_COMPLETE = (len(finishes) == 1 and len(STARTED) == len(EXITS) == 42
+                          and finishes[0] == dict(event="finish", admitted=42, unstarted=0, interrupted=False, failed=False)
+                          and (REVIEW_ROOT / "slots.jsonl").read_bytes().endswith(b"\n"))
+else:
+    SCHEDULER_COMPLETE = True
+
+
+def attempt_admission(id, repetition, records):
+    if SELECTED_PLAN.get("schemaVersion") != 2:
+        return dict(complete=True)
+    script = ("const fs=require('node:fs');const input=JSON.parse(fs.readFileSync(0,'utf8'));"
+              "const result=require(process.argv[1]).validateCompleteReviewAttempts(input);"
+              "process.stdout.write(JSON.stringify(result));")
+    request = dict(records=records, caseId=f"{id}:r{repetition}", selected=SELECTED_PLAN,
+                   detectorDirectory=str(REVIEW_ROOT / f"{id}-{repetition}.jsonl.attempts"),
+                   verifierDirectory=str(REVIEW_ROOT / f"{id}-{repetition}.jsonl.verifier-attempts"))
+    run = subprocess.run(["node", "-e", script, str(ROOT / "../../issue974/attempt-ledger.cjs")],
+                         input=json.dumps(request), text=True, capture_output=True)
+    return json.loads(run.stdout) if run.returncode == 0 else dict(complete=False, failure="actual-call-evidence")
+
+
+def containment_admission(id, repetition, records):
+    if not CONTAINED:
+        return dict(complete=True)
+    try:
+        slot = (id, repetition)
+        exit = EXITS.get(slot) or {}
+        assert exit.get("code") == 0 and not exit.get("signal") and not exit.get("error")
+        assert exit.get("namespaceInitStopped") is True
+        sidecar = REVIEW_ROOT / f"{id}-{repetition}.jsonl.scopes.jsonl"
+        assert sidecar.read_bytes().endswith(b"\n")
+        scope = events(sidecar)
+        assert [row["event"] for row in scope] == ["scope-create-start", "scope-created", "operation-start", "scope-start",
+                                                   "scope-stopped", "operation-stopped", "scope-remove-start", "scope-removed"]
+        scheduled_scope = [row for row in SLOTS if row["event"].startswith(("scope-", "operation-"))
+                           and row.get("slot") == dict(id=id, repetition=repetition)]
+        without_slot = lambda row: {key: value for key, value in row.items() if key != "slot"}
+        assert list(map(without_slot, scheduled_scope)) == list(map(without_slot, scope))
+        assert not any(row["event"] == "operation-incomplete" for row in scope)
+        starts = [row for row in scope if row["event"] == "operation-start"]
+        ends = [row for row in scope if row["event"] == "operation-stopped"]
+        stopped = [row for row in scope if row["event"] == "scope-stopped"]
+        created = [row for row in scope if row["event"] == "scope-created"]
+        assert len(starts) == len(ends) == len(stopped) == len(created) == 1
+        start, end = starts[0], ends[0]
+        identity = start["identity"]
+        assert set(identity) == {"ownerId", "operationId", "planSha256", "implementation", "imageSha256", "purpose"}
+        assert re.fullmatch(r"[a-f0-9]{64}", identity["ownerId"])
+        assert re.fullmatch(r"[a-f0-9]{64}", start["scopeId"])
+        assert identity == dict(ownerId=identity["ownerId"], operationId=f"review:{id}:r{repetition}",
+                                planSha256=PLAN_SHA256, implementation=SELECTED_PLAN["implementation"],
+                                imageSha256=SELECTED_PLAN["containment"]["image"][7:], purpose="paired-review")
+        assert all(row.get("identity") == identity and row.get("scopeId") == start["scopeId"]
+                   for row in [*created, *stopped, end])
+        assert stopped[0].get("namespaceInitStopped") is True and end.get("namespaceInitStopped") is True
+        assert end.get("exitCode") == 0 and end.get("interrupted") is False
+        host = STARTS[0]["provenance"]
+        assert host["executionContext"] == "host" and host["implementation"] == SELECTED_PLAN["implementation"]
+        for field in ("tree", "sourceSha256", "dependencyLockSha256", "compilerConfigurationSha256"):
+            assert re.fullmatch(r"[a-f0-9]{40}" if field == "tree" else r"[a-f0-9]{64}", host[field])
+        if SELECTED_PLAN.get("sourceTree") is not None:
+            assert host["tree"] == SELECTED_PLAN["sourceTree"]
+        assert host["bootstrap"] == dict(bootstrapSha256=SELECTED_PLAN["inspectedArtifacts"]["../qualification-bootstrap.cjs"],
+                                         planCommit=PREREGISTRATION["commit"], planPath=PREREGISTRATION["path"], planSha256=PLAN_SHA256)
+        assert host["drivers"] == SELECTED_PLAN["inspectedArtifacts"]
+        assert host["containment"] == SELECTED_PLAN["containment"] and host["workerRuntime"] == SELECTED_PLAN["runtime"]
+        runtime_fields = {"dependencyTreeSha256", "dependencyEntries", "os", "arch", "kernel", "node", "nodeSha256",
+                          "gitExecutable", "gitSha256", "typescript", "typescriptSha256", "git"}
+        assert set(host["runtime"]) == runtime_fields
+        assert all(value == SELECTED_PLAN["hostRuntime"][key] for key, value in host["runtime"].items())
+        worker = dict(host, executionContext="worker", runtime={key: SELECTED_PLAN["runtime"][key] for key in host["runtime"]})
+        assert records[0]["provenance"] == worker
+        assert all(row.get("identity") == identity and row.get("scopeId") in (None, start["scopeId"])
+                   for row in scope if row["event"].startswith("scope-"))
+        return dict(complete=True, scopeId=start["scopeId"], ownerId=identity["ownerId"])
+    except (AssertionError, KeyError, OSError, ValueError, TypeError):
+        return dict(complete=False, failure="namespace-or-runtime-evidence")
 
 
 def project(record, fields):
@@ -149,7 +240,10 @@ def score(id, repetition):
     observations = report.get("candidates") or []
     subject = records[0]["subject"]
     citation_audit = audit_git_citations(id, subject, observations)
-    admitted = result.get("success") and payload.get("dryRun") and result.get("checkoutUnchanged") and not write_count
+    attempts = attempt_admission(id, repetition, records)
+    containment = containment_admission(id, repetition, records)
+    admitted = (result.get("success") and payload.get("dryRun") and result.get("checkoutUnchanged") and not write_count
+                and attempts["complete"] and containment["complete"])
     status = simulation.get("status", "invalid") if admitted else "invalid"
     head = subject["head"]
     confirmed = {row["id"] for row in observations if row.get("status") == "verdict"
@@ -169,6 +263,7 @@ def score(id, repetition):
                      and re.search(PATTERNS[id[0]], finding["title"] + " " + finding["description"], re.I)), None)
     baseline_match, shadow_match = matched(findings), matched(active)
     return dict(subject=id, repetition=repetition, status=status, githubWriteAttempts=write_count,
+                actualCalls=attempts, containment=containment,
                 checkoutUnchanged=result["checkoutUnchanged"], baseline=len(findings), shadow=len(active),
                 gitCitationAudit=citation_audit,
                 historicalBaseline=bool(admitted and not positive and baseline_match),
@@ -183,6 +278,11 @@ def score(id, repetition):
 
 
 rows = [score(id, repetition) for repetition in range(1, PLAN["repetitions"] + 1) for id in PLAN["order"]]
+if CONTAINED:
+    observed = [row.get("containment", {}) for row in rows if row.get("containment", {}).get("complete")]
+    if (len({row["scopeId"] for row in observed}) != len(observed)
+            or len({row["ownerId"] for row in observed}) != len(observed)):
+        raise ValueError("full-review reused namespace or owner identity")
 if ARGS.public_attempts:
     with ARGS.public_attempts.open("x", encoding="utf8") as output:
         for row in rows:
@@ -200,7 +300,7 @@ for repetition in range(1, PLAN["repetitions"] + 1):
 times = sorted(row["addedMs"] for row in rows if row.get("addedMs") is not None)
 p95 = times[math.ceil(0.95 * len(times)) - 1] if times else None
 checks = dict(
-    complete=all(row["status"] in ("complete", "incomplete") for row in rows),
+    complete=SCHEDULER_COMPLETE and all(row["status"] in ("complete", "incomplete") for row in rows),
     baseline=sum(reproductions.values()) >= PLAN["baselineMinimumAlerts"] and len(reproductions) >= PLAN["baselineMinimumPremises"],
     reduction=all(row["complete"] and row["shadow"] <= row["baseline"] for row in comparisons)
     and sum(row["shadow"] < row["baseline"] for row in comparisons) >= PLAN["minimumStrictlyBetterRepetitions"],

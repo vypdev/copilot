@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "scientificIdentitiesAndResultsUnchanged": true,
+  "actualSeparateTechnicalObservation": {
+    "at": "2026-11-23T17:24:32.635952+00:00",
+    "implementation": "626e4b7ee2c176d77381ecabdb0080665f3917ef",
+    "image": "sha256:1f0365105eb3fa48424a3ee40efecc539ded1e9623d943b820e9ca2b9975a3fa",
+    "originalCliArtifactBytes": 2832,
+    "originalCliArtifactSha256": "bde710d723c5355342f7ffaa208315a90d0f28e22e776763b5d082f4f1eae557",
+    "command": "/usr/bin/bash -c '/usr/local/bin/node runtime-control-witness.cjs'",
+    "commandExit": 0,
+    "beforeToolNonJsonProgressMessages": 1,
+    "actualProtectedOpensDenied": 9,
+    "positiveTrustedOpens": 9,
+    "protectedContentsRead": false,
+    "toolNonceLength": 64,
+    "modelNonceLength": 63,
+    "nonceEqual": false,
+    "actualCallsStarted": 1,
+    "overallRuntimeAdmission": "FAIL_NOT_ADMITTED",
+    "newScientificCalls": 0,
+    "noAutomaticReplay": true,
+    "actual174": "COMPLETE_NEGATIVE_UNCHANGED",
+    "actual42": "UNSTARTED_NOT_ADMITTED",
+    "pilotWrites": 0,
+    "production": "disabled"
+  },
+  "sourceSha256": {
+    "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs": "12087148985788344a1d9c00d1d831e5ceee36c0f5834a69285fd6347d1e2ef4",
+    "quality/bugbot/evidence/issue974/sdk-runtime-admission-components.cjs": "1f25c513e62916bb3868102bbdc8750e18c06dff4fd59c547809b914548cc003"
+  },
+  "causalOriginal": {
+    "passed": 2,
+    "failed": 5,
+    "assertionsSha256": "1f25c513e62916bb3868102bbdc8750e18c06dff4fd59c547809b914548cc003"
+  },
+  "correctedComponents": {
+    "counts": {
+      "tests": 65,
+      "pass": 65,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "sameAssertions": true,
+    "coverage": [
+      {
+        "file": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs",
+        "sourceSha256": "12087148985788344a1d9c00d1d831e5ceee36c0f5834a69285fd6347d1e2ef4",
+        "summary": {
+          "lines": {
+            "total": 181,
+            "covered": 181,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 25,
+            "covered": 24,
+            "skipped": 0,
+            "pct": 96
+          },
+          "statements": {
+            "total": 230,
+            "covered": 228,
+            "skipped": 0,
+            "pct": 99.13
+          },
+          "branches": {
+            "total": 40,
+            "covered": 38,
+            "skipped": 0,
+            "pct": 95
+          }
+        },
+        "gate": true
+      }
+    ]
+  },
+  "privateOriginalReceipts": [
+    {
+      "name": "actual-runtime-protocol2-attempt1-receipt.json",
+      "bytes": 4000,
+      "sha256": "f234e76aad3412f1ce692e926c92a478da9e802175dcd8230b9208e7d3eb3233"
+    },
+    {
+      "name": "actual-runtime-protocol2-independent-observation.json",
+      "bytes": 1128,
+      "sha256": "53955e7106d6381ee44326b854b249e7f099ed627f1553df33c7d99961b11897"
+    },
+    {
+      "name": "fresh-owned-container-absence-attempt2.json",
+      "bytes": 2438,
+      "sha256": "62ed721f90bfe5446344a7761143a0c1d30649f47c78ee751bb35d03088049fc"
+    },
+    {
+      "name": "actual-runtime-protocol2-fresh-scope-absence.json",
+      "bytes": 222,
+      "sha256": "e1cf7c54ed4b33bbe69d112cbec16a0d8e3a114b26a2393a1f8a0555a98c0199"
+    },
+    {
+      "name": "fresh-owned-absence-attempt1-prequery-negative.json",
+      "bytes": 462,
+      "sha256": "a46695e5cfb14c54d1afab9c42a866d03c55bbace5cebce4a6c7e6c8601b472f"
+    },
+    {
+      "name": "red1-receipt.json",
+      "bytes": 1149,
+      "sha256": "02d9415cb42e8001296ab96b8e0c16de2d5a842810ffbf331aba75cf4f126177"
+    },
+    {
+      "name": "green1-receipt.json",
+      "bytes": 796,
+      "sha256": "9e1531b04702e801718f829f23ebb4fe72464ba5c9f6e36f4152a8563bbd3fd1"
+    },
+    {
+      "name": "runtime-controller-coverage-attempt1-run-receipt.json",
+      "bytes": 431,
+      "sha256": "68409207107dabed6e06910ea2e7a398f5335c8d09110fb47335f5d0929d74f3"
+    },
+    {
+      "name": "same-assertions-complete-coverage-readback.json",
+      "bytes": 1289,
+      "sha256": "8e6ddb85bcffcc039a663049e8950c68a46ec4b3daf2cb28d51c1999f2e65397"
+    }
+  ],
+  "technicalInvocationCount": {
+    "historicalSeparate": 1,
+    "additionalFailed": 1,
+    "scientific": 200
+  },
+  "currentCorrectionGenuineRuntimeAdmission": "NOT_EXECUTED_NOT_ADMITTED",
+  "newScientificCalls": 0,
+  "pilotWrites": 0,
+  "production": "disabled",
+  "installation": "NOT_EXECUTED"
+}

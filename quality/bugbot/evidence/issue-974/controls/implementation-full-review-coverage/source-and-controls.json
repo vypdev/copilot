@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T21:15:08.293183+00:00",
+  "parent": "1a5430076dbeb68a5c199b5673afdbb0777e64f1",
+  "additionalControls": 65,
+  "distribution": {
+    "implementationAdmissionAndProjection": 41,
+    "fullReviewRealJournalFaults": 6,
+    "fullReviewLifecycle": 18
+  },
+  "selectedControlsPassed": 69,
+  "testHelperHashes": {
+    "quality/bugbot/evidence/issue974/implementation-components.cjs": "8188ef5b2be118ae09fafc93d30d147c04e03efc68ea0ce25009a8b926eaf234",
+    "quality/bugbot/evidence/issue974/full-review-fault-components.cjs": "d2be1ea46c49da922c56395334d84db54a5f9d00bd65fbd84dee456b66dce194",
+    "quality/bugbot/evidence/issue974/full-review-lifecycle-components.cjs": "4f87bba74e3ecdfa3ff08863a00815091a3a7cde74661200f4196e08249f599a",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "13d7fd90d61995e903b52705ac884e7aca2a3e60fa1a5c9d0b42c2a57374fce3",
+    "quality/bugbot/evidence/issue-974/controls/implementation-full-review-coverage/coverage.cjs": "fd63be78c585c880c28065b321a1357a11f0937e3654fd38946bc4449f853bb6"
+  },
+  "sourceHashes": {
+    "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs": "bcfa463a68cebd9a3334dc7196204552bfa85a75fae144390cc5c9c10b8bafdf",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/full-review.cjs": "0af69b793e42757b7fb02869321512ce0f8337539b917ba879e6b100be9fd19c"
+  },
+  "preloadTestHashes": {
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "13d7fd90d61995e903b52705ac884e7aca2a3e60fa1a5c9d0b42c2a57374fce3",
+    "quality/bugbot/evidence/issue974/implementation-components.cjs": "8188ef5b2be118ae09fafc93d30d147c04e03efc68ea0ce25009a8b926eaf234",
+    "quality/bugbot/evidence/issue974/full-review-fault-components.cjs": "d2be1ea46c49da922c56395334d84db54a5f9d00bd65fbd84dee456b66dce194",
+    "quality/bugbot/evidence/issue974/full-review-lifecycle-components.cjs": "4f87bba74e3ecdfa3ff08863a00815091a3a7cde74661200f4196e08249f599a",
+    "quality/bugbot/evidence/issue974/corpus-collector-components.cjs": "ddbf23d902bc7b283cee00932447f7b8681df574e9c424a9c991dc2a4d8f3690",
+    "quality/bugbot/evidence/issue974/corpus-worker-components.cjs": "3874d465fb616651324c20661fee17f705e0f0bd562ecabd33d108bb69b84e3e",
+    "quality/bugbot/evidence/issue974/launcher-components.cjs": "d74d76c8393d1f5fba61a8e3b6ea5703d57ced1c697a7e576524a890e51066f5",
+    "quality/bugbot/evidence/issue974/attempt-components.cjs": "5e7773031d79085da569fa78fc1d6db2d29f136593ec708079901b3eaf6106c1"
+  },
+  "fullShadowCommand": {
+    "command": "pnpm run test:bugbot-shadow-verification",
+    "exit": 0,
+    "passed": 408,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "durationMs": 262140.273208,
+    "logSha256": "78f45719770aa7683ba1be77427a9e843d91521d7dc063a8e9a43ca44e00a7ca",
+    "localFixtureSocketPermission": true,
+    "noQualificationSandboxChange": true
+  },
+  "measuredImplementationAndFullReviewModuleGatesSatisfied": true,
+  "globalChangedModuleGateSatisfied": false,
+  "coverageResults": [
+    {
+      "file": "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs",
+      "sourceSha256": "bcfa463a68cebd9a3334dc7196204552bfa85a75fae144390cc5c9c10b8bafdf",
+      "summary": {
+        "lines": {
+          "total": 135,
+          "covered": 135,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 17,
+          "covered": 17,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 140,
+          "covered": 140,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 99,
+          "covered": 92,
+          "skipped": 0,
+          "pct": 92.92
+        }
+      },
+      "gate": true
+    },
+    {
+      "file": "quality/bugbot/evidence/issue-950/ev07-shadow/full-review.cjs",
+      "sourceSha256": "0af69b793e42757b7fb02869321512ce0f8337539b917ba879e6b100be9fd19c",
+      "summary": {
+        "lines": {
+          "total": 80,
+          "covered": 80,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 14,
+          "covered": 14,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 99,
+          "covered": 99,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 47,
+          "covered": 44,
+          "skipped": 0,
+          "pct": 93.61
+        }
+      },
+      "gate": true
+    }
+  ],
+  "causalRuntimeCorrections": [
+    "Place start/planning journal writes inside cancellation-listener try/finally:4failing controls become4passing before any child.",
+    "Place slot-start journal write inside the log-descriptor try/finally:realv1/v2EISDIR exposes2descriptor leaks, then6/6faultcontrols pass."
+  ],
+  "negativeHistory": [
+    "Private implementation first31PASS1FAIL was an OS-injected child-env fixture assumption, corrected dispatch-env proof gives40PASS; added legacy/primary pin control gives41 and raises measured branch89.89to92.92 without threshold changes.",
+    "Private lifecycle once-removal observer interrupted modeled cancellation; two diagnostic launches and four exact-owned fixture processes stopped. No SDK/container/model work existed. Corrected observation checks final explicit handler removal.",
+    "Private lifecycle15PASS1FAIL assumed exactly3totaldispatches on copy failure; actual async propagation admitted5withmax3concurrent. Assertions now prove max3/allsettled/aborted/nooverwrite.",
+    "Complete first406PASS2FAIL at local fixture socket listenEPERM. Same408-test command with local socket permission passes, runtime and thresholds unchanged."
+  ],
+  "archives": {
+    "count": 28,
+    "hostAccountPathSanitizedDerivedCopies": [
+      "lifecycle-harness-owned-stop.json.log.gz",
+      "complete-shadow-socket-negative.log.gz"
+    ],
+    "originalRawPrivatelyRetainedWithHashes": true,
+    "publishedArchivesLosslessForDeclaredRawBytes": true
+  },
+  "applicationSourceAndAll4BundlesUnchanged": true,
+  "fullReviewDriverCleanupChanged": true,
+  "corporaAndMeasurementPlanAnd35LogicalIDsUnchanged": true,
+  "selectedActionSDDUnchanged": true,
+  "selectedSddSha256": "a5e74c0efa9c4dca80358316b75706ba9da5c1946356ad21aa144e3506c715f9",
+  "ports": "Actual current driver bytes, private Git/committed synthetic plans/files and version-only local Node child. Explicit modeled attestation/admission/planner/process/scope ports do not establish native or model admission.",
+  "parent1aNativeCI": "44943436298all4SUCCESS945SDK18756PASS35oldskips; public343deterministiccontrols; currentnewsource native checks still required.",
+  "normalHooks": "pending precommit snapshot",
+  "finalHeadNativeAcceptance": "required",
+  "qualificationModelCalls": 0,
+  "actual174Started": false,
+  "actual42Started": false,
+  "qualifiedProfile": null,
+  "pilotWriteAttempts": 0,
+  "production": "disabled"
+}

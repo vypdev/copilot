@@ -1,0 +1,5 @@
+Test Suites: 1 passed, 1 total
+Tests:       15 passed, 15 total
+Snapshots:   0 total
+Time:        5.317 s
+Ran all test suites matching src/infrastructure/agents/__tests__/qualification_investigation.test.ts.

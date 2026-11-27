@@ -1,0 +1,157 @@
+{
+  "at": "2026-11-23T04:31:52.535411+00:00",
+  "kind": "historical-native-plan-public-descriptor-retention",
+  "privateArchive": "historical20-native-plan-private-originals.zip",
+  "privateArchiveBytes": 58971,
+  "privateArchiveSha256": "bcd062574be4b7477f118b11dabb78a93c8e1a6ffcb03200cd4f89b13ca8c902",
+  "originalsVerified": 20,
+  "originalsChanged": false,
+  "historyRewritten": true,
+  "records": [
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C32.json",
+      "originalBytes": 6075,
+      "originalSha256": "734f11730774760cfb14702ddb709d9f3039386354ab3349ab5f595cfea7f6ec",
+      "publicDescriptorSha256": "54534abddb295ebc1c2c6695a23b1d6f210477f7f1c160920ff3f26d6651d221"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C33.json",
+      "originalBytes": 6075,
+      "originalSha256": "6335086880a05d1e17f696bba40b2f665c28cd0f63e095b679020cf68e23610a",
+      "publicDescriptorSha256": "5317b057cc31ef7daa4eca44114f6987c947eb3f490841ba64d8e3c6fb531c4c"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C34.json",
+      "originalBytes": 6075,
+      "originalSha256": "0256eb177172cc4b4c33f7871dc702f8e57027cf2164dc193fb6cc2fb95b4019",
+      "publicDescriptorSha256": "5052e9b4dc0f2f2dda1846decd5ca6bc7767376afbbfc5fd9851d0892baccbbd"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9/ev974-C35.json",
+      "originalBytes": 6075,
+      "originalSha256": "0d3cfff6b0f3b2520f462b9f482aa15c471a879e557fceb7b63949d833904643",
+      "publicDescriptorSha256": "0e098a39f7e0841e835f5d34fed030a1a47586104d1287de406cd4f0805ada48"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C32.json",
+      "originalBytes": 6075,
+      "originalSha256": "f3d64f632c253d4d9f7c51f25882e8070b6d84e82ce5be8672b6d461870153be",
+      "publicDescriptorSha256": "9fa3a82b1881fbc5be52d15edafd54ec9cb7a5ae39b125734ec3c9ed3b02ee0b"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C33.json",
+      "originalBytes": 6075,
+      "originalSha256": "5dfaf456bc7f9be09b99c2334751a000fb54dd1e87059230da934a3159152039",
+      "publicDescriptorSha256": "d3760655d8c5bcaf6c555f6ace95fef1328fecde7efdfdf17e3234f34793113a"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C34.json",
+      "originalBytes": 6075,
+      "originalSha256": "a94c44644235302d36bfde37b3b2635a84b504f743a7409d1eec9137e986f830",
+      "publicDescriptorSha256": "9fbfa558a31606841c3f75d0451561f8ea8219b3773bd155a9033cd5071d68c6"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/1f20e9-frozen-host/ev974-C35.json",
+      "originalBytes": 6075,
+      "originalSha256": "d5088da6c03694233d84c7add2f52bdfa2ed801d0969622834c069b15c249f7c",
+      "publicDescriptorSha256": "e45c4d1ded6768367c08cc8f2dc9f2d4d06fa9972947be5ccdb7bb72dd599f01"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C32.json",
+      "originalBytes": 6075,
+      "originalSha256": "57eae549b5205c6ea52554e31699e8f23934d8fe4612896bb39c4d1bcd2a20f3",
+      "publicDescriptorSha256": "601019fa8dca492818d5659ce1e855dc6a6f7de3cf71d57254a599d3182f0887"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C33.json",
+      "originalBytes": 6075,
+      "originalSha256": "ac0003288b1900a16702b7ea668326fe2876c45d1d42343529a494f8565d9b5f",
+      "publicDescriptorSha256": "d3a9c888e6e4d860e47fae01e754a9e2b888ae53164ecb914486edd5f4b37bd2"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C34.json",
+      "originalBytes": 6075,
+      "originalSha256": "3e045b9d86a3dd40046badd13eb52c2fd74a4fcc15282dd6e4170da00ad0be16",
+      "publicDescriptorSha256": "446a3ff92bd5f4697bcd6615cc9290c72f68817baacb387ca1d2634903958ca3"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/64da6ec/ev974-C35.json",
+      "originalBytes": 6075,
+      "originalSha256": "2459f555921282394652967f87f68ed4cf85345f2c9785c7ca15dba21e25ddc9",
+      "publicDescriptorSha256": "cf5a513302cb85f1182ed42ff17d0ff1350b831578518bddb4fbea78753a75fa"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C32.json",
+      "originalBytes": 6075,
+      "originalSha256": "8a010f27ddcfbbb38e6db0cd79429f572af0378fa451567890d4706c69e8b316",
+      "publicDescriptorSha256": "08d52d1f38de3f588601956a0df1aec09a4b499effb3f9ffc55f170e77d7a542"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C33.json",
+      "originalBytes": 6075,
+      "originalSha256": "897ef6410b299baf0f9e336144112c3fd1ade927c5739d2b4739f89f6537e307",
+      "publicDescriptorSha256": "63e53b013f678a12637550cc7d3c67a00f3762309b7291db16aaab1b28c8f20e"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C34.json",
+      "originalBytes": 6075,
+      "originalSha256": "811588031c386c3049e5c006bd6dbab97dd4e2964df49949008e1899d29f21d2",
+      "publicDescriptorSha256": "db52a0f78227567d02325ff2ec61f021e78fbb6812f65686c6aacd36238db803"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/82f0c14/ev974-C35.json",
+      "originalBytes": 6075,
+      "originalSha256": "660c1c63a7649e3e0b0476196c5cc92f100c7e860fa5992ca8dd6a2dfe7f359d",
+      "publicDescriptorSha256": "6c5ba8d22c6b478037c4d96ebdb6620dd0130a0dfd093cc118c27da5437ac1f6"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C32.json",
+      "originalBytes": 6075,
+      "originalSha256": "9e48b8103cf7c4f9c85892fd47acd66b7c97d9f7b380147d7881fba8afcbbffd",
+      "publicDescriptorSha256": "ab0bc44136c7c533942c8a54bc677d53ae2dcd74ba33b788097195040a4d2f85"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C33.json",
+      "originalBytes": 6075,
+      "originalSha256": "184327934c30de5b6ec7af24bf19bfa049adc220cf6e521197d244fa52b874cf",
+      "publicDescriptorSha256": "0e0eb80f6429a02610463e7d8b4be536c13db0aaa2330835cccd59ba18f87c79"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C34.json",
+      "originalBytes": 6075,
+      "originalSha256": "3354ad8a702292741f69c75f30c79dc3502e128fc4a04022a0fc08d39e845837",
+      "publicDescriptorSha256": "e7e51c50d24d98d777903c8c799b1b288551af8dec84cf35c2e9a21a11b51941"
+    },
+    {
+      "path": "quality/bugbot/evidence/issue-974/native-controls/e4bade2/ev974-C35.json",
+      "originalBytes": 6075,
+      "originalSha256": "84051336de4545610d55c78a340a85f3fbeff0f0b356f73c91ca50c5521d1a74",
+      "publicDescriptorSha256": "613aaccad61ecf62e6216a5ac2e87bfa4279fc43508913af9feeee2bf430ab28"
+    }
+  ],
+  "measured174Source": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "measured174Result": "COMPLETE_NEGATIVE",
+  "currentPreregistrationChanged": false,
+  "scientificCallsAdded": 0,
+  "pilotWrites": 0,
+  "production": "disabled",
+  "originalsRemainInSanitizedBranchHistory": false,
+  "redactedPublicMirrorSource": "188ed25bdb2fea743a0d471a544f42c8f581bf4d",
+  "githubCachedOriginalsStillPublicAtReadback": true,
+  "githubPurgeStatus": "PENDING_GITHUB_SUPPORT; old raw revision HTTP200 and21 review-comment diff hunks remain; branch redaction is complete, total deletion is not claimed",
+  "historyRedactionManifest": "quality/bugbot/evidence/issue-974/controls/history-redaction.json",
+  "privateHistoricalLocatorRetention": {
+    "privateOriginalsFile": "source5327-current-descriptor-original-associations-private.json",
+    "bytes": 174658,
+    "sha256": "a7158a2fd7ccbc5b2296b9e6e64c23349761c3acf0df6f07282e0d27ef955e10",
+    "gitLocatorAssociationsPublic": false
+  },
+  "currentNativeDescriptorLocatorRetention": {
+    "privateOriginalsFile": "source5327-native-descriptor-original-associations-private.json",
+    "bytes": 185695,
+    "sha256": "954ac09304e41c7f0895c8362f3e7eef9b301a6175ec1f47ea64e29f6d8ddb2b",
+    "gitLocatorAssociationsPublic": false
+  },
+  "currentDescriptorHashesUpdated": true,
+  "originalPlanBytesChanged": false
+}

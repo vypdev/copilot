@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "attempts": [
+    {
+      "schemaVersion": 1,
+      "phase": "staged diff validation before commit/hooks",
+      "attempt": 1,
+      "outcome": "unchanged git diff --cached --check rejected two whitespace-only raw diagnostic lines at262/264",
+      "commitStarted": false,
+      "hookStarted": false,
+      "correction": "exact UTF8 JSON representation preserves every raw byte and SHA; all original private logs retained",
+      "forceOrCheckBypass": false,
+      "production": "disabled"
+    },
+    {
+      "attempt": 2,
+      "phase": "staging before commit/hooks",
+      "outcome": "git add with individually named already-staged deletions returns128 because the paths no longer exist in the index or tree",
+      "commitStarted": false,
+      "hookStarted": false,
+      "correction": "stage the three validated owned directories/files, retaining exact per-path digest/inventory preflight and full staged checks",
+      "forceOrCheckBypass": false
+    }
+  ],
+  "production": "disabled"
+}

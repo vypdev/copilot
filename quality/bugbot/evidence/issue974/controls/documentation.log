@@ -1,0 +1,5 @@
+
+> @vypdev/copilot@3.10.13 validate:documentation /private/tmp/copilot-goal-974
+> node scripts/validate-documentation-contract.cjs
+
+documentation contract validation: PASS (120 MDX pages, 120 registered routes, 190 documented action inputs, 15 workflows, 16 single actions, 6 synchronized issue templates)

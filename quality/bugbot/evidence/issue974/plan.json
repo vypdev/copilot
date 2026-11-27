@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 0,
+  "status": "not-preregistered",
+  "reason": "Exact reviewed implementation, drivers and runtime must be committed before generating the measurement preregistration.",
+  "measuredModelCalls": 0,
+  "production": "disabled",
+  "fullReview": "unstarted"
+}

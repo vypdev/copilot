@@ -265,6 +265,26 @@ describe('AgentCliClient admitted process execution', () => {
         })).rejects.toMatchObject({ category: 'output' });
     }, MULTI_CASE_TEST_TIMEOUT_MS);
 
+    it('decodes Codex completion text separately from CLI command output', () => {
+        const raw = [
+            { type: 'item.completed', item: { type: 'command_execution', aggregated_output: 'TOOL_ONLY' } },
+            { type: 'item.completed', item: { type: 'agent_message', text: 'MODEL_ONLY' } },
+            { type: 'turn.completed' },
+        ].map(row => JSON.stringify(row)).join('\n') + '\n';
+        expect(decodeAgentCliOutput('codex-json-events', raw)).toBe('MODEL_ONLY');
+    });
+    it.each([
+        ['malformed JSON', 'not-json\n'], ['null event', 'null\n'], ['array event', '[]\n'],
+        ['missing type', '{}\n'], ['CLI error', '{"type":"error"}\n'], ['failed turn', '{"type":"turn.failed"}\n'],
+        ['duplicate completion', '{"type":"turn.completed"}\n{"type":"turn.completed"}\n'],
+        ['missing completion', '{"type":"item.completed","item":{"type":"agent_message","text":"result"}}\n'],
+        ['missing model text', '{"type":"turn.completed"}\n'],
+        ['empty model text', '{"type":"item.completed","item":{"type":"agent_message","text":" "}}\n{"type":"turn.completed"}\n'],
+        ['truncated framing', '{"type":"turn.completed"}'],
+    ])('rejects Codex JSON framing with %s', (_name, raw) => {
+        expect(() => decodeAgentCliOutput('codex-json-events', raw)).toThrow();
+    });
+
     it('rejects invalid JSON event values and unsupported admitted protocols', () => {
         for (const value of ['null', '[]', '"text"']) {
             expect(() => decodeAgentCliOutput('json-lines-text-events', value)).toThrow('invalid JSON event');

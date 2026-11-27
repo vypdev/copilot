@@ -1,0 +1,6 @@
+Test Suites: 1 passed, 1 total
+Tests:       30 passed, 30 total
+Snapshots:   0 total
+Time:        7.8 s
+Ran all test suites matching src/infrastructure/agents/__tests__/qualification_investigation.test.ts.
+Test results written to: ../copilot-goal-974-predispatch-real-sdk-attempt1.json

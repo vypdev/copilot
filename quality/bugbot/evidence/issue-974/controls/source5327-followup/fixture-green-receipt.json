@@ -1,0 +1,25 @@
+{
+  "at": "2026-11-23T14:00:51.049011+00:00",
+  "command": [
+    "pnpm",
+    "exec",
+    "jest",
+    "--runInBand",
+    "--runTestsByPath",
+    "src/infrastructure/agents/__tests__/qualification_investigation.test.ts",
+    "--json",
+    "--outputFile=/private/tmp/copilot-goal-974-ci5327-fixture-protocol-attempt1/green-jest.json"
+  ],
+  "exit": 0,
+  "testFileSha256": "896d5a66aae644bda7a432bb2f75168d5a440d9600bba4dfd27171aef606d82f",
+  "assertionBodyUnchanged": true,
+  "sourceUnchanged": true,
+  "passed": 30,
+  "failed": 0,
+  "pending": 0,
+  "logSha256": "33972a344ecbeade02cf0be0513ee7711178df0e80e901a3ded8566bc4ea4de7",
+  "newModels": 0,
+  "nativeWindowsObservation": false,
+  "otherCiFailuresCause": "UNKNOWN",
+  "DONE_DO_NOT_REPEAT": true
+}

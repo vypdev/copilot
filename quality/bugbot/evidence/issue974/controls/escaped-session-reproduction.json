@@ -1,0 +1,40 @@
+{
+  "at": "2026-11-20T19:43:47.262Z",
+  "head": "38f4c046ecb89f7b79c9778f4123ada8053f2069",
+  "platform": "darwin",
+  "arch": "arm64",
+  "node": "v24.20.0",
+  "cases": [
+    {
+      "inheritPipes": false,
+      "leaderExited": true,
+      "leaderSignal": "SIGTERM",
+      "escapedDescendantAlive": true,
+      "settledBeforeSafetyCleanup": true,
+      "terminalBeforeSafetyCleanup": {
+        "category": "cancelled"
+      }
+    },
+    {
+      "inheritPipes": true,
+      "leaderExited": true,
+      "leaderSignal": "SIGTERM",
+      "escapedDescendantAlive": true,
+      "settledBeforeSafetyCleanup": false,
+      "terminalBeforeSafetyCleanup": null
+    }
+  ],
+  "reproduced": true,
+  "fixtureDescendantsSafetyCleaned": true,
+  "qualificationCalls": 0,
+  "production": "disabled",
+  "sourceSha256": "5f06b0fb62457f4502460251728124e011b8a5931bdf42e43f8d5881a0dc9023",
+  "finding": "https://github.com/vypdev/copilot/pull/997#discussion_r4646554738",
+  "status": "reproduced-unresolved",
+  "fixtureScript": "'use strict';\nconst fs=require('node:fs'),path=require('node:path'),os=require('node:os'),cp=require('node:child_process'),crypto=require('node:crypto'),Module=require('node:module');\nconst root='/private/tmp/copilot-goal-974';\nconst ts=require(path.join(root,'node_modules/typescript'));\nModule._extensions['.ts']=(m,file)=>m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);\nconst {createAgentProcessLifecycle}=require(path.join(root,'src/data/repository/agent_cli_execution.ts'));\nconst pause=ms=>new Promise(r=>setTimeout(r,ms));\nasync function until(predicate){const deadline=Date.now()+5000;while(!predicate()){if(Date.now()>deadline)throw Error('Controlled fixture did not reach state');await pause(10);}}\nconst alive=pid=>{try{process.kill(pid,0);return true;}catch(e){if(e.code==='ESRCH')return false;throw e;}};\n(async()=>{\n const head=cp.execFileSync('/usr/bin/git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim();if(head!=='38f4c046ecb89f7b79c9778f4123ada8053f2069')throw Error('Source changed');\n const directory=fs.mkdtempSync(path.join(os.tmpdir(),'copilot-974-owned-escape-'));const cases=[];\n try {for(const inheritPipes of [false,true]){\n  const ready=path.join(directory,inheritPipes?'pipes.pid':'ignored.pid');\n  const descendant='require(\"node:fs\").writeFileSync('+JSON.stringify(ready)+',String(process.pid));setInterval(()=>{},1000);';\n  const parent='require(\"node:child_process\").spawn(process.execPath,[\"-e\",'+JSON.stringify(descendant)+'],{detached:true,stdio:'+JSON.stringify(inheritPipes?'inherit':'ignore')+'}).unref();setInterval(()=>{},1000);';\n  const child=cp.spawn(process.execPath,['-e',parent],{cwd:directory,env:{PATH:'/usr/bin:/bin'},detached:true,stdio:['pipe','pipe','pipe']});\n  let settled=false,terminal,pid;\n  const outcome=new Promise(resolve=>{const c=new AbortController();const lifecycle=createAgentProcessLifecycle(child,{timeoutMs:900000,maxOutputBytes:1024,outputProtocol:'plain-text'},c.signal,v=>{settled=true;terminal={unexpectedSuccess:true};resolve(v);},e=>{settled=true;terminal={category:e.category};resolve(e);});child.stdout.on('data',lifecycle.appendStdout);child.stderr.on('data',lifecycle.appendStderr);child.on('close',lifecycle.onClose);child.on('error',lifecycle.onError);child.stdin.end();child.abortFixture=lifecycle.abort;});\n  try{await until(()=>fs.existsSync(ready));pid=Number(fs.readFileSync(ready,'utf8'));child.abortFixture();await until(()=>child.exitCode!==null||child.signalCode!==null);await pause(150);\n   const fact={inheritPipes,leaderExited:child.exitCode!==null||child.signalCode!==null,leaderSignal:child.signalCode,escapedDescendantAlive:alive(pid),settledBeforeSafetyCleanup:settled,terminalBeforeSafetyCleanup:terminal||null};\n   if(!fact.escapedDescendantAlive||fact.settledBeforeSafetyCleanup===inheritPipes)throw Error('Expected escaped-session failure did not reproduce');cases.push(fact);\n  }finally{if(pid&&alive(pid)){process.kill(pid,'SIGKILL');await until(()=>!alive(pid));}try{process.kill(-child.pid,'SIGKILL');}catch(e){if(e.code!=='ESRCH')throw e;}await outcome;}\n }}finally{fs.rmSync(directory,{recursive:true,force:true});}\n const receipt={at:new Date().toISOString(),head,platform:process.platform,arch:process.arch,node:process.version,cases,reproduced:true,fixtureDescendantsSafetyCleaned:true,qualificationCalls:0,production:'disabled',sourceSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'src/data/repository/agent_cli_execution.ts'))).digest('hex')};\n fs.writeFileSync('/private/tmp/copilot-goal-974-escaped-session-reproduction.json',JSON.stringify(receipt,null,2)+'\\n');process.stdout.write(JSON.stringify(receipt)+'\\n');\n})().catch(e=>{process.stderr.write(e.stack+'\\n');process.exitCode=1;});\n",
+  "initialHarnessFailure": {
+    "reason": "Fixture incorrectly waited for non-null exitCode after signal termination; corrected to observe signalCode too. Product source unchanged.",
+    "log": "Error: Controlled fixture did not reach state\n    at until (/private/tmp/copilot-goal-974-escaped-session-reproduction.cjs:8:113)\n    at async /private/tmp/copilot-goal-974-escaped-session-reproduction.cjs:20:108\n"
+  },
+  "acceptance": "Negative cancellation evidence, not an added passing case or model measurement; native darwin/arm64 only."
+}

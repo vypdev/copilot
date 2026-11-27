@@ -1,0 +1,5 @@
+
+> @vypdev/copilot@3.10.13 validate:agent-docs /private/tmp/copilot-goal-974
+> node scripts/validate-agent-documentation.cjs
+
+agent documentation validation: PASS (120 MDX pages, 15 workflows, 120 routes)

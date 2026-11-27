@@ -1,0 +1,22 @@
+{
+  "startedAt": "2026-11-20T19:25:41.872386+00:00",
+  "finishedAt": "2026-11-20T19:31:49.418551+00:00",
+  "exitCode": 0,
+  "head": "38f4c046ecb89f7b79c9778f4123ada8053f2069",
+  "headAfter": "38f4c046ecb89f7b79c9778f4123ada8053f2069",
+  "statusAfter": "",
+  "counts": {
+    "tests": 233,
+    "pass": 233,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "rawBytes": 25183,
+  "rawSha256": "b802b865591404bcea540391261ca523859ca0e6ed8cd4d14bf6be42f830f58f",
+  "qualificationCalls": 0,
+  "production": "disabled",
+  "fullReview": "unstarted",
+  "log": "../../issue-974/controls/233-committed-controls.log.gz",
+  "logCompression": "gzip"
+}

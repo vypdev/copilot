@@ -1,0 +1,29 @@
+# Close Engine preparation and critical evidence failures before dispatch
+
+Two reproduced defects are corrected. Explicit cancellation now reaches initial Engine version/image/create requests; a withheld reply cannot hold the caller after abort. A create whose ID is unknown remains incomplete with retained intent, without replay, stopped/removal claims or unrelated deletion. Required observation/preparation writes cancel the original owned signal synchronously. The corpus, paired-review and technical-SDK factories bind that same capability; review-specific writes share the fence. Replacing the signal would lose the live admission, so no replacement or SDK observer behavior change is used. Original persistence failures survive later cancellation or terminal write errors.
+
+The real SDK planner/client/executor and a local controlled shell expose1PASS/2FAIL against the exact original recorder bytes, then3PASS against the correction using the same final test definition. Two actual Unix-HTTP/host-adapter cases expose2FAIL with held version/create replies, then2PASS. Namespace confirmation and Engine responses are modeled; there is no provider, Docker, real namespace or model acceptance claim. The Windows launcher branch is prepared without new skips but has not been executed here.
+
+The maintained SDK suite passes30cases. The targeted recorder/durability/stop suites pass45with0failure/skip/cancel, including four additional original-signal, preparation-write, auxiliary-write and first-error scenarios. These cases extend the existing35logical control IDs. The exact private ZIP retains all attempts, including the initial reused-namespace fixture error and the first green harness's missing aborted-scope expectation. Exact original output bytes and hashes are listed in source-and-controls.json. The Engine negative has an explicitly derived public copy, described below.
+
+Full exact-committed-source driver coverage, final normal hooks, package and native acceptance remain independent gates. Prior complete global evidence belongs to the measured093fd141 tuple; current-head global acceptance is not claimed. The completed174campaign remains negative with unchanged attempts and thresholds. These operational corrections do not repair detector precision, do not authorize repeating that campaign and do not admit phase42. Scientific/model calls added0;pilotwrites0;productiondisabled.
+
+
+## Final committed-source verification
+
+Source `97525e17d8ce6092a7195a925eeff08eed537459` passes all597 deterministic shadow controls, with zero failures, skips or cancellations. Normal build/test/lint hooks pass947suites/18789assertions with35existing skips; allfour bundles remain unchanged. Exact-source AST measurements pass95/90 for Engine, attempt ledger, corpus, paired-review and technical SDK-controller modules. The first Engine selection passed42component assertions but failed its coverage gate; expanding to existing stop/cancellation controls passes on the same bytes. Both reports and all original maps/logs remain in a verified private ZIP. This establishes component gates only, without a new global, native, scientific or installation claim.
+
+The earlier native4 sentinel diagnostic also exposed a personal runtime path. Its visible copy now uses a private-runtime placeholder and an explicit derived-copy descriptor; the exact1867original bytes are retained privately with their original digest. The account-bearing historical blob was included in the21-blob authorized history redaction; its original Git locator is no longer repeated by the current descriptor. Cached GitHub copies and historical review hunks remain pending Support purge, so complete hosted removal is not claimed. See the [privacy and retention summary](../history-redaction.md). This diagnostic grants no execution or acceptance.
+
+
+## Strict whitespace validation of public diagnostics
+
+The native static job 137510284906 rejected four blank lines with trailing spaces
+in the public original Engine negative. The local source commit had excluded that
+raw log from its diff check; this missed the repository-wide rule. No rule or CI
+configuration is changed. `engine-original-red-derived.txt` removes only eight
+trailing space bytes from those four lines. It preserves the reported failures
+and all other bytes. The exact 2,245-byte original remains verified inside the
+private causal ZIP and at its immutable published 97525e17 Git path. Source and
+assertion bytes are unchanged; this presentation correction grants no acceptance,
+scientific retry or installation.

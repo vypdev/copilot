@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "kind": "causal Engine mount serialization correction",
+  "implementationBefore": "1f20e9c5b46a7b3fdd761fbc07051058bb0dc699",
+  "nativePlanRevision": "25c41a97a658ab85ba9713d276e6d6e17c4e4858",
+  "actualNativeCommand": {
+    "tests": 4,
+    "pass": 0,
+    "fail": 4,
+    "skip": 0,
+    "cancel": 0,
+    "scopesCreated": 4,
+    "scopesStarted": 0,
+    "acceptedNativeControls": 0,
+    "detail": "C35 failed while preparing its C34 unrelated sentinel, before starting C35 target operations."
+  },
+  "actualReproduction": "native-engine-mount-normalization.json",
+  "cause": "Engine29.8.2 API1.56 omits ReadOnly:false in HostConfig.Mounts for the fixed writable output. Effective mount RW:true confirms the requested access. All other reviewed HostConfig fields in the exact unstarted create/inspect probe matched.",
+  "correction": "normalize only absent boolean ReadOnly to false, deny nonboolean values, compare every other configured mount field exactly, and additionally require exact effective bind source/destination/propagation/emptyMode/RW for both and no duplicates or extras",
+  "focal": "C27 actual observation accepted, explicit false accepted, missing input readonly/null/string/foreign paths/extra fields/changed effective access/duplicate destinations denied;1testPASS0fail/skip/cancel",
+  "sourceStatus": "local correction, not yet committed or built into an image",
+  "retainedNegative": "native-engine-mount-admission-negative.log.gz",
+  "cleanup": "native-engine-mount-admission-cleanup.json: four exact IDs, created/PID0, no forced cleanup, HTTP404 after test cleanup; cleanup is not acceptance evidence",
+  "additionalFullReviewControl": "additional-fullreview-attempt-admission.log.gz: actual Python scorer rejects missing detector ledger and corrupted detector response; restoration admits only the prior incomplete fixture. One focal C30 group passed. Its retained operator script is data, not a portable product entrypoint.",
+  "qualificationModelCalls": 0,
+  "174": "unstarted",
+  "42": "unstarted",
+  "production": "disabled",
+  "allChangedModuleCoverageSatisfied": false,
+  "nativeSdkAcceptance": false
+}

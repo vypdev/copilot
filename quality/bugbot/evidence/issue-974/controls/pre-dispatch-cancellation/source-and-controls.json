@@ -1,0 +1,393 @@
+{
+  "at": "2026-11-23T05:11:55.389894+00:00",
+  "parent": "d42fc720192ac36c9e9cd9d25975e74e14d4d70a",
+  "sourceSha256": {
+    "quality/bugbot/evidence/issue974/attempt-ledger.cjs": "ab1d15b4a1ecca01bbf589856fd07fec41d74c95815c15d35453ecd430dbd573",
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "fd6e2183cc4b06f126a7b83bdb22dbc5a959c6754331e00def61aa8f0b971162",
+    "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs": "304977e6a3229f2c58ec8998f27dba07953be6b4b13b93f4f92e3cbbfb597200",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs": "065e283c2d400c1b461c35b70caebbcc10565b6d10bbf3a42166e6eb3e49dfb9",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs": "4cccd4eb3c3ec399daf6ef0714713b7a5fab79041f4151c944a8b815e4b74e38"
+  },
+  "unchangedSdkCompositionSha256": {
+    "src/data/repository/agent_cli_client.ts": "e726cf7990b16938dd04ed15bcd80dbf9bcd371a8c55c24c32879f6ab311656b",
+    "src/data/repository/agent_cli_execution.ts": "fe89645d361e2dab3d3118f79fbb3fb45bc8bd61dcdea711b1209695453d5987",
+    "src/infrastructure/agents/agent_execution_planner.ts": "8cbb5e1509f31a995e0da6c137f41f4cd21d6c22e0d19586322b52c2a60f9e1d",
+    "src/infrastructure/agents/qualification_operation_scope.ts": "705158cab2c351d533d73014be9f67b0e6fbb1f26ad47a4e445ba814c592bd04",
+    "src/infrastructure/agents/qualification_investigation_admission.ts": "9493a7f3982dbfb6f7abf2d57846fcb9bc46578885a9bbd356d363c3c70f8b2e",
+    "src/infrastructure/agents/__tests__/source_snapshot_fixture.ts": "ab28d9f834aa87126ad647fe3250b35c93782a59f7d7e281d17c6201f65f04a3"
+  },
+  "sdkCounterfactual": {
+    "sameFinalPrivateTestSha256": "f33b57748245a27f7205868011b0252b643c8f183d420854f188dc8aec1b6a0a",
+    "originalLedgerSha256": "f8812728ecdbe99c072c2ae49eb78ef0c5ebc1e8e5a50e45925b340389420c4b",
+    "originalPass": 1,
+    "originalFail": 2,
+    "correctedPass": 3,
+    "correctedFail": 0,
+    "actual": "real SDK planner/client/executor and controlled local POSIX shell; modeled namespace confirmation; Windows launcher prepared but not executed here",
+    "invalidAttemptsRetained": "Original1reusednamespace;corrected1didnotawait deliberateabortedscoperejection;all original and corrected attempts in private ZIP"
+  },
+  "engineCounterfactual": {
+    "originalAdapterSha256": "608d81d0f9024556a1ae413a75c93434f2474711ce0f944788c9da89e55bb94f",
+    "originalFail": 2,
+    "correctedPass": 2,
+    "actual": "real Unix HTTP and host adapter; modeled Engine/version/image/create replies; no Docker or namespace execution"
+  },
+  "focusedComponents": {
+    "passed": 45,
+    "fail": 0,
+    "skip": 0,
+    "cancel": 0,
+    "additionalAdverseCases": 4
+  },
+  "sdkMaintainedSuite": {
+    "passed": 30,
+    "fail": 0,
+    "skip": 0
+  },
+  "logicalControlIds": 35,
+  "existingControlsExtended": [
+    "ev974-C15",
+    "ev974-C16",
+    "ev974-C27"
+  ],
+  "publicOriginalControls": {
+    "sdk-original-red.txt": {
+      "bytes": 1599,
+      "sha256": "ec18650614a2695a7d95ecc87abbdc448e1c0a7de88ccb5c34f9524d6b78f822"
+    },
+    "sdk-corrected-green.txt": {
+      "bytes": 245,
+      "sha256": "f2944c25b43ece6eb1c0d6873c3d6033d147daa8ebf28eddbc8b40a0d585606b"
+    },
+    "engine-corrected-green.txt": {
+      "bytes": 296,
+      "sha256": "18a87d4f19a93a19eee321f03659323520875bd2e0b7b788431361bcf2bcec2b"
+    },
+    "focused-components.txt": {
+      "bytes": 5391,
+      "sha256": "8c64653e669c5f63b4a38dae9c3c0c0438ced76732f6fbd13fcc9504744f0977"
+    },
+    "sdk-maintained-suite.txt": {
+      "bytes": 286,
+      "sha256": "dcef95bbc0dbdaae69e1c46b43a3ce11d8e485705eaaedff8fa04104d593c2ea"
+    }
+  },
+  "privateRetention": {
+    "archive": "predispatch-causal-original-controls.zip",
+    "bytes": 38261,
+    "sha256": "ab19f552fbf5a469f7bbee1699b2f523775d3ebfe881b9adc8962a45777a28db",
+    "verifiedMembers": 26,
+    "allOriginalAttemptsPreserved": true
+  },
+  "globalAcceptanceCurrentHead": false,
+  "priorGlobalAppliesToMeasured093": true,
+  "fullSourceDriverCoverage": {
+    "source": "97525e17d8ce6092a7195a925eeff08eed537459",
+    "shadow": {
+      "started": "2026-11-23T05:26:12.747934+00:00",
+      "finished": "2026-11-23T05:34:58.465374+00:00",
+      "implementation": "97525e17d8ce6092a7195a925eeff08eed537459",
+      "exitCode": 0,
+      "tests": 597,
+      "pass": 597,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "headAfter": "97525e17d8ce6092a7195a925eeff08eed537459",
+      "cleanAfter": true,
+      "logBytes": 68169,
+      "logSha256": "3460def2ed245ce001e770bce1eb08bf8174f5c06986673d185e717229441fb7",
+      "actualSdkModelCalls": 0,
+      "scientificCallsAdded": 0,
+      "nativeAcceptance": false,
+      "production": "disabled",
+      "DONE_DO_NOT_REPEAT": true
+    },
+    "astModuleMeasurements": [
+      {
+        "file": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+        "sourceSha256": "fd6e2183cc4b06f126a7b83bdb22dbc5a959c6754331e00def61aa8f0b971162",
+        "summary": {
+          "lines": {
+            "total": 407,
+            "covered": 405,
+            "skipped": 0,
+            "pct": 99.5
+          },
+          "functions": {
+            "total": 82,
+            "covered": 78,
+            "skipped": 0,
+            "pct": 95.12
+          },
+          "statements": {
+            "total": 594,
+            "covered": 569,
+            "skipped": 0,
+            "pct": 95.79
+          },
+          "branches": {
+            "total": 266,
+            "covered": 241,
+            "skipped": 0,
+            "pct": 90.6
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue974/qualification-seccomp.cjs",
+        "sourceSha256": "7c77f4881d061f754725791460faebfec35da5edccb2181d75fb8a31b7970688",
+        "summary": {
+          "lines": {
+            "total": 1,
+            "covered": 1,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 0,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 1,
+            "covered": 1,
+            "skipped": 0,
+            "pct": 100
+          },
+          "branches": {
+            "total": 0,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 100
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs",
+        "sourceSha256": "a3f378fe6b90228e8d9a0d37e9be407705d73c4409bae6841a1ac25dd22da4d6",
+        "summary": {
+          "lines": {
+            "total": 95,
+            "covered": 94,
+            "skipped": 0,
+            "pct": 98.94
+          },
+          "functions": {
+            "total": 23,
+            "covered": 23,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 119,
+            "covered": 118,
+            "skipped": 0,
+            "pct": 99.15
+          },
+          "branches": {
+            "total": 49,
+            "covered": 47,
+            "skipped": 0,
+            "pct": 95.91
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue974/attempt-ledger.cjs",
+        "sourceSha256": "ab1d15b4a1ecca01bbf589856fd07fec41d74c95815c15d35453ecd430dbd573",
+        "summary": {
+          "lines": {
+            "total": 169,
+            "covered": 169,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 42,
+            "covered": 42,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 212,
+            "covered": 211,
+            "skipped": 0,
+            "pct": 99.52
+          },
+          "branches": {
+            "total": 80,
+            "covered": 79,
+            "skipped": 0,
+            "pct": 98.75
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+        "sourceSha256": "065e283c2d400c1b461c35b70caebbcc10565b6d10bbf3a42166e6eb3e49dfb9",
+        "summary": {
+          "lines": {
+            "total": 232,
+            "covered": 230,
+            "skipped": 0,
+            "pct": 99.13
+          },
+          "functions": {
+            "total": 38,
+            "covered": 37,
+            "skipped": 0,
+            "pct": 97.36
+          },
+          "statements": {
+            "total": 291,
+            "covered": 288,
+            "skipped": 0,
+            "pct": 98.96
+          },
+          "branches": {
+            "total": 136,
+            "covered": 124,
+            "skipped": 0,
+            "pct": 91.17
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs",
+        "sourceSha256": "4cccd4eb3c3ec399daf6ef0714713b7a5fab79041f4151c944a8b815e4b74e38",
+        "summary": {
+          "lines": {
+            "total": 158,
+            "covered": 158,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 40,
+            "covered": 38,
+            "skipped": 0,
+            "pct": 95
+          },
+          "statements": {
+            "total": 190,
+            "covered": 187,
+            "skipped": 0,
+            "pct": 98.42
+          },
+          "branches": {
+            "total": 63,
+            "covered": 60,
+            "skipped": 0,
+            "pct": 95.23
+          }
+        },
+        "gate": true
+      },
+      {
+        "file": "quality/bugbot/evidence/issue974/sdk-runtime-admission.cjs",
+        "sourceSha256": "304977e6a3229f2c58ec8998f27dba07953be6b4b13b93f4f92e3cbbfb597200",
+        "summary": {
+          "lines": {
+            "total": 111,
+            "covered": 111,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 17,
+            "covered": 16,
+            "skipped": 0,
+            "pct": 94.11
+          },
+          "statements": {
+            "total": 135,
+            "covered": 133,
+            "skipped": 0,
+            "pct": 98.51
+          },
+          "branches": {
+            "total": 27,
+            "covered": 26,
+            "skipped": 0,
+            "pct": 96.29
+          }
+        },
+        "gate": true
+      }
+    ],
+    "initialEngineSelection": {
+      "passedComponentAssertions": 42,
+      "moduleGateFailed": true,
+      "statements": 94.61,
+      "branches": 88.72,
+      "cause": "Selection omitted existing stop-record/startup/late-cancellation controls. Same source with broader existing selection passes95/90; no threshold or source changes."
+    },
+    "globalAcceptance": false
+  },
+  "finalNativeAcceptance": false,
+  "measured174Source": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "actual174": "COMPLETE_NEGATIVE",
+  "performanceCorrection": false,
+  "scientificRerunAuthorizedByThis": false,
+  "scientificCallsAdded": 0,
+  "actual42": "UNSTARTED_NOT_ADMITTED",
+  "qualifiedProfiles": [],
+  "pilotWrites": 0,
+  "production": "disabled",
+  "finalSourceCommit": "97525e17d8ce6092a7195a925eeff08eed537459",
+  "normalHooks": {
+    "exitCode": 0,
+    "summaries": [
+      "Test Suites: 947 passed, 947 total",
+      "Tests:       35 skipped, 18789 passed, 18824 total"
+    ],
+    "bundlesUnchanged": true,
+    "protectedMainUnchanged": true,
+    "logSha256": "2b5b05417b27d5bd653d38a71e9f5d46274c2f2ad274b526744605505c2743a6"
+  },
+  "privateFinalVerificationRetention": {
+    "name": "predispatch-final-source-verification-attempt1.zip",
+    "bytes": 165191,
+    "sha256": "b4159c01d3278809514b6d7732bbe6bc4f2c5ff207231f743a4fdb7e1a33efe1",
+    "verifiedOriginalMembers": 26,
+    "negativeSelectionPreserved": true
+  },
+  "historicalOriginalControlVersions": {
+    "engine-original-red.txt": {
+      "bytes": 2245,
+      "sha256": "5420ab69ea7d4f61ab01240d0f92b170981471a2ed50bc69be53606f5f2b9fc8",
+      "path": "quality/bugbot/evidence/issue-974/controls/pre-dispatch-cancellation/engine-original-red.txt",
+      "gitSource": "97525e17d8ce6092a7195a925eeff08eed537459",
+      "privateArchive": "predispatch-causal-original-controls.zip",
+      "privateExactMembers": [
+        "controls/copilot-goal-974-create-cancellation-original-red-attempt1.log"
+      ],
+      "byteExactPrivateVerified": true
+    }
+  },
+  "derivedPublicControlCopies": {
+    "engine-original-red-derived.txt": {
+      "bytes": 2237,
+      "sha256": "3931b95ed0cc2070655c9e13186ec679732b9cbdefae42e2f629461bad8687ad",
+      "originalSha256": "5420ab69ea7d4f61ab01240d0f92b170981471a2ed50bc69be53606f5f2b9fc8",
+      "derivation": "Only remove the eight trailing space bytes from four blank lines; line endings, statements and failures otherwise unchanged. The original is retained exactly in private ZIP and immutable published Git.",
+      "originalBytes": 2245,
+      "acceptanceGranted": false
+    }
+  },
+  "nativeStaticFailure": {
+    "head": "a696e786010ecc22de41e969fc89292ed7c0a2ee",
+    "job": 137510284906,
+    "reason": "Strict repository diff-check rejected trailing blank-line whitespace in original negative log.",
+    "guardChanged": false,
+    "sourceOrAssertionsChanged": false,
+    "retryDispatched": false
+  }
+}

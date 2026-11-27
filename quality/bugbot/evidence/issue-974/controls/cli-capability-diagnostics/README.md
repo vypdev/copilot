@@ -1,0 +1,7 @@
+# Actual CLI capability diagnostics
+
+These credential-free observations use actual pinned Codex0.169.1 CLI/native bytes and immutable imageD2, UID502/GID20, no effective capabilities, no-new-privileges, read-only image root, no network and private owned output. They are diagnostics, not qualification/model calls or independent platform attestation. All three known metadata scopes were positively correlated stoppedPID0 and are freshly confirmed absent.
+
+The first help probe omitted writable HOME/tmp layout and failed its preparation. The second supplies private HOME and/tmp and observes namespace creation denied; its `sandbox linux --help` operand is not a valid linux subcommand in the pinned CLI and does not establish sandbox command acceptance. The third runs the proper `sandbox -- <owned canary>` command: default read-only mode exits1 at bubblewrap namespace creation, before any canary runs. A separate legacy-Landlock diagnostic exits101 before the workload and reports that filesystem-restricted execution requires bubblewrap to isolate app-server sockets. No fallback or changed grant/configuration is adopted.
+
+The recorded proc/sysctl observations do not establish whether kernel or seccomp causes the namespace refusal. Tool read/write/network confinement and oracle-free model input/readscope remain unverified. No actual oracle leak is claimed, and no174/42 measurement is admitted by these diagnostics.

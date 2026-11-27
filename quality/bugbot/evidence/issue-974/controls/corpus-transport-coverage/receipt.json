@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 1,
+  "kind": "exact-source AST corpus component coverage through existing C31 plus56 semantic component controls with modeled CLI/agent/provenance/containment ports and actual private filesystem; no native Docker/model acceptance",
+  "results": [
+    {
+      "file": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "sourceSha256": "71b24a615260277b6371354e488133e6fdcbf8caa4d251e79286fe8c4e1bc7e9",
+      "summary": {
+        "lines": {
+          "total": 232,
+          "covered": 230,
+          "skipped": 0,
+          "pct": 99.13
+        },
+        "functions": {
+          "total": 38,
+          "covered": 37,
+          "skipped": 0,
+          "pct": 97.36
+        },
+        "statements": {
+          "total": 291,
+          "covered": 288,
+          "skipped": 0,
+          "pct": 98.96
+        },
+        "branches": {
+          "total": 130,
+          "covered": 122,
+          "skipped": 0,
+          "pct": 93.84
+        }
+      },
+      "gate": true
+    }
+  ],
+  "measuredCorpusComponentGateSatisfied": true,
+  "globalChangedModuleCoverageSatisfied": false,
+  "observations": [
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    },
+    {
+      "kind": "component-vm",
+      "relative": "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+      "testOnlyExportSuffix": false
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "nativeSdkAcceptance": false,
+  "production": "disabled"
+}

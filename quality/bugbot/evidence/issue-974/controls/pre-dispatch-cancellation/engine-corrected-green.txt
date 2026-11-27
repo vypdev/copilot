@@ -1,0 +1,10 @@
+✔ explicit cancellation closes a held version reply before it is released (181.886083ms)
+✔ explicit cancellation closes a held create reply before it is released (147.772709ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 402.566333

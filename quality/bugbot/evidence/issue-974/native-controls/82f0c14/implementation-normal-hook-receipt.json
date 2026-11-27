@@ -1,0 +1,21 @@
+{
+  "started": "2026-11-21T04:40:23.001407+00:00",
+  "finished": "2026-11-21T04:46:48.930043+00:00",
+  "exitCode": 0,
+  "parent": "df779284840992fffe55bbad65fbdf74142af9ca",
+  "headAfter": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+  "statusAfter": "",
+  "log": "/private/tmp/copilot-goal-974-native-topology-commit.log",
+  "bytes": 537718,
+  "sha256": "726d1e5e6b0da191079da0f42753a9c5e82b1041a130d77c28f04338c3448cf2",
+  "suites": [
+    "Test Suites: 944 passed, 944 total"
+  ],
+  "tests": [
+    "Tests:       35 skipped, 18716 passed, 18751 total"
+  ],
+  "pushed": false,
+  "qualificationModelCalls": 0,
+  "native4": "unexecuted",
+  "production": "disabled"
+}

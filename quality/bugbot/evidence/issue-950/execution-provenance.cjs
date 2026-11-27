@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
-const { devNull } = require('node:os');
+const { devNull, release } = require('node:os');
 const path = require('node:path');
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -48,6 +48,31 @@ function pinnedGit(root) {
     { env, stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 256 * 1024 * 1024 });
     command.executable = executable;
     return command;
+}
+
+/** Git data transport only: no loader, scope or model admission is granted.
+ * The immutable image already has implementation; carry only later plan data. */
+function materializePlanBundle(root, implementation, planCommit, destination) {
+    assert.match(implementation ?? '', /^[a-f0-9]{40}$/u);
+    assert.match(planCommit ?? '', /^[a-f0-9]{40}$/u);
+    assert.notEqual(implementation, planCommit, 'the plan must follow implementation');
+    assert(typeof destination === 'string' && path.isAbsolute(destination) && path.resolve(destination) === destination);
+    const parent = path.dirname(destination), stat = fs.lstatSync(parent);
+    assert(fs.realpathSync(parent) === parent && stat.isDirectory() && !stat.isSymbolicLink()
+        && stat.uid === process.getuid() && (stat.mode & 0o077) === 0, 'private owned bundle staging required');
+    let occupied = false;
+    try { fs.lstatSync(destination); occupied = true; } catch (error) { assert.equal(error.code, 'ENOENT'); }
+    assert(!occupied, 'bundle destination already exists');
+    const git = pinnedGit(root);
+    assert.equal(git('rev-parse', '--verify', 'HEAD').toString('utf8').trim(), planCommit, 'reviewed plan HEAD changed');
+    git('merge-base', '--is-ancestor', implementation, planCommit);
+    // A raw SHA alone advertises no ref and Git refuses an empty bundle.
+    // HEAD is accepted only after exact identity validation, never as a mutable
+    // substitute for the independently reviewed commit. Exclude image objects.
+    git('bundle', 'create', destination, 'HEAD', '^' + implementation);
+    fs.chmodSync(destination, 0o600);
+    assert.equal(git('bundle', 'list-heads', destination).toString('utf8').trim(), planCommit + ' HEAD');
+    return hash(fs.readFileSync(destination));
 }
 
 function attestSource(root, implementation) {
@@ -154,7 +179,7 @@ function dependencyIdentity(root) {
     // These ancestors could otherwise shadow the admitted root dependencies.
     for (const relative of ['quality', 'quality/bugbot', 'quality/bugbot/evidence',
         'quality/bugbot/evidence/issue-950', 'quality/bugbot/evidence/issue-950/ev07-shadow',
-        'quality/bugbot/evidence/issue-950/normal-flow-shadow']) {
+        'quality/bugbot/evidence/issue-950/normal-flow-shadow', 'quality/bugbot/evidence/issue974']) {
         assert(!fs.existsSync(path.join(root, relative, 'node_modules')), 'unadmitted qualification dependency shadow');
     }
     assert(!process.env.NODE_PATH && !process.env.NODE_OPTIONS, 'qualification requires a clean Node loader environment');
@@ -169,32 +194,61 @@ function admitQualificationModules(root) {
     assert.equal(typeof registerHooks, 'function', 'qualification requires synchronous Node module hooks');
     const admitted = ['src', 'node_modules', 'quality/bugbot/evidence/issue-950']
         .map(relative => path.join(root, relative) + path.sep);
+    const exactFiles = new Set();
+    // New evaluator helpers are outside the historical directory. Only the
+    // authenticated public bootstrap's committed v2 plan can admit these two
+    // exact files; neither an environment switch nor a directory-wide grant can.
+    const proof = bootstrapAdmission(root);
+    if (proof) {
+        const bytes = fs.readFileSync(path.join(root, proof.planPath));
+        assert.equal(hash(bytes), proof.planSha256, 'admitted qualification plan changed');
+        const selected = JSON.parse(bytes);
+        if (selected.schemaVersion === 2) {
+            for (const name of ['corpus-selection.cjs', 'attempt-ledger.cjs', ...(selected.containment
+                ? ['operation-containment.cjs', 'qualification-seccomp.cjs', 'qualification-supervisor.cjs', 'qualification-runtime.Dockerfile', 'qualification-requirements.toml', 'containment-native-fixture.cjs', 'sdk-runtime-admission.cjs'] : [])]) {
+                const file = path.join(root, 'quality/bugbot/evidence/issue974', name);
+                const expected = selected.inspectedArtifacts?.['../../issue974/' + name];
+                assert.match(expected ?? '', /^[a-f0-9]{64}$/u, 'v2 helper is absent from the reviewed closure');
+                assert.equal(hash(fs.readFileSync(file)), expected, 'v2 helper differs from the reviewed closure');
+                exactFiles.add(file);
+            }
+        }
+    }
     return registerHooks({ resolve(specifier, context, nextResolve) {
         const result = nextResolve(specifier, context);
         if (!result.url.startsWith('node:')) {
             assert(result.url.startsWith('file:'), 'qualification module must have a physical admitted path');
             const file = fs.realpathSync(fileURLToPath(result.url));
-            assert(admitted.some(prefix => file.startsWith(prefix)), 'module is outside the admitted qualification closure');
+            assert(admitted.some(prefix => file.startsWith(prefix)) || exactFiles.has(file),
+                'module is outside the admitted qualification closure');
         }
         return result;
     } });
 }
 
-function runtimeIdentity(root) {
+function runtimeIdentity(root, expected) {
     const dependencies = dependencyIdentity(root);
+    if (expected) for (const [name, value] of Object.entries(dependencies)) {
+        assert.equal(value, expected[name], 'preregistered runtime differs before probes: ' + name);
+    }
     const typescript = require.resolve('typescript', { paths: [root] });
     assert(fs.realpathSync(typescript).startsWith(fs.realpathSync(path.join(root, 'node_modules')) + path.sep),
         'compiler is outside the admitted dependency tree');
     const gitExecutable = trustedGitExecutable();
-    return { ...dependencies, node: process.version, nodeSha256: hash(fs.readFileSync(process.execPath)),
+    const actual = { ...dependencies, os: process.platform, arch: process.arch, kernel: release(),
+        node: process.version, nodeSha256: hash(fs.readFileSync(process.execPath)),
         gitExecutable, gitSha256: hash(fs.readFileSync(gitExecutable)),
-        git: execFileSync(gitExecutable, ['--version'], { env: gitEnvironment(), encoding: 'utf8' }).trim(),
         typescript: JSON.parse(fs.readFileSync(require.resolve('typescript/package.json', { paths: [root] }))).version,
         typescriptSha256: hash(fs.readFileSync(typescript)) };
+    if (expected) for (const [name, value] of Object.entries(actual)) {
+        assert.equal(value, expected[name], 'preregistered runtime differs before probes: ' + name);
+    }
+    return { ...actual, git: execFileSync(gitExecutable, ['--version'], { env: gitEnvironment(), encoding: 'utf8' }).trim() };
 }
 
 function attestRuntime(root, selected) {
-    const actual = runtimeIdentity(root);
+    assert(selected && typeof selected === 'object', 'preregistered runtime required before probes');
+    const actual = runtimeIdentity(root, selected);
     for (const [name, value] of Object.entries(actual)) {
         assert.equal(value, selected?.[name], 'preregistered runtime differs: ' + name);
     }
@@ -243,7 +297,7 @@ function attestCommittedArtifact(root, file, expectedSha256, commit) {
 // this immutable module. A checkout file is never execution authority. This
 // context is not an independent attestation of the host or of human review.
 let bootstrapContext;
-function initializeBootstrapContext(root, proof, spawnDriver) {
+function initializeBootstrapContext(root, proof, spawnDriver, operation, campaign) {
     assert(!bootstrapContext, 'bootstrap context is already installed');
     root = fs.realpathSync(root);
     const main = fs.realpathSync(require.main.filename);
@@ -252,7 +306,14 @@ function initializeBootstrapContext(root, proof, spawnDriver) {
     assert.equal(hash(fs.readFileSync(path.join(root, 'quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs'))),
         proof.bootstrapSha256, 'admitted bootstrap identity differs');
     assert.equal(typeof spawnDriver, 'function');
-    bootstrapContext = Object.freeze({ root, proof: Object.freeze({ ...proof }), spawnDriver });
+    if (operation) {
+        assert(operation.signal instanceof AbortSignal && typeof operation.abort === 'function', 'live private operation required');
+        assert.match(operation.scopeId, /^[a-f0-9]{64}$/u);
+        assert(operation.identity && Object.isFrozen(operation.identity), 'immutable operation correlation required');
+    }
+    assert(campaign === undefined || typeof campaign === 'string', 'invalid admitted corpus campaign');
+    bootstrapContext = Object.freeze({ root, proof: Object.freeze({ ...proof }), spawnDriver, scopes: new Map(), campaign,
+        ...(operation && { operation: Object.freeze({ ...operation }) }) });
 }
 function bootstrapAdmission(root) {
     return bootstrapContext?.root === fs.realpathSync(root) ? bootstrapContext.proof : undefined;
@@ -262,11 +323,38 @@ function requireBootstrapAdmission(root) {
     assert(proof, 'qualification requires the independently reviewed immutable bootstrap');
     return proof;
 }
+function bootstrapOperation(root) {
+    return bootstrapContext?.root === fs.realpathSync(root) ? bootstrapContext.operation : undefined;
+}
+function bootstrapCampaign(root) {
+    requireBootstrapAdmission(root);
+    return bootstrapContext.campaign;
+}
+function selectedQualificationRuntime(root, plan) {
+    return plan.containment && !bootstrapOperation(root) ? plan.hostRuntime : plan.runtime;
+}
+function retainBootstrapScope(root, identity, scopeId) {
+    requireBootstrapAdmission(root);
+    const key = identity.ownerId + ':' + identity.operationId;
+    const previous = bootstrapContext.scopes.get(key);
+    assert(!previous || previous === scopeId, 'owned scope correlation changed');
+    bootstrapContext.scopes.set(key, scopeId ?? null);
+}
+function confirmBootstrapScopeStopped(root, identity, scopeId) {
+    requireBootstrapAdmission(root);
+    const key = identity.ownerId + ':' + identity.operationId;
+    assert.equal(bootstrapContext.scopes.get(key), scopeId, 'owned scope stop correlation differs');
+    bootstrapContext.scopes.delete(key);
+}
+function bootstrapCleanupAllowed(root) {
+    return bootstrapAdmission(root) !== undefined && bootstrapContext.scopes.size === 0;
+}
 function spawnQualificationDriver(mode, args, options) {
     assert(bootstrapContext, 'qualification requires the independently reviewed immutable bootstrap');
     return bootstrapContext.spawnDriver(mode, args, options);
 }
 
 module.exports = { attestSource, attestRuntime, attestDrivers, runtimeIdentity, dependencyIdentity, admitQualificationModules,
-    pinnedGit, gitEnvironment, trustedGitExecutable, attestCommittedArtifact, requireBootstrapAdmission,
-    bootstrapAdmission, initializeBootstrapContext, spawnQualificationDriver };
+    pinnedGit, materializePlanBundle, gitEnvironment, trustedGitExecutable, attestCommittedArtifact, requireBootstrapAdmission,
+    bootstrapAdmission, initializeBootstrapContext, spawnQualificationDriver, bootstrapOperation, selectedQualificationRuntime,
+    retainBootstrapScope, confirmBootstrapScopeStopped, bootstrapCleanupAllowed, bootstrapCampaign };

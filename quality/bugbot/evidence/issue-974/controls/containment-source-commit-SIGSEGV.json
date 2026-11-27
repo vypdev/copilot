@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T01:52:17.645621+00:00",
+  "status": "normal-commit-blocked-by-worker-SIGSEGV",
+  "headUnchanged": "8d44350032e416f35f37abc9417587fa9469a5f2",
+  "nativeAcceptance": "unexecuted",
+  "modelCalls": 0,
+  "firstHook": {
+    "suites": "943PASS/1workerSIGSEGV/944total",
+    "tests": "18715PASS/35existingSKIP/0assertionfailures",
+    "crashedSuite": "src/infrastructure/__tests__/setup_check_discovery_sdk_contract.integration.test.ts"
+  },
+  "focusedUnchangedSuite": "1suite/1testPASS",
+  "normalRecovery": "one normal same-source commit recovery; no skip/timeout/worker/policy change",
+  "generatedBundles": {
+    "build/cli/index.js": "c6673345acb748a2f56753d05942c3ed98c4f4f91380901142e11b0ae19e05f6",
+    "build/github_action/index.js": "8e8938796348bee6dcbc753f2496b2b4e519f9427d5cb84e3ecc40152d70bee5"
+  },
+  "logs": {
+    "normal-hook-SIGSEGV": {
+      "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-normal-hook-SIGSEGV.log.gz",
+      "rawBytes": 532888,
+      "rawSha256": "af5c6219b492612ba25789a41157e7af9f48c4b57e3c096b0101efb21a50715c"
+    },
+    "segfault-suite-focused": {
+      "path": "quality/bugbot/evidence/issue-974/controls/whole-operation-segfault-suite-focused.log.gz",
+      "rawBytes": 218,
+      "rawSha256": "dfc96117e947acc7bc6033d4216916b78a188b968d40836fa0939e70c7e36449"
+    }
+  }
+}

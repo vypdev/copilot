@@ -1,0 +1,41 @@
+node:internal/test_runner/harness:124
+      throw err;
+      ^
+
+RangeError: Maximum call stack size exceeded
+    at ensureTimerFlagsAreUpdated (node:internal/util/debuglog:393:38)
+    at internalEndTimer (node:internal/util/debuglog:425:5)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:263:5)
+    at Module.require (node:internal/modules/cjs/loader:1674:12)
+    at require (node:internal/modules/helpers:157:16)
+    at load (/private/tmp/copilot-goal-974-engine-transport-prototype-attempt3.cjs:11:243)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at loadWithHooks (node:internal/modules/customization_hooks:374:18)
+    at loadBuiltinWithHooks (node:internal/modules/cjs/loader:1286:22)
+    at Module._load (node:internal/modules/cjs/loader:1353:50)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+    ... collapsed 32 duplicate lines matching above 8 lines 4 times...
+    at Module.require (node:internal/modules/cjs/loader:1674:12)
+    at require (node:internal/modules/helpers:157:16)
+    at load (/private/tmp/copilot-goal-974-engine-transport-prototype-attempt3.cjs:11:243)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at loadWithHooks (node:internal/modules/customization_hooks:374:18)
+    at loadBuiltinWithHooks (node:internal/modules/cjs/loader:1286:22)
+    at Module._load (node:internal/modules/cjs/loader:1353:50)
+
+Node.js v24.20.0
+✖ /private/tmp/copilot-goal-974-engine-transport-prototype-attempt3.cjs (331.33775ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 339.645125
+
+✖ failing tests:
+
+test at ../copilot-goal-974-engine-transport-prototype-attempt3.cjs:1:1
+✖ /private/tmp/copilot-goal-974-engine-transport-prototype-attempt3.cjs (331.33775ms)
+  'test failed'

@@ -1,0 +1,11 @@
+✔ exact-source engine component covers owned Unix transport lifecycle and refusal faults (6267.934ms)
+✔ ev974-C27 closed containment refuses ambient grants, mutable images, arbitrary mounts/flags and unsafe namespace configuration (835.894625ms)
+ENGINE_COMPONENT_COVERAGE {"lines":{"total":262,"covered":262,"skipped":0,"pct":100},"functions":{"total":47,"covered":44,"skipped":0,"pct":93.61},"statements":{"total":341,"covered":337,"skipped":0,"pct":98.82},"branches":{"total":159,"covered":148,"skipped":0,"pct":93.08}}
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7465.699834

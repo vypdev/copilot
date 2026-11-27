@@ -1,0 +1,22 @@
+{
+  "startedAt": "2026-11-20T18:40:34.767368+00:00",
+  "finishedAt": "2026-11-20T18:46:15.194758+00:00",
+  "exitCode": 0,
+  "head": "5241685e8089c9dace4f829214f694126936525d",
+  "headAfter": "5241685e8089c9dace4f829214f694126936525d",
+  "statusAfter": "",
+  "rawBytes": 24987,
+  "rawSha256": "3875aa8113f8ce567559549447ad52589a2307ce370f96435cece3d41ac3dc29",
+  "qualificationModelCalls": 0,
+  "production": "disabled",
+  "fullReview": "unstarted",
+  "tests": 232,
+  "passed": 232,
+  "failed": 0,
+  "skipped": 0,
+  "cancelled": 0,
+  "durationMs": 339980.601625,
+  "log": "../../issue-974/controls/5241685-committed-controls.log.gz",
+  "compressedSha256": "2b130bc46844aab72ede251d276c99d8ef211ab918eda1ba51b8217ea1decb51",
+  "scope": "Actual initial5241685 committed source; retained positive history, not a233-control/final-correction certificate."
+}

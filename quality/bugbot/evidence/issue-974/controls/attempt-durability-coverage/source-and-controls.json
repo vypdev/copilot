@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-22T00:28:04.897833+00:00",
+  "parent": "05c3df8f6a20391b760025c054b47f891c63c157",
+  "findings": [
+    "PRRT_kwDONSeBW866SsVn",
+    "PRRT_kwDONSeBW866dMui",
+    "PRRT_kwDONSeBW866SsVf"
+  ],
+  "sourceHashes": {
+    "docs/bugbot/quality-observability.mdx": "cc262518dc30136cadc17a3bea1adb78d4461f6c3b5dbf344117c3d9b57162bb",
+    "quality/bugbot/evidence/issue-974/controls/engine-transport-coverage/coverage.cjs": "cfe57a43596918a9e1798d0de9835cc048f2bf8397a0bcb98ac945ca84a48102",
+    "quality/bugbot/evidence/issue-974/controls/implementation-full-review-coverage/coverage.cjs": "38f2656b76a6c004414ebc0fa30f9a12f6fb902d55ecc2b8f213050f6cdaae94",
+    "quality/bugbot/evidence/issue-974/controls/launcher-attempt-coverage/coverage.cjs": "c7b08a2893ca93156ab4952ddb7046d3d21ea4dce10f4d9a14928b4c869c695b",
+    "quality/bugbot/evidence/issue-974/controls/session-transport-coverage/coverage-runner.cjs": "78cd614e9d2387d1210384df4cea138aa14c381f72d4a8545aa77f3f9dfc77f1",
+    "quality/bugbot/evidence/issue974/attempt-ledger.cjs": "f8812728ecdbe99c072c2ae49eb78ef0c5ebc1e8e5a50e45925b340389420c4b",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "df7a28e0afa4af8ee1701bf0e65bbff3daafda97b1d99e8f6fa9c69b7979aad3",
+    "specs/CATALOG.md": "9776963d51183fab1319706096e4a232790221bfb26a7479d39640a01a112814",
+    "specs/catalog.json": "ced3e78235c483c4fcdd497eb305a7619fb7f84d3ad5ef390eab4922f123c132",
+    "quality/bugbot/evidence/issue974/attempt-durability-components.cjs": "860d22ef5b2ad96b6eadcc1fe4e7f6fcd20a5847ff839bef2fe8e4e8ae1e34c2",
+    "quality/bugbot/evidence/issue974/component-evidence-integrity-components.cjs": "d275d07cf0223a7a69eb086e62a2ae66d4580f8c625f49324b785958bfba61ec"
+  },
+  "testHelperHashes": {
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "df7a28e0afa4af8ee1701bf0e65bbff3daafda97b1d99e8f6fa9c69b7979aad3",
+    "quality/bugbot/evidence/issue974/engine-transport-components.cjs": "9e2ac879092de3163f06f5ab763feddded76362e86e1c307ad240d9802647279",
+    "quality/bugbot/evidence/issue974/supervisor-components.cjs": "777e153bda4585dcf91cb03505e86e188eb82b453566ea1a38858a464c5e2e10",
+    "quality/bugbot/evidence/issue974/corpus-collector-components.cjs": "ddbf23d902bc7b283cee00932447f7b8681df574e9c424a9c991dc2a4d8f3690",
+    "quality/bugbot/evidence/issue974/corpus-worker-components.cjs": "3874d465fb616651324c20661fee17f705e0f0bd562ecabd33d108bb69b84e3e",
+    "quality/bugbot/evidence/issue974/launcher-components.cjs": "d74d76c8393d1f5fba61a8e3b6ea5703d57ced1c697a7e576524a890e51066f5",
+    "quality/bugbot/evidence/issue974/attempt-components.cjs": "5e7773031d79085da569fa78fc1d6db2d29f136593ec708079901b3eaf6106c1",
+    "quality/bugbot/evidence/issue974/implementation-components.cjs": "8188ef5b2be118ae09fafc93d30d147c04e03efc68ea0ce25009a8b926eaf234",
+    "quality/bugbot/evidence/issue974/full-review-fault-components.cjs": "d2be1ea46c49da922c56395334d84db54a5f9d00bd65fbd84dee456b66dce194",
+    "quality/bugbot/evidence/issue974/full-review-lifecycle-components.cjs": "4f87bba74e3ecdfa3ff08863a00815091a3a7cde74661200f4196e08249f599a",
+    "quality/bugbot/evidence/issue974/review-driver-components.cjs": "a1ca260ade2154b097c10a9be7abd932b106c20bba0fbfa4dc54c83160e85b1f",
+    "quality/bugbot/evidence/issue974/component-coverage-gate-components.cjs": "37c51f2060cc2863d3f7d72550ce216e522f7afb783be7887b07978ba8a1ae0f",
+    "quality/bugbot/evidence/issue974/stop-record-components.cjs": "5cf256c13b07d491957b05ac153648bc85a266a25de8372ec6cfd8dd767e4b04",
+    "quality/bugbot/evidence/issue974/startup-stop-components.cjs": "6adf6f4988271d654015d105e163c713e49631db4a3106cb21a91e9c17766e83",
+    "quality/bugbot/evidence/issue974/attempt-durability-components.cjs": "860d22ef5b2ad96b6eadcc1fe4e7f6fcd20a5847ff839bef2fe8e4e8ae1e34c2",
+    "quality/bugbot/evidence/issue974/component-evidence-integrity-components.cjs": "d275d07cf0223a7a69eb086e62a2ae66d4580f8c625f49324b785958bfba61ec",
+    "quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs": "6971c477a0a18a9c8b1f1f7bffb7b6832e2a5d11407d475a36f514594d0e5313",
+    "quality/bugbot/evidence/issue974/session-transport.test.cjs": "e4e5a551d82fe49962cf9f4a04b2fe033072b337ce933c25bab0f4a8f8f19406"
+  },
+  "fullShadowCommand": {
+    "exit": 0,
+    "passed": 479,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "durability": {
+    "causalRedPassed": 1,
+    "causalRedFailed": 13,
+    "greenPassed": 14,
+    "greenFailed": 0,
+    "testSourceIdentical": true
+  },
+  "evidenceIntegrity": {
+    "causalRedPassed": 0,
+    "causalRedFailed": 2,
+    "greenPassed": 2,
+    "greenFailed": 0,
+    "testSourceIdentical": true,
+    "oldReceipt": "Hashes changed private fixture test bytes after loading, different from initial bytes.",
+    "correctedReceipt": "None; pre-load hash guard rejects each post-import mutation.",
+    "actualMutations": "Owned private copies only; semantic test imports suppressed, instrumented session module registered without invocation."
+  },
+  "selectedLauncherAndAttemptControlsPassed": 69,
+  "sessionControlsPassed": 63,
+  "measuredLauncherAndAttemptModuleGatesSatisfied": true,
+  "measuredSessionModuleGateSatisfied": true,
+  "globalChangedModuleGateSatisfied": false,
+  "coverage": [
+    {
+      "file": "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs",
+      "sourceSha256": "a3f378fe6b90228e8d9a0d37e9be407705d73c4409bae6841a1ac25dd22da4d6",
+      "summary": {
+        "lines": {
+          "total": 95,
+          "covered": 94,
+          "skipped": 0,
+          "pct": 98.94
+        },
+        "functions": {
+          "total": 23,
+          "covered": 23,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 119,
+          "covered": 118,
+          "skipped": 0,
+          "pct": 99.15
+        },
+        "branches": {
+          "total": 49,
+          "covered": 47,
+          "skipped": 0,
+          "pct": 95.91
+        }
+      },
+      "gate": true
+    },
+    {
+      "file": "quality/bugbot/evidence/issue974/attempt-ledger.cjs",
+      "sourceSha256": "f8812728ecdbe99c072c2ae49eb78ef0c5ebc1e8e5a50e45925b340389420c4b",
+      "summary": {
+        "lines": {
+          "total": 156,
+          "covered": 156,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 41,
+          "covered": 41,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 195,
+          "covered": 195,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 70,
+          "covered": 70,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "gate": true
+    }
+  ],
+  "sessionCoverage": {
+    "lines": {
+      "total": 103,
+      "covered": 103,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 22,
+      "covered": 22,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 134,
+      "covered": 134,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 109,
+      "covered": 109,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "preloadHashes": {
+    "launcherAndAttempt": 16,
+    "session": 2
+  },
+  "fixes": [
+    "New files synchronize contents, their containing directory and its parent before dispatch/completion; appended ledgers must already exist.",
+    "Preserve first write/sync failure even if descriptor close also fails; propagate sole close failure and release descriptors.",
+    "Capture session component-test digests before imports, verify at exit and refuse a misleading receipt after mutation."
+  ],
+  "preserved": [
+    "SDK/four application bundles",
+    "corpora and all frozen measurement plans",
+    "35 logical control IDs and selected immutable SDD",
+    "no research time,turn,read,token cutoff;no new grants/default/template/release changes"
+  ],
+  "invocationNegative": {
+    "at": "2026-11-22T00:21:17.032724+00:00",
+    "command": [
+      "node",
+      "--test",
+      "quality/bugbot/evidence/issue-974/controls/session-transport-coverage/coverage-runner.cjs",
+      "/private/tmp/copilot-goal-974",
+      "/private/tmp/copilot-goal-974-attempt-durability-session-ast-attempt1"
+    ],
+    "failure": "Node --test treats positional root/output as test paths, not wrapper argv. Wrapper sees undefinedroot; package root entry also ran and failed as local Action without event/credential environment.",
+    "childEnvironment": "Only PATH/SystemRoot/WINDIR/TMPDIR/TEMP/TMP retained. No credential or GitHub event environment supplied.",
+    "evidence": "Invocation negative only; not session source/coverage/native/model evidence. Outbound-effects were not instrumented in this mistaken local entry load; no assertion about them is inferred. No evaluated pilot context exists.",
+    "next": "Use documented plain node wrapper root output invocation in a new attempt; preserve first log."
+  },
+  "boundaries": "Actual local private file/directory syscalls with injected errors; semantic detector/verifier fakes. Actual Node child executes public AST driver on private copied modules, with test imports suppressed. No actual host power loss, admitted Linux/native SDK/Docker/model or campaign proof.",
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8350055,
+      "sha256": "52bade17c4ad39eb06a034e3e6e48889932aff07cd83baa24faa7bff163520f2"
+    },
+    "github_action": {
+      "bytes": 11109171,
+      "sha256": "5fa8301d2c57269edcf833ffc1dae9ca9a89fff234fe943fed3c18d2053121ac"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "archives": 25,
+  "primarySource": "https://man7.org/linux/man-pages/man2/fsync.2.html",
+  "actual174": "UNSTARTED",
+  "actual42": "UNSTARTED",
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "qualifiedProfile": null,
+  "production": "disabled",
+  "normalHooksAndFinalNative": "required",
+  "remaining": "Global drivers, other valid owner-loss/SDKscope/credential/read-scope findings, compliant actual runtime and fresh exact-tuple C32-C35/preregistration remain unmet."
+}

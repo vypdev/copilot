@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-11-21T04:49:11.914661+00:00",
+  "finishedAt": "2026-11-21T04:54:38.409328+00:00",
+  "implementation": "82f0c14e2b769092f1abcafa767b1cadbad6d4c1",
+  "exitCode": 0,
+  "counts": {
+    "tests": 239,
+    "pass": 239,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "log": "/private/tmp/copilot-goal-974-post-topology239-attempt1.log",
+  "logBytes": 25603,
+  "logSha256": "f4aca2a30b0494d8f2787d7e319a2bbd9c870aea3e8322c5eaef654ef69a4b3c",
+  "hostV8Coverage": null,
+  "allChangedModuleCoverageSatisfied": false,
+  "nativeSdkAcceptance": false,
+  "qualificationModelCalls": 0,
+  "174": "unstarted",
+  "42": "unstarted",
+  "production": "disabled"
+}

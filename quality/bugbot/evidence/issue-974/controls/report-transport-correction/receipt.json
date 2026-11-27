@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T19:02:36.764449+00:00",
+  "parent": "fb1b7fa1aef9955d019fae29a16705ad9f8bb028",
+  "negative": {
+    "run": 44932866559,
+    "job": 136933095726,
+    "retryable": false,
+    "reason": "call-budget",
+    "assessmentBatchesCompleted": 0,
+    "assessmentBatchesRequired": 7,
+    "retryRequested": false
+  },
+  "correction": "11 generated bulk reports archived losslessly using existing full-path .log.gz policy, exact raw/compressed hashes and immutable original Git blobs; no runtime consumers; historical path references remain recorded and mapped in generated-report-archive.json",
+  "policy": "unchanged",
+  "limits": "unchanged",
+  "runtimeSources": "unchanged",
+  "fourBundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8350055,
+      "sha256": "52bade17c4ad39eb06a034e3e6e48889932aff07cd83baa24faa7bff163520f2"
+    },
+    "github_action": {
+      "bytes": 11109171,
+      "sha256": "5fa8301d2c57269edcf833ffc1dae9ca9a89fff234fe943fed3c18d2053121ac"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "selectedSDD": "unchanged",
+  "nativeParentCI": {
+    "run": 44932871265,
+    "jobsPassed": 4,
+    "SDKsuites": 945,
+    "SDKassertionsPassed": 18756,
+    "historicalSkips": 35,
+    "extensionFiles": 385,
+    "extensionAssertionsPassed": 5291
+  },
+  "existingDeterministicControls": 298,
+  "freshFinalNativeProgressAcceptance": "required; not inferred from local format proof",
+  "files": [
+    {
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/report-transport-correction/fb1-native-progress-failure.log.gz",
+      "rawBytes": 32515,
+      "rawSha256": "6f8386780a929a676148d81bb334bbc66fea7d3dd7df14bcee39aa0fb0d8a4c4",
+      "gzipBytes": 8369,
+      "gzipSha256": "fa11affa0bca3ca026b05ba5a55791dddde436cdf5b4ef00ff6b84e709f9f4c9"
+    },
+    {
+      "archivePath": "quality/bugbot/evidence/issue-974/controls/report-transport-correction/fb1-native-coverage-complete.log.gz",
+      "rawBytes": 3219635,
+      "rawSha256": "be2cb8c598d5adf2c799d1bfbd87aa62cd0708e73bb8c0cdb9b647cf8737de07",
+      "gzipBytes": 583397,
+      "gzipSha256": "1435304e365308c767b1ea3b23dbc961d3c3add93de30ee6d062fa071da6b458"
+    }
+  ],
+  "qualificationModelCalls": 0,
+  "actual174Started": false,
+  "actual42Started": false,
+  "qualifiedProfile": null,
+  "pilotWriteAttempts": 0,
+  "production": "disabled"
+}

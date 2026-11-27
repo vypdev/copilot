@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "kind": "credential-free actual CLI sandbox command diagnostics; not qualification",
+  "image": "sha256:d2feb89ac2b0e9f383a26df0ce7c44e7c39f8aad11f4f8d3ed967ab262d1aa35",
+  "pins": {
+    "node": {
+      "path": "/usr/local/bin/node",
+      "sha256": "23a5637c2470fde09fcc1acc77c1b92e04e3d7e3e6e80ff7df6f5831958d1477"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "sha256": "54af380ba6ca1b36305358e99427a31ae4b0af5dc5cb6d0198c6f2f16e97651d"
+    },
+    "typescript": {
+      "path": "/sdk/node_modules/typescript/lib/typescript.js",
+      "sha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+    },
+    "provenance": {
+      "path": "/sdk/quality/bugbot/evidence/issue-950/execution-provenance.cjs",
+      "sha256": "b3684f55df070ab1a79f9b05f40671c9d6b320f39a1c6e0d967f352958248d46"
+    },
+    "codex": {
+      "path": "/opt/codex/node_modules/@openai/codex/bin/codex.js",
+      "sha256": "e14fc83739c13c1074b12bd1acce4010c893c7f6fbfc1593b4a31d74cabb57af"
+    },
+    "native": {
+      "path": "/opt/codex/node_modules/@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex",
+      "sha256": "7a32206a6aa161b678b42f25f9b20f5f7e006497cd98cd02dc8835cbaab3bba0"
+    }
+  },
+  "sysctls": {
+    "/proc/sys/kernel/unprivileged_userns_clone": {
+      "code": "ENOENT"
+    },
+    "/proc/sys/user/max_user_namespaces": "64279",
+    "/proc/self/attr/current": {
+      "code": "EINVAL"
+    }
+  },
+  "uid": 502,
+  "gid": 20,
+  "procStatus": [
+    "Uid:\t502\t502\t502\t502",
+    "Gid:\t20\t20\t20\t20",
+    "CapEff:\t0000000000000000",
+    "NoNewPrivs:\t1",
+    "Seccomp:\t2"
+  ],
+  "probes": [
+    {
+      "args": [
+        "-c",
+        "sandbox_mode=\"read-only\"",
+        "-C",
+        "/qualification-output/workspace",
+        "sandbox",
+        "--",
+        "/usr/local/bin/node",
+        "-e",
+        "const fs=require('node:fs');const observe=fn=>{try{return{ok:true,result:fn()};}catch(e){return{ok:false,code:e.code,message:e.message};}};console.log(JSON.stringify({allowedRead:observe(()=>fs.readFileSync('/qualification-output/workspace/allowed.txt','utf8').length),outsideRead:observe(()=>fs.readFileSync('/qualification-output/oracle-control.txt','utf8').length),outsideWrite:observe(()=>{fs.writeFileSync('/qualification-output/tool-write-control.txt','CONTROL');return true;})}));"
+      ],
+      "status": 1,
+      "signal": null,
+      "error": null,
+      "stdout": "",
+      "stderr": "bwrap: No permissions to create a new namespace, likely because the kernel does not allow non-privileged user namespaces. On e.g. debian this can be enabled with 'sysctl kernel.unprivileged_userns_clone=1'.\n"
+    },
+    {
+      "args": [
+        "-c",
+        "sandbox_mode=\"read-only\"",
+        "-C",
+        "/qualification-output/workspace",
+        "--enable",
+        "use_legacy_landlock",
+        "sandbox",
+        "--",
+        "/usr/local/bin/node",
+        "-e",
+        "const fs=require('node:fs');const observe=fn=>{try{return{ok:true,result:fn()};}catch(e){return{ok:false,code:e.code,message:e.message};}};console.log(JSON.stringify({allowedRead:observe(()=>fs.readFileSync('/qualification-output/workspace/allowed.txt','utf8').length),outsideRead:observe(()=>fs.readFileSync('/qualification-output/oracle-control.txt','utf8').length),outsideWrite:observe(()=>{fs.writeFileSync('/qualification-output/tool-write-control.txt','CONTROL');return true;})}));"
+      ],
+      "status": 101,
+      "signal": null,
+      "error": null,
+      "stdout": "",
+      "stderr": "\nthread 'main' (58) panicked at linux-sandbox/src/linux_run_main.rs:391:9:\nfilesystem-restricted execution requires bubblewrap to isolate app-server sockets\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+    }
+  ],
+  "modelCalls": 0,
+  "sandboxEnforcementExercised": false,
+  "modelInputScopeVerified": false,
+  "qualificationAcceptance": false,
+  "production": "disabled"
+}

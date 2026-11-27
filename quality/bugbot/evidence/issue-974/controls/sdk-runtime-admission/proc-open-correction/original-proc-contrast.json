@@ -1,0 +1,34 @@
+{
+  "at": "2026-11-23T02:47:26.052791+00:00",
+  "scopeId": "01ab6ddd0b9fbf9be6e3a29cb6589211db7ab5c5166f9674c0d0cb0818178fa2",
+  "image": "sha256:25fe34d998a2991755e2bd77a6d42859f8dbf7c776239162301c14f0f7e5e58a",
+  "profileSha256": "fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b",
+  "exitCode": 0,
+  "stdoutSha256": "0a1a133778a441eb8d383003bc352ea9a835ced303c1b0f84cb0ba299864a62b",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "removed": true,
+  "result": {
+    "kind": "model-free-proc-open-matched-contrast",
+    "afterActualInProcessUidDrop": {
+      "uid": 502,
+      "gid": 20,
+      "fileOwner": 0,
+      "openError": "EACCES",
+      "capEff": "0000000000000000"
+    },
+    "afterSameUidExec": {
+      "uid": 502,
+      "gid": 20,
+      "fileOwner": 502,
+      "openError": null,
+      "capEff": "0000000000000000"
+    },
+    "environmentContentsRead": false,
+    "modelCalls": 0
+  },
+  "notQualificationAcceptance": true,
+  "modelCalls": 0,
+  "scientificModelCalls": 0,
+  "production": "disabled",
+  "DONE_DO_NOT_REPEAT": true
+}

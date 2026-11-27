@@ -1,0 +1,24 @@
+{
+  "startedAt": "2026-11-20T18:17:13.016506+00:00",
+  "finishedAt": "2026-11-20T18:26:19.357370+00:00",
+  "exitCode": 0,
+  "headAfter": "f06e37e197d301aef7b04319c35362177ecbf72e",
+  "statusAfter": "M build/cli/index.js\n M build/github_action/index.js",
+  "ordinaryHooks": true,
+  "measuredCalls": 0,
+  "rawBytes": 535223,
+  "rawSha256": "ca15605f80107394e75291ed20f27e75275b4cd9caead7659302f2f1acb7aa8a",
+  "validation": {
+    "build": "PASS",
+    "jestSuites": 944,
+    "jestPassed": 18703,
+    "oldJestSkipped": 35,
+    "jestSeconds": 467.829,
+    "lint": "PASS"
+  },
+  "qualificationModelCalls": 0,
+  "log": "../../issue-974/controls/source-commit.log.gz",
+  "compressedBytes": 50646,
+  "compressedSha256": "724d466880bd6dae3d00894ca41a545c054a070e1fabb671ab9287a2336228c1",
+  "bundleFollowup": "Two tracked generated bundles were rebuilt by this hook and are included in the next normal delivery commit; this receipt does not claim they were in f06e37e."
+}

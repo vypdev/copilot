@@ -31,6 +31,8 @@ import { admitAgentSourceSnapshot } from '../../application/policies/agent_sourc
 import { SddSourceContextFailure, type AgentSourceSnapshot } from '../../domain/agent_source_snapshot';
 import { prepareSourceSnapshotWorkspace } from './agent_source_snapshot_workspace';
 import { createPrivateAgentExecutionRoot } from './agent_private_install_root';
+import { admitQualificationInvestigationPlan } from './qualification_investigation_admission';
+import { qualificationRuntimeCliEvidenceMode, requireQualificationOperationScope } from './qualification_operation_scope';
 
 export interface AgentExecutionPlanningRequest {
     readonly configuration: AgentConfiguration;
@@ -89,6 +91,27 @@ export class AgentExecutionPlanner {
         return this.preparePlan(request);
     }
 
+    /** Trusted qualification composition only; ordinary callers keep prepare(). */
+    prepareQualificationInvestigation(request: AgentExecutionPlanningRequest): AgentExecutionPlan {
+        if (request.capability !== 'findings' || request.sourceSnapshot || !request.signal) {
+            throw new AgentCliError('Qualification investigation requires findings, no source snapshot, and explicit cancellation.', 'configuration');
+        }
+        if (request.signal.aborted) throw new AgentCliError('Agent CLI execution was cancelled.', 'cancelled');
+        try { requireQualificationOperationScope(request.signal); }
+        catch { throw new AgentCliError('Qualification investigation requires its exact live owned operation scope.', 'configuration'); }
+        const runtimeToolEvidence = qualificationRuntimeCliEvidenceMode(request.signal);
+        if (runtimeToolEvidence && request.configuration.provider !== 'codex') {
+            throw new AgentCliError('Runtime tool evidence requires the admitted Codex provider.', 'configuration');
+        }
+        const plan = this.preparePlan(request, undefined, runtimeToolEvidence);
+        try {
+            return admitQualificationInvestigationPlan({ ...plan, qualificationInvestigation: true }, request.signal);
+        } catch (error) {
+            rmSync(plan.runtimeDirectory, { recursive: true, force: true });
+            throw error;
+        }
+    }
+
     prepareBrokeredVerification(request: AgentExecutionPlanningRequest, emptyWorkspace: string): AgentExecutionPlan {
         const workspace = realpathSync(emptyWorkspace);
         if (request.capability !== 'findings' || request.sourceSnapshot || readdirSync(workspace).length !== 0) {
@@ -97,7 +120,7 @@ export class AgentExecutionPlanner {
         return this.preparePlan(request, workspace);
     }
 
-    private preparePlan(request: AgentExecutionPlanningRequest, brokeredWorkspace?: string): AgentExecutionPlan {
+    private preparePlan(request: AgentExecutionPlanningRequest, brokeredWorkspace?: string, runtimeToolEvidence = false): AgentExecutionPlan {
         const startedAt = performance.now();
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
@@ -161,6 +184,7 @@ export class AgentExecutionPlanner {
                 runtimeDirectory,
                 ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
                 ...(brokeredWorkspace ? { brokeredVerification: true as const } : {}),
+                ...(runtimeToolEvidence ? { runtimeToolEvidence: true as const } : {}),
             });
             stage = 'artifacts';
             const artifacts = materializeArtifacts([

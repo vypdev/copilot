@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T02:29:51.762267+00:00",
+  "base": "d81c5e7a5163a5af32f5043739819b0bc85dbdad",
+  "normalHook": "944suites/18716PASS35oldskip;build/lintPASS",
+  "actualTransportNegative": {
+    "at": "2026-11-21T02:26:53.595625+00:00",
+    "purpose": "model-free local Git bundle transport capability",
+    "sourcePattern": "git bundle create <owned-private-file> <raw-reviewed-commit>",
+    "actualExitCode": 128,
+    "actualStderr": "fatal: Refusing to create empty bundle.\n",
+    "modelCalls": 0,
+    "containerCreateCalls": 0,
+    "rootCause": "No named positive ref is advertised by that raw-commit-only bundle command. The later-plan transport must advertise verified HEAD and use implementation-to-plan delta."
+  },
+  "correction": "Named HEAD validated as exact reviewed Y; ancestor X excluded from delta; no new model/scope grant",
+  "actualPositive": "C27PASS: exactYfetch into separateX-only repository verifies plan bytes; movedHEAD/occupiedoutput denied",
+  "logs": {
+    "d81c5e-normal-hook-success": {
+      "path": "quality/bugbot/evidence/issue-974/controls/d81c5e-normal-hook-success.log.gz",
+      "bytes": 536232,
+      "sha256": "d74dd1b5169afcf88859f00a0b015d01ebd501314449a17faeeddc54ec315a51"
+    },
+    "actual-plan-bundle-positive": {
+      "path": "quality/bugbot/evidence/issue-974/controls/actual-plan-bundle-positive.log.gz",
+      "bytes": 261,
+      "sha256": "f458ce258a9d21a209c9b0aad69bf0116b34892a18c769abc4c8e8dd589c42d9"
+    }
+  },
+  "remaining": [
+    "normalfollowupcommit",
+    "full239committedsource",
+    "changedmodule95/90coverage",
+    "actualSDKimage/native4",
+    "final native PR SHA/findings",
+    "measurementpreregistration full42closure"
+  ],
+  "qualificationModelCalls": 0,
+  "174": "unstarted",
+  "42": "unstarted",
+  "native4": "unexecuted",
+  "production": "disabled"
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "kind": "frozen qualification host observation for corrected source",
+  "repository": "/private/tmp/copilot-goal-974-native-1f20e9-1xrdeguw/frozen-host",
+  "source": {
+    "implementation": "e4bade2cfa2b41c42e5025f004d83a8386c0ee5c",
+    "tree": "2d0e5332d62398b828083c7a5133dd1ee11051cd",
+    "sourceSha256": "a7f6a6501845159c182c96a881b64626dfdaf00b9f803f48013011653985b1d9",
+    "dependencyLockSha256": "c7a4b4fb5b2b38236b093af1bf53d6a44c25cfdac39405fcaa1bc41bd57ca4bd",
+    "compilerConfigurationSha256": "ff3edb0f0b17f6d00a6504a8c1e7372b5573604feeadc5fd80a358fac91772f1"
+  },
+  "runtime": {
+    "dependencyTreeSha256": "cabf91bec28ce54e95078a3ad787ca37810ff3e4521bd7f57a8fe2b6ea2eecef",
+    "dependencyEntries": 26844,
+    "os": "darwin",
+    "arch": "arm64",
+    "kernel": "27.2.0",
+    "node": "v24.20.0",
+    "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+    "gitExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/git",
+    "gitSha256": "775851091335fd0f0e3eba68e92667b95115208e57ad5ca312936d10edb9ffd3",
+    "typescript": "5.9.3",
+    "typescriptSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+    "git": "git version 2.54.0 (Apple Git-157)"
+  },
+  "developmentHooksRun": false,
+  "modelCalls": 0,
+  "production": "disabled"
+}

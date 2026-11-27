@@ -1,0 +1,5 @@
+Test Suites: 1 passed, 1 total
+Tests:       14 skipped, 1 passed, 15 total
+Snapshots:   0 total
+Time:        3.106 s, estimated 7 s
+Ran all test suites matching src/infrastructure/agents/__tests__/qualification_investigation.test.ts with tests matching "ev974-C03".

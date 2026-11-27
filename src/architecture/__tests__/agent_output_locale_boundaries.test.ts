@@ -36,3 +36,29 @@ describe('product-facing agent locale boundaries', () => {
     expect(source).toContain('outputLocale');
   });
 });
+
+describe('qualification operation composition boundaries', () => {
+  it('keeps scope policy and semantic ports independent of process, engine and infrastructure adapters', () => {
+    for (const file of ['application/policies/qualification_operation_scope_policy.ts', 'application/ports/qualification_operation_scope_ports.ts']) {
+      const source = readFileSync(join(root, file), 'utf8');
+      expect(source).not.toMatch(/(?:from\s*|require\s*\()\s*['"](?:node:|https?:|.*infrastructure|.*data\/repository)/u);
+      expect(source).not.toMatch(/\b(?:spawn|execFile|Docker|HostConfig|process\.env)\b/u);
+    }
+  });
+
+  it('admits and stops plans only through the ordinary planner and executor, and grants live scopes only in the immutable bootstrap', () => {
+    const files = productionTypeScriptFiles(root).filter(file => !file.endsWith(join('agents', 'qualification_operation_scope.ts')));
+    const callers = (name: string) => files.filter(file => new RegExp(`\\b${name}\\s*\\(`, 'u').test(readFileSync(file, 'utf8')))
+      .map(file => file.slice(root.length + 1).replace(/\\/gu, '/')).sort();
+    expect(callers('bindQualificationOperationPlan')).toEqual(['infrastructure/agents/qualification_investigation_admission.ts']);
+    expect(callers('stopQualificationOperationPlan')).toEqual(['data/repository/agent_cli_execution.ts']);
+    expect(callers('requireQualificationOperationScope')).toEqual(['infrastructure/agents/agent_execution_planner.ts']);
+    expect(callers('withQualificationOperationScope')).toEqual([]);
+    const directory = join(root, '../quality/bugbot/evidence');
+    const sourceFiles = readdirSync(directory, { recursive: true }).filter((file): file is string =>
+      typeof file === 'string' && file.endsWith('.cjs') && !file.endsWith('.test.cjs'));
+    const grants = sourceFiles.filter(file => /\bwithQualificationOperationScope\s*\(/u.test(readFileSync(join(directory, file), 'utf8')))
+      .map(file => file.replace(/\\/gu, '/')).sort();
+    expect(grants).toEqual(['issue-950/qualification-bootstrap.cjs']);
+  });
+});

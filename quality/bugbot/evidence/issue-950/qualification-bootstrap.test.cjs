@@ -160,7 +160,7 @@ test('changed installed dependencies are refused before the immutable entrypoint
     f.write('node_modules/typescript/index.js', 'require("node:fs").writeFileSync(' + JSON.stringify(f.marker) + ',"executed");\n');
     const run = f.launch();
     assert.notEqual(run.status, 0);
-    assert.match(run.stderr, /runtime differs: dependencyTreeSha256/u);
+    assert.match(run.stderr, /runtime differs before probes: dependencyTreeSha256/u);
     assert.equal(fs.existsSync(f.marker), false);
     assert.equal(fs.existsSync(f.output), false);
 });
@@ -323,7 +323,7 @@ test('an arbitrary IPC parent cannot initialize qualification admission, unlike 
                 'the real previous worker accepts the arbitrary IPC parent without the public launch path');
         } else {
             assert.notEqual(code, 0, 'arbitrary IPC parent initialized bootstrap context: ' + stderr);
-            assert.match(stderr, /unsupported qualification entrypoint|worker admission.*removed/u);
+            assert.match(stderr, /private image worker unavailable/u);
             assert.equal(fs.existsSync(f.output), false);
         }
         assert.equal(fs.existsSync(f.marker), false);

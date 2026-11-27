@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T02:15:15.820785+00:00",
+  "status": "follow-up source correction, not native acceptance",
+  "base": "63628bb2ea01b2d9aafb589e3b1245dae54d4778",
+  "normalHook63628b": "944suites18716PASS35oldSKIP; build/lintPASS",
+  "retained239": "236PASS3FAIL0skip/cancel; see63628b-committed239-negative.json",
+  "corrections": {
+    "legacyDependencyControl": "Uses hash-checked frozen historical helper, explicitly synthetic omission variant; current byte rejection remains before import/probes",
+    "diagnostics": "updated exact earlier dependency denial and generic privateIPC precondition before OS checks; no grant or disabled test",
+    "scorer": "reproduced empty copied runtime projections classed incomplete; now12 observed runtime fields plus source/bootstrap correlation required",
+    "imageOwnership": "same reviewed workerUID/GID ownsSDK/Git atbuild and is checked beforeclone; source/officialGit inference, not executedSDK proof",
+    "privateEarlyFailures": "retained owned worker diagnostic before stoppedcontainer cleanup, never grants admission"
+  },
+  "checks": {
+    "correctedRetainedControls": "3/3PASS",
+    "newSixControls": "6/6PASS",
+    "full239followup": "pending committed-source run",
+    "image": "notbuilt",
+    "native4": "unexecuted"
+  },
+  "logs": {
+    "63628b-normal-hook-success": {
+      "path": "quality/bugbot/evidence/issue-974/controls/63628b-normal-hook-success.log.gz",
+      "bytes": 541135,
+      "sha256": "3712c9007151581df2b9c384063b77eaf9fdcbab761724f0091c53c346cc2078"
+    },
+    "compatibility-three-corrected": {
+      "path": "quality/bugbot/evidence/issue-974/controls/compatibility-three-corrected.log.gz",
+      "bytes": 457,
+      "sha256": "ec8e0d8ecf27493789bf6a7033f6fad0d9909db2aa51609c10a662da98b38fcc"
+    },
+    "missing-runtime-observation-negative": {
+      "path": "quality/bugbot/evidence/issue-974/controls/missing-runtime-observation-negative.log.gz",
+      "bytes": 1070,
+      "sha256": "798e83486e3949e3ae3c2ba47a85a23fb63c5a27c6da7d87578fc8e7d7f25731"
+    },
+    "runtime-observation-six-corrected": {
+      "path": "quality/bugbot/evidence/issue-974/controls/runtime-observation-six-corrected.log.gz",
+      "bytes": 882,
+      "sha256": "33c60f94265c91304afbcd679442eca62931dcf9353722839a80f08732c14aba"
+    }
+  },
+  "primaryReferences": [
+    "https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---local",
+    "https://docs.docker.com/reference/dockerfile/"
+  ],
+  "models": {
+    "174": "unstarted",
+    "42": "unstarted",
+    "calls": 0,
+    "qualifiedProfile": null,
+    "evaluatedPrWrites": 0,
+    "production": "disabled"
+  }
+}

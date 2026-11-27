@@ -19,6 +19,8 @@ export interface ProviderExecutionPolicyInput {
     readonly runtimeDirectory: string;
     readonly outputSchema?: Record<string, unknown>;
     readonly brokeredVerification?: true;
+    /** Internal output framing, selected only by the live runtime-control composition. */
+    readonly runtimeToolEvidence?: true;
 }
 
 export interface ProviderExecutionPolicy {

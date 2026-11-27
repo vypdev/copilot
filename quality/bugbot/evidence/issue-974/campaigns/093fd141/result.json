@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-23T03:46:01.554173+00:00",
+  "decision": "NOT_QUALIFIED",
+  "reason": "precisionbelow0.90",
+  "implementation": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "preregistration": "07f21a4cadbd1dbaf03566c57a8033f85e9ff760",
+  "planSha256": "312c4501082d97fbb5acd7c1f3801f179d085c553f2bd6d15c47bcd373a00db1",
+  "image": "sha256:c5d0f155dd148f617be6417ffa5967ee3b1cde3f08bfcb04f29096b8e951c2a9",
+  "driverCount": 19,
+  "corpusSha256": "001223aa255e5af7e10bddab2c8deacd7cacf0b5b3690a5a2034d241274cb9d6",
+  "casesCompleted": 174,
+  "applicationSdkCalls": 200,
+  "ordinaryFollowupCalls": 26,
+  "runtimeControlSdkCalls": 1,
+  "totalObservedSdkInvocations": 201,
+  "providerInternalRequestCount": null,
+  "configuredDetector": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "effort": "xhigh"
+  },
+  "proposedVerifier": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6.1-sol",
+    "effort": "xhigh"
+  },
+  "providerReportedModel": null,
+  "score": {
+    "metrics": {
+      "expected": 80,
+      "actual": 84,
+      "matched": 74,
+      "precision": 0.8809523809523809,
+      "recall": 0.925,
+      "locationAccuracy": 0.9324324324324325,
+      "severityAccuracy": 0.918918918918919,
+      "categoryAccuracy": 1,
+      "f1": 0.9024390243902439,
+      "falsePositives": 10,
+      "falseNegatives": 6,
+      "meanLineDistance": 0.0945945945945946,
+      "confidenceBrierScore": 0.11320833333333326
+    },
+    "violations": [
+      "precision 0.881 is below 0.900"
+    ],
+    "missingCases": []
+  },
+  "allAttemptsComplete": true,
+  "allContainmentComplete": true,
+  "all174InitialPromptLocalNativeSchemaHashesMatched": true,
+  "all175OwnedScientificScopesAbsent": true,
+  "actual42": "UNSTARTED_NOT_ADMITTED",
+  "solVerifierCalls": 0,
+  "pilotWriteAttempts": 0,
+  "production": "disabled",
+  "noCampaignRetry": true,
+  "actualGitHubWorkflowJob": false,
+  "host": "Local execution on physical DarwinARM64 Apple Silicon self-hosted listener host; existing Orbstack Engine",
+  "publicOriginals": [
+    {
+      "path": "campaign-receipt.json",
+      "originalBytes": 3817,
+      "originalSha256": "34c6ef9844a846daffbb6f512c77bf5fe5ab3677c0aac009a1a40dca6622e7f0",
+      "originalRetained": true
+    },
+    {
+      "path": "corpus-score.json",
+      "originalBytes": 738,
+      "originalSha256": "3aa610b5eccc7009e0f588bf853377f3720b972bd13ebbac257678d2920fbba2",
+      "originalRetained": true
+    },
+    {
+      "path": "preregistered-identities-audit.json",
+      "originalBytes": 99755,
+      "originalSha256": "1fd32299c8e857ddd34b9f0562a72dd55ff93560c1659b34bbca5011423a4a1e",
+      "originalRetained": true
+    },
+    {
+      "path": "owned-scopes-absence.json",
+      "originalBytes": 25090,
+      "originalSha256": "562a0a2e087a39b419f9654ea40aec5bc69ca14e34ec7850ef0526d2109848e7",
+      "originalRetained": true
+    },
+    {
+      "path": "sdk-control-receipt.json",
+      "originalBytes": 3213,
+      "originalSha256": "89f24af1c7d7a7f0da7e6c684e93f84cd6fdb3e6171107b1d318ed8c587185a4",
+      "originalRetained": true
+    },
+    {
+      "path": "native-control-receipt.json",
+      "originalBytes": 2090,
+      "originalSha256": "ced5f9924b543c9da6f5a83c55aa97361b63caebf4ef57c059ef4dbfeb6ad5f0",
+      "originalRetained": true
+    },
+    {
+      "path": "cli14-receipt.json",
+      "originalBytes": 16510,
+      "originalSha256": "8e30454a10336300359056488cf95d8145f6f4ef1091274dfaa4219648e943ef",
+      "originalRetained": true
+    },
+    {
+      "path": "source591-receipt.json",
+      "originalBytes": 556,
+      "originalSha256": "7e8a42f530b76c6881255d715542128922167e50ffe1325fc51d5586c7884265",
+      "originalRetained": true
+    },
+    {
+      "path": "source-global-byte-equivalence.json",
+      "originalBytes": 4231,
+      "originalSha256": "461791f1e1db74e59071cd6d56be10cbf1c488930cd7a4b051a5d786a7720174",
+      "originalRetained": true
+    },
+    {
+      "path": "preregistration-normal-commit-receipt.json",
+      "originalBytes": 2145,
+      "originalSha256": "25b2c4237c9305eda44252f68bbb81f97465994c5d830a806f8f2f734cfcfab3",
+      "originalRetained": true
+    },
+    {
+      "path": "canonical141.md",
+      "originalBytes": 65495,
+      "originalSha256": "a821cf4cef12827db77605419a6541640646c60fd098f510b91c2f2856f5632f",
+      "originalRetained": true
+    }
+  ],
+  "rawModelPromptResponseAttemptArtifacts": "Private durable bundle retained separately; no model/oracle/raw-auth content in public descriptor",
+  "fullPrivatePreregistration": "Retained locally; public descriptor identifies only the private host socket by digest",
+  "extraGzipArchivesPinned": 129,
+  "noHistoryRewrite": true
+}

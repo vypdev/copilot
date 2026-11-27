@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-23T02:53:13.665412+00:00",
+  "sourceParent": "22c94195ed38975acaade066473c5fea167ca09d",
+  "originals": [
+    {
+      "path": "decision.json",
+      "original": "sdk-admission-proc-open-causal-decision.json",
+      "bytes": 2166,
+      "sha256": "16505eb6904cf80525ec9f81e8b7087d312b83f23b6508a932cb9728a81dbf8e"
+    },
+    {
+      "path": "original-runtime-negative.json",
+      "original": "sdk-admission-runtime-attempt1/actual-sdk-runtime-admission-attempt1-receipt.json",
+      "bytes": 2248,
+      "sha256": "4336aa401e5ed51ca999bb3cf308d08a123597920ee20c52c96e4a314479a83d"
+    },
+    {
+      "path": "original-proc-contrast.json",
+      "original": "sdk-admission-runtime-attempt1/proc-open-causal-contrast-attempt1/receipt.json",
+      "bytes": 1100,
+      "sha256": "f20bc60d899c6d0d2d1d810440d2531270eaeb4d3c2e2f87ca295bbb7f1a1f4e"
+    },
+    {
+      "path": "same-test-red.log",
+      "original": "sdk-admission-proc-parent-red-attempt1.log",
+      "bytes": 1491,
+      "sha256": "f6a0ae442bd7cfe68397928972310c6164ad0a3e6e3c88809bfda3d621bbd09e"
+    },
+    {
+      "path": "controller-green.log",
+      "original": "sdk-admission-proc-parent-green-attempt2.log",
+      "bytes": 2499,
+      "sha256": "974feba44c942acea0d3dc78bf3cd8aa84f69aa25a67c7656c3b1395c40483bb"
+    },
+    {
+      "path": "sandbox-http-negative.log",
+      "original": "sdk-admission-proc-parent-green-attempt1.log",
+      "bytes": 5366,
+      "sha256": "451aee6898f219af3f383da8736e1a234540e6f99f9bd1a41328c7eca8e5bf89"
+    },
+    {
+      "path": "coverage-receipt.json",
+      "original": "sdk-admission-controller-coverage-proc-fix-attempt1/receipt.json",
+      "bytes": 4603,
+      "sha256": "74e5cb5dc5f4b1e48562dbe11f4dd87cec0b6de570142d9c8a4056c83a7927a7"
+    },
+    {
+      "path": "coverage-final.json",
+      "original": "sdk-admission-controller-coverage-proc-fix-attempt1/coverage-final.json",
+      "bytes": 17538,
+      "sha256": "b175a6535f8f678feed205971bb6f25b0ec959e976ab28028299edd80c754938"
+    }
+  ],
+  "modelCalls": 0,
+  "scientific174": "UNSTARTED",
+  "scientific42": "UNSTARTED",
+  "production": "disabled",
+  "pilotWrites": 0
+}

@@ -1,0 +1,459 @@
+{
+  "schemaVersion": 1,
+  "kind": "Post-de62 source/component and credential-free Linux process corrections; no new SDK runtime/scientific admission",
+  "parent": "de62edcbb3c1c5dc96b95d6adb53a81b63b69b1c",
+  "sourceSha256": {
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "18266b7dd053872e7edf4e8f068a81c3f630482141a3b632dec22cce24a7f41e",
+    "quality/bugbot/evidence/issue974/qualification-supervisor.cjs": "48d08c1adf64829638f5fbe1c6e6692d31ba5fb621a3136eb8c637d4e01f8318",
+    "quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile": "9668757fcc4f8beb344de2bc057aeb11e84736fde2f0003387a8e6d5ed03a90f",
+    "quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs": "8277cd975d0dcd0d4b444f767637a22d7f776b0683b2badf0386977ca4804ec2",
+    "quality/bugbot/evidence/issue974/engine-transport-components.cjs": "8316a7f0d384e1cc4e5e13d061613bde818b3f658da93a21aaf7b7604e7bf7f3",
+    "quality/bugbot/evidence/issue974/kill-failure-components.cjs": "78efeadc9f731bc3337323db4d3e55c8d0997df76c311546a2ae4ca6597883c6",
+    "quality/bugbot/evidence/issue974/init-parent-components.cjs": "c1b22dd66f24db19127cc0ed7478f8ef74df3ae22c456f3ab1bedaaa0e329343",
+    "quality/bugbot/evidence/issue974/supervisor-components.cjs": "ba6786494cf05bd8744521e9b0e1a2e3f74c6fa73d466ebbd5dc6cc742d7ac78",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "c7645b8529e88d2fe6d66d80c5ad0ce5c7676a09a0a6f3583719cf27c99cb5d2"
+  },
+  "failedKill": {
+    "originalPassed": 0,
+    "originalFailed": 2,
+    "correctedPassed": 2,
+    "correctedFailed": 0,
+    "sameAssertionBytes": true,
+    "effects": "HTTP500/lost KILL response reject pending wait; no DELETE, no stopped/removed claim; owned channels drained",
+    "transport": "actual Unix HTTP with modeled Engine/process admission and immediate test-only technical timer"
+  },
+  "reaping": {
+    "experiment": "same20-orphan inert Linux worker, old Node PID1 vs image-bound tini PID1",
+    "originalZombies": 20,
+    "correctedZombies": 0,
+    "workerStayedUid0": true,
+    "sdkImports": 0,
+    "oldSupervisorSha256": "c886a99a75e12068d1eb34dc01e2df4c420b43d2f2819c65a31bcaaddbe2d26a",
+    "newSupervisorSha256": "48d08c1adf64829638f5fbe1c6e6692d31ba5fb621a3136eb8c637d4e01f8318",
+    "nodeBase": "node@sha256:e9b5516b06baeaea9a8e65a7aec6a85fbb960a30b52b66968f2c8092b3e2a3eb",
+    "diagnosticTiniImage": "sha256:f4966973c34536d0b79ef9db92974928b20654f26299b1551e079ebeea98b121",
+    "receiptFieldClarification": "Corrected raw receipt inherits the name nodeBase for the diagnostic image identity; the exact base and owned image build are retained separately. Raw receipt bytes are unchanged.",
+    "firstSetupFailed": "OpenStdin=false, exit143 and no worker output; negative retained, not either experimental arm",
+    "threeExactOwnedContainersFreshlyAbsent": true,
+    "actualSDKOrUidDropAcceptance": false
+  },
+  "modeledComponents": {
+    "supervisorPassed": 53,
+    "initParentPassed": 10,
+    "c27IntegrationPassed": 44,
+    "componentAttempt1": "Obsolete supervisor negative pid2 fixture failed; only test fixture corrected before53+10PASS"
+  },
+  "fullSourceVerification": {
+    "completeShadowPassed": 605,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "actualFullSuite": true,
+    "firstFullAttempt": "604PASS/1FAIL from stale C28 aggregate49 vs53; source production unchanged; expected count corrected only",
+    "firstAstAttempt": "Engine95stmt/98.53line/88.72branch misses floor; supervisor0 from selecting C27 instead of owner C28. Negatives retained; thresholds unchanged.",
+    "astResults": [
+      {
+        "name": "supervisor-ast",
+        "metrics": [
+          {
+            "file": "quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+            "sourceSha256": "48d08c1adf64829638f5fbe1c6e6692d31ba5fb621a3136eb8c637d4e01f8318",
+            "summary": {
+              "lines": {
+                "total": 44,
+                "covered": 44,
+                "skipped": 0,
+                "pct": 100
+              },
+              "functions": {
+                "total": 10,
+                "covered": 10,
+                "skipped": 0,
+                "pct": 100
+              },
+              "statements": {
+                "total": 59,
+                "covered": 59,
+                "skipped": 0,
+                "pct": 100
+              },
+              "branches": {
+                "total": 36,
+                "covered": 36,
+                "skipped": 0,
+                "pct": 100
+              }
+            },
+            "gate": true
+          }
+        ]
+      },
+      {
+        "name": "engine-ast",
+        "metrics": [
+          {
+            "file": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+            "sourceSha256": "18266b7dd053872e7edf4e8f068a81c3f630482141a3b632dec22cce24a7f41e",
+            "summary": {
+              "lines": {
+                "total": 410,
+                "covered": 408,
+                "skipped": 0,
+                "pct": 99.51
+              },
+              "functions": {
+                "total": 84,
+                "covered": 81,
+                "skipped": 0,
+                "pct": 96.42
+              },
+              "statements": {
+                "total": 600,
+                "covered": 577,
+                "skipped": 0,
+                "pct": 96.16
+              },
+              "branches": {
+                "total": 266,
+                "covered": 241,
+                "skipped": 0,
+                "pct": 90.6
+              }
+            },
+            "gate": true
+          },
+          {
+            "file": "quality/bugbot/evidence/issue974/qualification-seccomp.cjs",
+            "sourceSha256": "7c77f4881d061f754725791460faebfec35da5edccb2181d75fb8a31b7970688",
+            "summary": {
+              "lines": {
+                "total": 1,
+                "covered": 1,
+                "skipped": 0,
+                "pct": 100
+              },
+              "functions": {
+                "total": 0,
+                "covered": 0,
+                "skipped": 0,
+                "pct": 100
+              },
+              "statements": {
+                "total": 1,
+                "covered": 1,
+                "skipped": 0,
+                "pct": 100
+              },
+              "branches": {
+                "total": 0,
+                "covered": 0,
+                "skipped": 0,
+                "pct": 100
+              }
+            },
+            "gate": true
+          }
+        ]
+      }
+    ]
+  },
+  "containment": "Engine.Init=false inspected, image-bundled init bytes bound by image ID; same nine-field profile, capabilities and13-rule fixed seccomp SHAfb324. Future image/new common committed technical admission required.",
+  "privacy": "Full original locator mapping retained privately; current descriptor removes old blob/path and graph associations. Older hosted copies and review hunks pending Support5044568; no full erasure claim.",
+  "historicalEvidence": "141raw65495B/a821 preserved at canonical141-historical.md behind current archive wrapper;150raw56524B/f798 retained at canonical150-historical.md. OriginalCLI14script4adf exact embedded originalintent/fullreceipt association; no rerun/receipt modification.",
+  "privateOriginalArtifacts": [
+    {
+      "file": "c27-integration-attempt1-receipt.json",
+      "bytes": 631,
+      "sha256": "a66749ff2f8ddaa28400635d0621482a2f1bd4f87a1e750a235fec3795d1dfa2"
+    },
+    {
+      "file": "c27-integration-attempt1.log",
+      "bytes": 5899,
+      "sha256": "906acbb8073e1d7e6f5dc5223cbb15db088c58aca4e51d7cb6ac7b5ffe1500b8"
+    },
+    {
+      "file": "corrected-supervisor.cjs",
+      "bytes": 3623,
+      "sha256": "48d08c1adf64829638f5fbe1c6e6692d31ba5fb621a3136eb8c637d4e01f8318"
+    },
+    {
+      "file": "diagnostic-initial-setup-container-fresh-absence-attempt1.json",
+      "bytes": 187,
+      "sha256": "4f2350f7fad42de2fa3e7658b9d447c7fe10d0cc71b20bd13da1ff2714f039bb"
+    },
+    {
+      "file": "diagnostic-owned-containers-fresh-absence-attempt1.json",
+      "bytes": 508,
+      "sha256": "9f6dcc9fd792872e475c930dd77446b35549452c5ab2543664f0faa911338838"
+    },
+    {
+      "file": "failed-kill-assertion-identity.json",
+      "bytes": 157,
+      "sha256": "2c3c81b1b27fb8f499ba4cfd688844c28d1b43903535780d49b5cfbe4bba860e"
+    },
+    {
+      "file": "failed-kill-corrected-green.json",
+      "bytes": 248,
+      "sha256": "ab47b96915a545c9d3e1e89610837351cb44934221165db9de8d64548b644cc4"
+    },
+    {
+      "file": "failed-kill-corrected-green.log",
+      "bytes": 234,
+      "sha256": "b8bfa862451f9fd414d9c595032b5f785ab28a4859674de1650dc1cc20939ef2"
+    },
+    {
+      "file": "failed-kill-original-red.json",
+      "bytes": 289,
+      "sha256": "c81ae5de6e0f8b8d39c2082a69a7c26d647b759e7d8adb3256d1934726f39dfe"
+    },
+    {
+      "file": "failed-kill-original-red.log",
+      "bytes": 628,
+      "sha256": "d90d624e747ee18ffbe7edd57159947abba893d582ef3991b42c3e041aba8de8"
+    },
+    {
+      "file": "full-source-verification-attempt1/complete-shadow.log",
+      "bytes": 71379,
+      "sha256": "a023cb9ef12c1ac34914224e761c6612911e73e5fa079f47c1ccb8b0cff52658"
+    },
+    {
+      "file": "full-source-verification-attempt1/engine/coverage-final.json",
+      "bytes": 96559,
+      "sha256": "491f91875da2d3dc8ed7c99e138f90e96aa96281e0a78fbf739039885d257f3f"
+    },
+    {
+      "file": "full-source-verification-attempt1/engine/receipt.json",
+      "bytes": 21283,
+      "sha256": "a407e9228d3ac6bbb3976a46184a595a3323b73f049d843b8468476529864406"
+    },
+    {
+      "file": "full-source-verification-attempt1/engine-ast.log",
+      "bytes": 6557,
+      "sha256": "0a81b17b57ad00c791bc8b37f6cba9968b695c120c2230821f3f419e89bba258"
+    },
+    {
+      "file": "full-source-verification-attempt1/receipt.json",
+      "bytes": 4259,
+      "sha256": "5e9d05ca34b76749b0ea2b90d0a206461937f3a583c1033baa685aa8e4c98ccc"
+    },
+    {
+      "file": "full-source-verification-attempt1/supervisor/coverage-final.json",
+      "bytes": 10434,
+      "sha256": "525e11bcf1559dcfb9d11b8fac89720b88a1c7c938b3908aa2798d7127bb5a79"
+    },
+    {
+      "file": "full-source-verification-attempt1/supervisor/receipt.json",
+      "bytes": 1126,
+      "sha256": "49a805947a3185bba24d14f87c47dc15efc4c73b9b052ad965d0fc985d4080a1"
+    },
+    {
+      "file": "full-source-verification-attempt1/supervisor-ast.log",
+      "bytes": 6398,
+      "sha256": "eecdebdc3b058079287c17568b09855c906a3d6a506d2f9a131accb016a67aa6"
+    },
+    {
+      "file": "full-source-verification-attempt2/complete-shadow.log",
+      "bytes": 70541,
+      "sha256": "970282ee57a8f9c4ea58183bab84736d68e9fa5c205eb1806f90d8611e1c2cb8"
+    },
+    {
+      "file": "full-source-verification-attempt2/engine/coverage-final.json",
+      "bytes": 96710,
+      "sha256": "cff4319be467e7096f6423fe59cfb9027692d72239881e5429e186e842e25c4c"
+    },
+    {
+      "file": "full-source-verification-attempt2/engine/receipt.json",
+      "bytes": 23986,
+      "sha256": "dd5692b154dfefe6c6559d500bfb042ee98c0fe2a626a5d01c67f995b93f382d"
+    },
+    {
+      "file": "full-source-verification-attempt2/engine-ast.log",
+      "bytes": 14270,
+      "sha256": "eb7e5ee74f7efa4c5603a09ad525b8d81968848f4f275b4ff28152b1673e506e"
+    },
+    {
+      "file": "full-source-verification-attempt2/receipt.json",
+      "bytes": 4953,
+      "sha256": "24f42e977a60cff61ab4bf41b89cda644439a4df7108b5f47e92bb654ec18339"
+    },
+    {
+      "file": "full-source-verification-attempt2/supervisor/coverage-final.json",
+      "bytes": 10599,
+      "sha256": "88d33599070a7bac73e0d53df615bbc9b023dccd7257214f15bd16f7e76bb9f8"
+    },
+    {
+      "file": "full-source-verification-attempt2/supervisor/receipt.json",
+      "bytes": 9724,
+      "sha256": "934594d7c62be7e9731b91b76cb2082fb2e7f51aad89b15fb7094ef7c225b7d8"
+    },
+    {
+      "file": "full-source-verification-attempt2/supervisor-ast.log",
+      "bytes": 5028,
+      "sha256": "d6554aa78a524c348b27772a14d04a12020e90744c8367fed68f4c551b457db4"
+    },
+    {
+      "file": "init-parent-and-supervisor-components-attempt1-receipt.json",
+      "bytes": 284,
+      "sha256": "32a708a12239ed59d5e9e21fd0fe564bf522849b2d4c134445c54b3562e55b43"
+    },
+    {
+      "file": "init-parent-and-supervisor-components-attempt1.log",
+      "bytes": 5539,
+      "sha256": "b3d5ceeea10da3680a973599a7268f708f4c20c5b693cac2a49d39b4d361abf3"
+    },
+    {
+      "file": "init-parent-and-supervisor-components-attempt2-receipt.json",
+      "bytes": 759,
+      "sha256": "2db9b60d013edd71d6c4abd22665cb00394f930b1ded98f9ff2b549bbe04051f"
+    },
+    {
+      "file": "init-parent-and-supervisor-components-attempt2.log",
+      "bytes": 5376,
+      "sha256": "72a74947789da0c905d574bdbf3abcd6c00c39e0b45f93b59b9e9d72fe64b0b5"
+    },
+    {
+      "file": "original-source/quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs",
+      "bytes": 34432,
+      "sha256": "05f8507de1ccef7e5e93deabfe3e0727eb6b163bf24a551120dfb7c618c44191"
+    },
+    {
+      "file": "original-source/quality/bugbot/evidence/issue974/engine-transport-components.cjs",
+      "bytes": 23275,
+      "sha256": "34d5a086d8d10837dbf3bce75eff695b1f74f8ee608d39beabba4e43ae2f255e"
+    },
+    {
+      "file": "original-source/quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "bytes": 40023,
+      "sha256": "97017cbf8a44ba11fc9c5757e33a1177a1e578e0e56b7f1220a377f781d21fed"
+    },
+    {
+      "file": "original-source/quality/bugbot/evidence/issue974/qualification-supervisor.cjs",
+      "bytes": 3295,
+      "sha256": "c886a99a75e12068d1eb34dc01e2df4c420b43d2f2819c65a31bcaaddbe2d26a"
+    },
+    {
+      "file": "original-source/quality/bugbot/evidence/issue974/qualification.test.cjs",
+      "bytes": 67657,
+      "sha256": "1de799df6b8a2e138d85be12c857cb547714b74e3bf9a7acc320e085ba00039b"
+    },
+    {
+      "file": "original-source.json",
+      "bytes": 931,
+      "sha256": "6c4916e9686a22967298a15cc8d6603ce3e8897dee358cb20f9e369e71e03c7e"
+    },
+    {
+      "file": "reaper-corrected-native-attempt1-after.json",
+      "bytes": 19728,
+      "sha256": "c50656a7cf809beb91c21881d809749156f3a0452fa56d4ea8e61f0cddbbdeb2"
+    },
+    {
+      "file": "reaper-corrected-native-attempt1-before.json",
+      "bytes": 19181,
+      "sha256": "553493e0212f59bf6c0073df5d4ad3784a580e8c51a617692e9b326538fb03c2"
+    },
+    {
+      "file": "reaper-corrected-native-attempt1-intent.json",
+      "bytes": 1704,
+      "sha256": "92cc29e79bc74f9c250f616b290109f97d1894465d79619c2eb38eae31be9a11"
+    },
+    {
+      "file": "reaper-corrected-native-attempt1-node-base-inspect.json",
+      "bytes": 2398,
+      "sha256": "f8a09f799ed693a3793487c9c919723a3470c2b6feefef378e7c3a879bddbace"
+    },
+    {
+      "file": "reaper-corrected-native-attempt1-receipt.json",
+      "bytes": 1168,
+      "sha256": "8a895dd7c5caebd2012eaa729650a7e00ef39dcabb12457fd3b6e0e631aacbd9"
+    },
+    {
+      "file": "reaper-diagnostic-image-build-attempt1-receipt.json",
+      "bytes": 861,
+      "sha256": "672798be9f10cbd07f846b98a371e4a3f90b03a00291700d373a2cd3466608c0"
+    },
+    {
+      "file": "reaper-diagnostic-image-build-attempt1.log",
+      "bytes": 2919,
+      "sha256": "23fed41eb8a30afdf4b3f8ce11e189a09cb63173bff0e33fa2224d5b05f5e6c5"
+    },
+    {
+      "file": "reaper-node-base-inspect.json",
+      "bytes": 2362,
+      "sha256": "9c4aca3f1022f806d2d6cee1e87cff82dd0f43a0b8a850cecc625519042bff76"
+    },
+    {
+      "file": "reaper-original-native-attempt1-after.json",
+      "bytes": 19721,
+      "sha256": "040cf688f67788a4198b6466503804ab0dff97d593e61700c8652ae9da086e28"
+    },
+    {
+      "file": "reaper-original-native-attempt1-before.json",
+      "bytes": 19172,
+      "sha256": "18e9d476e85395a7b0ab4ee35d577ccd174473c7487e55a1db8e67e211eeea2c"
+    },
+    {
+      "file": "reaper-original-native-attempt1-intent.json",
+      "bytes": 1713,
+      "sha256": "6695d3da77ce730226616962eddfe5ed44f488c7103109d70199af2f2dfecae9"
+    },
+    {
+      "file": "reaper-original-native-attempt1-negative.json",
+      "bytes": 427,
+      "sha256": "60b58f84d1a00b6f5bf9ee400bbe0481a2c95bd282b250f3ddf1357483aceef9"
+    },
+    {
+      "file": "reaper-original-native-attempt2-after.json",
+      "bytes": 19716,
+      "sha256": "388da14e9d86aefebfc9534388cc9e10cf803dee9989e3a9674f127f845bff61"
+    },
+    {
+      "file": "reaper-original-native-attempt2-before.json",
+      "bytes": 19169,
+      "sha256": "759ebc836d8fdb3c6353292150ff68857f58c1f7263461281d31a4f3acb20b02"
+    },
+    {
+      "file": "reaper-original-native-attempt2-intent.json",
+      "bytes": 1734,
+      "sha256": "624d1ff80ca1ea1427ef140bdc3e819993444c6246caf0a58c590101f464e851"
+    },
+    {
+      "file": "reaper-original-native-attempt2-node-base-inspect.json",
+      "bytes": 2362,
+      "sha256": "9c4aca3f1022f806d2d6cee1e87cff82dd0f43a0b8a850cecc625519042bff76"
+    },
+    {
+      "file": "reaper-original-native-attempt2-receipt.json",
+      "bytes": 1340,
+      "sha256": "20fd8ac6cf4783fa0072e7171585a63b553b59c56c3cc058cd3a3beefe610a2e"
+    },
+    {
+      "file": "reaper-probe-worker.cjs",
+      "bytes": 2238,
+      "sha256": "fbc563d8c5b07bc5931d6029df283d0b2cfca502838320e04583d29d15a4559d"
+    },
+    {
+      "file": "run-reaper-corrected-once.py",
+      "bytes": 4945,
+      "sha256": "916da62543ad907f16194514f9c4fff11fd3132a471fbce8ec23e59f8d072177"
+    },
+    {
+      "file": "run-reaper-original-attempt2-once.py",
+      "bytes": 4923,
+      "sha256": "a3378907f0d89b489cee9987104371f5c0e15b01a1dba8900f696e7f73090b9f"
+    },
+    {
+      "file": "run-reaper-original-once.py",
+      "bytes": 4600,
+      "sha256": "9c4cdf1b496aead609c890d758e30d3aa365bd92efbc7aed8a8ead32ab0c907c"
+    }
+  ],
+  "currentHeadNativeAcceptance": false,
+  "newSdkRuntimeAdmission": false,
+  "actual174": "COMPLETE_NEGATIVE_UNCHANGED",
+  "actual42": "UNSTARTED_NOT_ADMITTED",
+  "qualifiedProfiles": [],
+  "newScientificCalls": 0,
+  "pilotWrites": 0,
+  "production": "disabled",
+  "installation": "NOT_EXECUTED"
+}

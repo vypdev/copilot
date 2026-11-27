@@ -1,0 +1,17 @@
+{
+  "id": "c71ec46767707dccaa8349a7d7ad9dd4ea367d93cef7de39b7dfa4ce029e29ef",
+  "state": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 137,
+    "Error": "",
+    "StartedAt": "2026-11-21T03:57:25.602441423Z",
+    "FinishedAt": "2026-11-21T03:57:25.721550182Z"
+  },
+  "acceptanceEvidence": false
+}

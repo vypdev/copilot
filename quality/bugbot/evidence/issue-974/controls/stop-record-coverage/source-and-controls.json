@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T22:54:41.917308+00:00",
+  "parent": "81b9983743fed26ca4d4d870926dc92542dfd0be",
+  "finding": "PRRT_kwDONSeBW866SsVR",
+  "sourceHashes": {
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "558c7e8ecd36476ad49e6f9cce9afc041e2665783d66ebed4b563ed0d1517ac5"
+  },
+  "testHelperHashes": {
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "a26eff35f468a744f18374b12bf6605dc70232e7855fa783c3466e823754b5b4",
+    "quality/bugbot/evidence/issue974/engine-transport-components.cjs": "b6d75eec868321f047a1e1c6f1078295c9e0970421b53652ec3abaaa26f6ea0e",
+    "quality/bugbot/evidence/issue974/supervisor-components.cjs": "777e153bda4585dcf91cb03505e86e188eb82b453566ea1a38858a464c5e2e10",
+    "quality/bugbot/evidence/issue974/corpus-collector-components.cjs": "ddbf23d902bc7b283cee00932447f7b8681df574e9c424a9c991dc2a4d8f3690",
+    "quality/bugbot/evidence/issue974/corpus-worker-components.cjs": "3874d465fb616651324c20661fee17f705e0f0bd562ecabd33d108bb69b84e3e",
+    "quality/bugbot/evidence/issue974/launcher-components.cjs": "d74d76c8393d1f5fba61a8e3b6ea5703d57ced1c697a7e576524a890e51066f5",
+    "quality/bugbot/evidence/issue974/attempt-components.cjs": "5e7773031d79085da569fa78fc1d6db2d29f136593ec708079901b3eaf6106c1",
+    "quality/bugbot/evidence/issue974/implementation-components.cjs": "8188ef5b2be118ae09fafc93d30d147c04e03efc68ea0ce25009a8b926eaf234",
+    "quality/bugbot/evidence/issue974/full-review-fault-components.cjs": "d2be1ea46c49da922c56395334d84db54a5f9d00bd65fbd84dee456b66dce194",
+    "quality/bugbot/evidence/issue974/full-review-lifecycle-components.cjs": "4f87bba74e3ecdfa3ff08863a00815091a3a7cde74661200f4196e08249f599a",
+    "quality/bugbot/evidence/issue974/review-driver-components.cjs": "a1ca260ade2154b097c10a9be7abd932b106c20bba0fbfa4dc54c83160e85b1f",
+    "quality/bugbot/evidence/issue974/component-coverage-gate-components.cjs": "37c51f2060cc2863d3f7d72550ce216e522f7afb783be7887b07978ba8a1ae0f",
+    "quality/bugbot/evidence/issue974/stop-record-components.cjs": "5cf256c13b07d491957b05ac153648bc85a266a25de8372ec6cfd8dd767e4b04",
+    "quality/bugbot/evidence/issue-974/controls/engine-transport-coverage/coverage.cjs": "da78f3b8f78df5a124fac940b546227dd8f6162343ca8a7827646c5629af5f8d"
+  },
+  "fullShadowCommand": {
+    "exit": 0,
+    "passed": 459,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "focused": {
+    "redPassed": 2,
+    "redFailed": 10,
+    "greenPassed": 12,
+    "greenFailed": 0
+  },
+  "selectedControlsPassed": 13,
+  "measuredEngineModuleGateSatisfied": true,
+  "globalChangedModuleGateSatisfied": false,
+  "coverage": [
+    {
+      "file": "quality/bugbot/evidence/issue974/operation-containment.cjs",
+      "sourceSha256": "558c7e8ecd36476ad49e6f9cce9afc041e2665783d66ebed4b563ed0d1517ac5",
+      "summary": {
+        "lines": {
+          "total": 266,
+          "covered": 266,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 47,
+          "covered": 44,
+          "skipped": 0,
+          "pct": 93.61
+        },
+        "statements": {
+          "total": 348,
+          "covered": 344,
+          "skipped": 0,
+          "pct": 98.85
+        },
+        "branches": {
+          "total": 163,
+          "covered": 152,
+          "skipped": 0,
+          "pct": 93.25
+        }
+      },
+      "gate": true
+    }
+  ],
+  "testHashProof": "13 captured before loading and unchanged at exit. Earlier241PASS AST with no pre-load test hashes retained as separate old-style measurement; the focused13 execution supplies the current proof.",
+  "preflightNegative": "A metadata enhancement initially referenced nonexistent supervisor-transport-components.cjs; wrapper write did not occur. Corrected supervisor-components.cjs, exact previous wrapper and diagnostic retained.",
+  "fix": "Preserve first stop-record failure; still end owned lifetime, settle start/wait, inspect exact identity/stopped state and settle escalation. Rethrow journal error, never fabricate completed work or durable proof.",
+  "boundaries": "Actual private journal EISDIR and Unix HTTP; Engine/provenance/supervisor/timer behavior explicitly modeled. No Docker, native namespace, SDK/model or credential/read-scope admission claimed.",
+  "cases": "cancelled/failed, persistent/recovered journal, normalEOF/escalation, pre-start and later confirmation-record errors.",
+  "sourceContractUnchanged": [
+    "scope ownership/image/mount/grant fences",
+    "explicit stop reasons",
+    "existing post-stop escalation interval",
+    "no investigation timeout/retry/turn/read limits",
+    "corpora/measurement plan/35logicalIDs/selected SDD/SDK/four application bundles"
+  ],
+  "bundles": {
+    "api": {
+      "bytes": 1127424,
+      "sha256": "1680c60046aa3937ff940f72b605e0cc36c37706d6e9c7e5d1f980ff29ada68c"
+    },
+    "cli": {
+      "bytes": 8350055,
+      "sha256": "52bade17c4ad39eb06a034e3e6e48889932aff07cd83baa24faa7bff163520f2"
+    },
+    "github_action": {
+      "bytes": 11109171,
+      "sha256": "5fa8301d2c57269edcf833ffc1dae9ca9a89fff234fe943fed3c18d2053121ac"
+    },
+    "deployment_recovery": {
+      "bytes": 2035151,
+      "sha256": "8ea861695b9ddcfb15f57be466c4b3ddd72c4202391ec733a4abe6f9b7ab8b3a"
+    }
+  },
+  "archives": 20,
+  "actual174": "unstarted",
+  "actual42": "unstarted",
+  "qualificationModelCalls": 0,
+  "pilotWriteAttempts": 0,
+  "qualifiedProfile": null,
+  "production": "disabled",
+  "normalHooksAndFinalNative": "required",
+  "remaining": "Other valid attach/owner-loss/credential/read-scope/durability findings, global drivers and fresh exact-tuple nativeC32-C35 remain unmet."
+}

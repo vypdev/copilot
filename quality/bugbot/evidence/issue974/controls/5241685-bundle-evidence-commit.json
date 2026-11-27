@@ -1,0 +1,21 @@
+{
+  "startedAt": "2026-11-20T18:30:53.277814+00:00",
+  "finishedAt": "2026-11-20T18:37:50.496180+00:00",
+  "exitCode": 0,
+  "headBefore": "f06e37e197d301aef7b04319c35362177ecbf72e",
+  "headAfter": "5241685e8089c9dace4f829214f694126936525d",
+  "statusAfter": "",
+  "ordinaryHooks": true,
+  "sourceChanged": false,
+  "qualificationCalls": 0,
+  "rawBytes": 536133,
+  "rawSha256": "4bc15dc6f1ce42eb76368e212e8029980834ae9ef1437dc67c51ee02c706a7ec",
+  "build": "PASS",
+  "jestSuites": 944,
+  "jestPassed": 18703,
+  "oldJestSkipped": 35,
+  "jestSeconds": 343.126,
+  "lint": "PASS",
+  "log": "../../issue-974/controls/5241685-bundle-evidence-commit.log.gz",
+  "compressedSha256": "58853dba102180256befcc577d924c72c424b96a940a9aeb1d389c5666f07816"
+}

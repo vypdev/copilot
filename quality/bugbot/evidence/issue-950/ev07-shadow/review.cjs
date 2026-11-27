@@ -7,7 +7,7 @@ const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
-const { pinnedGit, admitQualificationModules } = require('../execution-provenance.cjs');
+const { pinnedGit, admitQualificationModules, bootstrapOperation } = require('../execution-provenance.cjs');
 const { qualificationProvenance, requirePinnedExecution, preparePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
@@ -20,12 +20,12 @@ const snapshot = (source, value, count = 0) => ({
 const args = ['diff', '--no-ext-diff', '--no-textconv', '--no-renames'];
 const originalPullNumbers = { X1: 24, P1: 28, J1: 28 };
 
-function prepareDetector(planner, request, log, selected = plan) {
-    const execution = preparePinnedExecution(planner, request, selected.runtime);
-    return admitPreparedDetector(execution, log, selected);
+function prepareDetector(planner, request, log, selected = plan, prepared = () => undefined) {
+    const execution = preparePinnedExecution(planner, request, selected.runtime, selected.lifecycle);
+    return admitPreparedDetector(execution, log, selected, prepared);
 }
 
-function admitPreparedDetector(execution, log, selected = plan) {
+function admitPreparedDetector(execution, log, selected = plan, prepared = () => undefined) {
     try {
         const runtimeProof = requirePinnedExecution(execution, selected.runtime);
         const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
@@ -33,6 +33,10 @@ function admitPreparedDetector(execution, log, selected = plan) {
         assert.deepEqual(flags, { model: selected.detector.model, modelProvider: selected.detector.modelProvider,
             reasoningEffort: selected.detector.effort, sandbox: 'read-only' });
         log({ event: 'detector-admitted', flags, runtime: execution.runtimeContract.version, runtimeProof });
+        prepared({ flags, runtimeProof, runtimeContract: execution.runtimeContract,
+            workspaceMode: execution.workspaceMode, output: execution.output,
+            qualificationInvestigation: execution.qualificationInvestigation === true,
+            schemaArtifactSha256: execution.artifacts?.find(item => item.purpose === 'output-schema')?.sha256 ?? null });
         return execution;
     } catch (error) {
         fs.rmSync(execution.runtimeDirectory, { recursive: true, force: true });
@@ -82,7 +86,10 @@ function readSubject(id, checkout) {
 }
 
 async function run(checkout, id, repetition, output, preflight = false) {
-    require('../execution-provenance.cjs').requireBootstrapAdmission(path.resolve(__dirname, '../../../../..'));
+    const root = path.resolve(__dirname, '../../../../..');
+    require('../execution-provenance.cjs').requireBootstrapAdmission(root);
+    const contained = bootstrapOperation(root);
+    assert(!plan.containment || contained, 'contained review requires its private whole-operation dispatch');
     const provenance = qualificationProvenance(plan);
     const implementation = provenance.implementation;
     admitQualificationModules(path.resolve(__dirname, '../../../../..'));
@@ -107,7 +114,11 @@ async function run(checkout, id, repetition, output, preflight = false) {
     const subject = readSubject(id, checkout);
     assert.equal(git(checkout, 'status', '--porcelain'), '');
     fs.writeFileSync(output, '', { flag: 'wx', mode: 0o600 });
-    const log = row => fs.appendFileSync(output, JSON.stringify(row) + '\n');
+    const log = row => {
+        const descriptor = fs.openSync(output, 'a', 0o600);
+        try { fs.writeFileSync(descriptor, JSON.stringify(row) + '\n'); if (plan.schemaVersion === 2) fs.fsyncSync(descriptor); }
+        finally { fs.closeSync(descriptor); }
+    };
     const preregistration = selectedPlanProvenance();
     log({ event: 'start', subject, repetition, implementation, provenance, plan: preregistration.sha256, preregistration, startedAt: new Date().toISOString() });
     const repository = { owner: 'vypdev', name: id.startsWith('U') ? 'ha-ui' : 'domus' };
@@ -154,24 +165,48 @@ async function run(checkout, id, repetition, output, preflight = false) {
     assert.deepEqual(operation.analysis.agentConfiguration, plan.detector);
     process.chdir(checkout);
     const planner = new AgentExecutionPlanner();
+    const cancel = contained ? { signal: contained.signal, abort: contained.abort } : new AbortController();
+    let detectorCli;
+    if (!preflight && plan.schemaVersion === 2) {
+        const artifactDirectory = output + '.attempts';
+        fs.mkdirSync(artifactDirectory, { mode: 0o700 });
+        detectorCli = require('../../issue974/attempt-ledger.cjs').createRecordedCli({
+            caseId: id + ':r' + repetition, record: log, artifactDirectory, cancellation: cancel,
+            recordObservation: fact => log({ event: 'detector', fact }),
+            createClient: (observer, prepared) => new AgentCliClient({
+                prepare: request => prepareDetector(planner, request, log, plan, prepared),
+            }, observer),
+        });
+    } else detectorCli = new AgentCliClient({ prepare: request => prepareDetector(planner, request, log) },
+        { observe(fact) { log({ event: 'detector', fact }); } });
     const detector = preflight ? { query: async ({ prompt }) => ({
         outputLocale: 'en-US', findings: [], resolved_findings: [],
         partition_id: prompt.match(/Return partition_id exactly as `([^`]+)`/u)?.[1],
         reviewed_head_sha: subject.head,
     }) }
-        : createFindingsQueryPort({ cli: new AgentCliClient({
-            prepare: request => prepareDetector(planner, request, log),
-        }, { observe(fact) { log({ event: 'detector', fact }); } }) });
-    const cancel = new AbortController();
+        : createFindingsQueryPort({ cli: detectorCli });
     process.once('SIGINT', () => cancel.abort());
     process.once('SIGTERM', () => cancel.abort());
     const evidenceToken = process.env.COPILOT_EVIDENCE_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
     assert(preflight || evidenceToken, 'read-only GitHub evidence credential unavailable');
     const ci = preflight ? undefined : createGitHubBugbotCiReader({ owner: repository.owner, repo: repository.name },
         getOctokit(evidenceToken).rest.actions);
+    let verifierTransport = askManagedBugbotShadowTurn;
+    if (!preflight && plan.schemaVersion === 2) {
+        const artifactDirectory = output + '.verifier-attempts';
+        fs.mkdirSync(artifactDirectory, { mode: 0o700 });
+        verifierTransport = require('../../issue974/attempt-ledger.cjs').createRecordedVerifier({
+            caseId: id + ':r' + repetition, record: log, artifactDirectory, transport: askManagedBugbotShadowTurn,
+            admitRuntime(invocation) {
+                return requirePinnedExecution({ executable: invocation.executable, launcherArgv: invocation.prefixArgs,
+                    ...(invocation.prefixArgs.length && { launcherSha256: hash(fs.readFileSync(invocation.prefixArgs[0])) }),
+                    runtimeContract: { version: plan.runtime.codex } }, plan.runtime);
+            },
+        });
+    }
     const verifier = createInstalledBugbotShadowVerifier(repository, checkout, async turn => {
         assert.deepEqual(turn.configuration, plan.verifier);
-        const result = await askManagedBugbotShadowTurn(turn);
+        const result = await verifierTransport(turn);
         log({ event: 'verifier', candidate: turn.candidateId, fact: result.fact });
         return result;
     }, ci);

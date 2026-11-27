@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "node": "v24.20.0",
+  "nodeSha256": "9d050fd455b56426e25d4d603c7c501cbb2630348e836cf221dcce748e90588a",
+  "execArgv": [
+    "--no-sparkplug"
+  ],
+  "availableParallelism": 12,
+  "files": [
+    "quality/bugbot/evidence/issue-950/qualification-bootstrap.test.cjs",
+    "quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs",
+    "quality/bugbot/evidence/issue-950/normal-flow-shadow/config.test.cjs",
+    "quality/bugbot/evidence/issue-950/normal-flow-shadow/paths.test.cjs",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.test.cjs",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/review-runtime.test.cjs",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/score-review.test.cjs",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/plan.test.cjs",
+    "quality/bugbot/evidence/issue-950/status-card-publication/publisher.test.cjs",
+    "quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs",
+    "quality/bugbot/evidence/issue-980/packaged-trust.test.cjs",
+    "quality/bugbot/evidence/issue-985/corpus-revision.test.cjs",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs",
+    "quality/bugbot/evidence/issue974/session-transport.test.cjs"
+  ],
+  "baseline": {
+    "name": "original-default",
+    "flags": [],
+    "width": 11,
+    "peak": 11,
+    "started": 14,
+    "finished": 14,
+    "code": 0,
+    "signal": null
+  },
+  "fixed": {
+    "name": "fixed-two-workers",
+    "flags": [
+      "--test-concurrency=2"
+    ],
+    "width": 2,
+    "peak": 2,
+    "started": 14,
+    "finished": 14,
+    "code": 0,
+    "signal": null
+  },
+  "limitation": "Inert local file-worker barriers prove fanout, not original Linux host load, timeout causation or qualification.",
+  "originalNativeCI": {
+    "head": "7d6afcdb4b6a143e435bbc47b7e94d500442985e",
+    "run": 46065083098,
+    "testsJob": 140728338908,
+    "rawBytes": 3207803,
+    "rawSha256": "276c841e25400a7e1522e6070897cf57ecee63ee9380ca67db34e72bfaab5a7f",
+    "staticJob": 140728338675,
+    "staticRawBytes": 154672,
+    "staticRawSha256": "c2f906a8fc6ebf6cee51698043efa9aa8a08fb02afe28dd07c8adc4288598d40",
+    "staticShadowDurationMs": 333700.881124,
+    "staticShadowTests": 653,
+    "originalCauses": "Git init ETIMEDOUT at 4000ms; grouped malformed-file test exceeded Jest5000ms. Host pressure/operation timing not captured."
+  },
+  "sharedHost": "Maintainer confirmed all four Ubuntu runners share one server on2026-11-27.",
+  "newScientificOrTechnicalSDKQueries": 0,
+  "firstControlFailure": "Initial FSEvents watcher emitted EMFILE; original attempt retained privately and not scored. Marker-state polling replaces watchers; first attempt has no surviving owned Node processes.",
+  "sourceSha256": {
+    "package.json": "20a5012c00c4a4773b09bfc830cd11310c31186158ec2efe785ab01d3b012302",
+    "quality/bugbot/evidence/issue-974/controls/shared-host-worker-fanout/worker-control.cjs": "e66ed85cbdbb88fa77cee2854e55868248cd8ca8978f7447ff99de429fb46524"
+  },
+  "localStaticValidation": "typecheck/lint/specification/docs-page/documentation/agent-guide/workflow PASS; catalog regenerated",
+  "fullShadow": {
+    "validatedSourceCommit": "223e2eb839cb9ebdd1c9f47242893ae3b5b4564a",
+    "passed": 653,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "durationMs": 326755.211334,
+    "rawBytes": 74725,
+    "rawSha256": "c8c386db577bbc693ead94aef57259b922e55b4609137e75dc76d0143c2addc4",
+    "scope": "Complete local model-free controls, not native Linux/SDK admission or qualification"
+  },
+  "focusedSDK": {
+    "suites": 2,
+    "passed": 130,
+    "failed": 0,
+    "skipped": 0,
+    "originalTestBodiesAndDeadlines": "unchanged",
+    "scope": "local, not original Linux host or native CI acceptance"
+  },
+  "normalHooks": {
+    "validatedSourceCommit": "223e2eb839cb9ebdd1c9f47242893ae3b5b4564a",
+    "suitesPassed": 970,
+    "testsPassed": 20010,
+    "historicalSkipped": 35,
+    "rawBytes": 547378,
+    "rawSha256": "8d06fbd5da438a0f39abb0bd260b4a962ea0f06cb2dd88278cbef98cbc468730",
+    "fourSdkBundlesByteIdentical": true
+  },
+  "delivery": {
+    "specifications": "PASS",
+    "documentation": "PASS",
+    "sdkBuildIdentity": "PASS",
+    "extension": "PASS_AFTER_REGENERATING_STALE_GENERATED_OUTPUT",
+    "npmContents": "PASS",
+    "extractedCliPackageSmoke": "PASS",
+    "initialStaleArtifactFailureRetained": true,
+    "installationClaim": false
+  }
+}

@@ -4,7 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { BugbotShadowCandidate, BugbotShadowResult } from '../../../application/ports/bugbot_shadow_verification_ports';
 import type { AgentConfiguration } from '../../../domain/agent';
-import { createPinnedBugbotShadowVerifier } from '../shadow_verification_adapter';
+import { askManagedBugbotShadowTurn, createPinnedBugbotShadowVerifier } from '../shadow_verification_adapter';
+import * as executableInvocation from '../../agents/agent_executable_invocation';
+import { withQualificationOperationScope } from '../../agents/qualification_operation_scope';
+import type { QualificationOperationScope, QualificationOperationStopped } from '../../../application/ports/qualification_operation_scope_ports';
 import { inspectCursorVerifierCatalog, inspectOpenCodeVerifierCatalog } from '../verifier_model_catalog';
 import { createInstalledBugbotShadowVerifier } from '../installed_bugbot_shadow_adapter';
 
@@ -14,6 +17,64 @@ jest.mock('node:child_process', () => {
 });
 
 const configuration: AgentConfiguration = { provider: 'codex', modelProvider: 'openai', model: 'gpt-6.1-sol', effort: 'xhigh' };
+
+jest.mock('../shadow/session.cjs', () => {
+    const actual = jest.requireActual('../shadow/session.cjs');
+    return { ...actual, ask: jest.fn(actual.ask) };
+});
+const session = require('../shadow/session.cjs') as { ask: jest.Mock };
+
+describe('managed verifier operation termination', () => {
+    const request = () => ({ cwd: '/fixture', configuration, candidateId: 'candidate', prompt: 'fixture prompt', schema: { type: 'object' } });
+    beforeEach(() => {
+        jest.spyOn(executableInvocation, 'resolveAgentExecutablePath').mockReturnValue(process.execPath);
+        jest.spyOn(executableInvocation, 'validateResolvedAgentInvocation').mockReturnValue({ executable: process.execPath, prefixArgs: [] });
+        session.ask.mockReset();
+    });
+    afterEach(() => {
+        jest.restoreAllMocks(); session.ask.mockImplementation(jest.requireActual('../shadow/session.cjs').ask);
+    });
+
+    it('keeps ordinary calls unscoped and reports the actual runtime before the transport starts', async () => {
+        const admit = jest.fn(), invoke = jest.fn();
+        session.ask.mockImplementation(input => {
+            expect(admit).toHaveBeenCalledWith({ executable: process.execPath, prefixArgs: [] });
+            expect(input.runtime.onTermination).toBeUndefined();
+            input.onInvocation({ model: configuration.model });
+            return Promise.resolve({ fact: { failure: null } });
+        });
+        await expect(askManagedBugbotShadowTurn({ ...request(), onRuntimeAdmission: admit, onInvocation: invoke }))
+            .resolves.toMatchObject({ fact: { failure: null } });
+        expect(session.ask).toHaveBeenCalledTimes(1); expect(invoke).toHaveBeenCalledWith({ model: configuration.model });
+        session.ask.mockClear();
+        await expect(askManagedBugbotShadowTurn({ ...request(), onRuntimeAdmission() { throw new Error('private admission diagnostic'); } }))
+            .resolves.toEqual({ fact: { failure: 'provider-runtime-unavailable' } });
+        expect(session.ask).not.toHaveBeenCalled();
+    });
+
+    it.each([['unexpected-provider-tool', 'e'], ['investigation-canceled', 'f'], ['ledger-callback-failed', '9']])(
+        'stops the exact complete operation before accepting a verifier result: %s', async (code, namespace) => {
+            const c = new AbortController(), scopeId = namespace.repeat(64);
+            const identity = { ownerId: 'a'.repeat(64), operationId: `managed-verifier-fixture-${code}`, planSha256: 'b'.repeat(64),
+                implementation: 'c'.repeat(40), imageSha256: 'd'.repeat(64), purpose: 'native-control' as const };
+            let confirm!: (proof: QualificationOperationStopped) => void;
+            const stopped = new Promise<QualificationOperationStopped>(resolve => { confirm = resolve; });
+            const stop = jest.fn(() => confirm({ identity, scopeId, namespaceInitStopped: true }));
+            const port: QualificationOperationScope = { identity, scopeId, signal: c.signal, stopped, requestStop: stop };
+            const diagnostic = jest.fn(() => { if (code === 'ledger-callback-failed') throw new Error('private ledger failure'); });
+            session.ask.mockImplementation(input => {
+                input.runtime.onTermination(code);
+                return Promise.resolve({ fact: { failure: code } });
+            });
+            await expect(withQualificationOperationScope(port, async () => askManagedBugbotShadowTurn({
+                ...request(), signal: c.signal, onTermination: diagnostic,
+            }))).rejects.toThrow('exact live owned operation scope');
+            expect(stop).toHaveBeenCalledTimes(1);
+            expect(stop).toHaveBeenCalledWith(code === 'investigation-canceled' ? 'cancelled' : 'failed');
+            expect(diagnostic).toHaveBeenCalledWith(code);
+        },
+    );
+});
 
 function expectSourceVerdict(result: BugbotShadowResult): void {
     const nativeGitFailures = jest.mocked(spawnSync).mock.results.flatMap((entry, index) => {

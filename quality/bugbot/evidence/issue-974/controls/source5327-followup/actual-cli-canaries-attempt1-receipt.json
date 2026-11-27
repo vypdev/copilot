@@ -1,0 +1,332 @@
+{
+  "started": "2026-11-23T12:54:55.061110+00:00",
+  "createExitCode": 0,
+  "image": "sha256:6d196f4007103963549144b15aff1e1e6735450e2c85d04fb201b04980ab7106",
+  "implementation": "5327d533045ab10dff1ca6969317c12e93b88cf8",
+  "profileSha256": "fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b",
+  "modelCalls": 0,
+  "qualificationCalls": 0,
+  "pilotWrites": 0,
+  "actual174": "COMPLETE_NEGATIVE_UNCHANGED",
+  "actual42": "UNSTARTED_NOT_ADMITTED",
+  "production": "disabled",
+  "DONE_DO_NOT_REPEAT": true,
+  "container": "34539c8638b0373588d57cf1d752b71dc9f4b64f9fb5c38e0cb0a9df66bddd42",
+  "startExitCode": 0,
+  "containerExitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "b7e934ad0f264426630d25d92f5b7a4fb8b0052dc2ee844a9b7e81ceab7dfa95",
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "observed": {
+    "schemaVersion": 1,
+    "kind": "actual-cli-model-free-exclusion",
+    "version": {
+      "status": 0,
+      "signal": null,
+      "output": [
+        null,
+        "codex-cli 0.171.0\n",
+        "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      ],
+      "pid": 12,
+      "stdout": "codex-cli 0.171.0\n",
+      "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+    },
+    "outsideProc": [
+      "Uid:\t502\t502\t502\t502",
+      "Gid:\t20\t20\t20\t20",
+      "CapInh:\t0000000000000000",
+      "CapPrm:\t0000000000000000",
+      "CapEff:\t0000000000000000",
+      "CapBnd:\t0000000000000000",
+      "NoNewPrivs:\t1",
+      "Seccomp:\t2"
+    ],
+    "profileSha256": "fb324e146b2fb829afcaadd4786f6c21e2e40f0d850de6229d5eb995a088811b",
+    "managedPolicySha256": "7862fc5acbefd63808622919479abb2e1073f052add56e71f807d783f1c22c5b",
+    "rows": [
+      {
+        "id": "workspace-positive",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");assert.equal(fs.readFileSync(\"/tmp/bugbot-contained-worker/workspace/positive.txt\",'utf8'),\"RUNTIME_PUBLIC_WORKSPACE_CANARY\");"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-read-sdk",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");let denied=false;try{fs.readFileSync(\"/sdk/package.json\");}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));denied=true;}assert(denied,'private read unexpectedly succeeded');"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-read-controller-source",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");let denied=false;try{fs.readFileSync(\"/tmp/bugbot-contained-worker/source/canary.txt\");}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));denied=true;}assert(denied,'private read unexpectedly succeeded');"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-read-auth-canary",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");let denied=false;try{fs.readFileSync(\"/tmp/bugbot-contained-worker/home/.codex/auth.json\");}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));denied=true;}assert(denied,'private read unexpectedly succeeded');"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-read-private-credentials",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");let denied=false;try{fs.readFileSync(\"/qualification-input/private-credentials.json\");}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));denied=true;}assert(denied,'private read unexpectedly succeeded');"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-read-invocation",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");let denied=false;try{fs.readFileSync(\"/qualification-input/invocation.json\");}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));denied=true;}assert(denied,'private read unexpectedly succeeded');"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-read-plan-bundle",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");let denied=false;try{fs.readFileSync(\"/qualification-input/plan.bundle\");}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));denied=true;}assert(denied,'private read unexpectedly succeeded');"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-read-oracle",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");let denied=false;try{fs.readFileSync(\"/qualification-input/campaign/corpus-v3/canary.txt\");}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));denied=true;}assert(denied,'private read unexpectedly succeeded');"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-read-output",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");let denied=false;try{fs.readFileSync(\"/qualification-output/canary.txt\");}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));denied=true;}assert(denied,'private read unexpectedly succeeded');"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-read-proc",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");let denied=false;try{fs.readFileSync(\"/proc/self/status\");}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));denied=true;}assert(denied,'private read unexpectedly succeeded');"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-controller-directory-enumeration",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");try{const entries=fs.readdirSync(\"/tmp/bugbot-contained-worker/source\");assert.equal(entries.length,0,'original controller directory entries visible');}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));}"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-symlink-alias",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");let denied=false;try{fs.readFileSync(\"/tmp/bugbot-contained-worker/workspace/private-alias\");}catch(e){assert(['EACCES','EPERM','ENOENT'].includes(e.code),String(e));denied=true;}assert(denied,'private read unexpectedly succeeded');"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-write",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");let denied=false;try{fs.writeFileSync(\"/tmp/bugbot-contained-worker/workspace/must-not-write.txt\",'MUST_NOT_EXIST',{flag:'wx'});}catch(e){assert(['EACCES','EPERM','EROFS'].includes(e.code),String(e));denied=true;}assert(denied,'read-only write unexpectedly succeeded');"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      },
+      {
+        "id": "deny-network",
+        "argv": [
+          "--config",
+          "sandbox_mode=\"read-only\"",
+          "sandbox",
+          "--",
+          "/usr/local/bin/node",
+          "-e",
+          "const fs=require('node:fs'),assert=require('node:assert/strict');fs.writeSync(1,\"FIXED_SANDBOX_CANARY_ENTERED\\n\");const net=require('node:net');const s=net.connect({host:'127.0.0.1',port:39697});const timer=setTimeout(()=>{s.destroy();throw Error('loopback denial was not observed');},1500);s.once('connect',()=>{clearTimeout(timer);s.destroy();throw Error('sandbox reached outside loopback listener');});s.once('error',e=>{clearTimeout(timer);assert(['EACCES','EPERM','ECONNREFUSED','ENETUNREACH','EHOSTUNREACH'].includes(e.code),String(e));});"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "errorCode": null,
+        "entered": true,
+        "passed": true,
+        "stdout": "FIXED_SANDBOX_CANARY_ENTERED\n",
+        "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/bugbot-contained-worker/home/.codex\"))\n"
+      }
+    ],
+    "planned": 14,
+    "unstarted": 0,
+    "passed": 14,
+    "failed": [],
+    "externalLoopbackConnections": 1,
+    "actualOrdinarySdkModelToolAdmission": false,
+    "payloadOutputTransport": "node-fd-write-sync",
+    "nodeStreamCompatibility": "not-measured",
+    "modelCalls": 0,
+    "qualificationCalls": 0,
+    "pilotWrites": 0,
+    "production": "disabled"
+  },
+  "actualOrdinarySdkModelToolAdmission": false,
+  "passed": true,
+  "ownedContainerRemoved": true,
+  "finished": "2026-11-23T12:54:57.226793+00:00"
+}

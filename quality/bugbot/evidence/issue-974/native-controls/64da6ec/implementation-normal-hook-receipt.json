@@ -1,0 +1,21 @@
+{
+  "started": "2026-11-21T04:04:54.389579+00:00",
+  "finished": "2026-11-21T04:10:45.247735+00:00",
+  "exitCode": 0,
+  "parent": "b79c13fbeb9f94fb06a152bfe756dc90acde7675",
+  "headAfter": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+  "statusAfter": "",
+  "log": "/private/tmp/copilot-goal-974-native-fixture-commit.log",
+  "bytes": 537229,
+  "sha256": "50e9a058c8a56f2f3e3f8fa97c8ecb1a7e72a6942fe468b24c8677e9355ce7a8",
+  "suites": [
+    "Test Suites: 944 passed, 944 total"
+  ],
+  "tests": [
+    "Tests:       35 skipped, 18716 passed, 18751 total"
+  ],
+  "pushed": false,
+  "qualificationModelCalls": 0,
+  "native4": "unexecuted",
+  "production": "disabled"
+}

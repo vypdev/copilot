@@ -1,0 +1,41 @@
+FAIL ../copilot-goal-974-observer-preflight-regression/observer-preflight.test.ts (5.518 s)
+  ● critical qualification attempt observations before real SDK dispatch › persistence failure=started
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      71 |         } else {
+      72 |           await expect(cli.execute(request)).rejects.toBe(failure);
+    > 73 |           expect(existsSync(marker)).toBe(false);
+         |                                      ^
+      74 |           expect(cancel.signal.aborted).toBe(true);
+      75 |         }
+      76 |       })());
+
+      at ../copilot-goal-974-observer-preflight-regression/observer-preflight.test.ts:73:38
+
+  ● critical qualification attempt observations before real SDK dispatch › persistence failure=admitted
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      71 |         } else {
+      72 |           await expect(cli.execute(request)).rejects.toBe(failure);
+    > 73 |           expect(existsSync(marker)).toBe(false);
+         |                                      ^
+      74 |           expect(cancel.signal.aborted).toBe(true);
+      75 |         }
+      76 |       })());
+
+      at ../copilot-goal-974-observer-preflight-regression/observer-preflight.test.ts:73:38
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 1 passed, 3 total
+Snapshots:   0 total
+Time:        5.658 s, estimated 7 s
+Ran all test suites.
+Test results written to: ../copilot-goal-974-observer-preflight-regression/original-red-attempt4.json

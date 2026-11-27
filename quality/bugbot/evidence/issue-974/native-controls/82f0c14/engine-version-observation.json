@@ -1,0 +1,55 @@
+{
+  "Platform": {
+    "Name": "Docker Engine - Community"
+  },
+  "Version": "29.8.2",
+  "ApiVersion": "1.56",
+  "MinAPIVersion": "1.40",
+  "Os": "linux",
+  "Arch": "arm64",
+  "Components": [
+    {
+      "Name": "Engine",
+      "Version": "29.8.2",
+      "Details": {
+        "ApiVersion": "1.56",
+        "Arch": "arm64",
+        "BuildTime": "2026-09-30T19:32:49.000000000+00:00",
+        "Experimental": "true",
+        "GitCommit": "8af9fe3",
+        "GoVersion": "go1.26.8",
+        "KernelVersion": "7.2.12-orbstack-00394-gbecdd6130068",
+        "MinAPIVersion": "1.40",
+        "Module": "github.com/moby/moby/v2",
+        "ModuleVersion": "v2.0.0+unknown",
+        "Os": "linux"
+      }
+    },
+    {
+      "Name": "containerd",
+      "Version": "v2.3.6",
+      "Details": {
+        "GitCommit": "ee2735368117d2eb259779949d5e75cdafec9761"
+      }
+    },
+    {
+      "Name": "runc",
+      "Version": "1.5.2",
+      "Details": {
+        "GitCommit": "29dd3dc2b13b4123162e5fe132504bb4b15569f1"
+      }
+    },
+    {
+      "Name": "docker-init",
+      "Version": "0.19.0",
+      "Details": {
+        "GitCommit": "de40ad0"
+      }
+    }
+  ],
+  "GitCommit": "8af9fe3",
+  "GoVersion": "go1.26.8",
+  "KernelVersion": "7.2.12-orbstack-00394-gbecdd6130068",
+  "Experimental": true,
+  "BuildTime": "2026-09-30T19:32:49.000000000+00:00"
+}

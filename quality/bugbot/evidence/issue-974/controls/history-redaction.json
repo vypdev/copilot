@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "kind": "maintainer-requested derived history privacy redaction; never a new scientific execution",
+  "redactedMirrorHead": "7e82637f7b17d6648f2fe755aaff88439c056b3f",
+  "unchangedBase": "5ebb96859b32a18736f8a75be09e698c763ce163",
+  "originalCommits": 53,
+  "rewrittenCommits": 44,
+  "targetBlobs": 21,
+  "targetAccountPrefixIdentities": 1,
+  "targetAccountPrefixSha256": "118d3430655eb151152f1ba0ed1c0da270b94961845787453301be6342f62aad",
+  "replacement": "/host-account-redacted/",
+  "tipTreeIdenticalBeforeLocatorFollowup": true,
+  "sourceCodeRuntimeCorpusPromptsSchemasOrderAndResultsChanged": false,
+  "originalScientificMeasuredSource": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "redactedMirrorOfMeasuredSource": "82235ac53e8c9477bdc8041112e8ccb9e56d3ccc",
+  "actual174": "COMPLETE_NEGATIVE_UNCHANGED",
+  "actual42": "UNSTARTED_NOT_ADMITTED",
+  "scientificCallsAdded": 0,
+  "pilotWrites": 0,
+  "production": "disabled",
+  "privateOriginals": {
+    "originalBundle": {
+      "file": "privacy-redaction-original-pr-history.bundle",
+      "bytes": 4517856,
+      "sha256": "e397d7f3a798a1b17a05253527bb1afe62323959c769c65b4d5308fb53383e02"
+    },
+    "originalBlobsZip": {
+      "file": "privacy-redaction-original-host-path-blobs.zip",
+      "bytes": 61904,
+      "sha256": "d081e9ad3409ea272e941dd5ffebcfceaa6fbe1616ade0187af30a66e2369252"
+    },
+    "fullLocatorMapping": {
+      "file": "privacy-redaction-full-locator-mapping-private-original.json",
+      "bytes": 31306,
+      "sha256": "3f2b67fdde4f7d9fe1655201d62f779b46ef70f7994de78e2aca25378d3edb0e",
+      "scope": "exact original public descriptor, including commit and original blob/path associations; privately retained"
+    }
+  },
+  "newReachableBlobsScanned": 1068,
+  "gzipDecoded": 365,
+  "remainingTargetOccurrencesInScannedBranchHistory": 0,
+  "jsonDocumentsValid": 21,
+  "invalidatedSignaturesRemoved": 0,
+  "publication": {
+    "exactOldHeadLease": true,
+    "successfulRemoteUpdates": 1,
+    "initialAttempt": "local pre-push hook required a worktree; no remote update; corrected without bypassing hooks",
+    "protectedBranchesTagsProtectionsPrivilegesChanged": false
+  },
+  "hostedPurgeComplete": false,
+  "hostedPurgeLimit": "Unauthenticated old raw revision still HTTP200;21 historical review-comment diff hunks retain target; formal support request submitted and verified Open; full hosted purge remains unverified.",
+  "scientificInterpretation": "Original measured SHA and original preregistration remain historical execution identities, preserved privately. Mirror IDs represent privacy-redacted public history; they do not relabel or repeat the measurement.",
+  "supportRequestSubmitted": true,
+  "editableReviewBodiesRedacted": 6,
+  "botQuotedVariant": "U+200B after @ normalized only to verify exact target identity before redacting the whole prefix; other text preserved",
+  "redactedHistoricalBlobIds": [
+    "c5b5f625fc4124d2f2db0cd1cf010af9c2c10066",
+    "bbd2a14c93bc310541ea4e7d84344e6e821605a9",
+    "1b49fb6194d9b4925fc1a946d5af561bc2091ecc",
+    "4054ae581654cef4f604e102d18a41bb3d9a5c62",
+    "d5c6714d47ff833c44fdac5c189c608b01a345e2",
+    "19a10b1074fb10cacd8c5eb1b7b68b1b76e72ef8",
+    "fb6f984ea8e3a700c213f0bc75a3b40d040ab056",
+    "39126bac5ff53dcb4e4b46fd037f43a241511559",
+    "91c8cc30fdb39932ae23c99bf7ca8fc556e43bc8",
+    "4043c7bc2ef21250a461a3464c01fb7207cc94a8",
+    "079da96132851e9459f4ffb2d987bfbfe2601804",
+    "6823e6030c743c94ef4573c80320fcc67ca59088",
+    "87ea8308fa36864717066f7185820ec81a7724b9",
+    "7f69cd0a85fee88e8e5cfcbf4051be22770bf48f",
+    "2d594e0f5e39edd8494fea7f86024867e946d5ac",
+    "63b85f57b3f959293d089d2c97a49537cf988a2c",
+    "6fc891172438f0774b558ee79f02ee234bcffebe",
+    "abeb0692e712c34814760daeeff30227318f061f",
+    "752e2db774ca495ecb8bda20f59fb7607d50cbda",
+    "fb59ed921ed9511b2144f5a4a71250d8dccac606",
+    "603344aae13360c5f980d89e3efd9f35a97b8622"
+  ],
+  "publicLocatorMinimization": {
+    "originalCommitGraphAndBlobPathAssociationsRemovedFromCurrentDescriptor": true,
+    "originalScientificExecutionIdentitiesRetained": true,
+    "historicalHostedCopiesPurged": false,
+    "supportCase": 5044568,
+    "note": "Earlier published versions may still expose these associations. Current descriptor minimization cannot establish hosted erasure; GitHub Support purge remains pending."
+  }
+}

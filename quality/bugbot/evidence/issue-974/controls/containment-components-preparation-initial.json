@@ -1,0 +1,184 @@
+{
+  "recordedAt": "2026-11-20T23:37:28.218643+00:00",
+  "state": "uncommitted-components-only",
+  "head": "8d44350032e416f35f37abc9417587fa9469a5f2",
+  "sourceSha256": {
+    "src/application/ports/qualification_operation_scope_ports.ts": "a01ece00d232bf912523f54400d100fd66b1c8b7906e14ee4b58edfcd566da9d",
+    "src/application/policies/qualification_operation_scope_policy.ts": "ee4a858890c4454c3aa01e773a4728d399042b2375b16d7a8ac8ddd16fe32490",
+    "src/infrastructure/agents/qualification_operation_scope.ts": "9e6a58bc5ea697919851e094110f42a73875f0a2ead3f115c679a777e28dc54e",
+    "src/infrastructure/agents/__tests__/qualification_investigation.test.ts": "5c6c51aa6f4f77fbac17f6f9808adacd316223a8835e59c8b7505f2fefd8d552",
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "47e2c7a338a652f56f20f982d47de31ecacf920745c944fba59c0d4cda2f0823",
+    "quality/bugbot/evidence/issue974/qualification-supervisor.cjs": "e19e86dda95fddf6d61cfafdbc2cefba4a8a4612609bd767f46b04dcdd1f19a7",
+    "quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile": "6c12a7b98ccf4e50c92c710a5d5a08eb9a48bd684ca3a4e9967cbfc41abcc9da",
+    "quality/bugbot/evidence/issue974/README.md": "c70d7dc0d518458abf3f3c77d79335e40fe395adff6b44ad65dc8ae65a7bf08d"
+  },
+  "componentJest": {
+    "passed": 15,
+    "retainedCaseGroups": 8,
+    "additionalComponentGroups": 7,
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 90,
+          "covered": 90,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 113,
+          "covered": 113,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 26,
+          "covered": 26,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 101,
+          "covered": 101,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "/private/tmp/copilot-goal-974/src/application/policies/qualification_operation_scope_policy.ts": {
+        "lines": {
+          "total": 42,
+          "covered": 42,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 12,
+          "covered": 12,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 49,
+          "covered": 49,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 59,
+          "covered": 59,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "/private/tmp/copilot-goal-974/src/infrastructure/agents/qualification_operation_scope.ts": {
+        "lines": {
+          "total": 48,
+          "covered": 48,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 14,
+          "covered": 14,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 64,
+          "covered": 64,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 42,
+          "covered": 42,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    }
+  },
+  "profileComponentChecks": {
+    "passed": 39,
+    "syntheticFixture": true,
+    "engineRequests": 0,
+    "containersCreated": 0
+  },
+  "retainedNodeReplay": {
+    "passed": 214,
+    "failed": 19,
+    "skipped": 0,
+    "cancelled": 0,
+    "reason": "All19failures at untracked application source guard in existing committed-source fixtures. Do not count as a pass or relax admission; replay only committed implementation."
+  },
+  "retainedNegativeAttempts": {
+    "scope1": "All15tests passed but focused command inherited uncollected unrelated path thresholds; isolated applicable stronger scope budgets correct the command, production budgets unchanged.",
+    "profile1": "Fixture used macOS /var alias instead of canonical /private/var staging; fixed fixture via realpath, source canonicality guard unchanged."
+  },
+  "logs": {
+    "scope-components-attempt1": {
+      "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt1.log.gz",
+      "bytes": 1581,
+      "sha256": "a8126979139e301ed8cb007f425eb6c7712d6e2a872a58bfbbb940655f09ebbf",
+      "gzipSha256": "17886511d70d9e6d2ea1cc513e049420a59eb570d9218960c443e79ff5df85b3"
+    },
+    "scope-components-attempt2": {
+      "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt2.log.gz",
+      "bytes": 1429,
+      "sha256": "87ce13de9124fae92278363bfe0d0ae694fb2caf7b718b949184735b630d70ef",
+      "gzipSha256": "857fb852c50b398df93f8a25475519d0d143adef5e2d66f2ff7c903c53269b72"
+    },
+    "scope-components-attempt3": {
+      "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt3.log.gz",
+      "bytes": 1429,
+      "sha256": "bfbc5bfca66313bf1cb219b7ad1016fd95b71a411bbfe830cb05d7e72d44496c",
+      "gzipSha256": "cc5e2a396456a9b07bd177c7f1afc87f7fca1f498b1174ee8ffd16f89dfd65ae"
+    },
+    "scope-components-attempt4": {
+      "path": "quality/bugbot/evidence/issue-974/controls/containment-scope-components-attempt4.log.gz",
+      "bytes": 1446,
+      "sha256": "1008f0056d70882074a2003f45dc49f99e576a42f29cc0036ca9ff3e4c9b1ba1",
+      "gzipSha256": "d68077eee0ad9b3d8551475fb0987b0a2e15c37d4bf95e2e7b7764c863e17459"
+    },
+    "profile-components-attempt1": {
+      "path": "quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt1.log.gz",
+      "bytes": 1035,
+      "sha256": "21e071130cfa42ac745a59afaa37fd55811703715618d8ad174a52e091bb60f3",
+      "gzipSha256": "157e706732b322b65456e2451246b292d7a3e9ca2e2d14b4d24851b109eb739b"
+    },
+    "profile-components-attempt2": {
+      "path": "quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt2.log.gz",
+      "bytes": 87,
+      "sha256": "cbef50910705828b731155e4ee403ae7937bcc1b1846b014fe8c02d256307ae9",
+      "gzipSha256": "844eb5e682c82cd97f2bd21d0944f539afa1f19c5cf275229a7fbc153e9177ea"
+    },
+    "profile-components-attempt3": {
+      "path": "quality/bugbot/evidence/issue-974/controls/containment-profile-components-attempt3.log.gz",
+      "bytes": 87,
+      "sha256": "cbef50910705828b731155e4ee403ae7937bcc1b1846b014fe8c02d256307ae9",
+      "gzipSha256": "844eb5e682c82cd97f2bd21d0944f539afa1f19c5cf275229a7fbc153e9177ea"
+    },
+    "retained-node-uncommitted-source": {
+      "path": "quality/bugbot/evidence/issue-974/controls/containment-retained-node-uncommitted-source.log.gz",
+      "bytes": 52793,
+      "sha256": "f0b887786facdaf5e7154bdc020fb2a32b89cdf9aefd4cc9d700308d06a1c356",
+      "gzipSha256": "ad8a651f3784fbb699839d2b0b45374abd2a0d7750c0d1119542da5683da46d5"
+    }
+  },
+  "implementationIntegrated": false,
+  "newSixNodeAcceptance": "unexecuted",
+  "newFourActualNativeSdkAcceptance": "unexecuted",
+  "imageBuilt": false,
+  "runtimeAdmitted": false,
+  "cancellationFinding": "reproduced-unresolved",
+  "corpus174": "unstarted",
+  "paired42": "unstarted",
+  "qualificationModelCalls": 0,
+  "evaluatedPrWriteAttempts": 0,
+  "production": "disabled"
+}

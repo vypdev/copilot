@@ -2,7 +2,7 @@
 
 - Status: Implemented — automated gates complete; controlled provider smoke remains external
 - Date: 2026-09-11
-- Last updated: 2026-11-12
+- Last updated: 2026-11-20
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-12 in the P1-C implementation worktree
 - Owners: Copilot maintainers and security reviewers
@@ -877,3 +877,303 @@ MUST accept only the complete supported matrix or the explicitly authorized
 temporary Ubuntu-only matrix, reject removal of Ubuntu, and preserve full
 package, coverage, acceptance and documentation checks. This change introduces
 no model request, new Action input, credentials, deployment or support claim.
+
+### Qualification investigation lifecycle — issue #974
+
+**Status: Ready for implementation; measurement and provider acceptance unstarted.**
+This is the coordinated runtime amendment requested by the Action-published
+[#974 design](./bugbot-analysis-publication-and-autofix.md#proposed-change-preregister-and-evaluate-the-luna-xhigh-detector-on-the-unchanged-174-case-ev-07-corpus).
+Its authority is the maintainer-delegated qualification work and that native SDD
+round, not issue text supplied to an agent. The existing runtime baseline,
+provider restrictions and Windows service retirement remain in force.
+
+Observed behavior: ordinary capability calls provide a 900,000 ms execution
+allowance. Brokered verification omits its investigation timer but requires an
+empty workspace, unsuitable for the ordinary source-bound detector. The new
+internal planner entry `prepareQualificationInvestigation` MUST preserve the
+ordinary detector's canonical repository workspace, provider argv, credential
+isolation, schema/output contract and complete ordinary preflight. It MUST
+reject every capability except findings, any immutable source snapshot, and a
+missing or already-aborted cancellation signal before preparing a runtime.
+
+```text
+Authenticated qualification bootstrap -> ordinary planner preflight
+  -> immutable in-process findings plan + exact cancellation signal
+  -> ordinary process executor -> completion / failure / explicit abort
+```
+
+Text equivalent: the authenticated qualification composition selects the internal
+planner method after admission of its source, drivers, runtime and plan. The
+planner keeps normal execution authority and registers one frozen plan object
+with its exact signal. The executor accepts the cancellation-only lifecycle only
+for that object/signal pair. Copying or serializing a plan, forging its marker,
+changing authority or supplying another signal MUST reject before spawn and
+clean owned runtime artifacts. No public Action/CLI/Variable/environment switch
+grants admission. This is trusted in-process composition, not protection against
+arbitrary code already executing inside that trusted process.
+
+The ordinary planner is the only production caller of registration. The process
+adapter only queries admission. A source architecture assertion enforces that
+direction. The admission registry owns no providers, GitHub ports, persistence,
+timers or research orchestration. Its weak identity map and frozen plan-owned
+collections cannot be adopted through a JSON receipt. Existing integrity and
+managed-artifact checks still run immediately before spawn.
+
+Only the investigation timer changes for admitted qualification findings.
+Ordinary consumer timers, immutable SDD source preparation/deadlines, bounded
+version/ACL probes, prompt/output safety bounds and credential validation keep
+their existing scope. No research time, turn, read or token ceiling is added.
+Explicit abort MUST terminate the ordinary process and descendants, preserving
+the existing TERM/KILL cleanup protocol. A registered plan is not proof of spawn
+or a provider-reported identity. The bounded observer contract is unchanged.
+
+The native POSIX regression also reproduces a leader exiting on TERM while its
+descendant ignores TERM: the older close handler cleared the force timer and
+left that descendant active. On a terminating operation's first close, the
+executor MUST kill surviving members of its owned detached POSIX process group
+before settlement and runtime cleanup. Repeated/late close events do nothing.
+Retain the failing control and corrected result. This is not Windows native
+process-tree acceptance and introduces no research deadline.
+
+Operator states and content are owned by the #974 evidence README: “Not
+preregistered; no model calls”, “Running; retain every attempt”, and “Failed or
+incomplete; full review remains unstarted” link to the plan and durable ledger.
+Private prompts, credentials, raw stderr and runtime paths do not appear in
+public summaries. Unknown usage remains optional telemetry. No production
+activation, installation, runtime provisioning or new platform support follows.
+Rollback uses ordinary `prepare`; retain all measurements and negative outcomes.
+
+The eight lifecycle controls `ev974-C01`–`ev974-C08` are defined and counted once
+in the Bugbot amendment's 25-case inventory. Runtime evidence lives in
+`src/infrastructure/agents/__tests__/qualification_investigation.test.ts`:
+ordinary/research timer comparison; canonical workspace/argv/schema/credentials;
+real POSIX descendant cancellation after the ordinary bound; fixer rejection;
+other roles/missing/canceled signal; immutable SDD source/deadline preservation;
+forged/copied/different-authority/signal rejection with cleanup; and ordinary
+nested/foreign/ambient rejection plus no environment grant. The POSIX fixture is
+not Windows service acceptance. Pure authority branches require 100% enumerated
+coverage; changed planner/process modules retain 95% lines/statements and 90%
+branches/functions, alongside repository floors. No control invokes a model.
+
+Runtime documentation is `docs/agents/execution-contract.mdx`; qualification
+operation/recovery is `docs/bugbot/quality-observability.mdx`. Register the new
+admission module and test with `agent-runtime`. Validate the specification and
+catalog with the actual repository scripts `pnpm run validate:specifications`
+and `pnpm run generate:specifications`; command existence is not executed proof.
+Acceptance requires all eight observable controls, coordinated Bugbot/runtime
+documentation, enforced dependency direction and applicable coverage. It does
+not imply that the 174-case corpus, 42 reviews or provider smoke ran.
+
+### Whole-operation containment correction — issue #974
+
+The reviewed containment appendix in the Bugbot owner supersedes process-group
+cleanup as proof for new qualification investigations. Ordinary consumer and
+immutable SDD-source lifecycles retain their existing scope. The previously
+reproduced new-session descendant remains negative evidence until actual native
+SDK controls establish the namespace boundary.
+
+```text
+Immutable public bootstrap -> private live owned scope -> ordinary planner/SDK
+  -> full detector/verifier call chain -> namespace stopped -> accepted outcome
+```
+
+Text equivalent: source/image/runtime/CLI admission precedes the private owned
+scope and ordinary planner; all actual follow-ups share that scope, whose stop
+must be confirmed before outer cleanup or accepted completion.
+
+Semantic ports and pure policy own immutable identity and complete-inventory
+decisions. Infrastructure owns the live plan/signal binding, Docker transport
+and PID1 lifetime. The planner must reject an uncontained qualification request
+before workspace/CLI preparation. The executor and existing verifier transport
+request whole-scope termination on actual cancellation/failure; they cannot fall
+back to a process group. A finished provider turn whose process fails to exit
+may trigger technical cleanup after that completion, never an active research
+deadline. Ordinary production calls receive no qualification stop capability.
+
+The immutable outer owner alone holds non-TTY stdin; EOF/owner death stops the
+Linux namespace, including quiet, escaped or reparented descendants. Normal
+completion has the same stop-confirmation requirement. Durable known/uncertain
+effects and incomplete call prefixes cannot authorize adoption, cleanup of an
+unrelated scope, replay or phase42. Model execution has no Docker authority,
+host PID access, arbitrary mounts or privileged mode. Engine/kernel versions
+are observations, not independent platform byte attestation.
+
+The Bugbot owner counts C26–C31 once as six deterministic controls and C32–C35
+once as four actual native SDK controls. They extend its retained 25 to 35 and
+the combined deterministic Node floor from 233 to 239. The separately declared
+`pnpm run test:bugbot-native-containment` fails on missing committed native plans
+or actual capability; it cannot silently skip or substitute model-free API
+fixtures for native acceptance. Fixture readiness/test bounds apply only to
+credential-free native controls and never to corpus/review research. Pure scope
+policy requires 100% all metrics; each changed runtime/containment module retains
+95% statements/lines and 90% branches/functions plus repository-wide gates.
+
+Architecture constraints enforce pure ports/policy, planner/admission/executor
+call ownership and bootstrap-only live-scope composition. Evidence, current
+unmet prerequisites and the native preparation command live in the issue README;
+the execution contract and quality-observability documentation cover operation,
+unknown ownership, retention and recovery. Native evidence and the full frozen
+42-review closure are required before measurement; no source test qualifies a
+profile, installs a default or enables production.
+
+#### Separate actual SDK runtime-admission prerequisite — issue #974
+
+The existing private identity admits the closed `runtime-admission` purpose for
+the remaining genuine SDK/model-tool prerequisite owned by the [Bugbot runtime
+contract](./bugbot-analysis-publication-and-autofix.md#separate-authenticated-sdk-runtime-admission).
+Only the immutable reviewed bootstrap can compose its live operation. It uses
+the same findings planner/executor, cancellation-only lifecycle, read-only
+workspace, native/local schema, private Codex authentication and whole-namespace
+stop confirmation. No public/environment grant, alternate executor or ordinary
+consumer behavior is introduced. The complete scientific-slot policy MUST still
+accept only `corpus-case` and `paired-review`; a stopped runtime-control identity
+cannot qualify a corpus or admit42. Model-free native-control credentials remain
+forbidden. Runtime admission never receives an evidence/GitHub token.
+
+The Bugbot owner counts26 additional verification cases once:23 model-free
+CJS controls, the existing two extended SDK identity/slot controls and one
+separate real Luna/xhigh canary query. Independent same-tuple CLI14 and native
+C32–C35 remain separate mandatory prerequisites, counted by their existing
+owners. These controls preserve the existing35
+qualification IDs. Pure identity policy remains100% all metrics; the new runtime
+controller retains95% statements/lines and90% branches/functions through isolated
+model-free instrumentation. Instrumentation MUST NOT enter actual native/model
+execution. Actual model-tool acceptance and source-global floors remain separate
+requirements. Retain unavailable/negative prefixes and the exact implementation,
+image, driver and runtime tuple; do not retry an uncertain control automatically.
+The positive protected-file baseline uses a fresh same-UID trusted Node, since
+the bootstrap's in-process UID drop changes its own proc-file ownership. It
+opens/closes the same nine files without reading protected contents or changing
+dumpability, permissions or isolation. Every file must open before model
+preparation; the CLI witness must still deny every file.
+
+#### Single-use identity and namespace admission — issue #974
+
+Observed defect: checking only the current asynchronous context rejects nested
+entry but admits sibling calls with the same port. A copied port, a fresh namespace
+with the same complete identity, or a new identity for a consumed namespace can
+also invoke the callback before terminal ledger validation rejects the replay.
+The reproduced SDK controls prepare the ordinary planner on these duplicate paths.
+
+The live-scope infrastructure MUST atomically reserve both the canonical six-field
+operation identity and namespace ID after structural port validation and before
+invoking the callback. Each remains consumed for that SDK process lifetime after
+completion, failure or cancellation. Neither copying the port nor changing one of
+those two identities grants another operation. Independent identities and namespaces
+MUST remain admissible concurrently. Structural rejection before reservation MUST
+consume neither identity. These are fixed internal admission rules, with no user,
+environment, retry or reset setting; ordinary consumer lifecycles stay in scope as
+previously specified. The reviewed bootstrap uses a private worker for each operation.
+
+| State | Next input | Observable result |
+|---|---|---|
+| Unconsumed identity and namespace | Valid private live port | Reserve both, then enter ordinary preparation |
+| Active or terminal reservation | Same identity or same namespace | Reject before callback, workspace resolution, executable selection or version probe |
+| Independent reservations | Two distinct valid operations | Both enter their own asynchronous contexts |
+| Structurally invalid port | Later valid port for those unconsumed IDs | First entry rejects without consuming the later valid admission |
+
+The existing error remains `Qualification requires its exact live owned operation
+scope.` Retain the first operation and inspect its known/unknown outcome; an
+unregistered retry cannot reuse its authorization. A separately authorized operation
+requires a new identity and namespace, and a scientific repeat still requires the
+existing causal correction and committed preregistration. Consumption is in-memory
+authorization state, never inferred from a serialized receipt. Existing stopped-scope
+proof, cancellation and failure contracts remain mandatory and are not established
+by this guard.
+
+The additional numeric test budget is **12 Jest cases** in
+`src/infrastructure/agents/__tests__/qualification_investigation.test.ts`: four
+concurrent aliases (same port, copied port, same identity, same namespace) with zero
+ordinary planner preparation; six subsequent reuses (completion/failure by same
+port/identity/namespace); one independent parallel admission; and one structurally
+rejected port that cannot consume a valid admission. They extend the existing C04
+authority proof without adding or recounting the 35 logical qualification IDs.
+Pure identity policy retains 100% all-metric coverage and the changed runtime scope
+retains 95% statements/lines and 90% branches/functions alongside repository gates.
+The cases use real asynchronous context/planner code and semantic stopped-namespace
+ports; they do not establish an actual Linux namespace or provider execution.
+
+Acceptance and Definition of Done require all twelve cases, unchanged existing
+controls, exact changed-module coverage, regenerated/validated catalog evidence,
+and coordinated execution-contract/quality-observability documentation. New SDK and
+bundle identities require fresh final-head/native and exact-tuple qualification
+admission; no old native result accepts them. No production activation, installation,
+permission expansion, model call or campaign result follows from these source tests.
+
+
+#### Source5327 review: independent CLI evidence
+
+A live runtime-admission capture is process-local authority, never a serialized
+claim. Bind it to the actual plan identity and exact abort signal; nested,
+expired, copied, foreign-provider and model-free scopes cannot use it. The
+actual successful child close MUST invoke the critical synchronous recorder
+before decoding the model response. Persistence errors cannot be swallowed as
+telemetry. The Bugbot owner then verifies the CLI's separate fixed command
+start/completion and raw output, and the host verifies the entire ordered
+attempt and artifact chain. Pass-only ledgers and model-reported denials are
+insufficient. The [owning amendment](./bugbot-analysis-publication-and-autofix.md#source5327-review-independent-cli-evidence)
+requires protocol2 and55 additional model-free assertions, including the six SDK
+scope cases, twelve decoder cases and schema1 helper-import refusal. No deadline,
+output limit, UID/capability, credential, native/scientific slot or production
+boundary changes. A new source must pass actual same-tuple controls before any
+new genuine runtime admission; none is executed or claimed by this amendment.
+
+
+#### Source626e observed progress and shell compatibility
+
+The [Bugbot owner](./bugbot-analysis-publication-and-autofix.md#source626e-observation-cli-progress-and-fixed-shell-paths)
+adds7 model-free controller controls, retaining the prior55 and unchanged SDK
+framing. Nonempty progress before witness completion is retained without
+establishing tool or final-response authority. Only the fixed non-login witness
+may use the additional /usr/bin/bash and /usr/bin/sh spellings. One complete
+command and a separate exact final nonce remain mandatory. The actual626e
+canary independently observed nine denials but failed; the model nonce had63
+characters against64 in the tool output. It remains FAIL_NOT_ADMITTED and is not
+rerun or relabelled by this amendment. Same-assertion controls2PASS/5FAIL become
+65componentPASS with unchanged95/90 floors. Full source/native review gates and
+existing scope/credential/output/cancellation boundaries remain unchanged.
+
+
+#### Source626e completed review: pre-creation cleanup and first failure
+
+The complete54-partition review identifies two reproducible operational faults.
+Owned staging MUST enter its cleanup-protected region before chmod or input
+directory creation. Resolve the system temporary parent before creating the
+owned directory so no fallible post-creation path resolution escapes cleanup.
+If setup fails before any Engine side effect, remove only that owned directory,
+retain incomplete evidence and propagate the setup failure. Unknown container
+creation/lifetime still retains staging under the existing ownership rule.
+
+When verifier transport rejects and terminal-ledger persistence also fails,
+the caller MUST receive the original transport error. Terminal persistence is
+best-effort only on this rejection path; its missing durable row remains
+incomplete evidence and MUST NOT admit a review or conceal failure. Start,
+request, success response and critical capture persistence keep their existing
+mandatory boundaries. No error payload, credential or private path is logged.
+
+| Failure | Retained fact | Outcome |
+|---|---|---|
+| chmod/input setup before Engine creation | Incomplete event; no scope | Owned staging removed; original failure |
+| Verifier rejects; terminal row also fails | Start without complete terminal evidence | Original transport error; admission incomplete |
+| Unknown Engine creation/lifetime | Existing owned identity/uncertainty | Keep staging; existing stopped-scope recovery |
+
+The incremental budget is four model-free physical controls: real temporary
+staging with injected chmod failure and input-mkdir failure2; verifier transport
+plus terminal-write failure with active and aborted signals2. The same four
+assertion bodies fail0PASS/4FAIL before correction and pass4/4 afterward. They
+extend the earlier7 observed-CLI controls without recounting the35 logical
+qualification IDs,174 scientific cases or42 paired slots. Existing95% lines/
+statements and90% branches/functions CJS floors and all source/native gates
+remain mandatory. A platform-aware scope-module exclusion is verified by the
+normal architecture scan; no real Windows execution is inferred.
+
+The public archive index MUST omit the original revision/path associations;
+retain its exact pre-minimization bytes privately. All129 sanitized mirror
+entries, gzip/decoded bytes and digests stay exact. The report accurately states
+that the private plan path is intentionally omitted. Previously published
+versions and cached original data still await Support5044568; removing current
+locators does not establish hosted erasure. Existing execution/quality docs and
+catalog evidence MUST explain these operational limits. No public setting,
+schema, privilege, retry, model query, installation or activation changes.
+The actual failed nonce canary remains failed; scientific174negative and42not
+admitted are unchanged. Update Graphify and require final reviewed-source CI.

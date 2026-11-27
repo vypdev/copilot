@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-11-21T04:11:00.659020+00:00",
+  "finishedAt": "2026-11-21T04:16:01.469615+00:00",
+  "implementation": "64da6ec09d37fdcc7bd03051f1a3b45501b365a7",
+  "exitCode": 0,
+  "counts": {
+    "tests": 239,
+    "pass": 239,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "log": "/private/tmp/copilot-goal-974-post-fixture239-attempt1.log",
+  "logBytes": 25916,
+  "logSha256": "0b3b149171a461775007750d3a4a6c825ed0d651d31d49b545346307910ba69c",
+  "hostV8Coverage": null,
+  "allChangedModuleCoverageSatisfied": false,
+  "nativeSdkAcceptance": false,
+  "qualificationModelCalls": 0,
+  "174": "unstarted",
+  "42": "unstarted",
+  "production": "disabled"
+}

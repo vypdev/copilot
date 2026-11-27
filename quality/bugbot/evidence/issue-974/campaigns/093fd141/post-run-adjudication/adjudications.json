@@ -1,0 +1,408 @@
+{
+  "kind": "POST_RUN_ADJUDICATION_OF_ORIGINAL174_NOT_NEW_MEASUREMENT",
+  "at": "2026-11-27T21:54:26.089718+00:00",
+  "originalImplementation": "093fd141fd513c92d3d0eb28ba8d40805a5e8b90",
+  "originalDecision": "COMPLETE_NEGATIVE",
+  "originalMetrics": {
+    "expected": 80,
+    "actual": 84,
+    "matched": 74,
+    "precision": 0.8809523809523809,
+    "recall": 0.925,
+    "locationAccuracy": 0.9324324324324325,
+    "severityAccuracy": 0.918918918918919,
+    "categoryAccuracy": 1,
+    "f1": 0.9024390243902439,
+    "falsePositives": 10,
+    "falseNegatives": 6,
+    "meanLineDistance": 0.0945945945945946,
+    "confidenceBrierScore": 0.11320833333333326
+  },
+  "rows": [
+    {
+      "caseId": "sql-bounded-query",
+      "scoredFP": 1,
+      "scoredFN": 0,
+      "classification": "unresolved-premise",
+      "reason": "The current finding requires tied created_at values and a stable page-boundary requirement. No schema/uniqueness constraint or actual tied-row witness is supplied. Retain the scorer FP; do not infer an independently proved consumer defect or detector correction.",
+      "next": "Obtain the authored ordering/schema contract before a source or rubric proposal."
+    },
+    {
+      "caseId": "csharp-contained-path",
+      "scoredFP": 1,
+      "scoredFN": 0,
+      "classification": "unresolved-premise-new-hypothesis",
+      "reason": "This prediction concerns symbolic-link traversal, unlike the prior audit's case-sensitivity prediction. The excerpt does not establish a traversed link, who can create it, the permitted filesystem policy, or the later file-opening path. The old Windows/case explanation cannot adjudicate this new finding. No .NET/Windows execution is claimed.",
+      "next": "Obtain the symlink/trust/opening contract and a matching native witness if needed; preserve current FP."
+    },
+    {
+      "caseId": "kotlin-blocking-coroutine",
+      "scoredFP": 1,
+      "scoredFN": 1,
+      "classification": "classification-disagreement",
+      "reason": "Expected and actual identify the synchronous file read on the request dispatcher at line49. Expected category performance differs from actual reliability; the original schema permits both. No Kotlin runtime execution is claimed.",
+      "next": "Review canonical category boundaries independently before any generic policy proposal; retain original FP/FN."
+    },
+    {
+      "caseId": "py-coverage-config-branch",
+      "scoredFP": 1,
+      "scoredFN": 0,
+      "classification": "unresolved-premise",
+      "reason": "The current finding assumes the complete job has no subsequent reporting step and must enforce fail_under here. The provided run command/TOML fragment does not establish that complete job or requirement. Retain the separate threshold hypothesis as unresolved.",
+      "next": "Obtain the complete authored job and reporting contract; do not manufacture absence from the excerpt."
+    },
+    {
+      "caseId": "py-short-circuit-unhashable",
+      "scoredFP": 1,
+      "scoredFN": 0,
+      "classification": "unresolved-premise",
+      "reason": "The current finding addresses outer-container shape, not the supplied element short-circuit order. A mapping with allowed keys can pass and null cannot be iterated, but whether this function must reject every outer JSON shape depends on an absent caller/container contract. Prior fixed Python observations establish behavior only.",
+      "next": "Obtain the outer-container/caller contract; retain the scorer FP and the earlier observation without rerunning it."
+    },
+    {
+      "caseId": "py-short-circuit-unsafe-order",
+      "scoredFP": 1,
+      "scoredFN": 1,
+      "classification": "classification-disagreement",
+      "reason": "Both identify set membership before isinstance and the resulting error on an unhashable step at line2. Actual reliability differs from expected correctness. Severity also differs (medium vs low) and is not repaired by a category-only diagnostic.",
+      "next": "Keep original FP/FN and severity/calibration contributions; no production fix follows merely from taxonomy."
+    },
+    {
+      "caseId": "kt-compose-external-loader",
+      "scoredFP": 1,
+      "scoredFN": 1,
+      "classification": "classification-disagreement",
+      "reason": "Both identify the external sibling loader remaining over the initialized app at line2 after its only shown removal listener is deleted, under the supplied versioned fixture contract. Actual reliability differs from expected correctness. No new Compose or consumer execution is claimed.",
+      "next": "Review category policy independently; preserve the original outcome and supplied-contract scope."
+    },
+    {
+      "caseId": "test-delegate-bypasses-stub",
+      "scoredFP": 1,
+      "scoredFN": 1,
+      "classification": "classification-disagreement",
+      "reason": "Both trace the public reader returning right(row) without participant binding and the added assertion expecting the arranged failure at line22. Actual reliability differs from expected correctness. The prior owned call-path control remains applicable; it is not rerun.",
+      "next": "Retain original FP/FN; distinguish a classification disagreement from an omitted semantic detection."
+    },
+    {
+      "caseId": "request-transform-write",
+      "scoredFP": 1,
+      "scoredFN": 1,
+      "classification": "classification-disagreement",
+      "reason": "Both trace diskWrite=true to no-cache, preserved through the real authored fixture path, reaching a no-store requirement at line1. Actual security differs from expected correctness. The privacy wording makes category priority a contract question, not grounds to suppress the issue.",
+      "next": "Resolve category priority independently; do not relax the frozen matcher or relabel the campaign."
+    },
+    {
+      "caseId": "fixture-values-ids-override-inverted",
+      "scoredFP": 1,
+      "scoredFN": 1,
+      "classification": "classification-disagreement",
+      "reason": "Both identify the assertion at line150 expecting b,a while the supplied helper/query/default and fixed observation produce a,b. Actual reliability differs from expected correctness. This is the same supplied fixture mechanism; no new Python/SQLite or consumer execution is claimed.",
+      "next": "Retain original FP/FN; review generic classification policy before any later independently preregistered evaluation."
+    }
+  ],
+  "summary": {
+    "classificationDisagreements": 6,
+    "unresolvedPremiseCases": 4,
+    "independentlyConfirmedNewProductionDefects": 0
+  },
+  "proofs": {
+    "method": "Privately retained original archive; exact frozen scorer/corpus; original request bytes checked against attempt-start hashes. Six category-only in-memory contrasts preserve all other prediction fields. Original inputs and aggregate metrics remain exact.",
+    "requestCountVerified": 8,
+    "caseCountDiagnosed": 6,
+    "noAggregateCounterfactualPassCalculated": true
+  },
+  "limits": "The category-only diagnostic does not alter original predictions, labels, severity, calibration, aggregate score or qualification. Four unresolved claims are not proved false or true. The new symlink hypothesis cannot inherit an old case-sensitivity adjudication. No new campaign, model query or source correction is justified solely by this inventory.",
+  "newScientificOrTechnicalSDKQueries": 0,
+  "DO_NOT_REPEAT": true,
+  "provenance": {
+    "originalArchive": {
+      "name": "completed174-private-attempts-and-controls.zip",
+      "bytes": 8705056,
+      "members": 1556,
+      "sha256": "7411656908984586cded444c923e917ac574fc91e6b599a47d221fcc79dd9f42"
+    },
+    "originalPredictions": {
+      "member": "scientific-campaign-attempt1/corpus-v3/predictions.json",
+      "bytes": 112804,
+      "sha256": "afb0864f2a8090ccf2d322d4cf77fcd7cbca8aa52a19b6a290adde979a0a2d1b"
+    },
+    "corpusSha256": "001223aa255e5af7e10bddab2c8deacd7cacf0b5b3690a5a2034d241274cb9d6",
+    "unchangedScorerSources": {
+      "src/tooling/bugbot_benchmark.ts": {
+        "bytes": 5543,
+        "sha256": "77a468f7e8cbf5cbd206eb5eb27660f826cfa21111e93181b07e7d8bb80ca194"
+      },
+      "src/tooling/bugbot_quality_eval.ts": {
+        "bytes": 6109,
+        "sha256": "d2c330b94ad8cc8f3b52ad8dad7afa3f0545dbf172da01950f71d6ab6839b408"
+      },
+      "src/domain/bugbot/finding_identity.ts": {
+        "bytes": 2789,
+        "sha256": "a0f79cf255fda49edec7d84618021f3172bc03a3d4e50bc5916ca9b051a96eb9"
+      }
+    },
+    "typescript": "5.9.3"
+  },
+  "requestContracts": [
+    {
+      "caseId": "kotlin-blocking-coroutine",
+      "attemptId": "kotlin-blocking-coroutine:1",
+      "requestMember": "scientific-campaign-attempt1/corpus-v3/attempts/919c7ce4a3034e9019e91bb9-1.request.json",
+      "requestSha256": "4c9b4965d73d5eefc2af8db5f0f1ba155fb21becf882e31795d859dc0668564a",
+      "originalCategoryContract": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "correctness",
+          "security",
+          "performance",
+          "reliability",
+          "maintainability",
+          null
+        ],
+        "description": "Primary defect category, or null when unavailable"
+      },
+      "expectedCategoryAllowed": true,
+      "actualCategory": "reliability",
+      "expectedCategory": "performance"
+    },
+    {
+      "caseId": "py-short-circuit-unsafe-order",
+      "attemptId": "py-short-circuit-unsafe-order:1",
+      "requestMember": "scientific-campaign-attempt1/corpus-v3/attempts/2704abb1d1347b3b1fb0b49e-1.request.json",
+      "requestSha256": "c1d8c02b1d0159b41604745403843bb2c302ac840a75e555c47555f104dbd1c3",
+      "originalCategoryContract": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "correctness",
+          "security",
+          "performance",
+          "reliability",
+          "maintainability",
+          null
+        ],
+        "description": "Primary defect category, or null when unavailable"
+      },
+      "expectedCategoryAllowed": true,
+      "actualCategory": "reliability",
+      "expectedCategory": "correctness"
+    },
+    {
+      "caseId": "py-short-circuit-unsafe-order",
+      "attemptId": "py-short-circuit-unsafe-order:2",
+      "requestMember": "scientific-campaign-attempt1/corpus-v3/attempts/2704abb1d1347b3b1fb0b49e-2.request.json",
+      "requestSha256": "bf6081caf92db2fd2f2d43a6c4ec41f7600080b9c3185d29add9e13b1c923b9d",
+      "originalCategoryContract": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "correctness",
+          "security",
+          "performance",
+          "reliability",
+          "maintainability",
+          null
+        ],
+        "description": "Primary defect category, or null when unavailable"
+      },
+      "expectedCategoryAllowed": true,
+      "actualCategory": "reliability",
+      "expectedCategory": "correctness"
+    },
+    {
+      "caseId": "kt-compose-external-loader",
+      "attemptId": "kt-compose-external-loader:1",
+      "requestMember": "scientific-campaign-attempt1/corpus-v3/attempts/e0273bd2e633684c4c890945-1.request.json",
+      "requestSha256": "afba24b26627af0ceea367655ba4280ed5f112e9bdfbc298c2b32b3e3e5e2a8d",
+      "originalCategoryContract": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "correctness",
+          "security",
+          "performance",
+          "reliability",
+          "maintainability",
+          null
+        ],
+        "description": "Primary defect category, or null when unavailable"
+      },
+      "expectedCategoryAllowed": true,
+      "actualCategory": "reliability",
+      "expectedCategory": "correctness"
+    },
+    {
+      "caseId": "test-delegate-bypasses-stub",
+      "attemptId": "test-delegate-bypasses-stub:1",
+      "requestMember": "scientific-campaign-attempt1/corpus-v3/attempts/3a5fd8084080d364e288c94e-1.request.json",
+      "requestSha256": "1aa32282b83434a9e7f952f90f75e088673bd6103ef5123e92bbb4d4dfb0594c",
+      "originalCategoryContract": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "correctness",
+          "security",
+          "performance",
+          "reliability",
+          "maintainability",
+          null
+        ],
+        "description": "Primary defect category, or null when unavailable"
+      },
+      "expectedCategoryAllowed": true,
+      "actualCategory": "reliability",
+      "expectedCategory": "correctness"
+    },
+    {
+      "caseId": "request-transform-write",
+      "attemptId": "request-transform-write:1",
+      "requestMember": "scientific-campaign-attempt1/corpus-v3/attempts/683f8be99d36fb90ced50502-1.request.json",
+      "requestSha256": "61bfbc6cd475cb1b5a071888b624f7d8f4fe1a82e14e8876200919949cc94bad",
+      "originalCategoryContract": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "correctness",
+          "security",
+          "performance",
+          "reliability",
+          "maintainability",
+          null
+        ],
+        "description": "Primary defect category, or null when unavailable"
+      },
+      "expectedCategoryAllowed": true,
+      "actualCategory": "security",
+      "expectedCategory": "correctness"
+    },
+    {
+      "caseId": "fixture-values-ids-override-inverted",
+      "attemptId": "fixture-values-ids-override-inverted:1",
+      "requestMember": "scientific-campaign-attempt1/corpus-v3/attempts/7e53849e5b3b68bfaa369512-1.request.json",
+      "requestSha256": "3cabf6e413a8658948952aeff9b72a96a164b8aecb4ad439c6a2e2d7fe7660e5",
+      "originalCategoryContract": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "correctness",
+          "security",
+          "performance",
+          "reliability",
+          "maintainability",
+          null
+        ],
+        "description": "Primary defect category, or null when unavailable"
+      },
+      "expectedCategoryAllowed": true,
+      "actualCategory": "reliability",
+      "expectedCategory": "correctness"
+    },
+    {
+      "caseId": "fixture-values-ids-override-inverted",
+      "attemptId": "fixture-values-ids-override-inverted:2",
+      "requestMember": "scientific-campaign-attempt1/corpus-v3/attempts/7e53849e5b3b68bfaa369512-2.request.json",
+      "requestSha256": "6c03c18cf605499dd7bfdc29c8086c3720188394a6c4f8f5b04f07aa2ac51f68",
+      "originalCategoryContract": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "correctness",
+          "security",
+          "performance",
+          "reliability",
+          "maintainability",
+          null
+        ],
+        "description": "Primary defect category, or null when unavailable"
+      },
+      "expectedCategoryAllowed": true,
+      "actualCategory": "reliability",
+      "expectedCategory": "correctness"
+    }
+  ],
+  "categoryOnlyDiagnostics": [
+    {
+      "caseId": "kotlin-blocking-coroutine",
+      "diagnosticChangedField": "category",
+      "originalCategory": "reliability",
+      "expectedCategory": "performance",
+      "originalScoredFalsePositive": 1,
+      "originalScoredFalseNegative": 1,
+      "diagnosticPairMatched": true,
+      "severityStillDifferent": false,
+      "originalFindingAndScoreUnmodified": true
+    },
+    {
+      "caseId": "py-short-circuit-unsafe-order",
+      "diagnosticChangedField": "category",
+      "originalCategory": "reliability",
+      "expectedCategory": "correctness",
+      "originalScoredFalsePositive": 1,
+      "originalScoredFalseNegative": 1,
+      "diagnosticPairMatched": true,
+      "severityStillDifferent": true,
+      "originalFindingAndScoreUnmodified": true
+    },
+    {
+      "caseId": "kt-compose-external-loader",
+      "diagnosticChangedField": "category",
+      "originalCategory": "reliability",
+      "expectedCategory": "correctness",
+      "originalScoredFalsePositive": 1,
+      "originalScoredFalseNegative": 1,
+      "diagnosticPairMatched": true,
+      "severityStillDifferent": false,
+      "originalFindingAndScoreUnmodified": true
+    },
+    {
+      "caseId": "test-delegate-bypasses-stub",
+      "diagnosticChangedField": "category",
+      "originalCategory": "reliability",
+      "expectedCategory": "correctness",
+      "originalScoredFalsePositive": 1,
+      "originalScoredFalseNegative": 1,
+      "diagnosticPairMatched": true,
+      "severityStillDifferent": false,
+      "originalFindingAndScoreUnmodified": true
+    },
+    {
+      "caseId": "request-transform-write",
+      "diagnosticChangedField": "category",
+      "originalCategory": "security",
+      "expectedCategory": "correctness",
+      "originalScoredFalsePositive": 1,
+      "originalScoredFalseNegative": 1,
+      "diagnosticPairMatched": true,
+      "severityStillDifferent": false,
+      "originalFindingAndScoreUnmodified": true
+    },
+    {
+      "caseId": "fixture-values-ids-override-inverted",
+      "diagnosticChangedField": "category",
+      "originalCategory": "reliability",
+      "expectedCategory": "correctness",
+      "originalScoredFalsePositive": 1,
+      "originalScoredFalseNegative": 1,
+      "diagnosticPairMatched": true,
+      "severityStillDifferent": false,
+      "originalFindingAndScoreUnmodified": true
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T01:42:45.073708+00:00",
+  "status": "local-implementation-before-normal-commit",
+  "base": "8d44350032e416f35f37abc9417587fa9469a5f2",
+  "sourceSha256": {
+    "docs/agents/execution-contract.mdx": "c2d340f21cb1e2e232cf5360122af92b076f29393738fe4025cfdec1a98bc6b4",
+    "docs/bugbot/quality-observability.mdx": "9185bdbdfd77ddbdddf7d7be67271ea6c14923c2cb6590342e4982b14b3dcc11",
+    "package.json": "3dd2d72f372d3220413287b5b57ccb102e4addfc8f007fd18f1262266e3366af",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs": "175657587b08cdb313bdb7f58fe471de95219eb30d60afc454813e0e04abe54d",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/full-review.cjs": "e0a374fb9b451544910a1cab96cda774a88ecc72eae60c454d2dd7238d4f3c5a",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs": "bcfa463a68cebd9a3334dc7196204552bfa85a75fae144390cc5c9c10b8bafdf",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs": "a3f378fe6b90228e8d9a0d37e9be407705d73c4409bae6841a1ac25dd22da4d6",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs": "6b8e27717b30ae68a9ece2a9703073775b8025912614b1039ae25cab4b4fc85c",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/score-review.py": "9dc8918dfd75864e3549c3bae254ad9be99520c1660f536835dff10bc4f83f11",
+    "quality/bugbot/evidence/issue-950/execution-provenance.cjs": "cc5b11979d30f4ba050e959b3e68a427e76c154f3d81f2a4606cbb322845a1d0",
+    "quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs": "e848dd2a3a5f4e4586be79fc7d52817d42f8016cb9cb3f6a825fb2fb4c963242",
+    "quality/bugbot/evidence/issue974/README.md": "9dbe236ce419a8be2d57518579fabac7651ba9c4c164b49906c72604ce48dd02",
+    "quality/bugbot/evidence/issue974/attempt-ledger.cjs": "b88d90219eb70b0ec0adcc030c52b2771501f2d6fd3b8979bd216859ba287294",
+    "quality/bugbot/evidence/issue974/containment-native-fixture.cjs": "62eeded3ae8815e93c7c7183aab77bb0c58f1fa1b7a4260038defb1a5247ebf6",
+    "quality/bugbot/evidence/issue974/containment-native.test.cjs": "6aff983fcba8a3cc466ae836d71d8915404ad7685bea9d9c4bab5c20aa60667f",
+    "quality/bugbot/evidence/issue974/operation-containment.cjs": "54d4b8321f11a122a97aecf728f91b779428fa74f6042b04edee250a26e2752e",
+    "quality/bugbot/evidence/issue974/qualification-runtime.Dockerfile": "6c12a7b98ccf4e50c92c710a5d5a08eb9a48bd684ca3a4e9967cbfc41abcc9da",
+    "quality/bugbot/evidence/issue974/qualification-supervisor.cjs": "e19e86dda95fddf6d61cfafdbc2cefba4a8a4612609bd767f46b04dcdd1f19a7",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "556fed7b087ed8b0969fbadf022991881f884cf77dade3ae40c104d0091e1fbb",
+    "scripts/coverage-budgets.json": "74a371781ea76b7fb4b3ee7bb39f33f74d2d694d322e9fde8184220d5fce71f6",
+    "specs/CATALOG.md": "f45a7cb1b1e63eec28de6c5505c1f9a8743f7b71334c1fde1918fbe30d66eb6d",
+    "specs/agent-execution-policy-hardening.md": "d906bfe582f302cde8440d79efa5b4905b71e5fa9c10699156818597469068f3",
+    "specs/bugbot-analysis-publication-and-autofix.md": "d44eab4ec40dfb34fe1d06d5bf3e9ad2a4633a8989bbd803c6d8d202b68fc8fe",
+    "specs/catalog.json": "c01a61dae833f33bb1f79f10528794d03314710a1781a2c4a10e247ffae372f5",
+    "src/application/policies/qualification_operation_scope_policy.ts": "ee4a858890c4454c3aa01e773a4728d399042b2375b16d7a8ac8ddd16fe32490",
+    "src/application/ports/qualification_operation_scope_ports.ts": "a01ece00d232bf912523f54400d100fd66b1c8b7906e14ee4b58edfcd566da9d",
+    "src/architecture/__tests__/agent_output_locale_boundaries.test.ts": "8dfc336a3b22f4656b5236a5c249ea0e80bd74fd195cee512910c8b1635c3ba3",
+    "src/data/repository/agent_authentication.ts": "cbd790a767cebb2a1cb95dbef523fc86b1cef061c329614d0c17372b2de451e0",
+    "src/data/repository/agent_cli_execution.ts": "1650131bb5e693313f9debfc02fe9714f70a372ca69c8e38d8ae88a3b1ca7a8c",
+    "src/infrastructure/agents/__tests__/qualification_investigation.test.ts": "c0ab331e2de3400781b96007f590a95dedc1f34d5c57c285781b45e872fe313e",
+    "src/infrastructure/agents/agent_execution_planner.ts": "8cbb5e1509f31a995e0da6c137f41f4cd21d6c22e0d19586322b52c2a60f9e1d",
+    "src/infrastructure/agents/qualification_investigation_admission.ts": "9493a7f3982dbfb6f7abf2d57846fcb9bc46578885a9bbd356d363c3c70f8b2e",
+    "src/infrastructure/agents/qualification_operation_scope.ts": "c95b98d2aaca6a12650c17227783d117b87f10107933741982b12abf1b9e08be",
+    "src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts": "bfbeb822aab9cbefa20d8b5951f3ed528ec8c81638f84d6235cabca0a697491d",
+    "src/infrastructure/bugbot/shadow/session.cjs": "3234f7356290c1993d6fa6d6754c3ab897f6e40228e2834906d94bf0a344d0f4",
+    "src/infrastructure/bugbot/shadow_verification_adapter.ts": "df2388df274fc4aee231df52e30d13dccf05b9172e6f2ef284f6d8737d666f8b"
+  },
+  "logs": {
+    "six-node-final": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-six-node-final.log.gz",
+      "rawBytes": 881,
+      "rawSha256": "c04717b418b4e4cc354761360b4d825041cc8983d35dc5d5d2800eadbb70c63c",
+      "gzipSha256": "c567066e22ba4b618c4f12cc0ed8d1a9ac0539a2882f605af7d7fd0d8f00a0e0"
+    },
+    "C30-initial-syntax-negative": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-C30-initial-syntax-negative.log.gz",
+      "rawBytes": 1286,
+      "rawSha256": "be26f588f13d98d0036b37f9f8a78b1009189aeac0c8346ce08317733dc065ea",
+      "gzipSha256": "df7a8f938f8ccb827662a58ada37e1a153de617bfa0f9da1ef58d13a6a01d205"
+    },
+    "C30-component-intermediate": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-C30-component-intermediate.log.gz",
+      "rawBytes": 235,
+      "rawSha256": "e4c3efae162227fb75a4ee19b803f82ae0d39a68b3ad3a952e381a3b5408f1cf",
+      "gzipSha256": "6aade7d399b23eeea7681f92897e1a9394432ac847d2573673f703b4d4ddb1fe"
+    },
+    "C30-actual-scorer": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-C30-actual-scorer.log.gz",
+      "rawBytes": 237,
+      "rawSha256": "46d935c14c517f026f543cbc7d72bd53cfeed95388f1455577cf07f6236527b3",
+      "gzipSha256": "adbe5bb1ae0838eb84fa33f3268bf13e8fc326aba0601be44d429854a50b02c2"
+    },
+    "verifier-scope-32": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-verifier-scope-32.log.gz",
+      "rawBytes": 280,
+      "rawSha256": "49edfb4b5ae6e04dd04f33a94b7e8a7f9b769ba9b48b42a7b0bfdbfe408b2b60",
+      "gzipSha256": "d783bb01ccb335c2cb3bd2bf6e37785afa6ec406d451a882ffc308196531844d"
+    },
+    "scope-coverage6-historical": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage6-historical.log.gz",
+      "rawBytes": 1446,
+      "rawSha256": "619b2425ae0c49d8c5417ba7554b8e772162a8f091883112b8c3deb653fbee82",
+      "gzipSha256": "e5d37a0487d49cdbc6b9d414cd01ab4486fa744c581c3fbec80f19e79a220abf"
+    },
+    "scope-coverage7-cancel-category-negative": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage7-cancel-category-negative.log.gz",
+      "rawBytes": 2613,
+      "rawSha256": "56799e2ab5601447e83299ccd905967ac226ed7a9a4adf66e3189c636286bbcf",
+      "gzipSha256": "02dcd70431ce014f13c1afde12a69befd8ebd922fb81d88b5ff854b06a1aea11"
+    },
+    "scope-coverage8-final": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-scope-coverage8-final.log.gz",
+      "rawBytes": 1447,
+      "rawSha256": "95799b778a1958f6f3b4431577e66eed628f793a9a21ec46da219f7cd39f232d",
+      "gzipSha256": "d9c7926113ea95aec6a40bcc1f85c9f06cf9967bdd2d5af26759d341111b127c"
+    },
+    "scorer-legacy11": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-scorer-legacy11.log.gz",
+      "rawBytes": 1305,
+      "rawSha256": "5f34efc829053298d307c04613106b5956e7e8bea1de5d20a2d928e3c72f4ee2",
+      "gzipSha256": "88c4e20d9b0d4ab3732e2f05e16029011b3543bf64e6467be7144da753feb19b"
+    },
+    "architecture3-17": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-architecture3-17.log.gz",
+      "rawBytes": 349,
+      "rawSha256": "536bf1297ce80e57c0bc79d1eb03a5b89edecf4b331afd83e890307fc40a82bb",
+      "gzipSha256": "c6e7c0d633751bb378ae3bb9530503c0caed6832981a62195f4673dc0637b18c"
+    },
+    "architecture-initial-one-matched": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-architecture-initial-one-matched.log.gz",
+      "rawBytes": 325,
+      "rawSha256": "9794c5fafffcb3457d1f15fc9fcf2fcab8980c3b3390311bae4a37582706ab84",
+      "gzipSha256": "cee7846da1e27c2878d4f3b6863baa48c8cfc26bb72fe173e94ccc5d8f041691"
+    },
+    "types": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-types.log.gz",
+      "rawBytes": 0,
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    "lint-initial-warning": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-lint-initial-warning.log.gz",
+      "rawBytes": 333,
+      "rawSha256": "413cea5feaa7670efae867272da6ea9a0b617f8c8e5c42e54eaf17491d5b4873",
+      "gzipSha256": "00c03ca2aa05d76e6b7285213976bf179bed678aae6b950e97c3c7a7b6de558f"
+    },
+    "lint-final": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-lint-final.log.gz",
+      "rawBytes": 0,
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gzipSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    "specifications": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-specifications.log.gz",
+      "rawBytes": 2458,
+      "rawSha256": "8c689eaaad0d7983c82d42a28bd091129bea742552e86fe8b086c8ab5d8172e1",
+      "gzipSha256": "b6f7b55ac9dca0fb1f042e1ef0d2eb35838bc1707afc1611995f807a0e42fa25"
+    },
+    "documentation": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-documentation.log.gz",
+      "rawBytes": 306,
+      "rawSha256": "1b2d840993321a85c930e6767a23f6fa9a1e6e9ba3d7b48dcac9dce11d259c5a",
+      "gzipSha256": "e415b0dc7d5e7c0e14944817e2e48f38c29f970e065bc497098b77e75b03a6e6"
+    },
+    "graphify": {
+      "file": "quality/bugbot/evidence/issue-974/controls/whole-operation-graphify.log.gz",
+      "rawBytes": 3618,
+      "rawSha256": "7273996599b1e6276152bb2b197644ed1b5d0d814680885e588bb6d2c1d0590e",
+      "gzipSha256": "0c8df117b8bb9ea20380fef631622cb4e2235e4013664040f4b4f71cd6e732e8"
+    }
+  },
+  "currentEvidence": {
+    "newDeterministicControls": "6/6 PASS, zero skipped/cancelled",
+    "sdkVerifier": "2 suites/32 tests PASS",
+    "scopePolicyCoverage": "15 groups PASS; 127 statements/107 branches/29 functions/100 lines;100%each",
+    "scorerCompatibility": "11/11 PASS",
+    "architecture": "3 suites/17 PASS; earlier command matched only one suite, retained",
+    "types": "PASS",
+    "lint": "PASS0warnings; earlier unused directive warning retained",
+    "specifications": "PASS",
+    "documentation": "PASS120MDX/routes",
+    "graphify": "AST update PASS; earlier WIP snapshot retained"
+  },
+  "retainedNegatives": [
+    "C30 initial fixture syntax error",
+    "scope coverage7 had14PASS/1cancel-category assertion failure despite100%coverage; corrected cancellation priority before admission check",
+    "previous214PASS/19untracked-source failures retained in component receipt"
+  ],
+  "native": {
+    "fixtureAndHarnessPresent": true,
+    "imageBuilt": false,
+    "actualCases32to35": "unexecuted",
+    "unrelatedCachedImagesAreAcceptance": false,
+    "modelCalls": 0
+  },
+  "remaining": [
+    "normal implementation commit/build/hooks",
+    "full239 committed-source controls",
+    "each changed runtime/containment95/90 coverage and global checks",
+    "actual immutable SDKimage and4nativecontrols",
+    "final native PR SHA/findings",
+    "committed measurement preregistration including full42closure"
+  ],
+  "measurement": {
+    "calls": 0,
+    "174": "unstarted",
+    "42": "unstarted",
+    "qualifiedProfile": null,
+    "evaluatedPrWriteAttempts": 0,
+    "production": "disabled"
+  }
+}

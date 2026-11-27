@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-22",
+  "parent": "a74613e95927dae5a0d327b31ced436e22ba8259",
+  "sourceSha256": {
+    "quality/bugbot/evidence/issue974/containment-native.test.cjs": "24bb6aed67d174c24507543f8ae3fc5ad54ab8215fc7c8347951dba541f3ce1a",
+    "quality/bugbot/evidence/issue974/native-bootstrap-components.cjs": "46ad5f1fc57fa2a8c22991c0c213a601388e44d8be1a47b2dab6f635e5ef1051",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "c74cf176e5f87300a05010e469042016eadcd7c68c47f0a59ec33edbd756cc37",
+    "quality/bugbot/evidence/issue-974/controls/engine-transport-coverage/coverage.cjs": "b7011b06354801e953575984934af01674a5db554cf2732dd464564bde049d3e",
+    "quality/bugbot/evidence/issue-974/controls/launcher-attempt-coverage/coverage.cjs": "f1c5484981db875bc1859cd1b8058ac16d1df4240d1ccd81456593171d2f2c41",
+    "quality/bugbot/evidence/issue-974/controls/implementation-full-review-coverage/coverage.cjs": "26aea512890454f0bb3c1a78fca919c4fc9073c9375a4083e05567d9945d428c"
+  },
+  "originalSuppliedDigestDefect": {
+    "sameFinal13Tests": true,
+    "preCorrectionSource": "a74613e95927dae5a0d327b31ced436e22ba8259",
+    "preCorrectionReadSeamOnly": true,
+    "before": {
+      "pass": 6,
+      "fail": 7
+    },
+    "filesystemReferenceCandidate": {
+      "pass": 13,
+      "fail": 0
+    }
+  },
+  "committedReferenceDefect": {
+    "sameFinal16Tests": true,
+    "filesystemReferenceCandidate": {
+      "pass": 13,
+      "fail": 3
+    },
+    "committedHostReference": {
+      "pass": 16,
+      "fail": 0
+    },
+    "finalUsesExistingPinnedGitDataReader": true
+  },
+  "intermediateFull503": {
+    "pass": 503,
+    "notFinalVersion": true,
+    "newMissingCasesThenDetected": "dirty host bootstrap paired with matching digest; legitimate committed input beside dirty file; dirty executing harness with resigned plan hashes"
+  },
+  "finalFullCommand": {
+    "pass": 506,
+    "fail": 0,
+    "skip": 0,
+    "cancel": 0,
+    "actualC32C35Executed": false
+  },
+  "initialInterceptorCorrection": "Readonly opens alone are intercepted, preventing injected writes from recursing or replacing the tracked descriptor. Initial test bytes/logs remain retained.",
+  "typedDocsSpecsCatalog": "PASS",
+  "normalHooks": "PENDING",
+  "logicalCaseIds": 35,
+  "priorFloorsUnchanged": true,
+  "newC26Subscenarios": 16,
+  "componentBoundary": "Real Git/private filesystem and modeled child-process launch; these sixteen execute no bootstrap, Engine, provider or model. Other existing Node/Git/transport fixture processes execute in the full command.",
+  "actualFreshNativeTuple": "REQUIRED_UNEXECUTED",
+  "bootstrapSourceCommittedHostRequired": true,
+  "qualificationModelCalls": 0,
+  "pilotWrites": 0,
+  "qualifiedProfiles": [],
+  "production": "disabled",
+  "remaining": "credential exclusion, independent owner-loss cleanup, actual CLI and read-scope admission, all remaining source/global/native gates and committed scientific preregistration",
+  "pendingRecoverySnapshotsUnchanged": true
+}

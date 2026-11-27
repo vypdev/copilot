@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-21T19:43:03.028844+00:00",
+  "parent": "22bf7637f0a3ed8eb656a7185b80797b67aa6776",
+  "additionalControls": 45,
+  "distribution": {
+    "launcher": 32,
+    "attemptLedger": 13
+  },
+  "selectedControlsPassed": 55,
+  "testHelperHashes": {
+    "quality/bugbot/evidence/issue974/launcher-components.cjs": "d74d76c8393d1f5fba61a8e3b6ea5703d57ced1c697a7e576524a890e51066f5",
+    "quality/bugbot/evidence/issue974/attempt-components.cjs": "5e7773031d79085da569fa78fc1d6db2d29f136593ec708079901b3eaf6106c1",
+    "quality/bugbot/evidence/issue974/qualification.test.cjs": "e886f09b2c2a26fe1cd20b76e941d66292277486e384aff3e0854a19f2fdbaa3"
+  },
+  "sourceHashes": {
+    "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs": "a3f378fe6b90228e8d9a0d37e9be407705d73c4409bae6841a1ac25dd22da4d6",
+    "quality/bugbot/evidence/issue974/attempt-ledger.cjs": "b88d90219eb70b0ec0adcc030c52b2771501f2d6fd3b8979bd216859ba287294"
+  },
+  "fullShadowCommand": {
+    "command": "pnpm run test:bugbot-shadow-verification",
+    "exit": 0,
+    "passed": 343,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "durationMs": 297073.524542,
+    "logSha256": "80813f2356b1bba58cb1488221a1edffbd218bea59857c08cc10dc10045f773e"
+  },
+  "measuredLauncherAndAttemptModuleGatesSatisfied": true,
+  "globalChangedModuleGateSatisfied": false,
+  "runtimeAndCorporaAndPlanAnd35LogicalIDsUnchanged": true,
+  "selectedActionSDDUnchanged": true,
+  "nativeAdmissionOrModelCampaign": false,
+  "ports": "modeled scorer/provenance/CLI/verifier/containment/process; actual private filesystem and current full deterministic Unix fixtures",
+  "parent22NativeCI": "4/4SUCCESS945SDK/18756PASS35historicalskips;385extensionfiles5291PASS;298NodecontrolsPASS; full native progress separate and still pending",
+  "normalHooks": "pending precommit snapshot",
+  "finalHeadNativeAcceptance": "required",
+  "qualificationModelCalls": 0,
+  "actual174Started": false,
+  "actual42Started": false,
+  "qualifiedProfile": null,
+  "pilotWriteAttempts": 0,
+  "production": "disabled"
+}
