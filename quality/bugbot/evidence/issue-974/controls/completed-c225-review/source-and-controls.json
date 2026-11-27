@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "review": {
+    "source": "c225a67475b0c3cbda09aac7e3270862ccc8c056",
+    "run": 46045517442,
+    "job": 140663674328,
+    "reviewId": 6092843761,
+    "partitions": "55/55",
+    "partitionRetries": 1,
+    "workflowResult": "success",
+    "reviewCheck": "neutral, five new findings; not clean PASS"
+  },
+  "causalBefore": {
+    "kind": "MODEL_FREE_EXACT_SOURCE_CAUSAL_REPRODUCTIONS",
+    "source": "c225a67475b0c3cbda09aac7e3270862ccc8c056",
+    "rows": [
+      {
+        "name": "pre-create retention failure cleans private dummy-token staging",
+        "expected": "FAIL",
+        "actual": "FAIL",
+        "detail": "known pre-dispatch failure retained its owned private staging\n\ntrue !== false\n"
+      },
+      {
+        "name": "existing fixture fails to reject mutant that drops review evidence token",
+        "expected": "PASS",
+        "actual": "PASS"
+      },
+      {
+        "name": "independent token assertion rejects the same mutant",
+        "expected": "FAIL",
+        "actual": "FAIL",
+        "detail": "Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'COMPONENT_ONLY_TOKEN'\n"
+      },
+      {
+        "name": "independent token assertion accepts original source",
+        "expected": "PASS",
+        "actual": "PASS"
+      }
+    ],
+    "newModelCalls": 0,
+    "newInstallationWrites": 0,
+    "pilotWrites": 0,
+    "production": "disabled",
+    "actualDockerAdmission": false,
+    "actualQualification": false
+  },
+  "after": {
+    "at": "2026-11-27T20:09:14.971Z",
+    "base": "c225a67475b0c3cbda09aac7e3270862ccc8c056",
+    "operationSourceSha256": "47d868c49030d69e2d93246a0e64cb09bae45b83eb2182b17895b3faab31cb2a",
+    "componentSourceSha256": "c63a63e793d9181212afaf2f529ac50aa81553094468d32082833400b9ea9012",
+    "rows": [
+      {
+        "name": "actual modified source, complete Engine component suite",
+        "result": "PASS"
+      },
+      {
+        "name": "restore createdEffect before failed retention",
+        "result": "REJECTED_BY_NEW_CONTROL",
+        "error": "known pre-dispatch failure must remove private staging\n\ntrue !== false\n"
+      },
+      {
+        "name": "drop selected review evidence token",
+        "result": "REJECTED_BY_NEW_CONTROL",
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ null\n- 'COMPONENT_ONLY_EVIDENCE'\n"
+      },
+      {
+        "name": "leak ambient evidence token into corpus mode",
+        "result": "REJECTED_BY_NEW_CONTROL",
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'COMPONENT_ONLY_EVIDENCE'\n- null\n"
+      }
+    ],
+    "productionChange": "Flag possible create effects only after synchronous scope retention succeeds; genuine unknown creation effects retain staging.",
+    "testChange": "Independent literal token expectations, selection precedence and corpus/preflight exclusion; pre-create record/retention failure cleanup.",
+    "actualDockerAdmission": false,
+    "actualQualification": false,
+    "modelCalls": 0,
+    "installationWrites": 0,
+    "pilotWrites": 0,
+    "production": "disabled",
+    "sourceCoverage": {
+      "tests": 435,
+      "pass": 435,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "operationContainment": {
+        "statements": 96.16,
+        "lines": 99.51,
+        "branches": 90.6,
+        "functions": 96.42
+      },
+      "attemptLedger": {
+        "statements": 99.53,
+        "lines": 100,
+        "branches": 98.75,
+        "functions": 100
+      },
+      "unchangedFloors": "95 statements/lines;90 branches/functions",
+      "actualNativeSdkAcceptance": false
+    },
+    "fullShadowControls": {
+      "counts": {
+        "tests": 653,
+        "pass": 653,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "source": "modified bytes linked by operation/component SHA256, before commit; not runtime admission",
+      "rawSha256": "fcefbe05502512c200052eaedb2a07ddf9711d27362b2af139a4c6aa642d49d5"
+    }
+  },
+  "findings": [
+    {
+      "id": 4723219065,
+      "assessment": "refuted for admitted API1.56; response headers acknowledge wait registration before terminal body"
+    },
+    {
+      "id": 4723219070,
+      "assessment": "refuted within existing trusted-source boundary: admitted Node modules are TCB, correlation is not module authentication; model stdio cannot grant IPC; actual namespace stop and independent complete attempts/scoring remain required"
+    },
+    {
+      "id": 4723219077,
+      "assessment": "confirmed: synchronous pre-dispatch retention failure retained private staging; corrected and original behavior rejected by control"
+    },
+    {
+      "id": 4723219083,
+      "assessment": "already satisfied at c225: image api call passes undefined, signal"
+    },
+    {
+      "id": 4723219105,
+      "assessment": "confirmed assertion gap: literal evidence-token expectations now detect omission, precedence errors and corpus leakage"
+    }
+  ],
+  "scientific174": "COMPLETE_NEGATIVE, unchanged",
+  "paired42": "UNSTARTED_NOT_ADMITTED",
+  "newScientificOrTechnicalSdkCalls": 0,
+  "pilotWrites": 0,
+  "production": "disabled",
+  "actualNativeAcceptanceOnModifiedTuple": false,
+  "caseInventory": "existing ev974-C27; 35 logical IDs unchanged",
+  "environmentNegative": {
+    "attempts": 2,
+    "error": "local sandbox denied temporary Unix-socket listen before observations",
+    "causalEvidence": false,
+    "correctedExecution": "same model-free fixtures with local temporary Unix socket access; no Docker"
+  }
+}

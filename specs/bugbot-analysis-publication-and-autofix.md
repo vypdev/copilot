@@ -6017,3 +6017,23 @@ catalog evidence MUST explain these operational limits. No public setting,
 schema, privilege, retry, model query, installation or activation changes.
 The actual failed nonce canary remains failed; scientific174negative and42not
 admitted are unchanged. Update Graphify and require final reviewed-source CI.
+
+
+### Post-campaign c225 review: pre-dispatch staging and credential evidence
+
+This is an implementation correction to EV974-S03/S06 and an extension of
+existing C27 evidence, with no new capability or logical case IDs. Successful
+synchronous scope retention precedes the flag that preserves a possible Engine
+create effect. A failure before that point has no dispatched create request and
+releases its owned private staging; genuine unknown creation/lifetime effects
+remain retained with their ownership records.
+
+The existing C27 component includes two pre-dispatch failure subscenarios and
+nine credential configurations. Independent literal expectations verify review
+evidence-token sources and precedence, absence, and exclusion from corpus and
+preflight packets. Original behavior and three deliberate mutants are retained
+in the [c225 review packet](../quality/bugbot/evidence/issue-974/controls/completed-c225-review/README.md).
+These eleven subscenarios do not increase the35logical-case inventory or replace
+actual native controls, source/module coverage or scientific admission. The
+174negative result and unstarted42 remain unchanged. No new measurement, SDK
+query, privilege, runtime profile, public flag or production activation occurs.

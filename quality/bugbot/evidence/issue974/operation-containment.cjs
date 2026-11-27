@@ -514,7 +514,7 @@ async function runContainedOperation({ root, plan, mode, slot, outputDirectory, 
     const retained = async event => {
         if (event.event === 'scope-create-start') {
             await record(event);
-            createdEffect = true; provenance.retainBootstrapScope(root, identity, null); return;
+            provenance.retainBootstrapScope(root, identity, null); createdEffect = true; return;
         }
         if (event.event === 'scope-created') provenance.retainBootstrapScope(root, identity, event.scopeId);
         await record(event);

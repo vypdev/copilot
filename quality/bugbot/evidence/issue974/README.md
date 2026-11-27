@@ -3,7 +3,7 @@
 The independent 174-case campaign is complete and negative: precision74/84 =
 88.0952%, below the unchanged90% minimum. Measured source093fd141 and preregistration
 07f21a4 retain all original inputs,200scientific SDK application invocations and
-one separate technical SDK control. Luna→Sol is not qualified;42 remain unstarted
+two separate technical SDK controls, including the retained failed626e canary. Luna→Sol is not qualified;42 remain unstarted
 and inadmissible. Production stays disabled and pilot write attempts remain0.
 See the [complete frozen result](../issue-974/campaigns/093fd141/results.md).
 
@@ -15,10 +15,10 @@ legacy worker's ledger failure from producing PASS, reject reversed s390 clone
 ABIs before the unchanged approved filter is used, and clarify the enclosing
 build context with its sanitized `sdk-source/` child. These corrections do not
 change or repeat the campaign. Retrieve compressed evidence with each entry's
-own archiveRevision/path, then verify both recorded hashes. The original personal
-host endpoint remains in historical Git commits; redacted tip descriptors do not
-erase that history. History treatment still requires a maintainer decision under
-the managed-branch rules.
+own archiveRevision/path, then verify both recorded hashes. The current branch and lookup locators are sanitized. The previously exposed
+unreferenced raw URL now returns404, while21historical review diff hunks remain
+visible at the latest read. Hosted redaction is incomplete; a sanitized tip or
+a missing old raw URL alone cannot establish the remaining purge.
 
 ## Corpus component coverage correction
 
@@ -33,6 +33,18 @@ Full shadow controls, normal hooks and current-head native findings remain
 separate required checks. These fixtures do not establish actual model quality,
 CLI confinement, native containment or qualification. Actual174/42 are still
 unstarted; production remains disabled and pilot writes0.
+
+## Completed c225 review corrections
+
+The original current-source review completed55/55partitions. Its five findings
+were adjudicated: two confirmed corrections/test gaps and three refuted premises;
+a neutral findings check is not a clean PASS. The confirmed
+pre-create scope-retention failure now releases its owned private staging before
+any Engine POST. C27 also asserts review evidence-token selection/precedence and
+corpus/preflight exclusion with independent expected values. The complete Engine
+component suite passes and rejects three deliberate production mutants. These
+model-free controls do not rerun or qualify the actual SDK.
+See the [source-bound review packet](../issue-974/controls/completed-c225-review/README.md).
 
 # EV-07 v2 detector qualification — issue #974
 

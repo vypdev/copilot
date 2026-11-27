@@ -161,7 +161,7 @@ async function fixture(options = {}) {
         fs.rmSync(directory, { recursive: true, force: true });
         throw error;
     }
-    const nativeRequire = Module.createRequire(file), module = { exports: {} }, provenance = { requireBootstrapAdmission: where => { assert.equal(where, directory); return proof; }, materializePlanBundle: (where, x, y, dest) => { fs.writeFileSync(dest, 'unit bundle'); return hash('unit bundle'); }, retainBootstrapScope: () => { }, confirmBootstrapScopeStopped: () => { } };
+    const nativeRequire = Module.createRequire(file), module = { exports: {} }, provenance = { requireBootstrapAdmission: where => { assert.equal(where, directory); return proof; }, materializePlanBundle: (where, x, y, dest) => { fs.writeFileSync(dest, 'unit bundle'); return hash('unit bundle'); }, retainBootstrapScope: () => { if (options.retainFailure) throw Error('unit scope retention failure'); }, confirmBootstrapScopeStopped: () => { } };
     const isolatedProcess = Object.create(process);
     Object.defineProperty(isolatedProcess, 'env', { value: options.environment ?? {}, writable: false });
     const authFile = path.join(directory, 'unit-auth.json');
@@ -187,6 +187,7 @@ async function fixture(options = {}) {
         const credentials = JSON.parse(fs.readFileSync(path.join(event.inputDirectory, 'private-credentials.json')));
         assert.deepEqual(credentials.environment, options.selectedCredentials?.OPENAI_API_KEY === undefined ? {} : { OPENAI_API_KEY: options.selectedCredentials.OPENAI_API_KEY });
         assert.equal(credentials.codexAuth, options.sessionFile ? 'COMPONENT_ONLY_SESSION' : null);
+        assert.equal(credentials.evidenceToken, options.expectedEvidenceToken ?? null);
     } if (options.recordFailure === event.event)
         throw Error('unit durable record failure'); if (options.onRecord) await options.onRecord(event); };
     return { api: module.exports, directory, input, output, identity, profile, plan, requests, events, proof, get lifetimeEnds() { return lifetimeEnds; }, get attachDestructions() { return attachDestructions; }, get running() { return running; }, get removed() { return removed; }, get config() { return config; }, get activeClientRequests() { return clientRequests.size; }, get ownerChannelClosed() { return ownerChannel?.closed ?? true; }, record,
@@ -233,8 +234,30 @@ async function exerciseEngineTransportFaults() {
     for (const aborted of [false, true])
         await use({ completeOnStart: !aborted }, async (f) => { const cancel = new AbortController(); if (aborted)
             cancel.abort(); const pending = f.api.runContainedOperation({ root: f.directory, plan: f.plan, mode: 'native-control', slot: { caseId: 'ev974-C32' }, outputDirectory: path.join(f.directory, 'outer-output'), record: f.record, signal: cancel.signal }); if (aborted) { await assert.rejects(pending, /cancelled|aborted/); assert.equal(f.requests.filter(row => row.route.includes('/containers/create?')).length, 0); assert.equal(f.events.at(-1).event, 'operation-incomplete'); assert.equal(f.events.at(-1).reason, 'explicit-cancellation'); } else { const result = await pending; assert.equal(result.interrupted, false); assert.equal(result.namespaceInitStopped, true); assert.equal(f.removed, true); } });
-    for (const configuration of [{ mode: 'corpus', purpose: 'qualification', preflight: true, selectedCredentials: { OPENAI_API_KEY: 'COMPONENT_ONLY_KEY', UNRELATED: 'MUST_NOT_COPY' }, sessionFile: true }, { mode: 'corpus', purpose: 'qualification', environment: {} }, { mode: 'review', purpose: 'qualification', environment: { COPILOT_EVIDENCE_TOKEN: 'COMPONENT_ONLY_EVIDENCE' } }, { mode: 'review', purpose: 'qualification', environment: { GH_TOKEN: 'COMPONENT_ONLY_FALLBACK' } }, { mode: 'review', purpose: 'qualification', environment: { GITHUB_TOKEN: 'COMPONENT_ONLY_OTHER' } }, { mode: 'review', purpose: 'qualification', environment: {} }])
+    const ambientEvidenceTokens = { COPILOT_EVIDENCE_TOKEN: 'COMPONENT_ONLY_EVIDENCE', GH_TOKEN: 'COMPONENT_ONLY_FALLBACK', GITHUB_TOKEN: 'COMPONENT_ONLY_OTHER' };
+    for (const configuration of [
+        { mode: 'corpus', purpose: 'qualification', preflight: true, selectedCredentials: { OPENAI_API_KEY: 'COMPONENT_ONLY_KEY', UNRELATED: 'MUST_NOT_COPY' }, sessionFile: true, environment: ambientEvidenceTokens },
+        { mode: 'corpus', purpose: 'qualification', environment: {} },
+        { mode: 'corpus', purpose: 'qualification', environment: ambientEvidenceTokens },
+        { mode: 'review', purpose: 'qualification', environment: { COPILOT_EVIDENCE_TOKEN: 'COMPONENT_ONLY_EVIDENCE' }, expectedEvidenceToken: 'COMPONENT_ONLY_EVIDENCE' },
+        { mode: 'review', purpose: 'qualification', environment: { GH_TOKEN: 'COMPONENT_ONLY_FALLBACK' }, expectedEvidenceToken: 'COMPONENT_ONLY_FALLBACK' },
+        { mode: 'review', purpose: 'qualification', environment: { GITHUB_TOKEN: 'COMPONENT_ONLY_OTHER' }, expectedEvidenceToken: 'COMPONENT_ONLY_OTHER' },
+        { mode: 'review', purpose: 'qualification', environment: ambientEvidenceTokens, expectedEvidenceToken: 'COMPONENT_ONLY_EVIDENCE' },
+        { mode: 'review', purpose: 'qualification', environment: { GH_TOKEN: 'COMPONENT_ONLY_FALLBACK', GITHUB_TOKEN: 'COMPONENT_ONLY_OTHER' }, expectedEvidenceToken: 'COMPONENT_ONLY_FALLBACK' },
+        { mode: 'review', purpose: 'qualification', environment: {} },
+    ])
         await use({ ...configuration, completeOnStart: true }, async (f) => { const campaign = path.join(f.directory, 'campaign'); fs.mkdirSync(path.join(campaign, 'corpus-v3'), { recursive: true }); fs.mkdirSync(path.join(campaign, 'fixtures/full-review/U1'), { recursive: true }); fs.writeFileSync(path.join(campaign, 'corpus-v3/unit.txt'), 'COMPONENT_SOURCE'); const result = await f.api.runContainedOperation({ root: f.directory, plan: f.plan, mode: configuration.mode, slot: configuration.mode === 'review' ? { subjectId: 'U1', repetition: 1 } : { caseId: 'component-case' }, outputDirectory: path.join(f.directory, 'outer-output'), record: f.record, signal: new AbortController().signal, campaign, preflight: configuration.preflight ?? false }); assert.equal(result.interrupted, false); assert.equal(result.exitCode, 0); assert.equal(f.removed, true); });
+    for (const failure of ['record', 'retention'])
+        await use({ purpose: 'qualification', environment: ambientEvidenceTokens, selectedCredentials: { OPENAI_API_KEY: 'COMPONENT_ONLY_KEY' }, sessionFile: true, retainFailure: failure === 'retention', recordFailure: failure === 'record' ? 'scope-create-start' : undefined }, async (f) => {
+            await assert.rejects(f.api.runContainedOperation({ root: f.directory, plan: f.plan, mode: 'corpus', slot: { caseId: 'component-case' }, outputDirectory: path.join(f.directory, 'outer-output'), record: f.record, signal: new AbortController().signal }), failure === 'retention' ? /unit scope retention failure/ : /unit durable record failure/);
+            assert.equal(f.requests.filter(row => row.method === 'POST' && row.route.includes('/containers/create?')).length, 0);
+            assert.equal(f.requests.filter(row => row.method === 'DELETE').length, 0);
+            const incomplete = f.events.at(-1);
+            assert.equal(incomplete.event, 'operation-incomplete'); assert.equal(incomplete.scopeId, null);
+            assert.equal(incomplete.stoppedConfirmed, false); assert.equal(incomplete.removed, false);
+            assert.equal(fs.existsSync(incomplete.inputDirectory), false, 'known pre-dispatch failure must remove private staging');
+            assert.equal(fs.existsSync(f.directory), true, 'unrelated fixture root must remain');
+        });
     await use({ unknownCreateId: true }, async (f) => { await assert.rejects(f.api.runContainedOperation({ root: f.directory, plan: f.plan, mode: 'native-control', slot: { caseId: 'ev974-C32' }, outputDirectory: path.join(f.directory, 'outer-output'), record: f.record, signal: new AbortController().signal })); assert.equal(f.events.at(-1).scopeId, null); assert.equal(f.events.at(-1).removed, false); assert.equal(fs.existsSync(f.events.at(-1).inputDirectory), true); assert.equal(f.requests.filter(r => r.method === 'DELETE').length, 0); });
     await use({ recordFailure: 'scope-created' }, async (f) => { await assert.rejects(f.api.runContainedOperation({ root: f.directory, plan: f.plan, mode: 'native-control', slot: { caseId: 'ev974-C32' }, outputDirectory: path.join(f.directory, 'outer-output'), record: f.record, signal: new AbortController().signal }), /creation record failed/); assert.equal(f.removed, true); assert.equal(f.events.at(-1).event, 'operation-incomplete'); assert.equal(f.events.at(-1).stoppedConfirmed, true); });
 }
