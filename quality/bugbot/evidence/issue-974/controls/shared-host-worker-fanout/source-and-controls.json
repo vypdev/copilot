@@ -66,7 +66,17 @@
     "quality/bugbot/evidence/issue-974/controls/shared-host-worker-fanout/worker-control.cjs": "e66ed85cbdbb88fa77cee2854e55868248cd8ca8978f7447ff99de429fb46524"
   },
   "localStaticValidation": "typecheck/lint/specification/docs-page/documentation/agent-guide/workflow PASS; catalog regenerated",
-  "fullShadow": "PENDING_COMMITTED_SOURCE",
+  "fullShadow": {
+    "validatedSourceCommit": "223e2eb839cb9ebdd1c9f47242893ae3b5b4564a",
+    "passed": 653,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "durationMs": 326755.211334,
+    "rawBytes": 74725,
+    "rawSha256": "c8c386db577bbc693ead94aef57259b922e55b4609137e75dc76d0143c2addc4",
+    "scope": "Complete local model-free controls, not native Linux/SDK admission or qualification"
+  },
   "focusedSDK": {
     "suites": 2,
     "passed": 130,
@@ -74,5 +84,24 @@
     "skipped": 0,
     "originalTestBodiesAndDeadlines": "unchanged",
     "scope": "local, not original Linux host or native CI acceptance"
+  },
+  "normalHooks": {
+    "validatedSourceCommit": "223e2eb839cb9ebdd1c9f47242893ae3b5b4564a",
+    "suitesPassed": 970,
+    "testsPassed": 20010,
+    "historicalSkipped": 35,
+    "rawBytes": 547378,
+    "rawSha256": "8d06fbd5da438a0f39abb0bd260b4a962ea0f06cb2dd88278cbef98cbc468730",
+    "fourSdkBundlesByteIdentical": true
+  },
+  "delivery": {
+    "specifications": "PASS",
+    "documentation": "PASS",
+    "sdkBuildIdentity": "PASS",
+    "extension": "PASS_AFTER_REGENERATING_STALE_GENERATED_OUTPUT",
+    "npmContents": "PASS",
+    "extractedCliPackageSmoke": "PASS",
+    "initialStaleArtifactFailureRetained": true,
+    "installationClaim": false
   }
 }

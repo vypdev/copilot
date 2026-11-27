@@ -2756,7 +2756,10 @@
         "quality/bugbot/evidence/issue-974/controls/completed-c225-review/README.md",
         "quality/bugbot/evidence/issue-974/controls/completed-c225-review/source-and-controls.json",
         "quality/bugbot/evidence/issue-974/controls/shared-host-worker-fanout/README.md",
-        "quality/bugbot/evidence/issue-974/controls/shared-host-worker-fanout/source-and-controls.json"
+        "quality/bugbot/evidence/issue-974/controls/shared-host-worker-fanout/source-and-controls.json",
+        "quality/bugbot/evidence/issue-974/campaigns/093fd141/post-run-adjudication/README.md",
+        "quality/bugbot/evidence/issue-974/campaigns/093fd141/post-run-adjudication/adjudications.json",
+        "quality/bugbot/evidence/issue-974/campaigns/093fd141/canonical164-historical.md"
       ]
     },
     {

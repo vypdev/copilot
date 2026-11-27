@@ -7,6 +7,15 @@ two separate technical SDK controls, including the retained failed626e canary. L
 and inadmissible. Production stays disabled and pilot write attempts remain0.
 See the [complete frozen result](../issue-974/campaigns/093fd141/results.md).
 
+The later [original-run adjudication](../issue-974/campaigns/093fd141/post-run-adjudication/README.md)
+locates all ten scored false positives and six false negatives in ten cases.
+Six pairs describe the expected supplied mechanism but select another category;
+four hypotheses still need missing premises. Their original scores remain
+unchanged, and no new production correction or campaign is inferred. This audit
+uses retained predictions and byte-identical pure scoring sources, with no new
+SDK invocation. The current C# symlink hypothesis is separate from the older
+case-sensitivity hypothesis and cannot inherit its adjudication.
+
 Historical source-control notes below retain their original snapshot statuses.
 The current result above and the linked campaign report identify completed work.
 

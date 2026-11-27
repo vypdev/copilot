@@ -51,4 +51,12 @@ exact-head native CI can establish the protected merge gate. The 174 scientific
 result remains negative, 42 reviews unstarted, profiles none and pilot writes 0.
 No new scientific or technical SDK query, installation or activation occurs.
 
+On committed local source 223e2eb, the complete capped suite passes 653/653 with
+zero failures, omissions and cancellations. Normal hooks pass 970 suites and
+20010 tests plus 35 historical omissions; the four SDK bundles remain byte-identical.
+Final delivery checks pass after regenerating the stale generated extension
+output, preserving that initial artifact failure. These are source 223 local
+results. Later documentation-only reports do not turn them into a native Linux
+or new-source runtime admission; published-head CI remains a separate gate.
+
 [Node 24.20.0 documents the file-worker option and its processor-derived default](https://nodejs.org/download/release/v24.20.0/docs/api/cli.html#--test-concurrency).
