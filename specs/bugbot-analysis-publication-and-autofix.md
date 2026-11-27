@@ -6037,3 +6037,29 @@ These eleven subscenarios do not increase the35logical-case inventory or replace
 actual native controls, source/module coverage or scientific admission. The
 174negative result and unstarted42 remain unchanged. No new measurement, SDK
 query, privilege, runtime profile, public flag or production activation occurs.
+
+### Model-free worker allocation on a shared runner host
+
+The repository's model-free shadow command MUST retain its complete fourteen
+test files while setting Node file concurrency to two. Multiple Ubuntu runner
+registrations share one physical server, as confirmed by the maintainer;
+Node's processor-derived default does not reserve those processors for its job.
+This is an allocation for test files, not a global descendant-process limit.
+The three independent source CI jobs, placement, permissions, native Git and
+Jest deadlines, assertions, coverage floors and all qualification identities
+remain unchanged. There is no new operator setting or installation-template
+change. Rollback is the ordinary source commit; it does not replay a campaign.
+
+The incremental verification budget is **two local runner-control scenarios**:
+the original default exceeds two simultaneous held fixtures, and the explicit
+two-worker command admits at most two while completing every identical fixture.
+Use release-marker identities rather than latency assertions; retain a failed
+control separately. These scenarios are not new IDs in the 35-case qualification
+inventory. Require the unchanged 653-case model-free suite, both SDK suites that
+failed in 7d6, ordinary source/delivery validation and exact-head native CI.
+The [worker-control packet](../quality/bugbot/evidence/issue-974/controls/shared-host-worker-fanout/README.md)
+and contributor testing guide distinguish bounded fanout from missing historical
+host pressure/timing evidence: this correction does not itself prove the cause
+of the earlier Git or malformed-file timeout. The current required CI remains
+failed until a changed-source native result establishes otherwise. Preserve
+the 174 negative outcome, 42 unstarted slots, all attempts and production disabled.
