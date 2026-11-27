@@ -3,7 +3,7 @@
 // Engine, bootstrap process, provider or model is launched by these controls.
 const assert = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os');
 const path = require('node:path'), vm = require('node:vm'), Module = require('node:module');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawnSync } = require('node:child_process');
 const { createHash } = require('node:crypto'), { test } = require('node:test');
 const root = path.resolve(__dirname, '../../../..');
 const sourceFile = path.join(root, 'quality/bugbot/evidence/issue974/containment-native.test.cjs');
@@ -14,7 +14,9 @@ function fixture(t, trusted) {
   const directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ev974-native-pin-admission-')));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const config = path.join(directory, 'empty-global'); fs.writeFileSync(config, '');
-  const env = { ...process.env, GIT_CONFIG_GLOBAL: config, GIT_CONFIG_NOSYSTEM: '1' };
+  const env = { ...Object.fromEntries(Object.entries(process.env)
+    .filter(([key]) => !key.toUpperCase().startsWith('GIT_'))),
+    GIT_CONFIG_GLOBAL: config, GIT_CONFIG_NOSYSTEM: '1', GIT_NO_REPLACE_OBJECTS: '1' };
   const git = args => execFileSync('git', args, { cwd: directory, env, stdio: ['ignore', 'pipe', 'pipe'] });
   git(['init', '--initial-branch=main']);
   const bootstrap = path.join(directory, 'supplied-bootstrap.cjs');
@@ -36,6 +38,8 @@ function fixture(t, trusted) {
   const records = ids.map((caseId, index) => ({ bootstrapPath: bootstrap, bootstrapSha256: hash(fs.readFileSync(bootstrap)),
     caseId, planPath: caseId + '.json', planSha256: hash(contents[index]), repository: directory, revision }));
   const file = path.join(directory, 'control-records.json'); fs.writeFileSync(file, JSON.stringify(records));
+  const environment = { COPILOT_NATIVE_CONTROL_PLANS: file,
+    COPILOT_NATIVE_CONTROL_PLANS_SHA256: hash(fs.readFileSync(file)) };
   const exported = { exports: {} }, launches = [];
   const controlledRequire = name => name === 'node:test' ? { test() {} }
     : name === 'node:child_process' ? { execFileSync, spawn(node, args) {
@@ -52,9 +56,10 @@ function fixture(t, trusted) {
   });
   vm.runInNewContext(source + '\nmodule.exports = { prepared, launch };\n', {
     require: controlledRequire, module: exported, __filename: hostHarness, __dirname: path.dirname(hostHarness),
-    process: { env: { COPILOT_NATIVE_CONTROL_PLANS: file }, execPath: process.execPath }, Buffer,
+    process: { env: environment, execPath: process.execPath }, Buffer,
   }, { filename: sourceFile });
-  return { ...exported.exports, launches, bootstrap, canonical, directory, records, controlFile: file, hostBootstrap, hostHarness, git };
+  return { ...exported.exports, launches, bootstrap, canonical, directory, records, controlFile: file,
+    environment, hostBootstrap, hostHarness, git };
 }
 test('ev974-C26 canonical bootstrap bytes remain admissible to the native preparation control', t => {
   assert.equal(fixture(t, true).prepared().length, 4);
@@ -93,6 +98,7 @@ test('ev974-C26 dirty host bootstrap bytes cannot be authorized by a matching su
   fs.writeFileSync(f.hostBootstrap, changed); fs.writeFileSync(f.bootstrap, changed);
   for (const row of f.records) row.bootstrapSha256 = hash(changed);
   fs.writeFileSync(f.controlFile, JSON.stringify(f.records));
+  f.environment.COPILOT_NATIVE_CONTROL_PLANS_SHA256 = hash(fs.readFileSync(f.controlFile));
   assert.throws(() => f.prepared());
   assert.equal(f.launches.length, 0);
 });
@@ -118,6 +124,7 @@ test('ev974-C26 a dirty executing harness cannot be authorized by resigning its 
   const revision = f.git(['rev-parse', 'HEAD']).toString().trim();
   for (const row of f.records) { row.revision = revision; row.planSha256 = hash(fs.readFileSync(path.join(f.directory, row.planPath))); }
   fs.writeFileSync(f.controlFile, JSON.stringify(f.records));
+  f.environment.COPILOT_NATIVE_CONTROL_PLANS_SHA256 = hash(fs.readFileSync(f.controlFile));
   assert.throws(() => f.prepared());
   assert.equal(f.launches.length, 0);
 });
@@ -182,5 +189,79 @@ for (const scenario of ['inode-replaced', 'grew-after-stat', 'read-failed']) {
   test('ev974-C26 supplied bootstrap ' + scenario + ' closes its descriptor and cannot launch', t => {
     const f = fixture(t, true);
     interceptSnapshot(f, scenario, run => assert.throws(run));
+  });
+}
+
+for (const pin of [undefined, 'not-a-reviewed-sha256']) {
+  test('ev974-C26 rejects ' + (pin === undefined ? 'missing' : 'malformed') + ' independent native inventory pin', t => {
+    const f = fixture(t, true);
+    if (pin === undefined) delete f.environment.COPILOT_NATIVE_CONTROL_PLANS_SHA256;
+    else f.environment.COPILOT_NATIVE_CONTROL_PLANS_SHA256 = pin;
+    assert.throws(() => f.prepared(), /independently reviewed native-control inventory digest/u);
+    assert.equal(f.launches.length, 0);
+  });
+}
+
+function replacePlanRevision(f) {
+  for (const row of f.records) {
+    const file = path.join(f.directory, row.planPath), plan = JSON.parse(fs.readFileSync(file, 'utf8'));
+    plan.containment.image = 'sha256:' + 'e'.repeat(64);
+    fs.writeFileSync(file, JSON.stringify(plan));
+  }
+  f.git(['add', '--', ...f.records.map(row => row.planPath)]);
+  f.git(['-c', 'user.name=Controlled Fixture', '-c', 'user.email=fixture@example.invalid',
+    'commit', '-m', 'Different self-consistent native plan revision']);
+  const revision = f.git(['rev-parse', 'HEAD']).toString().trim();
+  for (const row of f.records) {
+    row.revision = revision; row.planSha256 = hash(fs.readFileSync(path.join(f.directory, row.planPath)));
+  }
+  fs.writeFileSync(f.controlFile, JSON.stringify(f.records));
+}
+
+test('ev974-C26 self-consistent replacement plan revision cannot replace the independently reviewed inventory', t => {
+  const f = fixture(t, true), originalPin = f.environment.COPILOT_NATIVE_CONTROL_PLANS_SHA256;
+  replacePlanRevision(f);
+  assert.notEqual(hash(fs.readFileSync(f.controlFile)), originalPin);
+  assert.throws(() => f.prepared(), /native-control inventory differs from independently reviewed digest/u);
+  assert.equal(f.launches.length, 0);
+});
+
+test('ev974-C26 a separately reviewed inventory digest admits its exact replacement tuple', t => {
+  const f = fixture(t, true);
+  replacePlanRevision(f);
+  // Model the operator's separate reviewed input, never derive authority from
+  // the untrusted records inside prepared(). This is not a native observation.
+  f.environment.COPILOT_NATIVE_CONTROL_PLANS_SHA256 = hash(fs.readFileSync(f.controlFile));
+  const entries = f.prepared();
+  assert.equal(entries.length, 4);
+  assert(entries.every(entry => entry.plan.containment.image === 'sha256:' + 'e'.repeat(64)));
+  assert.equal(f.launches.length, 0);
+});
+
+for (const key of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE']) {
+  test('ev974-C26 ambient ' + key + ' cannot redirect the native bootstrap Git fixture', t => {
+    const directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ev974-native-git-env-')));
+    t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+    const env = { ...Object.fromEntries(Object.entries(process.env)
+      .filter(([name]) => !name.toUpperCase().startsWith('GIT_'))),
+      GIT_CONFIG_GLOBAL: os.devNull, GIT_CONFIG_NOSYSTEM: '1', GIT_NO_REPLACE_OBJECTS: '1' };
+    const git = (...args) => execFileSync('git', ['-C', directory, '-c', 'core.hooksPath=' + os.devNull, ...args],
+      { env, stdio: ['ignore', 'pipe', 'pipe'] });
+    git('init', '--initial-branch=control'); fs.writeFileSync(path.join(directory, 'owned-marker.txt'), 'Owned fixture only\n');
+    git('add', '.'); git('-c', 'user.name=Controlled Fixture', '-c', 'user.email=fixture@example.invalid',
+      'commit', '-m', 'Separate owned Git baseline');
+    const snapshot = () => ({ head: git('rev-parse', 'HEAD').toString().trim(),
+      status: git('status', '--porcelain').toString(), index: hash(fs.readFileSync(path.join(directory, '.git/index'))) });
+    const before = snapshot(), target = key === 'GIT_DIR' ? path.join(directory, '.git')
+      : key === 'GIT_INDEX_FILE' ? path.join(directory, '.git/index') : directory;
+    const childEnvironment = { ...env, [key]: target }; delete childEnvironment.NODE_TEST_CONTEXT;
+    const child = spawnSync(process.execPath, ['--no-sparkplug', '--test', '--test-reporter=tap',
+      '--test-name-pattern=^ev974-C26 canonical bootstrap bytes remain admissible to the native preparation control$', __filename],
+      { cwd: root, env: childEnvironment, encoding: 'utf8', maxBuffer: 1024 * 1024 });
+    assert.deepEqual(snapshot(), before, 'ambient binding modified the separate owned repository');
+    assert.equal(child.status, 0, child.stdout + child.stderr);
+    assert.match(child.stdout, /^# tests 1$/mu);
+    assert.match(child.stdout, /^# pass 1$/mu);
+    assert.match(child.stdout, /^# skipped 0$/mu);
   });
 }

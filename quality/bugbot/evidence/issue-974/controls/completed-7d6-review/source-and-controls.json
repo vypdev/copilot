@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "reviewedHead": "7d6afcdb4b6a143e435bbc47b7e94d500442985e",
+  "review": {
+    "run": 46065082979,
+    "job": 140728339493,
+    "check": 140730235957,
+    "id": 6094019747,
+    "partitionsCompleted": 56,
+    "partitionsTotal": 56,
+    "workflow": "success",
+    "checkConclusion": "neutral",
+    "observations": 5
+  },
+  "sources": {
+    "quality/bugbot/evidence/issue974/containment-native.test.cjs": "3bed59eda1a8b83c2fdf62291997da0b9fc4330180552ca26bf0b0a7664c389e",
+    "quality/bugbot/evidence/issue974/native-bootstrap-components.cjs": "3cdabf8f57c8db500c6c72df8b1914963fd8b6a01b7081d191075a561bd242b7"
+  },
+  "causal": {
+    "baseline": {
+      "tests": 23,
+      "pass": 17,
+      "fail": 6,
+      "skipped": 0,
+      "cancelled": 0,
+      "rawBytes": 13778,
+      "rawSha256": "85aa698d74a63c033e1e66ab851f4ba972109df770ef2ae44768740f0ee0faec",
+      "harnessSha256": "33d77f691829dc68a603b749fafa53f5549dd1c48acaf16a8342a71903594419",
+      "testSourceSha256": "ab9ff540bccc5abeb175f9557c31ba588c2b927a104e4ab5b438398c7b618f44"
+    },
+    "fixed": {
+      "tests": 23,
+      "pass": 23,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "rawBytes": 5432,
+      "rawSha256": "9fc7ccc46ed1879f914be025cadaff8789fc8b298920237e5af26c0d30e732ba"
+    },
+    "sameAssertionsVerified": true,
+    "addedInventoryCases": 4,
+    "addedGitCases": 3,
+    "originalCompleteCommandCases": 653,
+    "requiredCompleteCommandCases": 660,
+    "logicalIds": 35
+  },
+  "coverageRefutation": {
+    "package": "istanbul-lib-coverage",
+    "version": "3.2.2",
+    "primarySource": "lib/percent.js",
+    "primarySourceSha256": "f60252cc5c75c4f5d1e43e9f49e09d19757504a1b570f36f1770509606fd2801",
+    "algorithm": "Math.floor(((1000 * 100 * covered) / total) / 10) / 100",
+    "covered": 37785,
+    "total": 38494,
+    "actualLibraryResult": 98.15,
+    "roundToNearestIsNotProducerContract": 98.16,
+    "originalReportSha256": "461791f1e1db74e59071cd6d56be10cbf1c488930cd7a4b051a5d786a7720174",
+    "originalReportByteIdentical": true
+  },
+  "limits": {
+    "componentOnly": true,
+    "realGitAndFilesystem": true,
+    "childLaunchPort": "modeled",
+    "nativeEngineCalls": 0,
+    "modelQueries": 0,
+    "newCampaigns": 0,
+    "actual174": "COMPLETE_NEGATIVE_UNCHANGED",
+    "actual42": "UNSTARTED_NOT_ADMITTED",
+    "qualifiedProfiles": [],
+    "installation": "NOT_EXECUTED",
+    "production": "disabled",
+    "pilotWriteAttempts": 0
+  },
+  "pending": [
+    "Normal commit hooks and verified clean parent/source/bundle checks",
+    "Normal fast-forward publication to exact existing Action ref",
+    "Fresh native CI and protection checks before merge"
+  ],
+  "completeCorrectedSourceCommand": {
+    "exit": 0,
+    "summary": {
+      "tests": 660,
+      "pass": 660,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "durationSeconds": 362.95848512649536,
+    "rawBytes": 75374,
+    "rawSha256": "7218ddaeefffd5e8d626151d5821726e38c6eae79ae5de0fdae57858a94d4717"
+  },
+  "staticValidation": [
+    {
+      "operation": "run generate:specifications",
+      "exit": 0,
+      "rawSha256": "75c9e10c3faa3e8a8fb2ad19d5158f6eb4f24bdcc5beb99bb753bd0a9feb66d3"
+    },
+    {
+      "operation": "run validate:specifications",
+      "exit": 0,
+      "rawSha256": "b7dafee17eee4daf09a1239b89b39a8c35b5f7072a3f416e2c8531ebf968d5f7"
+    },
+    {
+      "operation": "run validate:documentation",
+      "exit": 0,
+      "rawSha256": "23dfee16bdd4387324aea08fac9577dc68e5bd41ee017c1a300a72cdf94ce0ab"
+    },
+    {
+      "operation": ".",
+      "exit": 0,
+      "rawSha256": "3e4bb4b8958ad9e207999b2c093347f53ec7f5b97ee566e2fb8322a49620f200"
+    },
+    {
+      "operation": "diff --check",
+      "exit": 0,
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

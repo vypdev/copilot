@@ -1,6 +1,6 @@
 # Causal preparation correction: frozen qualification host
 
-> Historical public descriptors: account-bearing socket endpoints are held only in the exact private originals. These tip JSON copies are non-executable and do not grant admission. See [original retention and descriptor limits](../README.md). Existing Git history remains unchanged.
+> Historical public descriptors: account-bearing socket endpoints are held only in the exact private originals. These tip JSON copies are non-executable and do not grant admission. See [original retention and descriptor limits](../README.md). Public history is a privacy-redacted mirror; [retention and hosted-purge limits](../../controls/history-redaction.md) distinguish it from the privately retained originals. The preparation states below are historical, not current execution instructions or scientific status.
 
 The first four actual native tests at committed plan revision `3d53cdb` failed
 host dependency admission before probes, SDK scope creation or model calls.

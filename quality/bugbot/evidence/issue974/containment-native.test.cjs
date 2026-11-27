@@ -21,7 +21,13 @@ function prepared() {
     assert(process.env.COPILOT_NATIVE_CONTROL_PLANS, 'Prepare the four committed native-control plans before this explicit native command.');
     const file = path.resolve(process.env.COPILOT_NATIVE_CONTROL_PLANS);
     assert(fs.lstatSync(file).isFile() && !fs.lstatSync(file).isSymbolicLink());
-    const records = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const reviewedInventorySha256 = process.env.COPILOT_NATIVE_CONTROL_PLANS_SHA256;
+    assert.match(reviewedInventorySha256 ?? '', /^[a-f0-9]{64}$/u,
+        'independently reviewed native-control inventory digest required');
+    const inventoryBytes = fs.readFileSync(file);
+    assert.equal(hash(inventoryBytes), reviewedInventorySha256,
+        'native-control inventory differs from independently reviewed digest');
+    const records = JSON.parse(inventoryBytes);
     const hostRoot = path.resolve(__dirname, '../../../..');
     const hostGit = pinnedGit(hostRoot);
     const trustedHostCommit = hostGit('rev-parse', 'HEAD').toString('utf8').trim();

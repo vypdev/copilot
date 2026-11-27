@@ -1,6 +1,6 @@
 # Native plans after the SDK fixture correction
 
-> Historical public descriptors: account-bearing socket endpoints are held only in the exact private originals. These tip JSON copies are non-executable and do not grant admission. See [original retention and descriptor limits](../README.md). Existing Git history remains unchanged.
+> Historical public descriptors: account-bearing socket endpoints are held only in the exact private originals. These tip JSON copies are non-executable and do not grant admission. See [original retention and descriptor limits](../README.md). Public history is a privacy-redacted mirror; [retention and hosted-purge limits](../../controls/history-redaction.md) distinguish it from the privately retained originals. The preparation states below are historical, not current execution instructions or scientific status.
 
 Implementation64da6ec passes all239 controls with zero failure/skip/cancellation,
 and normal build/lint/944 SDK suites (18,716 assertions and35 existing skips).

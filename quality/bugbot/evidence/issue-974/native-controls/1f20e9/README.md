@@ -1,10 +1,12 @@
 # Native SDK control preparation for implementation 1f20e9
 
-> Historical public descriptors: account-bearing socket endpoints are held only in the exact private originals. These tip JSON copies are non-executable and do not grant admission. See [original retention and descriptor limits](../README.md). Existing Git history remains unchanged.
+> Historical public descriptors: account-bearing socket endpoints are held only in the exact private originals. These tip JSON copies are non-executable and do not grant admission. See [original retention and descriptor limits](../README.md). Public history is a privacy-redacted mirror; [retention and hosted-purge limits](../../controls/history-redaction.md) distinguish it from the privately retained originals. The preparation states below are historical, not current execution instructions or scientific status.
 
-These four committed plans authorize only the model-free native controls C32–C35.
-They cannot authorize a corpus campaign or full review and receive no model or
-GitHub credentials. All four actual native controls are unexecuted at preparation.
+At original preparation, the four private committed plans were restricted to
+the model-free native controls C32–C35, without model or GitHub credentials.
+The sanitized JSON descriptors here cannot authorize or run those controls:
+their placeholder socket endpoint intentionally fails closed-profile admission.
+They cannot authorize a corpus campaign or full review. All four actual native controls were unexecuted at preparation.
 The independent 174 cases and all 42 paired reviews remain unstarted; no profile
 is qualified and production remains disabled.
 
@@ -25,9 +27,12 @@ The source commit passes the normal build/lint/944 SDK suites (18,716 passing,
 are retained; the original PTY handle was lost across context compaction, so no
 shell exit code is invented. The earlier 236/239 negative remains unchanged.
 
-Independently materialize the committed bootstrap and native harness, then bind
-these exact committed plan paths/hashes/revision through the documented private
-four-record JSON inventory. Missing readiness, unknown ownership, runtime byte
-mismatch, interrupted calls and incomplete evidence fail closed. Retain actual
-logs and scope observations before claiming C32–C35 acceptance. This preparation
-is separate from the future measurement preregistration and scientific gates.
+The original preparation required an independently materialized committed
+bootstrap and native harness plus the reviewed private four-record inventory.
+Historical reproduction requires those exact private originals and their
+original source/runtime admission; these public descriptors are not substitutes.
+Do not insert a live endpoint after review or weaken absolute-path validation.
+A new attempt needs its own reviewed committed plans and complete tuple. Missing
+readiness, unknown ownership, byte mismatch, interruption and incomplete evidence
+fail closed. This historical preparation does not grant another native attempt
+or measurement and does not replace retained actual logs and scope observations.

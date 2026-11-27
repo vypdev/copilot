@@ -6063,3 +6063,54 @@ host pressure/timing evidence: this correction does not itself prove the cause
 of the earlier Git or malformed-file timeout. The current required CI remains
 failed until a changed-source native result establishes otherwise. Preserve
 the 174 negative outcome, 42 unstarted slots, all attempts and production disabled.
+
+### Independently reviewed native inventory — completed 7d6 review
+
+Observed C26 gaps: the four native records could select another self-consistent
+plan revision without a separate expected identity, and the component Git fixture
+inherited repository-binding environment values. The external host's committed
+harness/bootstrap reference remains necessary but does not independently pin
+the selected plan tuple. This amendment changes only explicit model-free native
+preparation and its owned component fixture; no consumer SDK or scientific
+prediction, scorer, threshold, measured source or runtime privilege changes.
+
+| Input | Contract | Failure and migration |
+|---|---|---|
+| `COPILOT_NATIVE_CONTROL_PLANS` | Existing private four-record inventory path; seven fields per row unchanged. | Missing input fails the explicit command; no native skip or automatic retry. |
+| `COPILOT_NATIVE_CONTROL_PLANS_SHA256` | Required separately reviewed lowercase 64-hex SHA-256 of exact inventory bytes, supplied by the trusted operator for this invocation. No default, precedence fallback or persistence. | Missing/malformed/mismatched input fails before parsing records, reading selected plans or starting children. Existing invocations must obtain this pin from independent review. |
+
+The harness MUST compare the exact inventory bytes to that external reviewed
+pin before interpreting any row. This binds every repository, plan revision,
+path and digest in all four records; a self-consistent replacement file MUST NOT
+choose its own authority. The operator MUST NOT derive the expected pin from
+unreviewed input at launch. A deliberately reviewed new tuple needs its own
+independent pin and subsequent native acceptance; it cannot inherit a historical
+PASS. The existing committed-host bootstrap pin, physical snapshot checks and
+process-local prepared-entry capability all remain required.
+
+Textual flow: separately reviewed inventory digest -> exact byte comparison ->
+committed host/bootstrap and selected plan admission -> private entry -> native
+launch. For example, `native-control inventory differs from independently
+reviewed digest` means no native child started: retain the rejected input and
+reconcile it against the independently reviewed tuple. Do not repair this by
+automatically hashing the rejected file or substituting a socket endpoint.
+Historical public descriptors remain non-executable; retained private originals
+and rewritten public locators are distinct from unchanged archive payload bytes.
+
+The C26 incremental budget is **seven distinct model-free controls**: missing
+pin, malformed pin, self-consistent alternate plan rejection, separately reviewed
+replacement admission, and three real owned-repository contrasts for inherited
+`GIT_DIR`, `GIT_WORK_TREE` and `GIT_INDEX_FILE`. The fixture MUST remove inherited
+`GIT_*` names case-insensitively before setting controlled configuration, and the
+three contrasts MUST preserve the decoy repository's HEAD, index and status.
+These controls extend the complete 653 command to **660**, preserve35 logical
+IDs and every existing coverage/native/scientific gate, and exercise no Engine,
+model or qualification campaign. The original six failing assertions and the
+same corrected seven cases remain inspectable in the
+[completed 7d6 review packet](../quality/bugbot/evidence/issue-974/controls/completed-7d6-review/README.md).
+Acceptance maps these requirements to `native-bootstrap-components.cjs`; the
+evidence README documents independent pin supply and fail-closed migration.
+Normal source/package checks and exact-head native CI remain required before
+merge. Rollback is an ordinary source commit; no campaign or installation is
+automatically repeated. No new public UI, Action input, release or activation is
+introduced.

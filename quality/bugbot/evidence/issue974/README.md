@@ -406,13 +406,22 @@ the exact four-case inventory, one `selectedCase`, `fixtureCliSha256` and
 `harnessSha256`. A private JSON array lists the four records in that order. Each
 record contains exactly `caseId`, `repository`, `revision`, `planPath`,
 `planSha256`, `bootstrapPath` and `bootstrapSha256`. The public bootstrap checks
-these committed references; they are not scope grants. Native purpose cannot
+these committed references; they are not scope grants. The operator MUST supply
+the independently reviewed SHA-256 of the exact inventory bytes through
+`COPILOT_NATIVE_CONTROL_PLANS_SHA256`, separately from that file. This pin covers
+all four repositories, revisions, paths and digests; do not calculate it from an
+unreviewed file at execution time or accept a digest carried inside that file.
+Missing/malformed pins and changed inventory bytes reject before reading plans
+or launching a child. A deliberately updated tuple requires a separately
+reviewed new inventory pin; it does not reuse earlier native acceptance.
+Native purpose cannot
 authorize corpus/review calls and receives no model or GitHub credential. The
 actual installed CLI byte/version probe remains separate from the frozen
 model-free subprocess exercised through the ordinary SDK planner/executor.
 
 ```sh
 COPILOT_NATIVE_CONTROL_PLANS=/absolute/private/native-controls.json \
+  COPILOT_NATIVE_CONTROL_PLANS_SHA256="$REVIEWED_NATIVE_INVENTORY_SHA256" \
   pnpm run test:bugbot-native-containment
 ```
 

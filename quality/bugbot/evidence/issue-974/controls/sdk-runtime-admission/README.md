@@ -45,7 +45,13 @@ actual complete CLI lifecycle remain private runtime artifacts.
   destinations. Do not present a reconstruction as an original.
 
 The historical `source-and-controls.json` maps every original to a byte-verified lossless
-`.log.gz` archive. The [history index](../historical-gzip-archive.json) now pins all19 archives to immutable source22c94195 and exact blobs/hashes; retrieve them with `git show <archiveRevision>:<path>`. Their original bytes remain reachable, with no history rewrite. No suppression or limit changes. This source packet does not
+`.log.gz` archive. The [history index](../historical-gzip-archive.json) includes
+these19 archives with per-entry sanitized-mirror revisions and exact blobs/hashes;
+retrieve each using its own `archiveRevision` and path. The archive payload bytes
+remain unchanged. Public commit history was rewritten to redact personal paths;
+the [redaction record](../history-redaction.md) distinguishes mirror locators
+from original execution identities and privately retained originals. Unchanged
+payload bytes do not establish hosted purge. No suppression or limit changes. This source packet does not
 establish genuine SDK/model acceptance. The real runtime query, full committed
 590-control regression, global source gates and common image/preregistration
 are still unexecuted/pending here. Actual174/42UNSTARTED,qualifiedprofileNONE,
