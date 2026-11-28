@@ -3,7 +3,7 @@ import type { SetupPublisherInventoryDocument, SetupPublisherInventoryReviewAuth
   SetupPublisherInventoryReviewRecord } from '../../../domain/setup_publisher_inventory_review';
 import { SetupPublisherInventoryError } from '../../../domain/setup_publisher_inventory_review';
 import { assertSetupPublisherInventoryBindings, canonicalPublisherInventoryJson, decideSetupPublisherInventoryReview,
-  parseSetupPublisherInventoryDocument, parseSetupPublisherInventoryLocator, publisherInventoryContractSha256,
+  parseSetupPublisherInventoryDocument, parseSetupPublisherInventoryLocator, publisherInventoryActorLogin, publisherInventoryContractSha256,
   publisherInventorySha256, publisherInventoryWorkflowSetSha256, setupPublisherInventoryFactForPlan } from '../setup_publisher_inventory_review_policy';
 import { parseSetupPublisherProposal } from '../setup_publisher_installation_policy';
 import { planSetupPublisherInstallation } from '../setup_publisher_plan_policy';
@@ -51,6 +51,31 @@ function fixture() {
 }
 
 describe('publisher inventory closed input and binding', () => {
+  it.each(['', 'build_linux', '_build', `${'a'.repeat(32)}:_build`, `${'a'.repeat(32)}:`])(
+    'publisher-inventory-C03: preserves valid workflow and routed job scope: %s', job => {
+      const f = fixture(); f.document.inputs.push({ id: 'input-scope', workflow: f.file.path, job, step: 0,
+        input: 'env:MODE', origin: 'literal', sourceFingerprint: 'a'.repeat(64) });
+      expect(parseSetupPublisherInventoryDocument(canonicalPublisherInventoryJson(f.document)).inputs[0].job).toBe(job);
+    });
+  it.each(['1build', 'build.invalid', 'bad:scope', 'x'.repeat(129)])(
+    'publisher-inventory-C03: unsupported job scopes do not acquire an input binding: %s', job => {
+      const f = fixture(); f.document.inputs.push({ id: 'input-scope', workflow: f.file.path, job, step: 0,
+        input: 'env:MODE', origin: 'literal', sourceFingerprint: 'a'.repeat(64) });
+      expect(() => parseSetupPublisherInventoryDocument(canonicalPublisherInventoryJson(f.document))).toThrow('invalid-document');
+    });
+  it.each(['', `${'a'.repeat(32)}:`])('publisher-inventory-C03: workflow scope cannot pretend to be a step: %s', job => {
+    const f = fixture(); f.document.inputs.push({ id: 'input-scope', workflow: f.file.path, job, step: 1,
+      input: 'env:MODE', origin: 'literal', sourceFingerprint: 'a'.repeat(64) });
+    expect(() => parseSetupPublisherInventoryDocument(canonicalPublisherInventoryJson(f.document))).toThrow('invalid-document');
+  });
+  it('publisher-inventory-C19: preparation identity changes the decision digest independently of set order', () => {
+    const f = fixture(), first = decideSetupPublisherInventoryReview(f.document, f.locator, f.authority);
+    f.authority.preparingActorIds.push(19);
+    const changed = decideSetupPublisherInventoryReview(f.document, f.locator, f.authority);
+    expect(changed.approvals).toEqual(first.approvals); expect(changed.decisionsSha256).not.toBe(first.decisionsSha256);
+    f.authority.preparingActorIds.reverse();
+    expect(decideSetupPublisherInventoryReview(f.document, f.locator, f.authority).decisionsSha256).toBe(changed.decisionsSha256);
+  });
   it('publisher-inventory-C01: admits a valid locator but requires independent facts before a version2 preview', () => {
     const f = fixture();
     const proposal = parseSetupPublisherProposal(f.version2);
@@ -184,6 +209,12 @@ describe('publisher inventory closed input and binding', () => {
 });
 
 describe('publisher inventory independent current review authority', () => {
+  it.each([
+    ['User', 'reviewer', true], ['Bot', 'owned-automation[bot]', true], ['User', 'owned-automation[bot]', false],
+    ['Bot', 'unsafe/name', false], ['Future', 'reviewer', false], ['Bot', null, false],
+  ] as const)('publisher-inventory-C12: validates the account type and login namespace: %s %s', (type, value, valid) => {
+    expect(publisherInventoryActorLogin(type, value)).toBe(valid);
+  });
   it('rejects corrupted, duplicate or contradictory read-port facts at the immutable planning boundary', () => {
     const f = fixture(), files = f.inspection.installation.workflows;
     for (const mutate of [

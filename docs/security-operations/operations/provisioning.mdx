@@ -179,19 +179,43 @@ head and contains one closed statement between the HTML-comment markers
 `/copilot:publisher-inventory-review:v1`. The statement has fields
 `kind=bugbot-publisher-inventory-review`, `decision=compatible`,
 `documentSha256`, `destinationRepositoryId`, `destinationHead` and
-`publisherContractSha256`. The PR author cannot approve their own evidence.
+`publisherContractSha256`. The PR author and every account recorded as preparing
+or publishing the evidence cannot approve it, including automation whose GitHub
+account type is `User`. Setup reads all PR commits (at most250) and up to ten
+100-event pages of authenticated branch activity; it must observe branch creation
+and publication of the selected head. Missing identities, unavailable history or
+exhausted pagination leave authority unverified. Git commit author declarations
+are insufficient publication evidence. A `User` account and write permission do
+not prove human deliberation: the operator must obtain an actual independent
+maintainer review. This preparing automation never submits that approval.
 A later generic approval cannot renew an earlier purpose-specific decision;
 a current independent request for changes blocks the preview. Incomplete review
 pages, unavailable permissions or missing source facts keep authority unverified.
 
 The supported source profile is finite: literal pinned Actions/reusable
 workflows, complete Node entrypoints/static imports, and supported literal shell
-programs/callees. Floating refs, mutable candidate checkouts, dynamic loading,
+programs/callees. GitHub's `$/` self references bind to the repository and commit
+of the workflow or action containing the reference, including `$/` for an action
+at that repository's root and references inside an external
+reusable workflow; they require no workspace checkout and cannot include an
+`@ref` suffix. They are unavailable on GitHub Enterprise Server. By contrast,
+`./` Action paths still require an independently bound immutable workspace.
+See [GitHub's source-reference syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsuses).
+Node inspection parses syntax and lexical scopes. It accepts source-bound
+literal imports and supported native utility modules, while indirect code
+creation, reflection escapes, opaque computed properties and native execution or
+loading facilities remain unresolved. Source traversal is bounded at10,000 syntax
+nodes and depth64; a larger or unsupported program needs a reviewed supported
+binding profile. Code-like strings alone do not represent execution.
+Floating refs, mutable candidate checkouts, dynamic loading,
 unbound downloads, unsupported matrices and unresolved expressions stay blocked.
 Runtime environment overrides that can select other executable code, including
 `NODE_OPTIONS` preloads, also remain unresolved for Node and shell programs.
-Required repository/organization Variables use authenticated GETs; only
-fingerprints and provenance enter evidence. Secret values are never fetched.
+Setup enumerates repository and organization Actions Variables through
+authenticated GETs, including their non-secret values, visibility and selected
+repository memberships. These values are needed to resolve effective inputs and
+aggregate `INPUT_VARS_JSON` settings. Only fingerprints and provenance enter
+evidence; raw values are not logged or persisted. Secret values are never fetched.
 A symbolic credential is supported only where reviewed behavior is independent
 of its value; Secret-derived code or behavior selection remains unresolved.
 The maintainer supplies semantic assurance about the bound programs; source

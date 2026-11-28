@@ -689,18 +689,32 @@ no concrete use case or default implementation. The publisher cannot adopt legac
 effects. Source reads pin a merged maintainer revision and verified Git blob bytes;
 the destination reader proves compatible installed metadata and complete relevant
 workflow inventory without Secret reads or resource writers. Version2 inventory
-review may read the narrowly required repository/organization Variable metadata
-and selected-repository membership; version1 retains its prior read scope.
+review enumerates repository and organization Actions Variables, including their
+non-secret values, visibility and selected-repository membership, to resolve
+effective inputs and aggregate `INPUT_VARS_JSON` configuration. Only fingerprints
+and provenance enter evidence; raw values are not logged or persisted. Secret
+values are never fetched. Version1 retains its prior read scope.
 
 `SetupPublisherInventoryReviewAdapter` authenticates the separate evidence PR,
 complete document-only tree difference, immutable program/input graph, complete
-review pages and current reviewer permissions. Pure inventory policy validates
+review pages and current reviewer permissions. Complete PR commits and provider
+branch activity identify authors, committers, branch creators and publishers;
+all recorded preparing identities are excluded from approval, including service
+accounts reported as `User`. Git author declarations cannot establish publication
+identity. Account type and permission authenticate an account; actual independent
+human review remains an operating prerequisite, not a personhood claim from the API. Pure inventory policy validates
 canonical closed documents and purpose-specific decisions. Stable evidence,
 closure and decision identities enter the existing plan and approval digest;
 mutable decisions, permissions and inputs are read again for each effect.
 The independent review provides semantic assurance, while the reader establishes
 source/input bindings and observable conflicts. Unsupported execution remains
 unresolved. The existing classifier keeps positive foreign-writer priority.
+Node closure uses pinned Acorn syntax parsing and ESLint lexical-scope analysis
+to bind literal runtime imports in source order and reject indirect code creation,
+reflection escapes, opaque dynamic property access and unsupported native modules.
+Local shadowed identifiers and inert code-like strings remain ordinary source.
+The finite profile is bounded at10,000 syntax nodes and depth64; it does not prove
+arbitrary JavaScript behavior. Shell callee edges similarly retain command order.
 Node and shell execution share the same runtime-environment override fence;
 source identity alone cannot authorize an unbound interpreter preload. Provider
 failures within inventory inspection become closed review-unavailable or

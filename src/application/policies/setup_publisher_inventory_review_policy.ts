@@ -9,6 +9,7 @@ type RecordValue = Record<string, unknown>;
 const sha = /^[a-f0-9]{40}$/u, digest = /^[a-f0-9]{64}$/u;
 const coordinate = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}\/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/u;
 const identity = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/u;
+const jobIdentity = /^(?:[a-f0-9]{32}:)?(?:[A-Za-z_][A-Za-z0-9_-]*)?$/u;
 const login = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/u;
 const fileFields = ['path', 'mode', 'blob', 'contentSha256'];
 const object = (v: unknown): v is RecordValue => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -106,8 +107,9 @@ function edge(v: unknown): SetupPublisherInventoryEdge {
 }
 function input(v: unknown): SetupPublisherInventoryInput {
   if (!exact(v, ['id', 'workflow', 'job', 'step', 'input', 'origin', 'sourceFingerprint']) || !matches(v.id, identity)
-    || !workflowPath(v.workflow) || typeof v.job !== 'string' || v.job !== '' && !matches(v.job, identity)
-    || !Number.isSafeInteger(v.step) || Number(v.step) < 0 || Number(v.step) > 10_000 || v.job === '' && v.step !== 0
+    || !workflowPath(v.workflow) || typeof v.job !== 'string' || v.job.length > 128 || !matches(v.job, jobIdentity)
+    || !Number.isSafeInteger(v.step) || Number(v.step) < 0 || Number(v.step) > 10_000
+    || (v.job === '' || /^[a-f0-9]{32}:$/u.test(v.job)) && v.step !== 0
     || !text(v.input, 200) || !matches(v.sourceFingerprint, digest)
     || !member(v.origin, ['literal', 'default', 'workflow-env', 'job-env', 'step-env', 'repository-variable', 'organization-variable',
       'input-vars-json', 'symbolic-secret'])) return invalid();
@@ -214,6 +216,13 @@ function approvedStatement(body: string, document: SetupPublisherInventoryDocume
     && v.publisherContractSha256 === document.publisher.contractSha256;
 }
 
+/** Provider Bot principals have a distinct login syntax; they never become human approvals. */
+export function publisherInventoryActorLogin(actorType: unknown, value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  if (actorType === 'Bot') return /^[A-Za-z0-9][A-Za-z0-9-]{0,99}(?:\[bot\])?$/u.test(value);
+  return actorType === 'User' && login.test(value);
+}
+
 /** Reduce authenticated review decisions; generic comments cannot renew or revoke an approval. */
 export function decideSetupPublisherInventoryReview(document: SetupPublisherInventoryDocument, locator: SetupPublisherInventoryLocator,
   authority: SetupPublisherInventoryReviewAuthority): Pick<SetupPublisherInventoryReviewFact, 'approvals' | 'decisionsSha256'> {
@@ -228,7 +237,7 @@ export function decideSetupPublisherInventoryReview(document: SetupPublisherInve
   const decisions = new Map<number, SetupPublisherInventoryReviewRecord>(), reviewIds = new Set<number>();
   const actors = new Map<number, string>();
   for (const review of authority.reviews) {
-    if (!positive(review.id) || reviewIds.has(review.id) || !positive(review.actorId) || !matches(review.actorLogin, login)
+    if (!positive(review.id) || reviewIds.has(review.id) || !positive(review.actorId) || !publisherInventoryActorLogin(review.actorType, review.actorLogin)
       || !['User', 'Bot'].includes(review.actorType) || !['PENDING', 'COMMENTED', 'APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(review.state)
       || typeof review.body !== 'string' || Buffer.byteLength(review.body, 'utf8') > 65_536
       || review.commit !== null && !sha.test(review.commit)) return unavailable();
@@ -260,5 +269,6 @@ export function decideSetupPublisherInventoryReview(document: SetupPublisherInve
     }
   }
   if (!approvals.length) throw new SetupPublisherInventoryError('review-required');
-  return Object.freeze({ approvals: Object.freeze(approvals.map(a => Object.freeze(a))), decisionsSha256: publisherInventorySha256(stable) });
+  return Object.freeze({ approvals: Object.freeze(approvals.map(a => Object.freeze(a))), decisionsSha256: publisherInventorySha256({
+    authorId: authority.authorId, preparingActorIds: [...authority.preparingActorIds].sort((a, b) => a - b), decisions: stable }) });
 }

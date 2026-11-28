@@ -1991,6 +1991,41 @@ are defined by the companion's inventory sections6.1-6.4. There is no arbitrary
 trust URL, skip-inventory flag, self-issued approval, Secret read or new installer.
 Known foreign/direct writers win over compatible claims. Missing facts remain
 unresolved and producer migrations require their own reviewed delivery.
+GitHub Cloud `$/` self references bind to the repository and immutable commit of
+the containing workflow or action, including root actions and when that source is external to the
+destination. They do not depend on a workspace checkout and cannot specify an
+`@ref` suffix. Ordinary `./` Action references retain their immutable-workspace
+requirement. Neither form permits substituting another repository or commit.
+Preparing identities MUST include the evidence-PR author, all associated commit
+authors/committers and every provider-recorded branch creator/publisher. Git
+commit declarations are not authenticated pusher evidence. Read the complete PR
+commit list (maximum250,100/page) and the same-repository/ref activity with at
+most ten100-event pages, requiring creation and exact-head publication. Extract
+only a validated next cursor; never follow a supplied URL. Denied, inconsistent,
+unassociated or incomplete facts leave review authority unverified. Exclude all
+these accounts even when a service account has provider type `User`; bind their
+sorted IDs into the decision digest so changed preparation invalidates approval.
+Actual independent human review remains the companion's operational prerequisite;
+account type/permission does not prove personhood. No new human registry or
+approval automation is introduced, and preparing automation never reviews itself.
+
+The finite Node profile MUST use syntax and lexical scope, retain literal import
+source order and reject indirect code construction, prototype/reflection escapes,
+opaque dynamic properties and unsupported native execution/loading facilities.
+Closed local bindings, literal data and supported utility imports remain valid.
+Acorn8.18.0 and eslint-scope9.1.2 are runtime dependencies pinned in the root
+package manifest/lockfile; syntax traversal has fixed10,000-node/depth64 bounds.
+Exhaustion remains unresolved, without clipping or claiming arbitrary program
+verification. Shell callee edges MUST retain command order too. Actual workflow
+job IDs allow a leading underscore; input bindings preserve valid job identity
+and source-route prefixes without relaxing other document IDs.
+
+Version2 inspection enumerates repository/organization Actions Variables,
+including non-secret values, visibility and selected-repository memberships, to
+resolve effective inputs and aggregate `INPUT_VARS_JSON`. Only fingerprints and
+provenance enter evidence; raw values MUST NOT be logged or persisted. Secret
+values are never fetched. Version1's read scope is unchanged.
+
 Node and shell inspection MUST reject runtime environment overrides that can
 load code outside the bound graph. Inventory read failures expose closed current
 review-unavailable or unresolved-source causes instead of losing their stage.
@@ -2052,3 +2087,27 @@ the publisher. Actual independent producer review, an eligible separately
 authorized installation preview and verified default/native execution remain
 operational work under #977. Production verification remains disabled and
 evaluated-pilot write attempts remain zero.
+
+### Completed source-review corrections (#1007)
+
+The62 semantic inventory/recovery cases remain the acceptance floor; parameter
+variants do not create new case identities. The reviewed implementation adds145
+risk controls:33 indirect Node escape programs,11 unsafe native modules,14 valid
+closed programs, one inert download/code-construction oracle, four syntax bounds,
+one two-import source-order case, two actual job-input bindings,11 pure job-scope
+boundaries, one preparation-digest ordering case,57 preparation/commit/activity/
+pagination variants, one bracket-suffixed Bot preparation identity, one Bot-review
+compatibility case, six account-type/login policy boundaries and two shell
+command-order variants. These controls MUST
+traverse the complete reader where provider/source behavior is asserted. The
+source-order cases retain original failures before correction and preserve
+swapped-dependency rejection. Existing pure100% and reader95%lines/statements,
+90%functions/branches floors remain unchanged. Complete-source and actual packed
+CLI gates still apply; no profile, native compatibility or installation is
+qualified by deterministic controls.
+
+Traceability: preparation and human operating boundary -> IR977-R02/C10-C21;
+Node/shell source closure -> IR977-R03/C27/C29; valid job scopes and actual Variable
+read disclosure -> IR977-R03/C30; package manifest/lockfile and generated CLI ->
+IR977-R08. Provisioning and architecture describe the same actual read/trust
+boundary. The selected Action-published companion remains byte-identical.

@@ -1089,7 +1089,7 @@
       "id": "setup-and-doctor",
       "title": "Setup, configuration, credentials, and doctor",
       "status": "implemented",
-      "scope": "Plan, validate, provision and audit repository installation without exposing credentials. Preserve ordinary batch resources, purpose-separated recovery and the cumulative125-case publisher baseline. Publisher-only delivery authenticates the pinned source, complete installed guidance and exact two-file tree scope; it retains verified historical branch/PR effects independently of current authority and distinguishes known results from failed journal persistence. Optional version2 inventory review authenticates canonical source/input bindings, complete purpose-specific independent GitHub decisions and current permissions; unsupported execution and positive writer conflicts remain blocking. Four-locale blocked/partial views retain operation and PR navigation without granting installation approval. The62-case inventory/recovery contract, package/native source acceptance, actual producer compatibility, installation and qualification are separate evidence requirements.",
+      "scope": "Plan, validate, provision and audit repository installation without exposing credentials. Preserve ordinary batch resources, purpose-separated recovery and the cumulative125-case publisher baseline. Publisher-only delivery authenticates the pinned source, complete installed guidance and exact two-file tree scope; it retains verified historical branch/PR effects independently of current authority and distinguishes known results from failed journal persistence. Optional version2 inventory review authenticates canonical source/input bindings, complete purpose-specific independent GitHub decisions, current permissions and provider-recorded preparation/publication exclusions. Pinned syntax/scope analysis fences indirect Node code creation; enumerated non-secret Variable values are reduced to fingerprints/provenance; unsupported execution and positive writer conflicts remain blocking. Four-locale blocked/partial views retain operation and PR navigation without granting installation approval. The62-case inventory/recovery contract, package/native source acceptance, actual producer compatibility, installation and qualification are separate evidence requirements.",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-28",
       "specs": [
@@ -1327,7 +1327,9 @@
         "src/domain/issue_workflow_field_mapping.ts",
         "src/domain/setup_publisher_inventory_review.ts",
         "src/application/policies/setup_publisher_inventory_review_policy.ts",
-        "src/infrastructure/setup_publisher_inventory_review_adapter.ts"
+        "src/infrastructure/setup_publisher_inventory_review_adapter.ts",
+        "package.json",
+        "pnpm-lock.yaml"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",

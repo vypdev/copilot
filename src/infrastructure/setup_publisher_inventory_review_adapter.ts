@@ -3,6 +3,8 @@ import { builtinModules } from 'node:module';
 import { posix } from 'node:path';
 import * as shellQuote from 'shell-quote';
 import { JSON_SCHEMA, load } from 'js-yaml';
+import { parse as parseJavaScript } from 'acorn';
+import { analyze as analyzeJavaScriptScopes } from 'eslint-scope';
 import type { SetupBatchTarget } from '../domain/setup_batch';
 import type { SetupPublisherInspection, SetupPublisherObservedFile, SetupPublisherProposal } from '../domain/setup_publisher_installation';
 import { SETUP_PUBLISHER_INVENTORY_PATH, SETUP_PUBLISHER_INVENTORY_LIMITS, SetupPublisherInventoryError,
@@ -10,7 +12,7 @@ import { SETUP_PUBLISHER_INVENTORY_PATH, SETUP_PUBLISHER_INVENTORY_LIMITS, Setup
   type SetupPublisherInventoryReviewFact, type SetupPublisherInventoryReviewRecord,
   type SetupPublisherInventoryReviewer, type SetupPublisherInventoryUnit } from '../domain/setup_publisher_inventory_review';
 import { assertSetupPublisherInventoryBindings, canonicalPublisherInventoryJson, decideSetupPublisherInventoryReview,
-  parseSetupPublisherInventoryDocument, publisherInventoryContractSha256, publisherInventorySha256 } from '../application/policies/setup_publisher_inventory_review_policy';
+  parseSetupPublisherInventoryDocument, publisherInventoryActorLogin, publisherInventoryContractSha256, publisherInventorySha256 } from '../application/policies/setup_publisher_inventory_review_policy';
 import { setupInstallationTreeLevel } from '../application/policies/setup_installation_tree_policy';
 import { setupPublisherWorkflow } from '../application/policies/setup_publisher_installation_policy';
 import type { SetupInstallationTree, SetupInstallationSubtree } from '../application/contracts/setup_installation_delivery';
@@ -63,6 +65,99 @@ const environment = (...values: readonly Data[]): Data => {
 };
 const hasRuntimeOverride = (values: Data): boolean => Object.keys(values)
   .some(key => /^(?:PATH|NODE_OPTIONS|NODE_PATH|BASH_ENV|ENV|SHELLOPTS|GITHUB_ACTION_PATH|LD_.*|DYLD_.*)$/iu.test(key));
+
+/** A finite source profile, not proof of arbitrary JavaScript behavior. */
+function nodeImports(content: string): readonly string[] {
+  let root: Data, globals: ReadonlySet<unknown>;
+  try { root = parseJavaScript(content, { ecmaVersion: 'latest', sourceType: 'module',
+    ranges: true, allowHashBang: true, allowReturnOutsideFunction: true }) as unknown as Data;
+    const scopes = analyzeJavaScriptScopes(root as unknown as Parameters<typeof analyzeJavaScriptScopes>[0],
+      { ecmaVersion: 2026, sourceType: 'module', optimistic: false, ignoreEval: false });
+    if (!scopes.globalScope) return unresolved();
+    globals = new Set(scopes.globalScope.through.map(reference => reference.identifier));
+  } catch { return unresolved(); }
+  const forbidden = new Set(['eval', 'Function', 'AsyncFunction', 'GeneratorFunction', 'AsyncGeneratorFunction',
+    'WebAssembly', 'importScripts', 'globalThis', 'global', 'window', 'self', 'Reflect', 'Proxy',
+    'fetch', 'WebSocket', 'XMLHttpRequest', 'Worker', 'SharedWorker', 'arguments', 'createRequire']);
+  const opaqueMembers = new Set(['constructor', 'prototype', '__proto__', '__defineGetter__', '__defineSetter__',
+    '__lookupGetter__', '__lookupSetter__', 'prepareStackTrace', 'getThis', 'getFunction', 'caller', 'callee', 'arguments']);
+  const objectOperations = new Set(['keys', 'values', 'entries', 'fromEntries', 'assign', 'freeze', 'seal',
+    'preventExtensions', 'is', 'isFrozen', 'isSealed', 'isExtensible', 'hasOwn', 'create']);
+  const memberName = (node: Data): string => {
+    const property = batchObject(node.property);
+    if (!property) return unresolved();
+    if (node.computed) {
+      if (property.type !== 'Literal' || !['string', 'number'].includes(typeof property.value)) return unresolved();
+      return String(property.value);
+    }
+    if (!['Identifier', 'PrivateIdentifier'].includes(String(property.type)) || typeof property.name !== 'string') return unresolved();
+    return property.type === 'PrivateIdentifier' ? `#${property.name}` : property.name;
+  };
+  const literal = (node: unknown): string => {
+    const value = batchObject(node);
+    if (value?.type !== 'Literal' || typeof value.value !== 'string') return unresolved();
+    return value.value;
+  };
+  const strictBody = (value: Data): boolean => {
+    if (!Array.isArray(value.body)) return false;
+    for (const item of value.body) {
+      const statement = batchObject(item);
+      if (typeof statement?.directive !== 'string') break;
+      if (statement.directive === 'use strict') return true;
+    }
+    return false;
+  };
+  const module = Array.isArray(root.body) && root.body.some(value => /^(?:Import|Export)/u.test(String(batchObject(value)?.type)));
+  const imports = new Map<number, string>(), pending: { node: Data; parent?: Data; depth: number; strict: boolean; thisSafe: boolean }[] = [
+    { node: root, depth: 0, strict: module || strictBody(root), thisSafe: true },
+  ];
+  let count = 0;
+  while (pending.length) {
+    const { node, parent, depth, strict, thisSafe } = pending.pop()!;
+    if (++count > 10_000 || depth > 64 || node.type === 'ThisExpression' && !thisSafe || node.type === 'WithStatement') return unresolved();
+    if (node.type === 'ImportDeclaration' || node.type === 'ExportNamedDeclaration' && node.source
+      || node.type === 'ExportAllDeclaration') imports.set(Number(node.start), literal(node.source));
+    if (node.type === 'ImportExpression') {
+      if (node.options !== undefined && node.options !== null) return unresolved();
+      imports.set(Number(node.start), literal(node.source));
+    }
+    if (node.type === 'CallExpression' && batchObject(node.callee)?.type === 'Identifier'
+      && batchObject(node.callee)?.name === 'require' && globals.has(node.callee)) {
+      if (!Array.isArray(node.arguments) || node.arguments.length !== 1) return unresolved();
+      imports.set(Number(node.start), literal(node.arguments[0]));
+    }
+    if (node.type === 'MemberExpression') {
+      const name = memberName(node), owner = batchObject(node.object);
+      if (opaqueMembers.has(name) || owner?.type === 'Identifier' && owner.name === 'Object' && globals.has(owner) && !objectOperations.has(name)) return unresolved();
+    }
+    if (node.type === 'Property' || node.type === 'MethodDefinition' || node.type === 'PropertyDefinition') {
+      const key = batchObject(node.key);
+      if (node.computed && key?.type !== 'Literal' || key?.type === 'Identifier' && opaqueMembers.has(String(key.name))
+        && !(node.type === 'MethodDefinition' && node.kind === 'constructor' && !node.computed)
+        || key?.type === 'Literal' && opaqueMembers.has(String(key.value))) return unresolved();
+    }
+    if (node.type === 'Identifier' && globals.has(node)) {
+      const name = String(node.name);
+        if (forbidden.has(name)) return unresolved();
+        if (name === 'require' && !(parent?.type === 'CallExpression' && parent.callee === node)) return unresolved();
+        if (name === 'Object' && !(parent?.type === 'MemberExpression' && parent.object === node)) return unresolved();
+        if (name === 'process' && !(parent?.type === 'MemberExpression' && parent.object === node && memberName(parent) === 'env')) return unresolved();
+        if (name === 'module' && !(parent?.type === 'MemberExpression' && parent.object === node && memberName(parent) === 'exports')) return unresolved();
+    }
+    for (const value of Object.values(node)) {
+      for (const item of Array.isArray(value) ? value : [value]) {
+        const child = batchObject(item);
+        if (child && typeof child.type === 'string') {
+          const body = batchObject(child.body), functionScope = ['FunctionDeclaration', 'FunctionExpression'].includes(String(child.type));
+          const childStrict = strict || child.type === 'ClassBody' || functionScope && !!body && strictBody(body);
+          pending.push({ node: child, parent: node, depth: depth + 1, strict: childStrict,
+            thisSafe: functionScope ? childStrict : child.type === 'ClassBody' || thisSafe });
+        }
+      }
+    }
+  }
+  return [...imports].sort((a, b) => a[0] - b[0]).map(([, specifier]) => specifier);
+}
 
 /** Authenticated GETs and source bindings only. No repository program is executed and no review is submitted. */
 export class SetupPublisherInventoryReviewAdapter {
@@ -121,10 +216,12 @@ export class SetupPublisherInventoryReviewAdapter {
       return unresolved();
     }
     this.verifyProducerMeaning(document, units);
+    if (typeof head.ref !== 'string' || !head.ref || head.ref.length > 240 || /[\p{Cc}\p{Cf}]/u.test(head.ref)) return unavailable();
+    const preparingActorIds = await this.preparingActors(coordinate, locator.pullRequest, locator.head, head.ref, pull.commits, author.id, token);
     const reviews = await this.reviews(coordinate, locator.pullRequest, token);
     const reviewers: SetupPublisherInventoryReviewer[] = [];
     const actors = new Map(reviews.filter(r => !['PENDING', 'COMMENTED'].includes(r.state) && r.actorType === 'User'
-      && r.actorId !== author.id).map(r => [r.actorId, r.actorLogin]));
+      && !preparingActorIds.includes(r.actorId)).map(r => [r.actorId, r.actorLogin]));
     for (const [id, login] of actors) {
       try {
         const permission = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/collaborators/{username}/permission',
@@ -135,7 +232,7 @@ export class SetupPublisherInventoryReviewAdapter {
       } catch { return unavailable(); }
     }
     const decision = decideSetupPublisherInventoryReview(document, locator, { authorId: author.id,
-      preparingActorIds: [author.id], reviews, reviewers, complete: true });
+      preparingActorIds, reviews, reviewers, complete: true });
     if (document.workflows.some(w => w.disposition === 'incompatible')) throw new SetupPublisherInventoryError('incompatible-producer');
     if (document.workflows.some(w => w.disposition === 'unresolved')) return unresolved();
     return Object.freeze({ ...locator, base: base.sha, workflowSetSha256: document.workflowSetSha256,
@@ -165,7 +262,7 @@ export class SetupPublisherInventoryReviewAdapter {
       if (!Array.isArray(values) || values.length > 100) return unavailable();
       for (const raw of values) {
         const v = batchObject(raw), user = batchObject(v?.user);
-        if (!batchPositive(v?.id) || !batchPositive(user?.id) || typeof user.login !== 'string' || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/u.test(user.login)
+        if (!batchPositive(v?.id) || !batchPositive(user?.id) || !publisherInventoryActorLogin(user.type, user.login)
           || !['User', 'Bot'].includes(String(user.type)) || !['PENDING', 'COMMENTED', 'APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(String(v.state))
           || typeof v.body !== 'string' && v.body !== null || typeof v.submitted_at !== 'string' && v.submitted_at !== null
           || v.commit_id !== null && !batchSha(v.commit_id)) return unavailable();
@@ -174,6 +271,83 @@ export class SetupPublisherInventoryReviewAdapter {
           submittedAt: v.submitted_at as string | null, commit: v.commit_id as string | null });
       }
       if (values.length < 100) return result;
+    }
+    return unavailable();
+  }
+
+  private activityCursor(link: unknown, coordinate: Coordinate, ref: string): { readonly name: 'after' | 'before'; readonly value: string } | undefined {
+    if (link === undefined || link === null || link === '') return undefined;
+    if (typeof link !== 'string' || link.length > 16_384 || /[\p{Cc}\p{Cf}]/u.test(link)) return unavailable();
+    let next: { name: 'after' | 'before'; value: string } | undefined;
+    const relations = new Set<string>();
+    for (const part of link.split(',')) {
+      const match = /^\s*<([^<>]+)>;\s*rel="(next|prev|first|last)"\s*$/u.exec(part);
+      if (!match || relations.has(match[2])) return unavailable();
+      relations.add(match[2]); if (match[2] !== 'next') continue;
+      let url: URL; try { url = new URL(match[1]); } catch { return unavailable(); }
+      const names = [...url.searchParams.keys()], cursors = names.filter(name => name === 'after' || name === 'before');
+      if (url.origin !== 'https://api.github.com' || url.username || url.password || url.hash
+        || url.pathname.toLowerCase() !== `/repos/${coordinate.owner}/${coordinate.repo}/activity`.toLowerCase()
+        || names.some(name => !['ref', 'per_page', 'direction', 'after', 'before'].includes(name) || url.searchParams.getAll(name).length !== 1)
+        || url.searchParams.get('ref') !== ref || url.searchParams.get('per_page') !== '100' || url.searchParams.get('direction') !== 'desc'
+        || cursors.length !== 1) return unavailable();
+      const value = url.searchParams.get(cursors[0])!;
+      if (!value || value.length > 2048 || /[\p{Cc}\p{Cf}]/u.test(value)) return unavailable();
+      next = { name: cursors[0] as 'after' | 'before', value };
+    }
+    return next;
+  }
+
+  private async preparingActors(coordinate: Coordinate, pullRequest: number, head: string, branch: string, count: unknown,
+    authorId: number, token: string): Promise<readonly number[]> {
+    // GitHub exposes at most250 PR commits. Never treat a truncated history or
+    // an unassociated commit author/committer as independent preparation.
+    if (!batchPositive(count) || count > 250) return unavailable();
+    const ids = new Set([authorId]), commits = new Set<string>(), actors = new Map<number, string>();
+    const account = (value: unknown): void => {
+      const actor = batchObject(value);
+      if (!batchPositive(actor?.id) || !publisherInventoryActorLogin(actor.type, actor.login)) return unavailable();
+      const identity = `${actor.login.toLowerCase()}:${actor.type}`;
+      if (actors.has(actor.id) && actors.get(actor.id) !== identity) return unavailable();
+      actors.set(actor.id, identity); ids.add(actor.id);
+    };
+    let last = '';
+    for (let page = 1; commits.size < count; page++) {
+      const values = await this.transport.call(token, 'GET /repos/{owner}/{repo}/pulls/{pull_number}/commits',
+        { ...coordinate, pull_number: pullRequest, per_page: 100, page });
+      if (!Array.isArray(values) || !values.length || values.length > 100 || commits.size + values.length > count) return unavailable();
+      for (const value of values) {
+        const commit = batchObject(value);
+        if (!batchSha(commit?.sha) || commits.has(commit.sha)) return unavailable();
+        commits.add(commit.sha); last = commit.sha;
+        for (const key of ['author', 'committer']) account(commit[key]);
+      }
+      if (values.length < 100 && commits.size !== count) return unavailable();
+    }
+    if (last !== head) return unavailable();
+    // Git author/committer fields are declarations, not evidence of who
+    // published the bytes. Authenticate the complete provider activity too.
+    const ref = `refs/heads/${branch}`, events = new Set<number>(), cursors = new Set<string>();
+    let cursor: { name: 'after' | 'before'; value: string } | undefined, created = false, published = false;
+    for (let page = 0; page < 10; page++) {
+      const response = await this.transport.activityPage(token, coordinate, ref, cursor);
+      if (!Array.isArray(response.entries) || response.entries.length > 100) return unavailable();
+      for (const value of response.entries) {
+        const event = batchObject(value);
+        if (!batchPositive(event?.id) || events.has(event.id) || event.ref !== ref || !batchSha(event.before) || !batchSha(event.after)
+          || !['push', 'force_push', 'branch_creation', 'branch_deletion', 'pr_merge', 'merge_queue_merge'].includes(String(event.activity_type))) return unavailable();
+        events.add(event.id); account(event.actor);
+        if (event.activity_type === 'branch_creation' && event.before === '0'.repeat(40) && event.after !== '0'.repeat(40)) created = true;
+        if (event.after === head && event.activity_type !== 'branch_deletion') published = true;
+      }
+      const next = this.activityCursor(response.link, coordinate, ref);
+      if (!next) {
+        if (!created || !published) return unavailable();
+        return [...ids].sort((a, b) => a - b);
+      }
+      const key = `${next.name}:${next.value}`;
+      if (!response.entries.length || cursors.has(key)) return unavailable();
+      cursors.add(key); cursor = next;
     }
     return unavailable();
   }
@@ -365,7 +539,13 @@ export class SetupPublisherInventoryReviewAdapter {
   private assertUses(value: string, source: UnitSource, called: UnitSource, context: ExecutionContext, reusable: boolean): void {
     if (value.includes('${{')) return unresolved();
     let repository: string, commit: string, path: string;
-    if (value.startsWith('./')) {
+    if (value.startsWith('$/')) {
+      path = value.slice(2);
+      if ((path !== '' && !safePath(path)) || path.includes('@')) return unresolved();
+      // GitHub self references bind to the file containing the reference,
+      // including inside external reusable workflows and composite actions.
+      repository = source.unit.repository; commit = source.unit.commit;
+    } else if (value.startsWith('./')) {
       if (reusable) { repository = source.unit.repository; commit = source.unit.commit; path = value.slice(2); }
       else {
         const relative = value.slice(2), checkout = [...context.workspace].sort((a, b) => b.prefix.length - a.prefix.length)
@@ -425,7 +605,8 @@ export class SetupPublisherInventoryReviewAdapter {
         const checkout = [...context.workspace].reverse().find(w => w.prefix === '');
         const path = actionPath ? sibling(owner.unit.path, relative.slice(actionPrefix.length)) : relative.replace(/^\.\//u, '');
         if (!safePath(path) || !actionPath && !checkout) return unresolved();
-        const edge = document.edges.filter(e => e.from === program.unit.id && e.role === `program:${++calls}`);
+        const role = `program:${++calls}`;
+        const edge = document.edges.filter(e => e.from === program.unit.id && e.role === role);
         const called = edge.length === 1 ? sources.get(edge[0].to) : undefined, expected = actionPath ? owner.unit : checkout;
         if (!called || called.unit.path !== path || called.unit.repository.toLowerCase() !== expected!.repository.toLowerCase()
           || called.unit.commit !== expected!.commit || called.unit.kind !== (executable === 'node' ? 'node-entrypoint' : 'shell-program')) return unresolved();
@@ -451,29 +632,20 @@ export class SetupPublisherInventoryReviewAdapter {
     if (active.has(program.unit.id) || active.size >= 16) return unresolved();
     active.add(program.unit.id);
     const content = program.content;
-    // This deliberately finite lexical profile is not a general JS verifier.
-    // Human review supplies semantics; observable dynamic loading, native/code
-    // generation and mutable external programs cannot be hidden by that claim.
-    if (/\b(?:eval|Function|importScripts|WebAssembly)\s*(?:\(|\.)|\bprocess\s*\.\s*(?:binding|dlopen)\s*\(/u.test(content)
-      || /\brequire\s*\.(?:resolve|cache|extensions)|\bcreateRequire\b/u.test(content)) return unresolved();
-    const imports: string[] = [];
-    let remainder = content;
-    for (const call of content.matchAll(/\b(?:require|import)\s*\(/gu)) {
-      const literal = /^(?:require|import)\s*\(\s*(['"])([^'"\\\r\n]+)\1\s*\)/u.exec(content.slice(call.index));
-      if (!literal) return unresolved(); imports.push(literal[2]); remainder = remainder.replace(literal[0], '');
-    }
-    for (const declaration of content.matchAll(/\b(?:import|export)\s+(?:(?:[^;\r\n]*?\s+from\s*)?)(['"])([^'"\\\r\n]+)\1/gu)) {
-      imports.push(declaration[2]); remainder = remainder.replace(declaration[0], '');
-    }
-    if (/\brequire\b|\bimport\b(?!\s*\.\s*meta\b)/u.test(remainder)) return unresolved();
+    // Human review supplies semantics. Parsed source also closes indirect
+    // loading, constructors, reflection and CommonJS wrapper escapes.
+    const imports = nodeImports(content);
     let count = 0;
     for (const specifier of imports) {
       if (builtinModules.includes(specifier) || builtinModules.includes(specifier.replace(/^node:/u, ''))) {
-        if (/^(?:node:)?(?:child_process|cluster|worker_threads|vm|module|fs(?:\/promises)?|process)$/u.test(specifier)) return unresolved();
+        const name = specifier.replace(/^node:/u, '');
+        if (!['assert', 'assert/strict', 'buffer', 'crypto', 'events', 'os', 'path', 'path/posix', 'path/win32', 'punycode', 'querystring',
+          'stream', 'stream/consumers', 'stream/promises', 'stream/web', 'string_decoder', 'timers', 'timers/promises', 'url', 'util', 'util/types', 'zlib'].includes(name)) return unresolved();
         continue;
       }
       if (!specifier.startsWith('./') && !specifier.startsWith('../')) return unresolved();
-      const path = sibling(program.unit.path, specifier), edges = document.edges.filter(e => e.from === program.unit.id && e.role === `import:${++count}`);
+      const path = sibling(program.unit.path, specifier), role = `import:${++count}`;
+      const edges = document.edges.filter(e => e.from === program.unit.id && e.role === role);
       const called = edges.length === 1 ? sources.get(edges[0].to) : undefined;
       if (!called || called.unit.path !== path || called.unit.repositoryId !== program.unit.repositoryId || called.unit.commit !== program.unit.commit
         || !['node-entrypoint', 'data-file'].includes(called.unit.kind)) return unresolved();

