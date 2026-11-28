@@ -1,7 +1,7 @@
 import { DeliverSetupInstallationUseCase } from '../deliver_setup_installation_use_case';
 import { ApplySetupPublisherUseCase, SetupPublisherApplyError } from '../apply_setup_publisher_use_case';
 import { ReviewSetupPublisherUseCase } from '../review_setup_publisher_use_case';
-import { SetupInstallationSnapshotChanged } from '../../../ports/setup_installation_delivery_ports';
+import { SetupInstallationObservedEffectError, SetupInstallationSnapshotChanged } from '../../../ports/setup_installation_delivery_ports';
 import type { SetupInstallationObjectObserver } from '../../../ports/setup_installation_delivery_ports';
 import type { SetupPublisherApplyPorts } from '../../../ports/setup_publisher_apply_ports';
 import type { SetupPublisherOperation } from '../../../../domain/setup_publisher_installation';
@@ -290,3 +290,16 @@ it.each(['branch', 'pullRequest'] as const)('completed recovery preserves cancel
   await expect(f.execute(existing)).rejects.toMatchObject({ reason: 'cancelled', retained: existing, lastPersisted: existing });
   expect(f.states).toEqual([]); expect(f.writes).toEqual([]); expect(f.release).toHaveBeenCalledTimes(1);
 });
+it.each((['branch', 'pullRequest'] as const).flatMap(phase => (['drift', 'cancelled'] as const).map(reason => ({ phase, reason }))))(
+  'completed recovery retains its receipt after a verified $phase observation followed by $reason', async ({ phase, reason }) => {
+    const f = fixture(), existing = f.completed(['tree', 'commit', 'branch', 'pull-request']); f.retain(existing);
+    const observed = phase === 'branch' ? { effect: 'branch' as const, commit }
+      : { effect: 'pull-request' as const, commit, pullRequestNumber: 73 };
+    f.writer[phase].mockRejectedValue(new SetupInstallationObservedEffectError(reason, observed));
+    await expect(f.execute(existing)).rejects.toMatchObject({ reason: reason === 'drift' ? 'stale' : 'cancelled',
+      retained: existing, lastPersisted: existing });
+    expect(f.saved()).toEqual(existing); expect(f.states).toEqual([]); expect(f.writes).toEqual([]);
+    expect(f.release).toHaveBeenCalledTimes(1);
+    if (phase === 'branch') expect(f.writer.pullRequest).not.toHaveBeenCalled();
+  },
+);

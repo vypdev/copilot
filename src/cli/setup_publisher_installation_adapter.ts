@@ -31,7 +31,7 @@ export async function executeSetupPublisherCommand(input: SetupPublisherCommandI
   const explicitOptions = [...input.explicitOptions];
   const catalog = resolveStaticSetupPublisherCatalog(setupPublisherEnvironmentLocale(process.env));
   const write = (text: string) => process.stdout.write(text);
-  const presenter = new SetupPublisherInstallationPresenter(catalog, write);
+  const presenter = new SetupPublisherInstallationPresenter(catalog, write, process.stdout.columns);
   let installation: ReturnType<typeof createSetupPublisherInstallationCompositionRoot> | undefined;
   const operationLocation = async (id: string): Promise<string | undefined> => {
     try { return await installation?.operationLocation?.(id); }
@@ -84,19 +84,29 @@ export async function executeSetupPublisherCommand(input: SetupPublisherCommandI
     else write(catalog.message(result.stage === 'dry-run' ? 'dryRun' : result.stage === 'unchanged' ? 'unchanged'
       : result.stage === 'declined' ? 'declined' : 'cancelled') + '\n');
   } catch (error) {
+    if (error instanceof SetupPublisherReviewError && error.reason === 'inventory' && error.blocked) {
+      presenter.inventoryBlocked(error.blocked, error.retained,
+        error.retained ? await operationLocation(error.retained.operationId) : undefined);
+      process.exitCode = 1; return;
+    }
     let message: SetupPublisherMessageId = 'blocked';
     if (error instanceof PublisherCommandError) message = error.reason;
     else if (error instanceof SetupPublisherProposalFileError) message = 'invalid';
     else if (error instanceof SetupPublisherCredentialError) message = 'tokenRequired';
     else if (error instanceof SetupPublisherPlanError) message = error.reason === 'destination-changed' ? 'stale'
       : error.reason === 'authority-unverified' ? 'authority' : error.reason === 'source-unverified' ? 'sourceUnverified' : 'unsupported';
-    else if (error instanceof SetupPublisherReviewError) message = error.reason === 'cancelled' ? 'cancelled' : error.reason === 'stale' ? 'stale' : 'blocked';
+    else if (error instanceof SetupPublisherReviewError) message = error.planFailure === 'destination-changed' ? 'stale'
+      : error.planFailure === 'authority-unverified' ? 'authority' : error.planFailure === 'source-unverified' ? 'sourceUnverified'
+        : error.planFailure === 'installation-unsupported' ? 'unsupported'
+          : error.reason === 'cancelled' ? 'cancelled' : error.reason === 'stale' ? 'stale' : 'blocked';
     else if (error instanceof SetupPublisherApplyError) message = error.reason === 'cancelled' ? 'cancelled' : error.reason === 'stale' ? 'stale' : 'blocked';
     else if (error instanceof SetupPublisherInstallationError) message = error.reason === 'resume-missing' ? 'resumeMissing'
       : error.reason === 'resume-required' ? 'resumeRequired' : error.reason === 'invalid' ? 'invalid' : 'blocked';
     else if (error instanceof SetupBatchProviderError && error.code === 'forbidden') message = 'authority';
     write(catalog.message(message) + '\n');
     if (error instanceof SetupPublisherApplyError) presenter.operation(error.retained, error.reason === 'journal',
+      await operationLocation(error.retained.operationId));
+    else if (error instanceof SetupPublisherReviewError && error.retained) presenter.operation(error.retained, false,
       await operationLocation(error.retained.operationId));
     process.exitCode = message === 'cancelled' ? 130 : 1;
   } finally { process.off('SIGINT', stop); terminal?.close(); }

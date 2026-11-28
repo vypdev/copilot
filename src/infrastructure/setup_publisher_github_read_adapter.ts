@@ -10,12 +10,15 @@ import { SetupPublisherCredentials } from './setup_publisher_credentials';
 import { SetupPublisherGitReader, type SetupPublisherGitEntry } from './setup_publisher_git_reader';
 import { SetupPublisherGithubSourceAdapter } from './setup_publisher_github_source_adapter';
 import { inspectSetupPublisherWorkflows } from './setup_publisher_workflow_inventory';
+import { SetupPublisherInventoryReviewAdapter } from './setup_publisher_inventory_review_adapter';
 
 /** One relevant authenticated snapshot, paired to a private credential generation. */
 export class SetupPublisherGithubReadAdapter {
   private readonly source: SetupPublisherGithubSourceAdapter;
+  private readonly inventory: SetupPublisherInventoryReviewAdapter;
   constructor(private readonly transport: SetupBatchGithubTransport, private readonly credentials: SetupPublisherCredentials) {
     this.source = new SetupPublisherGithubSourceAdapter(transport);
+    this.inventory = new SetupPublisherInventoryReviewAdapter(transport);
   }
 
   async inspect(input: SetupPublisherProposal): Promise<SetupPublisherReadSnapshot> {
@@ -74,8 +77,10 @@ export class SetupPublisherGithubReadAdapter {
         if ((entry.type === 'tree' || entry.type === 'commit') && path !== SETUP_PUBLISHER_WORKFLOW_PATH || !/\.ya?ml$/iu.test(entry.path)) continue;
         workflows.push(await load(path, entry));
       }
+      const inventoryReview = proposal.schemaVersion === 2 ? await this.inventory.inspect(proposal, { target, source, tree: root, workflows }, token) : undefined;
       return { session, inspection: { target, authority, source, installation: { complete: true, manifest,
-        guidance, workflows, publisher: inspectSetupPublisherWorkflows(workflows, expected) } } };
+        guidance, workflows, publisher: inspectSetupPublisherWorkflows(workflows, expected, inventoryReview),
+        ...(inventoryReview ? { inventoryReview } : {}) } } };
     });
   }
 }

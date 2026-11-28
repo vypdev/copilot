@@ -1,0 +1,566 @@
+import { createHash } from 'node:crypto';
+import { builtinModules } from 'node:module';
+import { posix } from 'node:path';
+import * as shellQuote from 'shell-quote';
+import { JSON_SCHEMA, load } from 'js-yaml';
+import type { SetupBatchTarget } from '../domain/setup_batch';
+import type { SetupPublisherInspection, SetupPublisherObservedFile, SetupPublisherProposal } from '../domain/setup_publisher_installation';
+import { SETUP_PUBLISHER_INVENTORY_PATH, SETUP_PUBLISHER_INVENTORY_LIMITS, SetupPublisherInventoryError,
+  type SetupPublisherInventoryDocument, type SetupPublisherInventoryInput, type SetupPublisherInventoryInputOrigin,
+  type SetupPublisherInventoryReviewFact, type SetupPublisherInventoryReviewRecord,
+  type SetupPublisherInventoryReviewer, type SetupPublisherInventoryUnit } from '../domain/setup_publisher_inventory_review';
+import { assertSetupPublisherInventoryBindings, canonicalPublisherInventoryJson, decideSetupPublisherInventoryReview,
+  parseSetupPublisherInventoryDocument, publisherInventoryContractSha256, publisherInventorySha256 } from '../application/policies/setup_publisher_inventory_review_policy';
+import { setupInstallationTreeLevel } from '../application/policies/setup_installation_tree_policy';
+import { setupPublisherWorkflow } from '../application/policies/setup_publisher_installation_policy';
+import type { SetupInstallationTree, SetupInstallationSubtree } from '../application/contracts/setup_installation_delivery';
+import { batchObject, batchPositive, batchSha, SetupBatchGithubTransport } from './setup_batch_github_read_adapter';
+import { SetupPublisherGitReader } from './setup_publisher_git_reader';
+import { inspectSetupPublisherWorkflows } from './setup_publisher_workflow_inventory';
+
+type Data = Record<string, unknown>;
+type Coordinate = { owner: string; repo: string };
+interface UnitSource { unit: SetupPublisherInventoryUnit; content: string; reader: SetupPublisherGitReader; coordinate: Coordinate }
+interface WorkspaceSource { repositoryId: number; repository: string; commit: string; prefix: string }
+interface ExecutionContext {
+  workflow: string; route: string; inputs: Data; environment: Data;
+  workspace: WorkspaceSource[];
+}
+interface VariableWitness {
+  readonly fingerprint: Readonly<{ effectiveVariablesSha256?: string }>;
+  readonly origins: ReadonlyMap<string, 'repository-variable' | 'organization-variable'>;
+}
+interface InventoryObservation {
+  readonly target: SetupBatchTarget;
+  readonly source: SetupPublisherInspection['source'];
+  readonly tree: string;
+  readonly workflows: readonly SetupPublisherObservedFile[];
+}
+const sha256 = (v: string) => createHash('sha256').update(v, 'utf8').digest('hex');
+const order = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
+const unresolved = (): never => { throw new SetupPublisherInventoryError('unresolved-closure'); };
+const unavailable = (): never => { throw new SetupPublisherInventoryError('review-unavailable'); };
+const mismatch = (): never => { throw new SetupPublisherInventoryError('binding-mismatch'); };
+const safePath = (v: unknown): v is string => typeof v === 'string' && v.length <= 512 && !/[\\\p{Cc}\p{Cf}]/u.test(v)
+  && v.split('/').every(p => p !== '' && p !== '.' && p !== '..' && p.toLowerCase() !== '.git');
+const sibling = (file: string, relative: string) => {
+  if (!relative || relative.startsWith('/') || /[\\\p{Cc}\p{Cf}]/u.test(relative)) return unresolved();
+  const path = posix.normalize(posix.join(posix.dirname(file), relative));
+  if (!safePath(path)) return unresolved(); return path;
+};
+const scope = (v: unknown): Data => {
+  if (v === undefined) return {};
+  const result = batchObject(v); if (!result) return unresolved(); return result;
+};
+const environment = (...values: readonly Data[]): Data => {
+  const result: Data = {}, names = new Map<string, string>();
+  for (const value of values) for (const [name, definition] of Object.entries(value)) {
+    const folded = name.toUpperCase(), prior = names.get(folded);
+    if (prior !== undefined && prior !== name) return unresolved();
+    names.set(folded, name); result[name] = definition;
+  }
+  return result;
+};
+const hasRuntimeOverride = (values: Data): boolean => Object.keys(values)
+  .some(key => /^(?:PATH|NODE_OPTIONS|NODE_PATH|BASH_ENV|ENV|SHELLOPTS|GITHUB_ACTION_PATH|LD_.*|DYLD_.*)$/iu.test(key));
+
+/** Authenticated GETs and source bindings only. No repository program is executed and no review is submitted. */
+export class SetupPublisherInventoryReviewAdapter {
+  constructor(private readonly transport: SetupBatchGithubTransport) {}
+
+  async inspect(proposal: SetupPublisherProposal, observed: InventoryObservation,
+  token: string): Promise<SetupPublisherInventoryReviewFact> {
+    if (proposal.schemaVersion !== 2) throw new SetupPublisherInventoryError('review-required');
+    try { return await this.inspectBound(proposal, observed, token); }
+    catch (error) {
+      if (error instanceof SetupPublisherInventoryError) throw error;
+      return unavailable();
+    }
+  }
+
+  private async inspectBound(proposal: SetupPublisherProposal & { readonly schemaVersion: 2 }, observed: InventoryObservation,
+    token: string): Promise<SetupPublisherInventoryReviewFact> {
+    const { target, source, tree, workflows } = observed, locator = proposal.inventoryReview;
+    const coordinate = { owner: target.owner, repo: target.name };
+    const pull = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/pulls/{pull_number}',
+      { ...coordinate, pull_number: locator.pullRequest }));
+    const head = batchObject(pull?.head), base = batchObject(pull?.base), author = batchObject(pull?.user);
+    const belongs = (v: unknown): boolean => {
+      const repository = batchObject(v);
+      return repository?.id === target.id && typeof repository.full_name === 'string'
+        && repository.full_name.toLowerCase() === `${target.owner}/${target.name}`.toLowerCase();
+    };
+    if (pull?.number !== locator.pullRequest || pull.state !== 'open' || pull.merged !== false
+      || head?.sha !== locator.head || !belongs(head.repo) || !belongs(base?.repo) || !batchSha(base?.sha)
+      || !batchPositive(author?.id) || !['User', 'Bot'].includes(String(author.type))) return unavailable();
+    const reader = new SetupPublisherGitReader(this.transport, token, coordinate);
+    const reviewTree = await reader.commitTree(locator.head), baseTree = await reader.commitTree(base.sha);
+    const documentEntry = await reader.find(reviewTree, SETUP_PUBLISHER_INVENTORY_PATH);
+    if (!documentEntry || documentEntry.mode !== '100644') return unavailable();
+    await this.assertReviewOnlyTree(reader, baseTree, reviewTree, documentEntry.sha);
+    const bytes = await reader.text(documentEntry, SETUP_PUBLISHER_INVENTORY_LIMITS.bytes);
+    if (sha256(bytes) !== locator.documentSha256) return mismatch();
+    const document = parseSetupPublisherInventoryDocument(bytes);
+    const publisher = { repositoryId: source.repositoryId, commit: source.commit, workflowSha256: sha256(source.workflow),
+      actionManifestSha256: source.actionManifestSha256, actionBundleSha256: source.actionBundleSha256 };
+    assertSetupPublisherInventoryBindings(document, {
+      destination: { repositoryId: target.id, repository: `${target.owner}/${target.name}`, defaultBranch: target.defaultBranch,
+        head: target.baseSha, tree }, publisher: { ...publisher, contractSha256: publisherInventoryContractSha256(publisher) },
+      workflows: workflows.map(file => ({ path: file.path, mode: file.mode as '100644' | '100755', contentSha256: sha256(file.content),
+        blob: createHash('sha1').update(`blob ${Buffer.byteLength(file.content, 'utf8')}\0`).update(file.content, 'utf8').digest('hex') })),
+    });
+    if (inspectSetupPublisherWorkflows(workflows, setupPublisherWorkflow(source.workflow, source.commit)).kind === 'foreign') {
+      throw new SetupPublisherInventoryError('incompatible-producer');
+    }
+    let units: ReadonlyMap<string, UnitSource>;
+    try {
+      units = await this.readUnits(document, token);
+      await this.verifyClosure(document, units, target, token);
+    } catch (error) {
+      if (error instanceof SetupPublisherInventoryError) throw error;
+      return unresolved();
+    }
+    this.verifyProducerMeaning(document, units);
+    const reviews = await this.reviews(coordinate, locator.pullRequest, token);
+    const reviewers: SetupPublisherInventoryReviewer[] = [];
+    const actors = new Map(reviews.filter(r => !['PENDING', 'COMMENTED'].includes(r.state) && r.actorType === 'User'
+      && r.actorId !== author.id).map(r => [r.actorId, r.actorLogin]));
+    for (const [id, login] of actors) {
+      try {
+        const permission = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/collaborators/{username}/permission',
+          { ...coordinate, username: login })), user = batchObject(permission?.user);
+        if (user?.id !== id || typeof user.login !== 'string' || user.login.toLowerCase() !== login.toLowerCase()
+          || !['admin', 'write', 'read', 'none'].includes(String(permission?.permission))) return unavailable();
+        reviewers.push({ id, login: user.login, permission: permission!.permission as SetupPublisherInventoryReviewer['permission'] });
+      } catch { return unavailable(); }
+    }
+    const decision = decideSetupPublisherInventoryReview(document, locator, { authorId: author.id,
+      preparingActorIds: [author.id], reviews, reviewers, complete: true });
+    if (document.workflows.some(w => w.disposition === 'incompatible')) throw new SetupPublisherInventoryError('incompatible-producer');
+    if (document.workflows.some(w => w.disposition === 'unresolved')) return unresolved();
+    return Object.freeze({ ...locator, base: base.sha, workflowSetSha256: document.workflowSetSha256,
+      closureSha256: publisherInventorySha256({ units: document.units, edges: document.edges, inputs: document.inputs }),
+      contractSha256: document.publisher.contractSha256, ...decision,
+      workflows: Object.freeze(document.workflows.map(w => Object.freeze({ path: w.path, disposition: w.disposition }))) });
+  }
+
+  private async assertReviewOnlyTree(reader: SetupPublisherGitReader, base: string, prepared: string, blob: string): Promise<void> {
+    const pending: SetupInstallationSubtree[] = [{ path: '', baseSha: base, preparedSha: prepared }];
+    while (pending.length) {
+      const item = pending.pop()!;
+      const tree = async (sha: string | undefined): Promise<SetupInstallationTree> => ({ truncated: false,
+        entries: sha === undefined ? [] : (await reader.tree(sha)).map(entry => ({ path: entry.path, mode: entry.mode,
+          type: entry.type, sha: entry.sha })) as SetupInstallationTree['entries'] });
+      try { pending.push(...setupInstallationTreeLevel(item.path, await tree(item.baseSha), await tree(item.preparedSha),
+        [{ path: SETUP_PUBLISHER_INVENTORY_PATH, sha: blob, mode: '100644' }])); }
+      catch { return unavailable(); }
+    }
+  }
+
+  private async reviews(coordinate: Coordinate, pullRequest: number, token: string): Promise<readonly SetupPublisherInventoryReviewRecord[]> {
+    const result: SetupPublisherInventoryReviewRecord[] = [];
+    for (let page = 1; page <= 10; page++) {
+      const values = await this.transport.call(token, 'GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews',
+        { ...coordinate, pull_number: pullRequest, per_page: 100, page });
+      if (!Array.isArray(values) || values.length > 100) return unavailable();
+      for (const raw of values) {
+        const v = batchObject(raw), user = batchObject(v?.user);
+        if (!batchPositive(v?.id) || !batchPositive(user?.id) || typeof user.login !== 'string' || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/u.test(user.login)
+          || !['User', 'Bot'].includes(String(user.type)) || !['PENDING', 'COMMENTED', 'APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(String(v.state))
+          || typeof v.body !== 'string' && v.body !== null || typeof v.submitted_at !== 'string' && v.submitted_at !== null
+          || v.commit_id !== null && !batchSha(v.commit_id)) return unavailable();
+        result.push({ id: v.id, actorId: user.id, actorLogin: user.login, actorType: user.type as 'User' | 'Bot',
+          state: v.state as SetupPublisherInventoryReviewRecord['state'], body: v.body === null ? '' : v.body as string,
+          submittedAt: v.submitted_at as string | null, commit: v.commit_id as string | null });
+      }
+      if (values.length < 100) return result;
+    }
+    return unavailable();
+  }
+
+  private async readUnits(document: SetupPublisherInventoryDocument, token: string): Promise<ReadonlyMap<string, UnitSource>> {
+    const readers = new Map<string, SetupPublisherGitReader>(), commits = new Map<string, string>(), result = new Map<string, UnitSource>();
+    let bytes = 0;
+    for (const unit of document.units) {
+      const [owner, repo] = unit.repository.split('/'), coordinate = { owner, repo };
+      let reader = readers.get(unit.repository);
+      if (!reader) {
+        const metadata = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}', coordinate));
+        if (metadata?.id !== unit.repositoryId || typeof metadata.full_name !== 'string'
+          || metadata.full_name.toLowerCase() !== unit.repository.toLowerCase()) return mismatch();
+        reader = new SetupPublisherGitReader(this.transport, token, coordinate); readers.set(unit.repository, reader);
+      }
+      const key = `${unit.repository}:${unit.commit}`;
+      let tree = commits.get(key);
+      if (!tree) { tree = await reader.commitTree(unit.commit); commits.set(key, tree); }
+      if (tree !== unit.tree) return mismatch();
+      const entry = await reader.find(tree, unit.path);
+      if (!entry || entry.type !== 'blob' || entry.mode !== unit.mode || entry.sha !== unit.blob) return mismatch();
+      // Keep the existing Git blob ceiling; this profile also caps aggregate
+      // source bytes at that ceiling. Destination installation assets stay unchanged.
+      bytes += entry.size ?? 0; if (bytes > 100_000_000) return unresolved();
+      const metadata = ['workflow', 'reusable-workflow', 'action', 'composite-action'].includes(unit.kind);
+      const content = await reader.text(entry, metadata ? 100_000 : 100_000_000);
+      if (sha256(content) !== unit.contentSha256) return mismatch();
+      if (unit.kind === 'action' || unit.kind === 'composite-action') {
+        if (!/(?:^|\/)action\.ya?ml$/u.test(unit.path)) return unresolved();
+        const alternative = unit.path.endsWith('.yml') ? unit.path.slice(0, -4) + '.yaml' : unit.path.slice(0, -5) + '.yml';
+        if (await reader.find(tree, alternative)) return unresolved();
+      }
+      result.set(unit.id, { unit, content, reader, coordinate });
+    }
+    return result;
+  }
+
+  private yaml(source: string): Data {
+    let parsed: unknown;
+    try { parsed = load(source, { schema: JSON_SCHEMA }); } catch { return unresolved(); }
+    const root = batchObject(parsed); if (!root) return unresolved();
+    let nodes = 0; const ancestors = new Set<object>();
+    const visit = (v: unknown, depth: number): void => {
+      if (++nodes > 10_000 || depth > 64) return unresolved();
+      if (v === null || typeof v !== 'object') return;
+      if (ancestors.has(v) || Object.prototype.hasOwnProperty.call(v, '<<')) return unresolved();
+      ancestors.add(v); Object.values(v).forEach(child => visit(child, depth + 1)); ancestors.delete(v);
+    };
+    visit(root, 0); return root;
+  }
+
+  private async verifyClosure(document: SetupPublisherInventoryDocument, sources: ReadonlyMap<string, UnitSource>,
+    target: SetupBatchTarget, token: string): Promise<void> {
+    const inputs = new Map<string, SetupPublisherInventoryInput>(), active = new Set<string>();
+    let variables: VariableWitness;
+    try { variables = await this.variableWitness(target, sources, token); } catch { return unresolved(); }
+    const sourceFor = (from: UnitSource, role: string, accept: (u: SetupPublisherInventoryUnit) => boolean): UnitSource => {
+      const edges = document.edges.filter(e => e.from === from.unit.id && e.role === role);
+      if (edges.length !== 1) return unresolved();
+      const source = sources.get(edges[0].to); if (!source || !accept(source.unit)) return unresolved(); return source;
+    };
+    const observe = (source: UnitSource, context: ExecutionContext, job: string, step: number, kind: 'env' | 'with', values: Data,
+      origin: SetupPublisherInventoryInputOrigin): void => {
+      for (const [name, definition] of Object.entries(values)) {
+        if (!/^[A-Za-z_][A-Za-z0-9_-]*$/u.test(name) || !['string', 'number', 'boolean'].includes(typeof definition)) return unresolved();
+        let symbolic = false;
+        if (typeof definition === 'string') {
+          const expressions = [...definition.matchAll(/\$\{\{\s*([^{}]*?)\s*\}\}/gu)];
+          if (definition.replace(/\$\{\{\s*([^{}]*?)\s*\}\}/gu, '').includes('${{')) return unresolved();
+          for (const [, expression] of expressions) {
+            const credential = /^secrets\.([A-Za-z_][A-Za-z0-9_]*)$/iu.exec(expression);
+            if (credential) {
+              if (!/^(?:token|github[-_]token|gh[-_]token|access[-_]token|auth[-_]token|pat|password)$/iu.test(name)) return unresolved();
+              symbolic = true; continue;
+            }
+            if (/^(?:vars\.[A-Za-z_][A-Za-z0-9_]*|toJSON\(vars\)|github\.(?:repository|repository_id))$/iu.test(expression)) continue;
+            const reference = /^(inputs|env)\.([A-Za-z_][A-Za-z0-9_-]*)$/iu.exec(expression);
+            const owner = reference?.[1].toLowerCase() === 'inputs' ? context.inputs : context.environment;
+            if (!reference || !Object.prototype.hasOwnProperty.call(owner, reference[2])
+              || typeof owner[reference[2]] === 'string' && String(owner[reference[2]]).includes('${{')) return unresolved();
+          }
+        }
+        const input = `${kind}:${name}`, scopeJob = context.route ? `${sha256(context.route).slice(0, 32)}:${job}` : job;
+        const variableReference = typeof definition === 'string' ? /^\$\{\{\s*vars\.([A-Za-z_][A-Za-z0-9_]*)\s*\}\}$/iu.exec(definition) : null;
+        const variableOrigin = variableReference ? variables.origins.get(variableReference[1].toUpperCase()) : undefined;
+        if (variableReference && !variableOrigin) return unresolved();
+        const actualOrigin = symbolic ? 'symbolic-secret' : kind === 'env' && name.toUpperCase() === 'INPUT_VARS_JSON' ? 'input-vars-json'
+          : variableOrigin ?? origin;
+        const anchor = { workflow: context.workflow, job: scopeJob, step, input, origin: actualOrigin };
+        const record = { id: publisherInventorySha256(anchor), ...anchor, sourceFingerprint: publisherInventorySha256({
+          kind: 'publisher-inventory-input-source', source: { repositoryId: source.unit.repositoryId, commit: source.unit.commit,
+            path: source.unit.path, contentSha256: source.unit.contentSha256 }, definition, effectiveEnvironment: context.environment,
+          callerInputs: context.inputs, variables: variables.fingerprint }) };
+        if (inputs.has(record.id) && canonicalPublisherInventoryJson(inputs.get(record.id)) !== canonicalPublisherInventoryJson(record)) return unresolved();
+        inputs.set(record.id, record);
+      }
+    };
+    const metadata = async (source: UnitSource, context: ExecutionContext, depth: number): Promise<void> => {
+      if (depth > 16 || active.has(source.unit.id)) return unresolved();
+      active.add(source.unit.id);
+      const value = this.yaml(source.content);
+      const steps = async (items: unknown, job: string, parent: ExecutionContext): Promise<void> => {
+        if (!Array.isArray(items) || items.length > 10_000) return unresolved();
+        for (let index = 0; index < items.length; index++) {
+          const step = batchObject(items[index]);
+          if (!step || Object.prototype.hasOwnProperty.call(step, 'uses') === Object.prototype.hasOwnProperty.call(step, 'run')) return unresolved();
+          const current = { ...parent, environment: environment(parent.environment, scope(step.env)) };
+          if (step['working-directory'] !== undefined || step.shell !== undefined && !['bash', 'sh'].includes(String(step.shell))) return unresolved();
+          observe(source, current, job, index + 1, 'env', scope(step.env), 'step-env');
+          observe(source, current, job, index + 1, 'with', scope(step.with), 'literal');
+          if (typeof step.run === 'string') {
+            if (step.run.includes('${{') && !/^\s*$/u.test(step.run.replace(/\$\{\{\s*github\.action_path\s*\}\}/gu, ''))) {
+              // Shell interpolation may create executable syntax. General
+              // expressions are not a literal source-fenced program.
+              if (step.run.replace(/\$\{\{\s*github\.action_path\s*\}\}/gu, '').includes('${{')) return unresolved();
+            }
+            const program = sourceFor(source, `run:${job}:${index + 1}`, u => u.kind === 'shell-program' && u.repositoryId === source.unit.repositoryId
+              && u.commit === source.unit.commit && u.path === source.unit.path && u.blob === source.unit.blob);
+            this.verifyShell(program, step.run, document, sources, current, source, new Set());
+          } else if (typeof step.uses === 'string') {
+            const role = `uses:${job}:${index + 1}`;
+            const called = sourceFor(source, role, u => ['action', 'composite-action'].includes(u.kind));
+            this.assertUses(step.uses, source, called, current, false);
+            const action = this.yaml(called.content), defaults = scope(action.inputs), provided = scope(step.with), resolved: Data = {};
+            for (const [name, raw] of Object.entries(defaults)) {
+              const input = batchObject(raw); if (!input) return unresolved();
+              if (!(name in provided) && input.default !== undefined) resolved[name] = input.default;
+            }
+            observe(called, current, job, index + 1, 'with', resolved, 'default');
+            await metadata(called, { ...current, inputs: { ...resolved, ...provided }, route: `${parent.route}/${source.unit.id}/${role}` }, depth + 1);
+            if (/^actions\/checkout@[a-f0-9]{40}$/u.test(step.uses)) this.checkout(step, current, target);
+          } else return unresolved();
+        }
+      };
+      if (source.unit.kind === 'workflow' || source.unit.kind === 'reusable-workflow') {
+        if (source.unit.kind === 'reusable-workflow' && !Object.prototype.hasOwnProperty.call(scope(value.on), 'workflow_call')) return unresolved();
+        const jobs = batchObject(value.jobs); if (!jobs || !Object.keys(jobs).length) return unresolved();
+        const workflowEnvironment = environment(scope(value.env));
+        observe(source, { ...context, environment: workflowEnvironment }, '', 0, 'env', workflowEnvironment, 'workflow-env');
+        for (const [name, raw] of Object.entries(jobs)) {
+          const job = batchObject(raw); if (!job || job.environment !== undefined || job.container !== undefined || job.services !== undefined
+            || job.defaults !== undefined || value.defaults !== undefined || job.secrets !== undefined) return unresolved();
+          // Matrix contexts require explicit finite expansion. Until resolved,
+          // they must not reuse one unexpanded set of input fingerprints.
+          if (job.strategy !== undefined) return unresolved();
+          const local = { ...context, environment: environment(workflowEnvironment, scope(job.env)), workspace: [] };
+          observe(source, local, name, 0, 'env', scope(job.env), 'job-env');
+          if (typeof job.uses === 'string') {
+            const role = `uses:${name}`, called = sourceFor(source, role, u => u.kind === 'reusable-workflow');
+            this.assertUses(job.uses, source, called, local, true);
+            observe(source, local, name, 0, 'with', scope(job.with), 'literal');
+            await metadata(called, { ...local, inputs: scope(job.with), route: `${context.route}/${source.unit.id}/${role}` }, depth + 1);
+          } else if (Array.isArray(job.steps)) {
+            await steps(job.steps, name, local);
+          } else return unresolved();
+        }
+      } else {
+        const runs = batchObject(value.runs); if (!runs) return unresolved();
+        if (runs.using === 'composite') {
+          if (source.unit.kind !== 'composite-action') return unresolved();
+          await steps(runs.steps, 'composite', context);
+        }
+        else if (runs.using === 'node20' || runs.using === 'node24') {
+          if (source.unit.kind !== 'action') return unresolved();
+          for (const role of ['main', 'pre', 'post']) {
+            if (role !== 'main' && runs[role] === undefined) continue;
+            const file = runs[role]; if (typeof file !== 'string') return unresolved();
+            const expected = sibling(source.unit.path, file.replace(/^\.\//u, ''));
+            const program = sourceFor(source, role, u => u.kind === 'node-entrypoint' && u.repositoryId === source.unit.repositoryId
+              && u.commit === source.unit.commit && u.path === expected);
+            this.verifyNode(program, document, sources, context, new Set());
+          }
+        } else return unresolved();
+      }
+      active.delete(source.unit.id);
+    };
+    for (const workflow of document.workflows) {
+      if (workflow.entryUnits.length !== 1) return unresolved();
+      const source = sources.get(workflow.entryUnits[0]);
+      if (!source || source.unit.kind !== 'workflow' || source.unit.repositoryId !== target.id || source.unit.commit !== target.baseSha
+        || source.unit.path !== workflow.path || source.unit.blob !== workflow.blob) return mismatch();
+      await metadata(source, { workflow: workflow.path, route: '', environment: {}, inputs: {}, workspace: [] }, 0);
+    }
+    const expected = [...inputs.values()].sort((a, b) => order(a.id, b.id));
+    if (canonicalPublisherInventoryJson(expected) !== canonicalPublisherInventoryJson(document.inputs)) return mismatch();
+  }
+
+  private assertUses(value: string, source: UnitSource, called: UnitSource, context: ExecutionContext, reusable: boolean): void {
+    if (value.includes('${{')) return unresolved();
+    let repository: string, commit: string, path: string;
+    if (value.startsWith('./')) {
+      if (reusable) { repository = source.unit.repository; commit = source.unit.commit; path = value.slice(2); }
+      else {
+        const relative = value.slice(2), checkout = [...context.workspace].sort((a, b) => b.prefix.length - a.prefix.length)
+          .find(w => w.prefix === '' || relative === w.prefix || relative.startsWith(w.prefix + '/'));
+        if (!checkout) return unresolved();
+        repository = checkout.repository; commit = checkout.commit; path = checkout.prefix ? relative.slice(checkout.prefix.length + 1) : relative;
+      }
+    } else {
+      const match = /^([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?:\/(.+))?@([a-f0-9]{40})$/u.exec(value);
+      if (!match) return unresolved();
+      repository = match[1]; path = match[2] ?? ''; commit = match[3];
+    }
+    if (repository.toLowerCase() !== called.unit.repository.toLowerCase() || commit !== called.unit.commit) return mismatch();
+    if (reusable ? path !== called.unit.path : ![path ? path + '/action.yml' : 'action.yml', path ? path + '/action.yaml' : 'action.yaml'].includes(called.unit.path)) return mismatch();
+  }
+
+  private checkout(step: Data, context: ExecutionContext, target: SetupBatchTarget): void {
+    const values = scope(step.with), ref = values.ref;
+    const repository = values.repository === undefined || values.repository === '${{ github.repository }}'
+      ? `${target.owner}/${target.name}` : values.repository;
+    const prefix = values.path === undefined ? '' : values.path;
+    if (!batchSha(ref) || typeof repository !== 'string' || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(repository)
+      || typeof prefix !== 'string' || prefix !== '' && !safePath(prefix) || step.if !== undefined
+      || values.clean === false || values.clean === 'false' || values['sparse-checkout'] !== undefined) return unresolved();
+    context.workspace.push({ repositoryId: target.id, repository, commit: ref, prefix });
+  }
+
+  private verifyShell(program: UnitSource, command: string, document: SetupPublisherInventoryDocument,
+    sources: ReadonlyMap<string, UnitSource>, context: ExecutionContext, owner: UnitSource, active: Set<string>): void {
+    // Literal bodies are reviewed programs, never executed by inspection. Their
+    // source-bound callees must be present; dynamic program/ref construction is unresolved.
+    if (active.has(program.unit.id) || active.size >= 16 || /\$\(|`|\\\r?\n|\$\{/u.test(command.replace(/\$\{\{\s*github\.action_path\s*\}\}/gu, ''))) return unresolved();
+    if (hasRuntimeOverride(context.environment)) return unresolved();
+    const actionPrefix = '__COPILOT_BOUND_ACTION_PATH__/';
+    const body = command.replace(/\$\{\{\s*github\.action_path\s*\}\}\//gu, actionPrefix);
+    if (body.includes('${{')) return unresolved();
+    active.add(program.unit.id);
+    let calls = 0;
+    for (const line of body.split(/\r?\n/u)) {
+      let tokens: ReturnType<typeof shellQuote.parse>;
+      const environment: Record<string, string> = {};
+      for (const expansion of line.matchAll(/\$([A-Za-z_][A-Za-z0-9_]*)/gu)) {
+        const name = expansion[1];
+        if (name === 'GITHUB_ACTION_PATH' && owner.unit.kind === 'composite-action') { environment[name] = actionPrefix.slice(0, -1); continue; }
+        const value = context.environment[name];
+        if (typeof value !== 'string' || value.includes('${{')) return unresolved(); environment[name] = value;
+      }
+      try { tokens = shellQuote.parse(line, environment); } catch { return unresolved(); }
+      let words: string[] = [];
+      const inspect = (): void => {
+        if (!words.length) return;
+        const [executable, ...args] = words;
+        if (['printf', 'echo', 'true', 'false', ':', 'test', '[', 'exit'].includes(executable)) { words = []; return; }
+        if (!['node', 'bash', 'sh'].includes(executable) || !args.length || args[0].startsWith('-')) return unresolved();
+        const relative = args[0], actionPath = relative.startsWith(actionPrefix);
+        if (actionPath && owner.unit.kind !== 'composite-action') return unresolved();
+        const checkout = [...context.workspace].reverse().find(w => w.prefix === '');
+        const path = actionPath ? sibling(owner.unit.path, relative.slice(actionPrefix.length)) : relative.replace(/^\.\//u, '');
+        if (!safePath(path) || !actionPath && !checkout) return unresolved();
+        const edge = document.edges.filter(e => e.from === program.unit.id && e.role === `program:${++calls}`);
+        const called = edge.length === 1 ? sources.get(edge[0].to) : undefined, expected = actionPath ? owner.unit : checkout;
+        if (!called || called.unit.path !== path || called.unit.repository.toLowerCase() !== expected!.repository.toLowerCase()
+          || called.unit.commit !== expected!.commit || called.unit.kind !== (executable === 'node' ? 'node-entrypoint' : 'shell-program')) return unresolved();
+        if (executable === 'node') this.verifyNode(called, document, sources, context, active);
+        else this.verifyShell(called, called.content, document, sources, context, owner, active);
+        words = [];
+      };
+      for (const token of tokens) {
+        if (typeof token === 'string') words.push(token);
+        else if (token !== null && typeof token === 'object' && 'comment' in token) break;
+        else if (token !== null && typeof token === 'object' && 'op' in token && typeof token.op === 'string'
+          && [';', '&&', '||'].includes(token.op)) inspect();
+        else return unresolved();
+      }
+      inspect();
+    }
+    active.delete(program.unit.id);
+  }
+
+  private verifyNode(program: UnitSource, document: SetupPublisherInventoryDocument, sources: ReadonlyMap<string, UnitSource>,
+    context: ExecutionContext, active: Set<string>): void {
+    if (hasRuntimeOverride(context.environment)) return unresolved();
+    if (active.has(program.unit.id) || active.size >= 16) return unresolved();
+    active.add(program.unit.id);
+    const content = program.content;
+    // This deliberately finite lexical profile is not a general JS verifier.
+    // Human review supplies semantics; observable dynamic loading, native/code
+    // generation and mutable external programs cannot be hidden by that claim.
+    if (/\b(?:eval|Function|importScripts|WebAssembly)\s*(?:\(|\.)|\bprocess\s*\.\s*(?:binding|dlopen)\s*\(/u.test(content)
+      || /\brequire\s*\.(?:resolve|cache|extensions)|\bcreateRequire\b/u.test(content)) return unresolved();
+    const imports: string[] = [];
+    let remainder = content;
+    for (const call of content.matchAll(/\b(?:require|import)\s*\(/gu)) {
+      const literal = /^(?:require|import)\s*\(\s*(['"])([^'"\\\r\n]+)\1\s*\)/u.exec(content.slice(call.index));
+      if (!literal) return unresolved(); imports.push(literal[2]); remainder = remainder.replace(literal[0], '');
+    }
+    for (const declaration of content.matchAll(/\b(?:import|export)\s+(?:(?:[^;\r\n]*?\s+from\s*)?)(['"])([^'"\\\r\n]+)\1/gu)) {
+      imports.push(declaration[2]); remainder = remainder.replace(declaration[0], '');
+    }
+    if (/\brequire\b|\bimport\b(?!\s*\.\s*meta\b)/u.test(remainder)) return unresolved();
+    let count = 0;
+    for (const specifier of imports) {
+      if (builtinModules.includes(specifier) || builtinModules.includes(specifier.replace(/^node:/u, ''))) {
+        if (/^(?:node:)?(?:child_process|cluster|worker_threads|vm|module|fs(?:\/promises)?|process)$/u.test(specifier)) return unresolved();
+        continue;
+      }
+      if (!specifier.startsWith('./') && !specifier.startsWith('../')) return unresolved();
+      const path = sibling(program.unit.path, specifier), edges = document.edges.filter(e => e.from === program.unit.id && e.role === `import:${++count}`);
+      const called = edges.length === 1 ? sources.get(edges[0].to) : undefined;
+      if (!called || called.unit.path !== path || called.unit.repositoryId !== program.unit.repositoryId || called.unit.commit !== program.unit.commit
+        || !['node-entrypoint', 'data-file'].includes(called.unit.kind)) return unresolved();
+      if (called.unit.kind === 'node-entrypoint') this.verifyNode(called, document, sources, context, active);
+      else if (!path.endsWith('.json')) return unresolved();
+    }
+    active.delete(program.unit.id);
+  }
+
+  private verifyProducerMeaning(document: SetupPublisherInventoryDocument, sources: ReadonlyMap<string, UnitSource>): void {
+    const incompatible = (): never => { throw new SetupPublisherInventoryError('incompatible-producer'); };
+    const lane = (value: unknown): boolean => {
+      const concurrency = batchObject(value);
+      return concurrency?.['cancel-in-progress'] === false && concurrency.queue === 'max'
+        && ['copilot-bugbot-status-${{ github.repository_id }}-${{ inputs.pull_number }}',
+          'copilot-bugbot-status-${{ github.repository_id }}-${{ github.event.pull_request.number }}'].includes(String(concurrency.group));
+    };
+    for (const workflow of document.workflows) {
+      const pending = [...workflow.entryUnits], reached = new Set<string>();
+      while (pending.length) {
+        const id = pending.pop()!; if (reached.has(id)) continue;
+        reached.add(id); pending.push(...document.edges.filter(e => e.from === id).map(e => e.to));
+      }
+      const content = [...reached].map(id => sources.get(id)!.content).join('\n');
+      const knownWriter = /\bissues\s*\.\s*(?:createComment|updateComment)\s*\(/u.test(content)
+        && /copilot:bugbot[-:]|bugbot-status-card|COPILOT_BUGBOT_STATUS_CARD/u.test(content);
+      if (workflow.disposition === 'incompatible' || knownWriter && workflow.disposition !== 'serialized-producer') return incompatible();
+      if (workflow.disposition !== 'serialized-producer') continue;
+      // The independent review identifies semantic writer paths. Observable
+      // serialization must also hold; a claimed compatible label cannot waive
+      // missing queue preservation or cancel an older publication.
+      const root = this.yaml(sources.get(workflow.entryUnits[0])!.content), jobs = scope(root.jobs);
+      if (!lane(root.concurrency) && Object.values(jobs).some(job => !lane(batchObject(job)?.concurrency))) return incompatible();
+    }
+  }
+
+  private async variableWitness(target: SetupBatchTarget,
+    sources: ReadonlyMap<string, UnitSource>, token: string): Promise<VariableWitness> {
+    if (![...sources.values()].some(s => ['workflow', 'reusable-workflow', 'action', 'composite-action'].includes(s.unit.kind)
+      && /\bvars\b/iu.test(s.content))) return { fingerprint: {}, origins: new Map() };
+    const coordinate = { owner: target.owner, repo: target.name };
+    const collect = async (route: string, parameters: Data, key: string): Promise<unknown[]> => {
+      const result: unknown[] = []; let total: number | undefined;
+      for (let page = 1; page <= 34; page++) {
+        const data = batchObject(await this.transport.call(token, route, { ...parameters, per_page: 30, page }));
+        if (!data || !Number.isSafeInteger(data.total_count) || Number(data.total_count) < 0 || Number(data.total_count) > 1000
+          || total !== undefined && total !== data.total_count || !Array.isArray(data[key]) || data[key].length > 30) return unresolved();
+        total = Number(data.total_count); result.push(...data[key]);
+        if (result.length === total) return result;
+        if (result.length > total || data[key].length < 30) return unresolved();
+      }
+      return unresolved();
+    };
+    const repository = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}', coordinate));
+    if (repository?.id !== target.id || typeof repository.full_name !== 'string'
+      || repository.full_name.toLowerCase() !== `${target.owner}/${target.name}`.toLowerCase()) return mismatch();
+    const owner = batchObject(repository.owner), effective: Data = {};
+    if (!batchPositive(owner?.id) || owner.id !== target.ownerId || typeof owner.login !== 'string'
+      || owner.login.toLowerCase() !== target.owner.toLowerCase()) return mismatch();
+    if (owner?.type === 'Organization') {
+      const variables = await collect('GET /orgs/{org}/actions/variables', { org: target.owner }, 'variables');
+      for (const raw of variables) {
+        const variable = batchObject(raw); if (!variable || typeof variable.name !== 'string'
+          || !['all', 'private', 'selected'].includes(String(variable.visibility))) return unresolved();
+        if (variable.visibility === 'selected') {
+          const repositories = await collect('GET /orgs/{org}/actions/variables/{name}/repositories', { org: target.owner, name: variable.name }, 'repositories');
+          const ids = repositories.map(r => batchObject(r)?.id);
+          if (ids.some(id => !batchPositive(id)) || new Set(ids).size !== ids.length) return unresolved();
+          if (!repositories.some(r => batchObject(r)?.id === target.id)) continue;
+        } else if (variable.visibility !== 'all' && !(variable.visibility === 'private' && target.private)) continue;
+        this.variable(effective, variable, 'organization-variable');
+      }
+    } else if (owner?.type !== 'User') return unresolved();
+    const repositoryVariables = await collect('GET /repos/{owner}/{repo}/actions/variables', coordinate, 'variables');
+    const local: Data = {};
+    for (const raw of repositoryVariables) { const variable = batchObject(raw); if (!variable) return unresolved(); this.variable(local, variable, 'repository-variable'); }
+    const merged = { ...effective, ...local };
+    if (Buffer.byteLength(canonicalPublisherInventoryJson(merged), 'utf8') > 256 * 1024) return unresolved();
+    // Only a fingerprint enters the document/fact. Values never leave this read scope.
+    return { fingerprint: { effectiveVariablesSha256: publisherInventorySha256(merged) }, origins: new Map(Object.entries(merged)
+      .map(([name, value]) => [name, (value as { origin: 'repository-variable' | 'organization-variable' }).origin])) };
+  }
+
+  private variable(values: Data, variable: Data, origin: string): void {
+    const name = variable.name;
+    if (typeof name !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]{0,99}$/u.test(name) || typeof variable.value !== 'string'
+      || Buffer.byteLength(variable.value, 'utf8') > 30_000 || Object.prototype.hasOwnProperty.call(values, name.toUpperCase())) return unresolved();
+    values[name.toUpperCase()] = { origin, value: variable.value };
+  }
+}

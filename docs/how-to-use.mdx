@@ -53,6 +53,14 @@ dry run. The second command requires an interactive terminal, fresh review and
 the approval word shown in that terminal before creating an installation PR.
 You can cancel instead. Proposal fields never authorize a change.
 
+If inspection needs an independent producer review, complete that review before
+approving installation. A version2 proposal identifies the exact evidence PR,
+head and document digest. Setup checks its source bindings, current independent
+review and reviewer permissions. Unresolved programs and incompatible publishers
+remain blocked. Inventory review and approval of the two installation files are
+separate decisions; see
+[independent producer review](/security-operations/operations/provisioning#independent-producer-inventory-review).
+
 Only `--token`, `--debug`, `--dry-run` and `--resume-operation` can accompany
 `--publisher-manifest`; generic configuration and automation options are rejected.
 Credentials come from the explicit token, `PERSONAL_ACCESS_TOKEN`, or the hidden
@@ -69,6 +77,9 @@ For retained operations, the CLI links the existing validated local operation
 record and any known installation PR. An unsaved preview has no record link.
 If reading the link fails, the operation status and recovery instructions remain
 visible. A local record or PR link does not prove installation or a native run.
+When review authority is lost after a confirmed change, the CLI retains the
+known branch/PR and stops. Resolve the displayed review prerequisite before
+resuming; the retained result does not authorize further changes.
 
 For interactive onboarding, follow [Set up with the web assistant](/setup-web).
 It covers pairing, capability choices, the two PAT roles, plan approval, Apply,

@@ -11,7 +11,7 @@ import { SetupInstallationGithubDeliveryAdapter } from '../setup_installation_gi
 import { setupInstallationTreeFixture } from './fixtures/setup_installation_tree_fixture';
 import { setupBatchBranch, setupBatchMarker } from '../../application/policies/setup_batch_policy';
 import { SetupBatchProviderError } from '../setup_batch_github_read_adapter';
-import { SetupInstallationDeliveryCancelled, SetupInstallationSnapshotChanged } from '../../application/ports/setup_installation_delivery_ports';
+import { SetupInstallationDeliveryCancelled, SetupInstallationObservedEffectError, SetupInstallationSnapshotChanged } from '../../application/ports/setup_installation_delivery_ports';
 import type { SetupInstallationDeliveryPlan } from '../../application/contracts/setup_installation_delivery';
 import { SETUP_PUBLISHER_WORKFLOW_PATH } from '../../domain/setup_publisher_installation';
 import { parseSetupPublisherOperation } from '../../application/policies/setup_publisher_installation_policy';
@@ -142,6 +142,33 @@ function deliveryFixture(publisherInstalled = false) {
 
 describe('actual shared Git delivery composition with controlled provider', () => {
   const otherOperation = '11111111-1111-4111-8111-111111111111';
+  it.each(['README.md', '.copilot/bugbot-publisher-inventory-review.json', '.github/workflows/ci.yml', 'producer.js']
+    .flatMap(path => (['branch', 'pullRequest'] as const).map(phase => ({ path, phase }))))(
+    'publisher-inventory-C56: complete prepared-tree proof rejects a third change to $path before $phase', async ({ path, phase }) => {
+      const f = deliveryFixture(); f.setBranch(f.commit); f.setPulls([f.pull()]);
+      f.preparedFiles.set(path, path.endsWith('.json') ? '{"schemaVersion":1}\n' : 'Unapproved producer or evidence change.\n');
+      await expect(f.writer[phase](f.commit, true)).rejects.toThrow('complete approved file scope');
+      expect(f.posts()).toEqual([]); expect(f.fresh).not.toHaveBeenCalled();
+    });
+  it.each(['branch', 'pull-request'] as const)('reports a verified existing %s separately from lost current authority', async effect => {
+    const f = deliveryFixture(); f.setBranch(f.commit); f.setPulls([f.pull()]); f.fresh.mockResolvedValue(false);
+    const work = effect === 'branch' ? f.writer.branch(f.commit, true) : f.writer.pullRequest(f.commit, true);
+    await expect(work).rejects.toBeInstanceOf(SetupInstallationObservedEffectError);
+    await expect(work).rejects.toMatchObject({ reason: 'drift', observed: { effect, commit: f.commit,
+      ...(effect === 'pull-request' ? { pullRequestNumber: 73 } : {}) } });
+    expect(f.fresh).toHaveBeenCalledTimes(1); expect(f.posts()).toEqual([]);
+  });
+  it.each(['foreign branch', 'foreign PR', 'unavailable PR readback'] as const)(
+    'never reports an owned observation for %s even if freshness is lost', async kind => {
+      const f = deliveryFixture(); f.setBranch(kind === 'foreign branch' ? 'f'.repeat(40) : f.commit);
+      f.setPulls([{ ...f.pull(), head: { ...f.pull().head, sha: 'f'.repeat(40) } }]); f.fresh.mockResolvedValue(false);
+      if (kind === 'unavailable PR readback') f.transform((route, data) => {
+        if (route === 'GET /repos/{owner}/{repo}/pulls') throw new SetupBatchProviderError('forbidden'); return data;
+      });
+      const work = kind === 'foreign branch' ? f.writer.branch(f.commit, true) : f.writer.pullRequest(f.commit, true);
+      await expect(work).rejects.not.toBeInstanceOf(SetupInstallationObservedEffectError);
+      expect(f.fresh).not.toHaveBeenCalled(); expect(f.posts()).toEqual([]);
+    });
   it.each(['open', 'closed'])('ignores an unrelated %s setup PR when creating this operation PR', async state => {
     const f = deliveryFixture(); f.setBranch(f.commit);
     const unrelated = { ...f.pull(), number: 91, state, body: setupBatchMarker(otherOperation, 42),

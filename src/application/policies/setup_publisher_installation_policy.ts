@@ -1,6 +1,7 @@
 import { JSON_SCHEMA, load } from 'js-yaml';
 import { SETUP_PUBLISHER_PURPOSE, SETUP_PUBLISHER_WORKFLOW_PATH, type SetupPublisherOperation, type SetupPublisherPlan, type SetupPublisherProposal } from '../../domain/setup_publisher_installation';
 import { setupBatchBranch } from './setup_batch_policy';
+import { parseSetupPublisherInventoryLocator } from './setup_publisher_inventory_review_policy';
 
 const sha = /^[a-f0-9]{40}$/u, digest = /^[a-f0-9]{64}$/u;
 const coordinate = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}\/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/u;
@@ -15,7 +16,10 @@ export function setupPublisherOperationMatchesPlan(operation: SetupPublisherOper
 }
 
 export function parseSetupPublisherProposal(value: unknown): SetupPublisherProposal {
-  if (!exact(value, fields) || value.schemaVersion !== 1 || value.kind !== 'review-only-publisher-installation-proposal'
+  const version2 = value !== null && typeof value === 'object' && !Array.isArray(value)
+    && (value as Record<string, unknown>).schemaVersion === 2;
+  if (!exact(value, version2 ? [...fields, 'inventoryReview'] : fields) || value.schemaVersion !== 1 && value.schemaVersion !== 2
+    || value.kind !== 'review-only-publisher-installation-proposal'
     || value.path !== SETUP_PUBLISHER_WORKFLOW_PATH || !description(value.baseline) || !description(value.sourceChange)
     || !matches(value.proposedWorkflowSha256, digest) || value.consumerTemplatesChanged !== false
     || value.productionVerification !== 'disabled' || value.installationAuthorized !== false || value.installedDestinationSha !== null
@@ -30,6 +34,10 @@ export function parseSetupPublisherProposal(value: unknown): SetupPublisherPropo
     || !matches(source.workflowSha256, digest) || !matches(source.actionManifestSha256, digest) || !matches(source.actionBundleSha256, digest)) throw invalid();
   if (!exact(native, ['status', 'explicitlyAuthorizedPullRequest', 'runId']) || native.status !== 'not-run'
     || native.explicitlyAuthorizedPullRequest !== null || native.runId !== null) throw invalid();
+  if (version2) {
+    try { parseSetupPublisherInventoryLocator(value.inventoryReview); }
+    catch { throw invalid(); }
+  }
   return JSON.parse(JSON.stringify(value)) as SetupPublisherProposal;
 }
 

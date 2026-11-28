@@ -1966,3 +1966,89 @@ qualification, installation, activation or permission change follows.
 
 Traceability: C125 -> G04/G07 -> shared store release -> real publisher finalizer
 and retained-state handling -> provisioning/orphan-lock recovery documentation.
+
+## Independent producer review and retained observations (#1006)
+
+This owner incorporates IR977-R01 through IR977-R10 from the officially selected
+publisher companion, including its complete retained baseline and recovery
+amendment. The version2 proposal is optional; version1 and ordinary batch retain
+their conservative inventory, resource and durable-schema contracts. Source
+implementation, reviewed producer compatibility, installation and native
+qualification remain separate acceptance claims.
+
+```text
+Authenticated source/input closure -> current independent inventory decision
+ -> exact installation preview -> separate approval -> shared delivery
+ -> retain verified effects -> stop on authority loss -> fresh recovery review
+```
+
+The existing publisher reader MUST authenticate the same-repository evidence PR,
+complete document-only difference against its own immutable base, separately
+bound live destination/workflow set, exact executable/input graph and complete
+current independent review/permission facts. The fixed canonical consumer
+document and version2 locator, supported finite source profile and numeric bounds
+are defined by the companion's inventory sections6.1-6.4. There is no arbitrary
+trust URL, skip-inventory flag, self-issued approval, Secret read or new installer.
+Known foreign/direct writers win over compatible claims. Missing facts remain
+unresolved and producer migrations require their own reviewed delivery.
+Node and shell inspection MUST reject runtime environment overrides that can
+load code outside the bound graph. Inventory read failures expose closed current
+review-unavailable or unresolved-source causes instead of losing their stage.
+
+The review/application path MUST bind stable evidence, source, decisions and
+permission facts into the existing exact operation digest. It rechecks mutable
+facts before each effect and recovery. Current-session cancellation is checked
+at dispatch and after awaited final confirmation. GitHub reads and writes are
+separate requests; no atomic revocation guarantee is asserted.
+
+The shared Git adapter MAY return a closed verified historical observation when
+complete owned ref/PR readback succeeded but later freshness/cancellation stops
+delivery. The common coordinator MUST validate the exact effect phase and
+prepared commit, safe PR number and absence of a conflicting known identity;
+retain the fact before reporting the stop; and start no subsequent effect.
+An uncertain POST or incomplete/foreign readback cannot manufacture confirmation.
+Failed persistence preserves newly known facts separately from the last durable
+record. No object is erased or uncertain mutation blindly retried. The same
+boundary protects ordinary batch without adding publisher-review authority to
+its v1 journal. Existing terminal blocked records remain terminal; freshly
+reviewed cancelled recovery preserves prior resource effects.
+
+The CLI MUST show the current blocked reason, retained operation and known
+installation PR separately from the selected evidence link. Its closed blocked
+view contains no ready plan, file bytes or approval capability. It offers the
+review action without an installation prompt. Pending, eligible, unchanged,
+partial and cancelled states use four bundled locales and English fallback,
+safe links and readable narrow-terminal prose. An exact supported installation
+with current compatible inventory remains unchanged without an empty PR.
+Initial planning rejection MUST retain any previously known operation and PR.
+Typed rejection preserves its concrete cause; an unexpected planning fault
+exposes a closed unavailable state without disclosing private internal detail.
+
+Testing retains the cumulative125-case baseline without reclassifying its
+historical package/native evidence. The inventory feature adds its **58 distinct
+cases plus four distinct recovery cases, minimum62**, with the distribution and
+reciprocal mapping in the companion. Pure inventory policy requires100% in all
+four coverage metrics; existing global/module/changed-path floors remain. Actual
+reader/planner/coordinator/Git/journal controls, complete pagination, producer
+conflicts, per-phase revocation, known-versus-durable failures, ordinary batch
+parity and actual packed CLI dry-run/decline are required. Typed fakes and case
+labels alone do not prove acceptance. All full/package/native source gates and
+final findings remain required before source acceptance.
+
+Traceability: IR977-R01/R02/R03/R04 -> inventory domain/policy/authenticated
+adapter -> C01-C34 and C49-C55; IR977-R05/R06 -> review/apply/shared delivery ->
+C35-C42/C53/C56-C58 and recovery-C01-C03; IR977-R07/R10 -> CLI/presenter ->
+C43-C48/C57 and recovery-C04; IR977-R08 -> composition/package/docs/catalog
+checks. The companion's per-requirement tables are authoritative for overlapping
+obligations and do not double-count these cases.
+
+Update the usage guide, provisioning, repository-guidance troubleshooting and
+architecture together. Catalog evidence includes the real new domain, pure
+policy, authenticated adapter and tests. Run catalog generation, specification
+and documentation validation, actual build/package checks and Graphify AST
+update. Rollback is a reviewed source change retaining old readable journals and
+already known effects; no source rollback removes a destination PR or installs
+the publisher. Actual independent producer review, an eligible separately
+authorized installation preview and verified default/native execution remain
+operational work under #977. Production verification remains disabled and
+evaluated-pilot write attempts remain zero.

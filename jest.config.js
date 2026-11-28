@@ -36,6 +36,18 @@ module.exports = {
       statements: 95,
       functions: 90,
       branches: 90
+    },
+    './src/application/policies/setup_publisher_inventory_review_policy.ts': {
+      lines: 100,
+      statements: 100,
+      functions: 100,
+      branches: 100
+    },
+    './src/infrastructure/setup_publisher_inventory_review_adapter.ts': {
+      lines: 95,
+      statements: 95,
+      functions: 90,
+      branches: 90
     }
   },
   coverageDirectory: 'coverage',

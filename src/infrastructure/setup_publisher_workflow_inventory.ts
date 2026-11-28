@@ -1,13 +1,15 @@
 import { JSON_SCHEMA, load } from 'js-yaml';
 import type { SetupPublisherInspection, SetupPublisherObservedFile } from '../domain/setup_publisher_installation';
 import { SETUP_PUBLISHER_WORKFLOW_PATH } from '../domain/setup_publisher_installation';
+import type { SetupPublisherInventoryReviewFact } from '../domain/setup_publisher_inventory_review';
 
 type Classification = SetupPublisherInspection['installation']['publisher'];
 type Meaning = 'ordinary' | 'publisher' | 'unknown';
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /** Parse workflow structure; comments and display names never establish publisher absence. */
-export function inspectSetupPublisherWorkflows(files: readonly SetupPublisherObservedFile[], expected: string): Classification {
+export function inspectSetupPublisherWorkflows(files: readonly SetupPublisherObservedFile[], expected: string,
+  reviewed?: SetupPublisherInventoryReviewFact): Classification {
   const foreign: string[] = [], unknown: string[] = [], exact: string[] = [];
   for (const file of files) {
     if (file.path.toLowerCase() === SETUP_PUBLISHER_WORKFLOW_PATH.toLowerCase()) {
@@ -20,6 +22,14 @@ export function inspectSetupPublisherWorkflows(files: readonly SetupPublisherObs
   }
   const result = (kind: Classification['kind'], paths: string[]): Classification => ({ kind, paths: Object.freeze(paths.sort()) });
   if (foreign.length) return result('foreign', [...foreign, ...exact]);
+  if (reviewed) {
+    const paths = [...files.map(file => file.path)].sort();
+    // The authenticated adapter owns authority; this final classification also
+    // requires a complete supported disposition set. Positive conflicts above
+    // retain priority over an independently approved claim.
+    if (reviewed.workflows.length === paths.length && reviewed.workflows.every((workflow, i) => workflow.path === paths[i]
+      && ['non-producer', 'serialized-producer'].includes(workflow.disposition))) return exact.length ? result('exact', exact) : result('absent', []);
+  }
   if (unknown.length) return result('unknown', [...unknown, ...exact]);
   return exact.length ? result('exact', exact) : result('absent', []);
 }

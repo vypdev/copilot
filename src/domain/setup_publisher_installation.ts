@@ -1,10 +1,10 @@
 export const SETUP_PUBLISHER_WORKFLOW_PATH = '.github/workflows/copilot_bugbot_status_card.yml';
 export const SETUP_PUBLISHER_PURPOSE = 'bugbot-status-publisher';
 export const SETUP_PUBLISHER_PROPOSAL_MAX_BYTES = 128 * 1024;
+import type { SetupPublisherInventoryLocator, SetupPublisherInventoryReviewFact } from './setup_publisher_inventory_review';
 
 /** Untrusted review input. No observation in this document grants Apply authority. */
-export interface SetupPublisherProposal {
-  readonly schemaVersion: 1;
+interface SetupPublisherProposalFields {
   readonly kind: 'review-only-publisher-installation-proposal';
   readonly destination: { readonly repository: string; readonly repositoryId: number;
     readonly defaultBranch: string; readonly head: string };
@@ -23,6 +23,10 @@ export interface SetupPublisherProposal {
   readonly dependency: 976;
   readonly coordination: 814;
 }
+export type SetupPublisherProposal = SetupPublisherProposalFields & (
+  | { readonly schemaVersion: 1; readonly inventoryReview?: never }
+  | { readonly schemaVersion: 2; readonly inventoryReview: SetupPublisherInventoryLocator }
+);
 
 export type SetupPublisherFileEffect = 'tree' | 'commit' | 'branch' | 'pull-request';
 /** Private metadata only; one target and no resource configuration, tokens or file bytes. */
@@ -83,6 +87,7 @@ export interface SetupPublisherInspection {
     readonly workflows: readonly SetupPublisherObservedFile[];
     /** Classification of the complete relevant workflow inventory by the reader. */
     readonly publisher: { readonly kind: 'absent' | 'exact' | 'foreign' | 'unknown'; readonly paths: readonly string[] };
+    readonly inventoryReview?: SetupPublisherInventoryReviewFact;
   };
 }
 
@@ -98,4 +103,5 @@ export interface SetupPublisherPlan {
   readonly approvalDigest: string | null;
   readonly files: readonly SetupBatchFile[];
   readonly nativeVerification: 'pending';
+  readonly inventoryReview?: SetupPublisherInventoryReviewFact;
 }

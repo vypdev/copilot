@@ -12,6 +12,7 @@ import { SetupBatchProviderError } from '../../infrastructure/setup_batch_github
 import { resolveStaticSetupPublisherCatalog } from '../../application/policies/setup_publisher_message_catalog';
 import type { SetupPublisherOperation, SetupPublisherPlan } from '../../domain/setup_publisher_installation';
 import type { TerminalDriver, TerminalReadResult } from '../../application/ports/setup_terminal_ports';
+import type { SetupPublisherInventoryFailure } from '../../domain/setup_publisher_inventory_review';
 
 jest.mock('../../infrastructure/composition/setup_publisher_installation_composition_root', () => ({ createSetupPublisherInstallationCompositionRoot: jest.fn() }));
 jest.mock('../setup_publisher_proposal_file', () => {
@@ -66,6 +67,68 @@ function observeCommandCredentials() {
   } });
   return { environmentReads, validation, restore() { process.env = environment; validation.mockRestore(); } };
 }
+it.each(['en-US', 'es-ES', 'fr-FR', 'pt-BR', 'de-DE'])(
+  'publisher-inventory-recovery-C04: actual %s CLI rejects initial/resumed inventory without displaying approval authority', async locale => {
+    process.env.LANG = locale.replace('-', '_') + '.UTF-8';
+    const catalog = resolveStaticSetupPublisherCatalog(locale);
+    const causes: [SetupPublisherInventoryFailure, Parameters<typeof catalog.message>[0]][] = [
+      ['invalid-document', 'inventoryInvalid'], ['binding-mismatch', 'inventoryStale'], ['review-unavailable', 'inventoryUnavailable'],
+      ['review-required', 'inventoryRequired'], ['changes-requested', 'inventoryChangesRequested'],
+      ['incompatible-producer', 'inventoryIncompatible'], ['unresolved-closure', 'inventoryUnresolved'],
+    ];
+    for (const [reason, message] of causes) for (const resume of [false, true]) {
+      jest.clearAllMocks(); output.mockClear(); process.exitCode = undefined;
+      const f = fixture(), evidence = { pullRequest: 81, head: '6'.repeat(40), documentSha256: '7'.repeat(64) };
+      Object.assign(f.proposal, { schemaVersion: 2, inventoryReview: evidence });
+      jest.mocked(createInteractiveTerminalDriver).mockReturnValue(f.terminal);
+      const execute = jest.fn(async (input: { operationId: string }) => { throw new SetupPublisherReviewError('inventory',
+        { reason, operationId: input.operationId, repository: 'owner/project', evidence }, resume ? f.operation : undefined); });
+      jest.mocked(createSetupPublisherInstallationCompositionRoot).mockReturnValue({ execute,
+        operationLocation: async () => `file:///owned/${f.operation.operationId}.json` });
+      await f.run({ dryRun: false, ...(resume ? { explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation: f.operation.operationId } : {}) });
+      const text = f.text(), normalized = text.replace(/\s+/gu, ' ');
+      expect(normalized).toContain(catalog.message('inventoryBlocked'));
+      expect(normalized).toContain(catalog.message(message));
+      expect(normalized).toContain(catalog.message('inventoryNoAuthority'));
+      expect(text).toContain('https://github.com/owner/project/pull/81');
+      if (resume) expect(text).toContain('https://github.com/owner/project/pull/73');
+      else expect(text).not.toContain('https://github.com/owner/project/pull/73');
+      expect(text).not.toContain('Complete file:'); expect(text).not.toContain(catalog.message('confirm', { approve: catalog.message('approve'), decline: catalog.message('decline') }));
+      expect(text).not.toMatch(/private-environment-fixture-token|private-hidden-fixture-token|approvalDigest/u);
+      expect(f.readText).not.toHaveBeenCalled(); expect(execute).toHaveBeenCalledTimes(1); expect(process.exitCode).toBe(1);
+    }
+  },
+);
+it('publisher-inventory-C46: cancellation preserves the stopped state and known saved PR without another prompt', async () => {
+  const f = fixture(); jest.mocked(createInteractiveTerminalDriver).mockReturnValue(f.terminal);
+  jest.mocked(createSetupPublisherInstallationCompositionRoot).mockReturnValue({
+    execute: async () => { throw new SetupPublisherReviewError('cancelled', undefined, f.operation); },
+    operationLocation: async () => `file:///owned/${f.operation.operationId}.json`,
+  });
+  await f.run({ dryRun: false, explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation: f.operation.operationId });
+  expect(f.text()).toContain('https://github.com/owner/project/pull/73');
+  expect(f.text()).toContain(resolveStaticSetupPublisherCatalog().message('cancelled'));
+  expect(f.text()).not.toContain('Complete file:'); expect(f.readText).not.toHaveBeenCalled(); expect(process.exitCode).toBe(130);
+});
+it.each(['en-US', 'es-ES', 'fr-FR', 'pt-BR', 'de-DE'])(
+  'publisher-inventory-C47: %s planning rejection preserves its precise cause and retained PR without a confirmation', async locale => {
+    process.env.LANG = locale.replace('-', '_') + '.UTF-8';
+    const catalog = resolveStaticSetupPublisherCatalog(locale);
+    for (const [reason, message] of [['destination-changed', 'stale'], ['authority-unverified', 'authority'],
+      ['source-unverified', 'sourceUnverified'], ['installation-unsupported', 'unsupported']] as const) {
+      jest.clearAllMocks(); output.mockClear(); process.exitCode = undefined;
+      const f = fixture(); jest.mocked(createInteractiveTerminalDriver).mockReturnValue(f.terminal);
+      jest.mocked(createSetupPublisherInstallationCompositionRoot).mockReturnValue({
+        execute: async () => { throw new SetupPublisherReviewError('planning', undefined, f.operation, reason); },
+        operationLocation: async () => `file:///owned/${f.operation.operationId}.json`,
+      });
+      await f.run({ dryRun: false, explicitOptions: ['publisherManifest', 'resumeOperation'], resumeOperation: f.operation.operationId });
+      expect(f.text()).toContain(catalog.message(message)); expect(f.text()).toContain('https://github.com/owner/project/pull/73');
+      expect(f.text()).toContain(`file:///owned/${f.operation.operationId}.json`);
+      expect(f.text()).not.toContain(catalog.message('confirm', { approve: catalog.message('approve'), decline: catalog.message('decline') }));
+      expect(f.text()).not.toContain('Complete file:'); expect(f.readText).not.toHaveBeenCalled(); expect(process.exitCode).toBe(1);
+    }
+  });
 it('publisher977-C109: actual CLI forwards the read-only known operation target to its presenter', async () => {
   const f = fixture(), url = `file:///owned/setup-operations/${f.operation.operationId}.json`;
   const factory = jest.mocked(createSetupPublisherInstallationCompositionRoot).getMockImplementation()!;

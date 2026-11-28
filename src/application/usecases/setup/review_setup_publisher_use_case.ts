@@ -1,11 +1,14 @@
 import type { SetupPublisherOperation, SetupPublisherPlan } from '../../../domain/setup_publisher_installation';
-import type { SetupPublisherApprovedAction, SetupPublisherReadSnapshot, SetupPublisherReviewPorts } from '../../ports/setup_publisher_review_ports';
+import type { SetupPublisherApprovedAction, SetupPublisherBlockedReview, SetupPublisherReadSnapshot, SetupPublisherReviewPorts } from '../../ports/setup_publisher_review_ports';
+import { SetupPublisherInventoryError } from '../../../domain/setup_publisher_inventory_review';
 import { setupBatchBranch } from '../../policies/setup_batch_policy';
 import { parseSetupPublisherOperation, parseSetupPublisherProposal, setupPublisherOperationMatchesPlan } from '../../policies/setup_publisher_installation_policy';
-import { planSetupPublisherInstallation } from '../../policies/setup_publisher_plan_policy';
+import { planSetupPublisherInstallation, SetupPublisherPlanError, type SetupPublisherPlanFailure } from '../../policies/setup_publisher_plan_policy';
 
 export class SetupPublisherReviewError extends Error {
-  constructor(readonly reason: 'invalid' | 'unavailable' | 'presentation' | 'stale' | 'cancelled') {
+  constructor(readonly reason: 'invalid' | 'unavailable' | 'presentation' | 'stale' | 'cancelled' | 'inventory' | 'planning',
+    readonly blocked?: SetupPublisherBlockedReview, readonly retained?: SetupPublisherOperation,
+    readonly planFailure?: SetupPublisherPlanFailure) {
     super(`Publisher review stopped: ${reason}. Prepare and review a fresh snapshot before applying.`);
   }
 }
@@ -31,31 +34,46 @@ export class ReviewSetupPublisherUseCase {
         return Object.freeze({ ...operation, effects: Object.freeze([...operation.effects]) });
       } catch { throw new SetupPublisherReviewError('invalid'); }
     })();
-    if (!this.ports.active()) throw new SetupPublisherReviewError('cancelled');
+    const inventoryFailure = (error: SetupPublisherInventoryError): SetupPublisherReviewError => proposal.schemaVersion === 2
+      ? new SetupPublisherReviewError('inventory', Object.freeze({ reason: error.reason, operationId,
+        repository: proposal.destination.repository, evidence: Object.freeze({ ...proposal.inventoryReview }) }), retained)
+      : new SetupPublisherReviewError('unavailable', undefined, retained);
+    if (!this.ports.active()) throw new SetupPublisherReviewError('cancelled', undefined, retained);
     const inspect = async (): Promise<SetupPublisherReadSnapshot> => {
       try {
         const snapshot = await this.ports.inspect(proposal);
         if (snapshot.session === null || typeof snapshot.session !== 'object') throw new SetupPublisherReviewError('unavailable');
         return snapshot;
-      } catch { throw new SetupPublisherReviewError(this.ports.active() ? 'unavailable' : 'cancelled'); }
+      } catch (error) {
+        if (!this.ports.active()) throw new SetupPublisherReviewError('cancelled', undefined, retained);
+        if (error instanceof SetupPublisherInventoryError) throw inventoryFailure(error);
+        throw new SetupPublisherReviewError('unavailable', undefined, retained);
+      }
     };
     const snapshot = await inspect();
-    if (!this.ports.active()) throw new SetupPublisherReviewError('cancelled');
+    if (!this.ports.active()) throw new SetupPublisherReviewError('cancelled', undefined, retained);
     const session = snapshot.session;
-    const plan = planSetupPublisherInstallation(proposal, snapshot.inspection, operationId);
-    if (retained && !setupPublisherOperationMatchesPlan(retained, plan)) throw new SetupPublisherReviewError('stale');
+    const plan = (() => {
+      try { return planSetupPublisherInstallation(proposal, snapshot.inspection, operationId); }
+      catch (error) {
+        if (error instanceof SetupPublisherInventoryError) throw inventoryFailure(error);
+        if (error instanceof SetupPublisherPlanError) throw new SetupPublisherReviewError('planning', undefined, retained, error.reason);
+        throw new SetupPublisherReviewError('unavailable', undefined, retained);
+      }
+    })();
+    if (retained && !setupPublisherOperationMatchesPlan(retained, plan)) throw new SetupPublisherReviewError('stale', undefined, retained);
     try {
       if (retained) await this.ports.present(plan, retained);
       else await this.ports.present(plan);
     }
-    catch { throw new SetupPublisherReviewError('presentation'); }
+    catch { throw new SetupPublisherReviewError('presentation', undefined, retained); }
     if (!this.ports.active()) return { plan, stage: 'cancelled' };
     if (plan.status === 'unchanged') return { plan, stage: 'unchanged' };
     if (dryRun) return { plan, stage: 'dry-run' };
     if (!this.ports.active()) return { plan, stage: 'cancelled' };
     let answer: 'approve' | 'decline' | 'cancel';
     try { answer = await this.ports.confirm(plan); }
-    catch { throw new SetupPublisherReviewError('presentation'); }
+    catch { throw new SetupPublisherReviewError('presentation', undefined, retained); }
     if (answer !== 'approve') return { plan, stage: answer === 'decline' ? 'declined' : 'cancelled' };
     if (!this.ports.active()) return { plan, stage: 'cancelled' };
     let live = true;
@@ -72,7 +90,7 @@ export class ReviewSetupPublisherUseCase {
       } catch { live = false; return false; }
     };
     try {
-      if (!await revalidate()) throw new SetupPublisherReviewError(this.ports.active() ? 'stale' : 'cancelled');
+      if (!await revalidate()) throw new SetupPublisherReviewError(this.ports.active() ? 'stale' : 'cancelled', undefined, retained);
       return { plan, stage: 'apply', result: await apply(plan, session, revalidate) };
     } finally { live = false; }
   }

@@ -5,6 +5,7 @@ import { SETUP_PUBLISHER_PURPOSE, SETUP_PUBLISHER_WORKFLOW_PATH, type SetupPubli
 import { setupBatchBranch, validateSetupBatchTargets } from './setup_batch_policy';
 import { setupInstallationFiles, SETUP_INSTALLATION_MANIFEST_PATH } from './setup_installation_receipt_policy';
 import { parseSetupPublisherProposal, setupPublisherWorkflow } from './setup_publisher_installation_policy';
+import { setupPublisherInventoryFactForPlan } from './setup_publisher_inventory_review_policy';
 import { parseRepositoryAgentGuidanceManifest, REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_POINTER_END,
   REPOSITORY_AGENT_POINTER_PATH, REPOSITORY_AGENT_POINTER_START, REPOSITORY_AGENT_PROFILE_PATH,
   REPOSITORY_AGENT_SKILL_PATH, validRepositoryAgentProfile } from './repository_agent_guidance_policy';
@@ -59,6 +60,10 @@ export function planSetupPublisherInstallation(input: SetupPublisherProposal, in
   if (!unchanged && (publisher.kind !== 'absent' || publisher.paths.length !== 0 || existing !== undefined)) {
     throw new SetupPublisherPlanError('installation-unsupported');
   }
+  // A version2 locator is not authority. Only the authenticated reader can
+  // supply the independent review fact, freshly bound to this complete set.
+  const inventoryReview = proposal.schemaVersion === 2 ? setupPublisherInventoryFactForPlan(proposal.inventoryReview,
+    installation.inventoryReview, installation.workflows) : undefined;
   // Include only audited public identity/authority facts. Session generation is
   // fenced privately by orchestration, never a credential hash in this digest.
   const identity = { purpose: SETUP_PUBLISHER_PURPOSE, operationId, receiptSchemaVersion: 1, target: boundTarget,
@@ -68,14 +73,15 @@ export function planSetupPublisherInstallation(input: SetupPublisherProposal, in
       pullRequest: source.pullRequest, reviewedRevision: source.reviewedRevision, mergedRevision: source.mergedRevision,
       workflowSha256: proposal.source.workflowSha256, actionManifestSha256: source.actionManifestSha256,
       actionBundleSha256: source.actionBundleSha256 },
-    workflowSha256: sha256(workflow), originalManifestSha256: sha256(installation.manifest!.content) };
+    workflowSha256: sha256(workflow), originalManifestSha256: sha256(installation.manifest!.content),
+    ...(inventoryReview ? { inventoryReview } : {}) };
   const digest = sha256(JSON.stringify(identity));
   const files = unchanged ? [] : setupInstallationFiles([{ path: SETUP_PUBLISHER_WORKFLOW_PATH, content: workflow }], manifest,
     { schemaVersion: 1, operationId, repositoryId: target.id, baseSha: target.baseSha, planDigest: digest });
   return Object.freeze({ purpose: SETUP_PUBLISHER_PURPOSE, operationId, target: Object.freeze(boundTarget),
     actorId: authority.actorId, sourceCommit: source.commit, status: unchanged ? 'unchanged' : 'review', digest,
     approvalDigest: unchanged ? null : approvalDigest(digest, files), files: Object.freeze(files.map(file => Object.freeze({ ...file }))),
-    nativeVerification: 'pending' });
+    nativeVerification: 'pending', ...(inventoryReview ? { inventoryReview } : {}) });
 }
 
 /** Byte identity only; a serialized plan or matching digest never grants Apply. */
