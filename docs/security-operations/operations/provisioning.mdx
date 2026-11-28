@@ -216,6 +216,13 @@ authenticated GETs, including their non-secret values, visibility and selected
 repository memberships. These values are needed to resolve effective inputs and
 aggregate `INPUT_VARS_JSON` settings. Only fingerprints and provenance enter
 evidence; raw values are not logged or persisted. Secret values are never fetched.
+If this read is required, the evidence document must include a workflow-scoped
+`vars-context` binding for every inventoried workflow, including an empty
+namespace. This also covers Variables used only by conditions or concurrency
+settings, without evaluating those expressions. Missing bindings block review;
+changed Variables require updated evidence, independent review and a new exact
+installation approval. Creating a Variable after reviewing an empty namespace
+also invalidates that evidence. Existing `env`/`with` bindings remain required.
 A symbolic credential is supported only where reviewed behavior is independent
 of its value; Secret-derived code or behavior selection remains unresolved.
 The maintainer supplies semantic assurance about the bound programs; source

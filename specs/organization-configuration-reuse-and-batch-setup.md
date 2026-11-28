@@ -2026,6 +2026,24 @@ resolve effective inputs and aggregate `INPUT_VARS_JSON`. Only fingerprints and
 provenance enter evidence; raw values MUST NOT be logged or persisted. Secret
 values are never fetched. Version1's read scope is unchanged.
 
+When the authenticated closure reads the Variable namespace, each destination
+workflow MUST have a workflow-scoped `vars-context` input record, even when the
+namespace is empty or no `env`/`with` entry exists. Its anchor is the workflow
+path, empty job, step0, input `vars-context` and literal origin. Its source
+fingerprint binds kind `publisher-inventory-variable-context`, the immutable
+root workflow repository/commit/path/content SHA256 and the complete effective
+Variable fingerprint, including each value's repository/organization provenance.
+The literal origin identifies this fixed context record, not the provenance of
+the Variables it binds. The independently reviewed document MUST contain the
+exact record. Missing or substituted records fail with `binding-mismatch` before
+review authority can qualify; changed configuration needs refreshed evidence and
+a new independent decision and exact operation approval. This includes creation
+of a Variable after an independently reviewed empty namespace. Inspect all
+source branches without evaluating conditions: immutable source binds the
+condition/metadata text, and this separate record binds its mutable configuration.
+Existing per-`env`/`with` bindings remain required. No expression execution,
+additional provider scope or bypass configuration is introduced.
+
 Node and shell inspection MUST reject runtime environment overrides that can
 load code outside the bound graph. Inventory read failures expose closed current
 review-unavailable or unresolved-source causes instead of losing their stage.
@@ -2091,14 +2109,18 @@ evaluated-pilot write attempts remain zero.
 ### Completed source-review corrections (#1007)
 
 The62 semantic inventory/recovery cases remain the acceptance floor; parameter
-variants do not create new case identities. The reviewed implementation adds145
+variants do not create new case identities. The reviewed implementation adds159
 risk controls:33 indirect Node escape programs,11 unsafe native modules,14 valid
 closed programs, one inert download/code-construction oracle, four syntax bounds,
 one two-import source-order case, two actual job-input bindings,11 pure job-scope
 boundaries, one preparation-digest ordering case,57 preparation/commit/activity/
 pagination variants, one bracket-suffixed Bot preparation identity, one Bot-review
 compatibility case, six account-type/login policy boundaries and two shell
-command-order variants. These controls MUST
+command-order variants; plus14 complete-context controls: missing job/step
+condition witnesses2, bound job/step conditions with changed values2, an empty
+namespace followed by Variable creation1, substituted digest/commit/content3,
+changed exact operation approval1, concurrency-only metadata1, preview drift1
+and post-tree/commit/branch drift3. These controls MUST
 traverse the complete reader where provider/source behavior is asserted. The
 source-order cases retain original failures before correction and preserve
 swapped-dependency rejection. Existing pure100% and reader95%lines/statements,

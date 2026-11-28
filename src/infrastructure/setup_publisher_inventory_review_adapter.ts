@@ -530,6 +530,16 @@ export class SetupPublisherInventoryReviewAdapter {
       const source = sources.get(workflow.entryUnits[0]);
       if (!source || source.unit.kind !== 'workflow' || source.unit.repositoryId !== target.id || source.unit.commit !== target.baseSha
         || source.unit.path !== workflow.path || source.unit.blob !== workflow.blob) return mismatch();
+      if (variables.fingerprint.effectiveVariablesSha256 !== undefined) {
+        // A complete namespace witness binds configuration used by any source
+        // control, including conditions with no env/with entries. The evidence
+        // document must contain it before the independent review can qualify.
+        const anchor = { workflow: workflow.path, job: '', step: 0, input: 'vars-context', origin: 'literal' as const };
+        const record = { id: publisherInventorySha256(anchor), ...anchor, sourceFingerprint: publisherInventorySha256({
+          kind: 'publisher-inventory-variable-context', source: { repositoryId: source.unit.repositoryId, commit: source.unit.commit,
+            path: source.unit.path, contentSha256: source.unit.contentSha256 }, variables: variables.fingerprint }) };
+        inputs.set(record.id, record);
+      }
       await metadata(source, { workflow: workflow.path, route: '', environment: {}, inputs: {}, workspace: [] }, 0);
     }
     const expected = [...inputs.values()].sort((a, b) => order(a.id, b.id));

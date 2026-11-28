@@ -143,7 +143,8 @@ function variableFixture(options: { organization?: unknown[]; repository?: unkno
   f.document.inputs.push({ id: publisherInventorySha256(anchor), ...anchor, sourceFingerprint: publisherInventorySha256({
     kind: 'publisher-inventory-input-source', source: { repositoryId: source.repositoryId, commit: source.commit,
       path: source.path, contentSha256: source.contentSha256 }, definition, effectiveEnvironment: env, callerInputs: {},
-    variables: { effectiveVariablesSha256: publisherInventorySha256(options.expected ?? {}) } }) }); f.seal();
+    variables: { effectiveVariablesSha256: publisherInventorySha256(options.expected ?? {}) } }) });
+  bindVariableContext(f, options.expected ?? {});
   const original = f.request.getMockImplementation()!;
   f.request.mockImplementation(async (route, parameters) => {
     let data: unknown;
@@ -162,6 +163,35 @@ function variableFixture(options: { organization?: unknown[]; repository?: unkno
     return { data: options.response ? options.response(route, parameters, data) : data };
   });
   return f;
+}
+
+function bindVariableContext(f: ReturnType<typeof fixture>, expected: Record<string, { origin: 'repository-variable' | 'organization-variable'; value: string }>) {
+  for (const workflow of f.document.workflows) {
+    const source = f.document.units.find(unit => unit.id === workflow.entryUnits[0])!;
+    const anchor = { workflow: workflow.path, job: '', step: 0, input: 'vars-context', origin: 'literal' as const };
+    f.document.inputs.push({ id: publisherInventorySha256(anchor), ...anchor, sourceFingerprint: publisherInventorySha256({
+      kind: 'publisher-inventory-variable-context', source: { repositoryId: source.repositoryId, commit: source.commit,
+        path: source.path, contentSha256: source.contentSha256 },
+      variables: { effectiveVariablesSha256: publisherInventorySha256(expected) } }) });
+  }
+  f.seal();
+}
+
+function conditionalFixture(location: 'job' | 'step' | 'concurrency', bind = false) {
+  const condition = "vars.MODE == 'publish'";
+  const workflow = location === 'concurrency'
+    ? 'on: push\nconcurrency:\n  group: ${{ vars.MODE }}\n  cancel-in-progress: false\njobs:\n  inspect:\n    steps:\n      - run: printf reviewed\n'
+    : location === 'job' ? `on: push\njobs:\n  inspect:\n    if: ${condition}\n    steps:\n      - run: printf reviewed\n`
+    : `on: push\njobs:\n  inspect:\n    steps:\n      - run: printf reviewed\n        if: ${condition}\n`;
+  const f = fixture({ workflow }), original = f.request.getMockImplementation()!;
+  let mode: string | undefined = 'observe';
+  f.request.mockImplementation(async (route, parameters) => {
+    if (route === 'GET /orgs/{org}/actions/variables') return { data: { total_count: 0, variables: [] } };
+    if (route === 'GET /repos/{owner}/{repo}/actions/variables') return { data: { total_count: mode === undefined ? 0 : 1, variables: mode === undefined ? [] : [{ name: 'MODE', value: mode }] } };
+    return original(route, parameters);
+  });
+  if (bind) bindVariableContext(f, { MODE: { origin: 'repository-variable', value: mode! } });
+  return { ...f, setMode: (value: string | undefined) => { mode = value; } };
 }
 
 function controlledDelivery(f: ReturnType<typeof fixture>, created: (effect: 'tree' | 'commit' | 'branch' | 'pull-request') => void) {
@@ -213,8 +243,8 @@ function executeControlledInstallation(f: ReturnType<typeof fixture>, journal: S
     operationId: '11111111-1111-4111-8111-111111111111', dryRun: false, resume });
 }
 
-function reviewedOperation() {
-  const f = fixture(), present = jest.fn(async () => undefined), confirm = jest.fn(async (): Promise<'approve'> => 'approve');
+function reviewedOperation(f: ReturnType<typeof fixture> = fixture()) {
+  const present = jest.fn(async () => undefined), confirm = jest.fn(async (): Promise<'approve'> => 'approve');
   const active = jest.fn(() => true), apply = jest.fn(async () => 'controlled-result');
   const review = new ReviewSetupPublisherUseCase({ inspect: proposal => f.inspectComplete(proposal), present, confirm, active });
   return { ...f, present, confirm, active, apply,
@@ -229,6 +259,81 @@ function nodeAction(main: string, helper?: string, concurrency = '') {
     edges: [{ from: 'workflow-ci', to: 'action', role: 'uses:inspect:1' }, { from: 'action', to: 'main', role: 'main' },
       ...(helper === undefined ? [] : [{ from: 'main', to: 'helper', role: 'import:1' }])] });
 }
+
+it.each(['job', 'step'] as const)('publisher-inventory-C30: rejects an unbound variable context used only by a %s condition', async location => {
+  const f = conditionalFixture(location);
+  await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'binding-mismatch' });
+});
+
+it.each(['job', 'step'] as const)('publisher-inventory-C30: a bound variable-only %s condition becomes stale when its value changes', async location => {
+  const f = conditionalFixture(location, true);
+  await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview');
+  f.setMode('publish');
+  await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'binding-mismatch' });
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+});
+
+it('publisher-inventory-C30: a verified empty namespace becomes stale when a condition variable is created', async () => {
+  const f = conditionalFixture('job'); f.setMode(undefined); bindVariableContext(f, {});
+  await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview');
+  f.request.mockClear(); f.setMode('publish');
+  await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'binding-mismatch' });
+  expect(f.request.mock.calls.some(([route]) => route.endsWith('/reviews'))).toBe(false);
+});
+
+it.each(['digest', 'source commit', 'source content'] as const)(
+  'publisher-inventory-C30: the complete namespace witness rejects a substituted %s', async fault => {
+    const f = conditionalFixture('job', true), source = f.document.units.find(unit => unit.id === 'workflow-ci')!;
+    const record = f.document.inputs.find(input => input.input === 'vars-context')!;
+    record.sourceFingerprint = fault === 'digest' ? '0'.repeat(64) : publisherInventorySha256({
+      kind: 'publisher-inventory-variable-context', source: { repositoryId: source.repositoryId,
+        commit: fault === 'source commit' ? '8'.repeat(40) : source.commit, path: source.path,
+        contentSha256: fault === 'source content' ? '0'.repeat(64) : source.contentSha256 },
+      variables: { effectiveVariablesSha256: publisherInventorySha256({ MODE: { origin: 'repository-variable', value: 'observe' } }) } });
+    f.seal(); await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'binding-mismatch' });
+    expect(f.request.mock.calls.some(([route]) => route.endsWith('/reviews'))).toBe(false);
+  });
+
+it('publisher-inventory-C30: changed namespace evidence requires a different exact operation approval', async () => {
+  const before = conditionalFixture('job', true), after = conditionalFixture('job');
+  after.setMode('publish'); bindVariableContext(after, { MODE: { origin: 'repository-variable', value: 'publish' } });
+  const first = await before.inspectComplete(), second = await after.inspectComplete();
+  expect(after.document.units).toEqual(before.document.units);
+  expect(after.locator.documentSha256).not.toBe(before.locator.documentSha256);
+  const plan = (f: typeof before, snapshot: typeof first) => planSetupPublisherInstallation(f.proposal, snapshot.inspection,
+    '11111111-1111-4111-8111-111111111111');
+  expect(plan(after, second).approvalDigest).not.toBe(plan(before, first).approvalDigest);
+});
+
+it('publisher-inventory-C30: namespace binding also covers a variable used only by other execution metadata', async () => {
+  const f = conditionalFixture('concurrency', true);
+  await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview');
+  f.setMode('publish'); await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'binding-mismatch' });
+});
+
+it('publisher-inventory-C35: condition-variable drift during real preview stops approval before delivery', async () => {
+  const source = conditionalFixture('job', true), f = reviewedOperation(source);
+  f.present.mockImplementation(async () => { source.setMode('publish'); });
+  await expect(f.execute()).rejects.toMatchObject({ reason: 'stale' });
+  expect(f.confirm).toHaveBeenCalledTimes(1); expect(f.apply).not.toHaveBeenCalled();
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+});
+
+it.each(['tree', 'commit', 'branch'] as const)(
+  'publisher-inventory-C36: condition-variable drift after %s stops the next real delivery phase', async effect => {
+    const f = conditionalFixture('step', true), state = controlledDelivery(f, completed => {
+      if (completed === effect) f.setMode('publish');
+    });
+    const directory = await mkdtemp(join(tmpdir(), 'publisher-inventory-condition-moved-'));
+    try {
+      const journal = new SetupPublisherJournalAdapter(directory);
+      await expect(executeControlledInstallation(f, journal)).rejects.toMatchObject({ reason: 'stale', retained: { status: 'partial' } });
+      const phases = ['tree', 'commit', 'branch'], count = phases.indexOf(effect) + 1;
+      expect(f.request.mock.calls.filter(([route]) => route.startsWith('POST '))).toHaveLength(count);
+      expect((await journal.load(state.operation))!.effects).toEqual(phases.slice(0, count));
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  });
+
 
 it.each([
   'globalThis["Function"]("return 1")();',
@@ -1000,7 +1105,8 @@ it.each(['repository-variable', 'organization-variable'] as const)(
     f.document.inputs.push({ id: publisherInventorySha256(anchor), ...anchor, sourceFingerprint: publisherInventorySha256({
       kind: 'publisher-inventory-input-source', source: { repositoryId: source.repositoryId, commit: source.commit,
         path: source.path, contentSha256: source.contentSha256 }, definition, effectiveEnvironment: { MODE: definition }, callerInputs: {},
-      variables: { effectiveVariablesSha256: publisherInventorySha256(variables) } }) }); f.seal();
+      variables: { effectiveVariablesSha256: publisherInventorySha256(variables) } }) });
+    bindVariableContext(f, variables);
     const original = f.request.getMockImplementation()!;
     f.request.mockImplementation(async (route, parameters) => {
       if (route === 'GET /orgs/{org}/actions/variables') return { data: { total_count: 1,
@@ -1033,8 +1139,8 @@ it.each([
   const f = fixture({ workflow, programs: [{ id: 'action', path: 'action/action.yml', kind: 'action', content: manifest },
     { id: 'main', path: 'action/main.js', kind: 'node-entrypoint', content: program }],
   edges: [{ from: 'workflow-ci', to: 'action', role: 'uses:inspect:1' }, { from: 'action', to: 'main', role: 'main' }] });
-  const variables = { ...(configuration.organization ? { MODE: { origin: 'organization-variable', value: configuration.organization } } : {}),
-    ...(configuration.repository ? { MODE: { origin: 'repository-variable', value: configuration.repository } } : {}) };
+  const variables = { ...(configuration.organization ? { MODE: { origin: 'organization-variable' as const, value: configuration.organization } } : {}),
+    ...(configuration.repository ? { MODE: { origin: 'repository-variable' as const, value: configuration.repository } } : {}) };
   const witness = { effectiveVariablesSha256: publisherInventorySha256(variables) };
   const source = f.document.units.find(u => u.id === 'workflow-ci')!, action = f.document.units.find(u => u.id === 'action')!;
   const bind = (unit: typeof source, job: string, step: number, kind: 'env' | 'with', name: string, definition: unknown,
@@ -1052,7 +1158,7 @@ it.each([
   for (const [name, definition] of Object.entries(provided)) bind(source, 'inspect', 1, 'with', name, definition,
     name === 'token' ? 'symbolic-secret' : 'literal', stepEnvironment);
   if (!configuration.provided) bind(action, 'inspect', 1, 'with', 'mode', 'manifest-default', 'default', stepEnvironment);
-  f.seal(); const original = f.request.getMockImplementation()!;
+  bindVariableContext(f, variables); const original = f.request.getMockImplementation()!;
   let repositoryValue = configuration.repository;
   f.request.mockImplementation(async (route, parameters) => {
     if (route === 'GET /orgs/{org}/actions/variables') return { data: { total_count: configuration.organization ? 1 : 0,

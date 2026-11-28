@@ -695,6 +695,14 @@ effective inputs and aggregate `INPUT_VARS_JSON` configuration. Only fingerprint
 and provenance enter evidence; raw values are not logged or persisted. Secret
 values are never fetched. Version1 retains its prior read scope.
 
+When closure inspection reads Variables, a workflow-scoped `vars-context` record
+binds the complete effective namespace and its provenance to each immutable root
+workflow, including an empty namespace. That record must exist in the independently
+reviewed document even when Variables appear only in conditions or concurrency
+metadata and there are no `env`/`with` entries. Inspection follows every source
+branch without executing conditions. Configuration drift invalidates the evidence
+before approval or the next delivery phase; existing per-input bindings remain.
+
 `SetupPublisherInventoryReviewAdapter` authenticates the separate evidence PR,
 complete document-only tree difference, immutable program/input graph, complete
 review pages and current reviewer permissions. Complete PR commits and provider
