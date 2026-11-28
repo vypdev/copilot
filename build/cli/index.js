@@ -72631,6 +72631,7 @@ function invalid() { return new Error('The publisher proposal is invalid or unsu
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publisherInventoryEdgeIdentity = exports.publisherInventorySha256 = void 0;
 exports.canonicalPublisherInventoryJson = canonicalPublisherInventoryJson;
+exports.publisherInventoryConditionReferences = publisherInventoryConditionReferences;
 exports.parseSetupPublisherInventoryLocator = parseSetupPublisherInventoryLocator;
 exports.parseSetupPublisherInventoryDocument = parseSetupPublisherInventoryDocument;
 exports.publisherInventoryWorkflowSetSha256 = publisherInventoryWorkflowSetSha256;
@@ -72709,6 +72710,185 @@ function canonicalPublisherInventoryJson(value) {
 }
 const publisherInventorySha256 = (value) => hash(canonicalPublisherInventoryJson(value));
 exports.publisherInventorySha256 = publisherInventorySha256;
+/** Parse the finite condition profile for input closure; never evaluate it. */
+function publisherInventoryConditionReferences(value) {
+    const unresolved = () => { throw new setup_publisher_inventory_review_1.SetupPublisherInventoryError('unresolved-closure'); };
+    if (value === undefined || value === null || typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value))
+        return [];
+    if (typeof value !== 'string')
+        return unresolved();
+    let source = value.trim();
+    if (source.startsWith('${{')) {
+        if (!source.endsWith('}}'))
+            return unresolved();
+        source = source.slice(3, -2).trim();
+    }
+    const tokens = [];
+    for (let offset = 0; offset < source.length;) {
+        if (/\s/u.test(source[offset])) {
+            offset++;
+            continue;
+        }
+        if (tokens.length >= 10000)
+            return unresolved();
+        if (source[offset] === "'") {
+            let literal = '', closed = false;
+            offset++;
+            while (offset < source.length) {
+                if (source[offset] !== "'") {
+                    literal += source[offset++];
+                    continue;
+                }
+                if (source[offset + 1] === "'") {
+                    literal += "'";
+                    offset += 2;
+                    continue;
+                }
+                offset++;
+                closed = true;
+                break;
+            }
+            if (!closed)
+                return unresolved();
+            tokens.push({ kind: 'string', value: literal });
+            continue;
+        }
+        const remaining = source.slice(offset), word = /^[A-Za-z_][A-Za-z0-9_-]*/u.exec(remaining);
+        if (word) {
+            tokens.push({ kind: 'word', value: word[0] });
+            offset += word[0].length;
+            continue;
+        }
+        const number = /^-?(?:0[xX][0-9a-fA-F]+|(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)/u.exec(remaining);
+        if (number) {
+            tokens.push({ kind: 'number', value: number[0] });
+            offset += number[0].length;
+            continue;
+        }
+        const operator = ['&&', '||', '==', '!=', '<=', '>=', '!', '<', '>', '(', ')', '[', ']', '.', ','].find(v => remaining.startsWith(v));
+        if (!operator)
+            return unresolved();
+        tokens.push({ kind: 'operator', value: operator });
+        offset += operator.length;
+    }
+    let cursor = 0;
+    const peek = () => tokens[cursor];
+    const operator = (value) => peek()?.kind === 'operator' && peek().value === value;
+    const take = (expected) => { if (!operator(expected))
+        return unresolved(); cursor++; };
+    const binary = new Map([['||', 1], ['&&', 2], ['==', 3], ['!=', 3], ['<', 4], ['<=', 4], ['>', 4], ['>=', 4]]);
+    const functions = new Map([
+        ['contains', [2, 2]], ['startswith', [2, 2]], ['endswith', [2, 2]], ['format', [1, 10000]],
+        ['join', [1, 2]], ['tojson', [1, 1]], ['fromjson', [1, 1]],
+        ['always', [0, 0]], ['success', [0, 0]], ['failure', [0, 0]], ['cancelled', [0, 0]],
+    ]);
+    const references = new Map();
+    function expression(minimum, depth) {
+        if (depth > 64)
+            return unresolved();
+        unary(depth);
+        while (true) {
+            const priority = peek()?.kind === 'operator' ? binary.get(peek().value) : undefined;
+            if (priority === undefined || priority < minimum)
+                break;
+            cursor++;
+            expression(priority + 1, depth + 1);
+        }
+    }
+    function unary(depth) {
+        if (depth > 64)
+            return unresolved();
+        if (operator('!')) {
+            cursor++;
+            unary(depth + 1);
+            return;
+        }
+        const data = primary(depth);
+        while (operator('.') || operator('[')) {
+            if (!data)
+                return unresolved();
+            if (operator('.')) {
+                cursor++;
+                if (peek()?.kind !== 'word')
+                    return unresolved();
+                cursor++;
+            }
+            else {
+                cursor++;
+                expression(0, depth + 1);
+                take(']');
+            }
+        }
+    }
+    function primary(depth) {
+        const token = peek();
+        if (!token)
+            return unresolved();
+        if (token.kind === 'operator' && token.value === '(') {
+            cursor++;
+            expression(0, depth + 1);
+            take(')');
+            return true;
+        }
+        if (token.kind === 'string' || token.kind === 'number') {
+            cursor++;
+            return true;
+        }
+        if (token.kind !== 'word')
+            return unresolved();
+        cursor++;
+        const name = token.value.toLowerCase();
+        if (['true', 'false', 'null'].includes(name))
+            return true;
+        if (operator('(')) {
+            const arity = functions.get(name);
+            if (!arity)
+                return unresolved();
+            cursor++;
+            let count = 0;
+            if (!operator(')')) {
+                while (true) {
+                    expression(0, depth + 1);
+                    count++;
+                    if (!operator(','))
+                        break;
+                    cursor++;
+                }
+            }
+            take(')');
+            if (count < arity[0] || count > arity[1])
+                return unresolved();
+            return true;
+        }
+        if (!['env', 'inputs', 'vars', 'github'].includes(name))
+            return unresolved();
+        let key;
+        if (operator('.')) {
+            cursor++;
+            if (peek()?.kind !== 'word')
+                return unresolved();
+            key = peek().value;
+            cursor++;
+        }
+        else if (operator('[')) {
+            cursor++;
+            if (peek()?.kind !== 'string')
+                return unresolved();
+            key = peek().value;
+            cursor++;
+            take(']');
+        }
+        else if (name !== 'vars')
+            return unresolved();
+        const reference = { context: name, ...(key !== undefined && { name: key }) };
+        references.set(`${name}:${key ?? ''}`, Object.freeze(reference));
+        return false;
+    }
+    expression(0, 0);
+    if (cursor !== tokens.length)
+        return unresolved();
+    return Object.freeze([...references.values()]);
+}
 function parseSetupPublisherInventoryLocator(value) {
     if (!exact(value, ['pullRequest', 'head', 'documentSha256']) || !positive(value.pullRequest)
         || !matches(value.head, sha) || !matches(value.documentSha256, digest))
@@ -138089,7 +138269,7 @@ const environment = (...values) => {
 const hasRuntimeOverride = (values) => Object.keys(values)
     .some(key => /^(?:PATH|NODE_OPTIONS|NODE_PATH|BASH_ENV|ENV|SHELLOPTS|GITHUB_ACTION_PATH|LD_.*|DYLD_.*)$/iu.test(key));
 /** A finite source profile, not proof of arbitrary JavaScript behavior. */
-function nodeImports(content) {
+function nodeImports(content, boundEnvironment) {
     let root, globals;
     try {
         root = (0, acorn_1.parse)(content, { ecmaVersion: 'latest', sourceType: 'module',
@@ -138167,6 +138347,14 @@ function nodeImports(content) {
             const name = memberName(node), owner = (0, setup_batch_github_read_adapter_1.batchObject)(node.object);
             if (opaqueMembers.has(name) || owner?.type === 'Identifier' && owner.name === 'Object' && globals.has(owner) && !objectOperations.has(name))
                 return unresolved();
+            if (owner?.type === 'Identifier' && owner.name === 'process' && globals.has(owner) && name === 'env') {
+                // The complete environment also contains provider/runner inputs that
+                // cannot be inferred from YAML. Only a literal, source-bound key may
+                // escape this member; aliases, enumeration and computed reads stay open.
+                if (parent?.type !== 'MemberExpression' || parent.object !== node
+                    || !boundEnvironment.has(memberName(parent)))
+                    return unresolved();
+            }
         }
         if (node.type === 'Property' || node.type === 'MethodDefinition' || node.type === 'PropertyDefinition') {
             const key = (0, setup_batch_github_read_adapter_1.batchObject)(node.key);
@@ -138570,6 +138758,27 @@ class SetupPublisherInventoryReviewAdapter {
                 inputs.set(record.id, record);
             }
         };
+        const condition = (value, context) => {
+            for (const reference of (0, setup_publisher_inventory_review_policy_1.publisherInventoryConditionReferences)(value)) {
+                if (reference.context === 'vars') {
+                    if (variables.fingerprint.effectiveVariablesSha256 === undefined)
+                        return unresolved();
+                    continue;
+                }
+                if (reference.context === 'github') {
+                    if (!['repository', 'repository_id'].includes(reference.name.toLowerCase()))
+                        return unresolved();
+                    continue;
+                }
+                const values = reference.context === 'env' ? context.environment : context.inputs;
+                const names = Object.keys(values).filter(name => name.toLowerCase() === reference.name.toLowerCase());
+                if (names.length !== 1)
+                    return unresolved();
+                const definition = values[names[0]];
+                if (typeof definition === 'string' && /\$\{\{\s*secrets\b/iu.test(definition))
+                    return unresolved();
+            }
+        };
         const metadata = async (source, context, depth) => {
             if (depth > 16 || active.has(source.unit.id))
                 return unresolved();
@@ -138587,6 +138796,7 @@ class SetupPublisherInventoryReviewAdapter {
                         return unresolved();
                     observe(source, current, job, index + 1, 'env', scope(step.env), 'step-env');
                     observe(source, current, job, index + 1, 'with', scope(step.with), 'literal');
+                    condition(step.if, current);
                     if (typeof step.run === 'string') {
                         if (step.run.includes('${{') && !/^\s*$/u.test(step.run.replace(/\$\{\{\s*github\.action_path\s*\}\}/gu, ''))) {
                             // Shell interpolation may create executable syntax. General
@@ -138607,7 +138817,8 @@ class SetupPublisherInventoryReviewAdapter {
                             const input = (0, setup_batch_github_read_adapter_1.batchObject)(raw);
                             if (!input)
                                 return unresolved();
-                            if (!(name in provided) && input.default !== undefined)
+                            if (!Object.keys(provided).some(key => key.toLowerCase() === name.toLowerCase())
+                                && input.default !== undefined)
                                 resolved[name] = input.default;
                         }
                         observe(called, current, job, index + 1, 'with', resolved, 'default');
@@ -138638,6 +138849,7 @@ class SetupPublisherInventoryReviewAdapter {
                         return unresolved();
                     const local = { ...context, environment: environment(workflowEnvironment, scope(job.env)), workspace: [] };
                     observe(source, local, name, 0, 'env', scope(job.env), 'job-env');
+                    condition(job.if, local);
                     if (typeof job.uses === 'string') {
                         const role = `uses:${name}`, called = sourceFor(source, role, u => u.kind === 'reusable-workflow');
                         this.assertUses(job.uses, source, called, local, true);
@@ -138663,16 +138875,27 @@ class SetupPublisherInventoryReviewAdapter {
                 else if (runs.using === 'node20' || runs.using === 'node24') {
                     if (source.unit.kind !== 'action')
                         return unresolved();
+                    // The Node action handler adds INPUT_* after the step environment.
+                    // Composite shell steps do not receive this implicit projection.
+                    // A declared input without a default is still projected as an empty
+                    // string by the runner. Its absence is bound by this manifest and
+                    // the complete caller with-map, rather than by an ambient value.
+                    const declaredInputs = Object.fromEntries(Object.keys(scope(value.inputs)).map(name => [name, '']));
+                    const inputEnvironment = Object.fromEntries(Object.entries({ ...declaredInputs, ...context.inputs })
+                        .map(([name, value]) => [`INPUT_${name.replace(/ /gu, '_').toUpperCase()}`, value]));
+                    const nodeContext = { ...context, environment: environment(context.environment, inputEnvironment) };
                     for (const role of ['main', 'pre', 'post']) {
                         if (role !== 'main' && runs[role] === undefined)
                             continue;
+                        if (role !== 'main')
+                            condition(runs[`${role}-if`], context);
                         const file = runs[role];
                         if (typeof file !== 'string')
                             return unresolved();
                         const expected = sibling(source.unit.path, file.replace(/^\.\//u, ''));
                         const program = sourceFor(source, role, u => u.kind === 'node-entrypoint' && u.repositoryId === source.unit.repositoryId
                             && u.commit === source.unit.commit && u.path === expected);
-                        this.verifyNode(program, document, sources, context, new Set());
+                        this.verifyNode(program, document, sources, nodeContext, new Set());
                     }
                 }
                 else
@@ -138844,7 +139067,12 @@ class SetupPublisherInventoryReviewAdapter {
         const content = program.content;
         // Human review supplies semantics. Parsed source also closes indirect
         // loading, constructors, reflection and CommonJS wrapper escapes.
-        const imports = nodeImports(content);
+        // Provider defaults and runtime/state channels cannot be replaced by a
+        // same-named YAML claim. GITHUB_TOKEN is an explicitly passed credential.
+        // The Node handler also removes NODE_ICU_DATA before starting the process.
+        const boundEnvironment = new Set(Object.keys(context.environment)
+            .filter(name => !/^(?:GITHUB_|RUNNER_|ACTIONS_|STATE_|NODE_ICU_DATA$)/iu.test(name) || name === 'GITHUB_TOKEN'));
+        const imports = nodeImports(content, boundEnvironment);
         let count = 0;
         for (const specifier of imports) {
             if (node_module_1.builtinModules.includes(specifier) || node_module_1.builtinModules.includes(specifier.replace(/^node:/u, ''))) {
@@ -138871,11 +139099,41 @@ class SetupPublisherInventoryReviewAdapter {
     }
     verifyProducerMeaning(document, sources) {
         const incompatible = () => { throw new setup_publisher_inventory_review_1.SetupPublisherInventoryError('incompatible-producer'); };
-        const lane = (value) => {
+        const preserving = (value) => {
             const concurrency = (0, setup_batch_github_read_adapter_1.batchObject)(value);
             return concurrency?.['cancel-in-progress'] === false && concurrency.queue === 'max'
+                && typeof concurrency.group === 'string' && concurrency.group.length > 0;
+        };
+        const lane = (value) => {
+            const concurrency = (0, setup_batch_github_read_adapter_1.batchObject)(value);
+            return preserving(value)
                 && ['copilot-bugbot-status-${{ github.repository_id }}-${{ inputs.pull_number }}',
-                    'copilot-bugbot-status-${{ github.repository_id }}-${{ github.event.pull_request.number }}'].includes(String(concurrency.group));
+                    'copilot-bugbot-status-${{ github.repository_id }}-${{ github.event.pull_request.number }}'].includes(String(concurrency?.group));
+        };
+        const metadata = (id, inheritedLane, active) => {
+            if (active.has(id) || active.size >= 16)
+                return incompatible();
+            const current = sources.get(id);
+            if (!current)
+                return incompatible();
+            const value = this.yaml(current.content), jobs = scope(value.jobs), next = new Set([...active, id]);
+            if (value.concurrency !== undefined && !preserving(value.concurrency))
+                return incompatible();
+            const workflowLane = inheritedLane || lane(value.concurrency);
+            for (const [name, raw] of Object.entries(jobs)) {
+                const job = scope(raw);
+                if (job.concurrency !== undefined && !preserving(job.concurrency))
+                    return incompatible();
+                const jobLane = workflowLane || lane(job.concurrency);
+                if (typeof job.uses === 'string') {
+                    const edges = document.edges.filter(edge => edge.from === id && edge.role === `uses:${name}`);
+                    if (edges.length !== 1)
+                        return incompatible();
+                    metadata(edges[0].to, jobLane, next);
+                }
+                else if (!jobLane)
+                    return incompatible();
+            }
         };
         for (const workflow of document.workflows) {
             const pending = [...workflow.entryUnits], reached = new Set();
@@ -138896,9 +139154,7 @@ class SetupPublisherInventoryReviewAdapter {
             // The independent review identifies semantic writer paths. Observable
             // serialization must also hold; a claimed compatible label cannot waive
             // missing queue preservation or cancel an older publication.
-            const root = this.yaml(sources.get(workflow.entryUnits[0]).content), jobs = scope(root.jobs);
-            if (!lane(root.concurrency) && Object.values(jobs).some(job => !lane((0, setup_batch_github_read_adapter_1.batchObject)(job)?.concurrency)))
-                return incompatible();
+            metadata(workflow.entryUnits[0], false, new Set());
         }
     }
     async variableWitness(target, sources, token) {

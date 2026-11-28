@@ -260,6 +260,163 @@ function nodeAction(main: string, helper?: string, concurrency = '') {
       ...(helper === undefined ? [] : [{ from: 'main', to: 'helper', role: 'import:1' }])] });
 }
 
+function bindRootEnvironment(f: ReturnType<typeof fixture>, values: Record<string, unknown>) {
+  const unit = f.document.units.find(u => u.id === 'workflow-ci')!;
+  for (const [name, definition] of Object.entries(values)) {
+    const anchor = { workflow: workflowPath, job: '', step: 0, input: `env:${name}`,
+      origin: typeof definition === 'string' && definition.includes('${{ secrets.') ? 'symbolic-secret' as const : 'workflow-env' as const };
+    f.document.inputs.push({ id: publisherInventorySha256(anchor), ...anchor, sourceFingerprint: publisherInventorySha256({
+      kind: 'publisher-inventory-input-source', source: { repositoryId: unit.repositoryId, commit: unit.commit,
+        path: unit.path, contentSha256: unit.contentSha256 }, definition, effectiveEnvironment: values, callerInputs: {}, variables: {} }) });
+  }
+  f.seal();
+}
+
+it.each([
+  'module.exports = process.env.GITHUB_EVENT_NAME;',
+  'module.exports = process.env["MODE"];',
+  'const name = "MODE"; module.exports = process.env[name];',
+  'const values = process.env; module.exports = values.MODE;',
+  'const { MODE } = process.env; module.exports = MODE;',
+  'module.exports = Object.keys(process.env);',
+  'const values = { ...process.env }; module.exports = values.MODE;',
+])('publisher-inventory-C30: ambient Node inputs cannot inherit an independent approval: %s', async program => {
+  const f = nodeAction(program);
+  await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+  expect(f.request.mock.calls.some(([r]) => r.endsWith('/reviews'))).toBe(false);
+});
+it.each(['GITHUB_EVENT_NAME', 'RUNNER_OS', 'ACTIONS_RUNTIME_TOKEN', 'STATE_selected', 'NODE_ICU_DATA'])(
+  'publisher-inventory-C30: a YAML claim cannot bind provider/runtime channel %s', async name => {
+    const env = { [name]: 'claimed' }, f = nodeAction(`module.exports = process.env[${JSON.stringify(name)}];`, undefined,
+      `env: ${JSON.stringify(env)}\n`);
+    bindRootEnvironment(f, env);
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+  });
+it.each(['process.env.MODE', 'process["env"]["MODE"]', 'process.env?.MODE'])(
+  'publisher-inventory-C30: a literal effective environment read remains admissible: %s', async expression => {
+    const f = nodeAction(`module.exports = ${expression};`, undefined, 'env: { MODE: reviewed }\n');
+    bindRootEnvironment(f, { MODE: 'reviewed' });
+    await expect(f.inspectComplete()).resolves.toMatchObject({ inspection: { installation: { inventoryReview: { approvals: [{ actorId: 17 }] } } } });
+    f.document.inputs[0].sourceFingerprint = '0'.repeat(64); f.seal();
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'binding-mismatch' });
+  });
+it('publisher-inventory-C27: a local process binding and inert env spelling do not read the runner', async () => {
+  const f = nodeAction('function read(process) { return process.env.MODE; } module.exports = read({env: {MODE: "local"}}) + "process.env.UNBOUND";');
+  await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+});
+it('publisher-inventory-C30: a declared absent Node input is the runner empty string rather than ambient state', async () => {
+  const f = fixture({ workflow: `on: push\njobs:\n  inspect:\n    steps:\n      - uses: owner/project/action@${'1'.repeat(40)}\n`,
+    programs: [{ id: 'action', path: 'action/action.yml', kind: 'action', content: 'inputs:\n  mode:\n    description: Optional\nruns: { using: node24, main: main.js }\n' },
+      { id: 'main', path: 'action/main.js', kind: 'node-entrypoint', content: 'module.exports = process.env.INPUT_MODE;' }],
+    edges: [{ from: 'workflow-ci', to: 'action', role: 'uses:inspect:1' }, { from: 'action', to: 'main', role: 'main' }] });
+  await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+  expect(f.document.inputs).toEqual([]); // Immutable manifest + complete caller map bind the absence.
+});
+it.each(['pre', 'post'] as const)('publisher-inventory-C28: %s conditions reject unbound runtime selectors and preserve status conditions', async role => {
+  for (const expression of ['always()', "github.event_name == 'push'"]) {
+    const f = fixture({ workflow: `on: push\njobs:\n  inspect:\n    steps:\n      - uses: owner/project/action@${'1'.repeat(40)}\n`,
+      programs: [{ id: 'action', path: 'action/action.yml', kind: 'action', content: `runs:\n  using: node24\n  main: main.js\n  ${role}: hook.js\n  ${role}-if: ${JSON.stringify(expression)}\n` },
+        { id: 'main', path: 'action/main.js', kind: 'node-entrypoint', content: 'module.exports = 1;' },
+        { id: 'hook', path: 'action/hook.js', kind: 'node-entrypoint', content: 'module.exports = 2;' }],
+      edges: [{ from: 'workflow-ci', to: 'action', role: 'uses:inspect:1' }, { from: 'action', to: 'main', role: 'main' }, { from: 'action', to: 'hook', role }] });
+    if (expression === 'always()') await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+    else await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+  }
+});
+it('publisher-inventory-C30: a composite Node child does not acquire implicit INPUT projection', async () => {
+  const action = 'inputs:\n  mode:\n    description: Optional\nruns:\n  using: composite\n  steps:\n    - run: node ${{ github.action_path }}/main.js\n';
+  const f = fixture({ workflow: `on: push\njobs:\n  inspect:\n    steps:\n      - uses: owner/project/action@${'1'.repeat(40)}\n`,
+    programs: [{ id: 'action', path: 'action/action.yml', kind: 'composite-action', content: action },
+      { id: 'shell', path: 'action/action.yml', kind: 'shell-program', content: action },
+      { id: 'main', path: 'action/main.js', kind: 'node-entrypoint', content: 'module.exports = process.env.INPUT_MODE;' }],
+    edges: [{ from: 'workflow-ci', to: 'action', role: 'uses:inspect:1' }, { from: 'action', to: 'shell', role: 'run:composite:1' },
+      { from: 'shell', to: 'main', role: 'call:1' }] });
+  await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+});
+
+it.each([
+  { name: 'secret through supported job env', definition: '${{ secrets.PAT }}', expression: "env.TOKEN != ''", allowed: false },
+  { name: 'secret through bracket selector', definition: '${{ secrets.PAT }}', expression: "env['TOKEN'] != ''", allowed: false },
+  { name: 'unsupported direct secret', definition: 'literal', expression: "secrets.PAT != ''", allowed: false },
+  { name: 'unbound environment', definition: 'literal', expression: "env.MISSING != ''", allowed: false },
+  { name: 'runtime event context', definition: 'literal', expression: "github.event_name == 'push'", allowed: false },
+  { name: 'job output context', definition: 'literal', expression: "needs.other.outputs.selected == 'yes'", allowed: false },
+  { name: 'bound literal', definition: 'literal', expression: "env.TOKEN == 'literal'", allowed: true },
+  { name: 'case-insensitive context key', definition: 'literal', expression: "ENV.token == 'literal'", allowed: true },
+  { name: 'inert secret spelling', definition: 'secrets.PAT', expression: "env.TOKEN == 'secrets.PAT'", allowed: true },
+  { name: 'fixed destination identity', definition: 'literal', expression: "github.repository_id != 0 && github.repository != ''", allowed: true },
+  { name: 'status and literals', definition: 'literal', expression: "success() && contains('secrets.PAT', 'PAT')", allowed: true },
+])('publisher-inventory-C30: condition input closure, $name', async row => {
+  // This env-to-step condition is supported provider syntax; no Secret value is fetched.
+  const env = { TOKEN: row.definition };
+  const workflow = `on: push\njobs:\n  inspect:\n    env: ${JSON.stringify(env)}\n    steps:\n      - if: ${JSON.stringify(row.expression)}\n        run: printf reviewed\n`;
+  const f = fixture({ workflow }), unit = f.document.units.find(u => u.id === 'workflow-ci')!;
+  const anchor = { workflow: workflowPath, job: 'inspect', step: 0, input: 'env:TOKEN',
+    origin: row.definition.startsWith('${{') ? 'symbolic-secret' as const : 'job-env' as const };
+  f.document.inputs.push({ id: publisherInventorySha256(anchor), ...anchor, sourceFingerprint: publisherInventorySha256({
+    kind: 'publisher-inventory-input-source', source: { repositoryId: unit.repositoryId, commit: unit.commit,
+      path: unit.path, contentSha256: unit.contentSha256 }, definition: row.definition, effectiveEnvironment: env, callerInputs: {}, variables: {} }) });
+  f.seal();
+  if (row.allowed) await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+  else {
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+    expect(f.request.mock.calls.some(([r]) => r.endsWith('/reviews'))).toBe(false);
+  }
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET ') && !/secrets/.test(route))).toBe(true);
+});
+
+const sharedLane = { group: 'copilot-bugbot-status-${{ github.repository_id }}-${{ inputs.pull_number }}', queue: 'max', 'cancel-in-progress': false };
+it.each([
+  { name: 'pending job dropped', job: { group: 'auxiliary', queue: 'single', 'cancel-in-progress': false }, allowed: false },
+  { name: 'running job cancelled', job: { group: 'auxiliary', 'cancel-in-progress': true }, allowed: false },
+  { name: 'implicit single queue', job: { group: 'auxiliary', 'cancel-in-progress': false }, allowed: false },
+  { name: 'preserved auxiliary group', job: { group: 'auxiliary', queue: 'max', 'cancel-in-progress': false }, allowed: true },
+  { name: 'inherited root lane', job: undefined, allowed: true },
+])('publisher-inventory-C34: root serialization also validates job preservation, $name', async row => {
+  const workflow = `on: push\nconcurrency: ${JSON.stringify(sharedLane)}\njobs:\n  inspect:\n`
+    + (row.job === undefined ? '' : `    concurrency: ${JSON.stringify(row.job)}\n`) + '    steps:\n      - run: printf reviewed\n';
+  const f = fixture({ workflow }); f.document.workflows[0].disposition = 'serialized-producer'; f.seal();
+  if (row.allowed) await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+  else await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'incompatible-producer' });
+});
+it.each([
+  { name: 'job-only shared lane', root: false, job: true, called: false, unsafe: false },
+  { name: 'callee-only shared lane', root: false, job: false, called: true, unsafe: false },
+  { name: 'caller root inherited by callee', root: true, job: false, called: false, unsafe: false },
+  { name: 'callee drops pending writer despite caller lane', root: true, job: false, called: false, unsafe: true },
+])('publisher-inventory-C34: reachable reusable workflow preservation, $name', async row => {
+  const concurrency = (enabled: boolean) => enabled ? `concurrency: ${JSON.stringify(sharedLane)}\n` : '';
+  const child = `on: { workflow_call: {} }\n${concurrency(row.called)}jobs:\n  publish:\n`
+    + (row.unsafe ? '    concurrency: { group: auxiliary, queue: single, cancel-in-progress: false }\n' : '')
+    + '    steps:\n      - run: printf reviewed\n';
+  const workflow = `on: push\n${concurrency(row.root)}jobs:\n  inspect:\n`
+    + (row.job ? `    concurrency: ${JSON.stringify(sharedLane)}\n` : '')
+    + `    uses: owner/reuse/.github/workflows/child.yml@${'a'.repeat(40)}\n`;
+  const f = fixture({ workflow, programs: [{ id: 'child', path: '.github/workflows/child.yml', kind: 'reusable-workflow', content: child },
+    { id: 'shell', path: '.github/workflows/child.yml', kind: 'shell-program', content: child }],
+    edges: [{ from: 'workflow-ci', to: 'child', role: 'uses:inspect' }, { from: 'child', to: 'shell', role: 'run:publish:1' }] });
+  // Authenticate the external callee without accidentally adding it as a
+  // second destination workflow in this complete-reader fixture.
+  const path = '.github/workflows/child.yml', commit = 'a'.repeat(40);
+  f.files.delete(path);
+  const targetTree = f.retain(f.files), externalTree = f.retain(new Map([[path, child]]));
+  f.commits.set(f.proposal.destination.head, targetTree); f.commits.set(commit, externalTree);
+  f.document.destination.tree = f.observed.tree = targetTree;
+  for (const unit of f.document.units) {
+    if (unit.id === 'workflow-ci') unit.tree = targetTree;
+    else Object.assign(unit, { repository: 'owner/reuse', repositoryId: 71, commit, tree: externalTree });
+  }
+  f.seal(); const original = f.request.getMockImplementation()!;
+  f.request.mockImplementation(async (route, parameters) => {
+    if (parameters.owner !== 'owner' || parameters.repo !== 'reuse') return original(route, parameters);
+    if (route === 'GET /repos/{owner}/{repo}') return { data: { id: 71, full_name: 'owner/reuse' } };
+    return original(route, { ...parameters, repo: 'project' });
+  });
+  f.document.workflows[0].disposition = 'serialized-producer'; f.seal();
+  if (row.unsafe) await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'incompatible-producer' });
+  else await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+});
+
 it.each(['job', 'step'] as const)('publisher-inventory-C30: rejects an unbound variable context used only by a %s condition', async location => {
   const f = conditionalFixture(location);
   await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'binding-mismatch' });
@@ -399,7 +556,9 @@ it.each([
   'console.log(import.meta.url);',
   'console.log(process.env.MODE);',
 ] as const)('publisher-inventory-C27: parsed source preserves a closed data-only Node program: %s', async program => {
-  const f = nodeAction(program), snapshot = await f.inspectComplete();
+  const f = nodeAction(program, undefined, program === 'console.log(process.env.MODE);' ? 'env: { MODE: controlled }\n' : '');
+  if (program === 'console.log(process.env.MODE);') bindRootEnvironment(f, { MODE: 'controlled' });
+  const snapshot = await f.inspectComplete();
   expect(planSetupPublisherInstallation(f.proposal, snapshot.inspection, '11111111-1111-4111-8111-111111111111').status).toBe('review');
   expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
 });
@@ -1125,15 +1284,17 @@ it.each([
   { name: 'step env overrides job, workflow and with', env: true, provided: true, expected: 'step' },
   { name: 'explicit with overrides manifest default', env: false, provided: true, expected: 'provided' },
   { name: 'manifest default is retained when with is absent', env: false, provided: false, expected: 'manifest-default' },
+  { name: 'provided input name is case-insensitive', env: false, provided: true, inputName: 'MODE', expected: 'provided' },
 ])('publisher-inventory-C30: bound Action precedence, $name', async configuration => {
   const manifest = 'name: Fixture\ninputs:\n  mode:\n    default: manifest-default\n  token:\n    description: Credential unused by this controlled program\nruns:\n  using: node24\n  main: main.js\n';
   // Only this authored controlled program is executed as an independent test
   // oracle. The production inspector never executes repository programs.
   const program = "const values = JSON.parse(process.env.INPUT_VARS_JSON || '{}');\n"
     + "module.exports = values.MODE || process.env.MODE || process.env.INPUT_MODE || 'fallback';\n";
-  const rootEnv = { INPUT_VARS_JSON: '${{ toJSON(vars) }}', ...(configuration.env ? { MODE: 'workflow' } : {}) };
+  // Even the fallback path must not inherit an unreviewed runner MODE.
+  const rootEnv = { INPUT_VARS_JSON: '${{ toJSON(vars) }}', MODE: configuration.env ? 'workflow' : '' };
   const jobEnv = configuration.env ? { MODE: 'job' } : {}, stepEnv = configuration.env ? { MODE: 'step' } : {};
-  const provided = { ...(configuration.provided ? { mode: 'provided' } : {}), token: '${{ secrets.PAT }}' };
+  const provided = { ...(configuration.provided ? { [configuration.inputName ?? 'mode']: 'provided' } : {}), token: '${{ secrets.PAT }}' };
   const workflow = `on: push\nenv: ${JSON.stringify(rootEnv)}\njobs:\n  inspect:\n    env: ${JSON.stringify(jobEnv)}\n    steps:\n`
     + `      - uses: owner/project/action@${'1'.repeat(40)}\n        env: ${JSON.stringify(stepEnv)}\n        with: ${JSON.stringify(provided)}\n`;
   const f = fixture({ workflow, programs: [{ id: 'action', path: 'action/action.yml', kind: 'action', content: manifest },

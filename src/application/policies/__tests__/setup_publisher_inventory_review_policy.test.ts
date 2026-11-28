@@ -3,7 +3,7 @@ import type { SetupPublisherInventoryDocument, SetupPublisherInventoryReviewAuth
   SetupPublisherInventoryReviewRecord } from '../../../domain/setup_publisher_inventory_review';
 import { SetupPublisherInventoryError } from '../../../domain/setup_publisher_inventory_review';
 import { assertSetupPublisherInventoryBindings, canonicalPublisherInventoryJson, decideSetupPublisherInventoryReview,
-  parseSetupPublisherInventoryDocument, parseSetupPublisherInventoryLocator, publisherInventoryActorLogin, publisherInventoryContractSha256,
+  parseSetupPublisherInventoryDocument, parseSetupPublisherInventoryLocator, publisherInventoryActorLogin, publisherInventoryConditionReferences, publisherInventoryContractSha256,
   publisherInventorySha256, publisherInventoryWorkflowSetSha256, setupPublisherInventoryFactForPlan } from '../setup_publisher_inventory_review_policy';
 import { parseSetupPublisherProposal } from '../setup_publisher_installation_policy';
 import { planSetupPublisherInstallation } from '../setup_publisher_plan_policy';
@@ -12,6 +12,43 @@ import { setupPublisherFixture } from './fixtures/setup_publisher_fixture';
 type Mutable<T> = T extends readonly (infer U)[] ? Mutable<U>[] : T extends object ? { -readonly [K in keyof T]: Mutable<T[K]> } : T;
 const copy = <T>(value: T): Mutable<T> => JSON.parse(JSON.stringify(value)) as Mutable<T>;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
+
+describe('publisher inventory condition dependencies without execution', () => {
+  it.each([
+    { source: undefined, references: [] }, { source: null, references: [] }, { source: true, references: [] },
+    { source: 0, references: [] }, { source: -1.5, references: [] },
+    { source: "  ${{ ENV.Mode == 'it''s ( ! || secrets.PAT' }}  ", references: [{ context: 'env', name: 'Mode' }] },
+    { source: "inputs['pull-number'] > 0", references: [{ context: 'inputs', name: 'pull-number' }] },
+    { source: "vars.MODE == '' || vars.MODE == 'publish'", references: [{ context: 'vars', name: 'MODE' }] },
+    { source: 'toJSON(vars)', references: [{ context: 'vars' }] },
+    { source: "github.repository != ''", references: [{ context: 'github', name: 'repository' }] },
+    { source: "!false && (null == null || -1.2e-3 < 0xF) && 1 <= 2 && 3 >= 2 && 3 > 2 && 1 != 2", references: [] },
+    { source: "contains('(', '!') || startsWith('abc', 'a') || endsWith('abc', 'c')", references: [] },
+    { source: "format('{0}', env.MODE)", references: [{ context: 'env', name: 'MODE' }] },
+    { source: "join(fromJSON('[1,2]')) == '1,2'", references: [] },
+    { source: "join(fromJSON('[1,2]'), ',') == '1,2'", references: [] },
+    { source: 'always() && success() || failure() || cancelled()', references: [] },
+    { source: "fromJSON(inputs.json).items[env.KEY] != ''", references: [{ context: 'inputs', name: 'json' }, { context: 'env', name: 'KEY' }] },
+    { source: "(fromJSON('{}'))['key'] == null", references: [] },
+    { source: "'(' == '(' && '!' == '!' && '||' == '||'", references: [] },
+    { source: 'TrUe && FALSE == false', references: [] },
+  ])('publisher-inventory-C30: closed condition dependencies: $source', ({ source, references }) => {
+    const result = publisherInventoryConditionReferences(source);
+    expect(result).toEqual(references);
+    if (references.length) { expect(Object.isFrozen(result)).toBe(true); expect(Object.isFrozen(result[0])).toBe(true); }
+  });
+  it.each([
+    '', '${{ true', '${{ true }} trailing', '"double quoted"', "'unterminated", 'env.', 'env[1]', 'env["MODE"]',
+    'env.MODE.other', "env.MODE['other']", 'env', 'inputs', 'github', 'secrets.PAT', 'needs.writer.outputs.mode',
+    "hashFiles('**/*')", 'unknown()', 'success(1)', 'contains(1)', 'contains(1,2,3)', 'format()',
+    'true false', 'true + false', ')', '(true', 'env[\'MODE\'', 'fromJSON(\'{}\').', 'fromJSON(\'{}\')[0',
+    'join(,)', 'always(1,)', '1.2.3', 'true &&', 'fromJSON',
+    '!'.repeat(66) + 'true', '('.repeat(66) + 'true' + ')'.repeat(66), Array(5002).fill('true').join(' || '),
+    {}, [], Number.NaN, Number.POSITIVE_INFINITY,
+  ])('publisher-inventory-C30: unresolved condition cannot gain review authority: %p', source => {
+    expect(() => publisherInventoryConditionReferences(source)).toThrow('unresolved-closure');
+  });
+});
 
 /** Pure-policy fixture only; authenticated provider/composition coverage is separate. */
 function fixture() {

@@ -12,7 +12,8 @@ import { SETUP_PUBLISHER_INVENTORY_PATH, SETUP_PUBLISHER_INVENTORY_LIMITS, Setup
   type SetupPublisherInventoryReviewFact, type SetupPublisherInventoryReviewRecord,
   type SetupPublisherInventoryReviewer, type SetupPublisherInventoryUnit } from '../domain/setup_publisher_inventory_review';
 import { assertSetupPublisherInventoryBindings, canonicalPublisherInventoryJson, decideSetupPublisherInventoryReview,
-  parseSetupPublisherInventoryDocument, publisherInventoryActorLogin, publisherInventoryContractSha256, publisherInventorySha256 } from '../application/policies/setup_publisher_inventory_review_policy';
+  parseSetupPublisherInventoryDocument, publisherInventoryActorLogin, publisherInventoryConditionReferences,
+  publisherInventoryContractSha256, publisherInventorySha256 } from '../application/policies/setup_publisher_inventory_review_policy';
 import { setupInstallationTreeLevel } from '../application/policies/setup_installation_tree_policy';
 import { setupPublisherWorkflow } from '../application/policies/setup_publisher_installation_policy';
 import type { SetupInstallationTree, SetupInstallationSubtree } from '../application/contracts/setup_installation_delivery';
@@ -67,7 +68,7 @@ const hasRuntimeOverride = (values: Data): boolean => Object.keys(values)
   .some(key => /^(?:PATH|NODE_OPTIONS|NODE_PATH|BASH_ENV|ENV|SHELLOPTS|GITHUB_ACTION_PATH|LD_.*|DYLD_.*)$/iu.test(key));
 
 /** A finite source profile, not proof of arbitrary JavaScript behavior. */
-function nodeImports(content: string): readonly string[] {
+function nodeImports(content: string, boundEnvironment: ReadonlySet<string>): readonly string[] {
   let root: Data, globals: ReadonlySet<unknown>;
   try { root = parseJavaScript(content, { ecmaVersion: 'latest', sourceType: 'module',
     ranges: true, allowHashBang: true, allowReturnOutsideFunction: true }) as unknown as Data;
@@ -129,6 +130,13 @@ function nodeImports(content: string): readonly string[] {
     if (node.type === 'MemberExpression') {
       const name = memberName(node), owner = batchObject(node.object);
       if (opaqueMembers.has(name) || owner?.type === 'Identifier' && owner.name === 'Object' && globals.has(owner) && !objectOperations.has(name)) return unresolved();
+      if (owner?.type === 'Identifier' && owner.name === 'process' && globals.has(owner) && name === 'env') {
+        // The complete environment also contains provider/runner inputs that
+        // cannot be inferred from YAML. Only a literal, source-bound key may
+        // escape this member; aliases, enumeration and computed reads stay open.
+        if (parent?.type !== 'MemberExpression' || parent.object !== node
+          || !boundEnvironment.has(memberName(parent))) return unresolved();
+      }
     }
     if (node.type === 'Property' || node.type === 'MethodDefinition' || node.type === 'PropertyDefinition') {
       const key = batchObject(node.key);
@@ -446,6 +454,23 @@ export class SetupPublisherInventoryReviewAdapter {
         inputs.set(record.id, record);
       }
     };
+    const condition = (value: unknown, context: ExecutionContext): void => {
+      for (const reference of publisherInventoryConditionReferences(value)) {
+        if (reference.context === 'vars') {
+          if (variables.fingerprint.effectiveVariablesSha256 === undefined) return unresolved();
+          continue;
+        }
+        if (reference.context === 'github') {
+          if (!['repository', 'repository_id'].includes(reference.name!.toLowerCase())) return unresolved();
+          continue;
+        }
+        const values = reference.context === 'env' ? context.environment : context.inputs;
+        const names = Object.keys(values).filter(name => name.toLowerCase() === reference.name!.toLowerCase());
+        if (names.length !== 1) return unresolved();
+        const definition = values[names[0]];
+        if (typeof definition === 'string' && /\$\{\{\s*secrets\b/iu.test(definition)) return unresolved();
+      }
+    };
     const metadata = async (source: UnitSource, context: ExecutionContext, depth: number): Promise<void> => {
       if (depth > 16 || active.has(source.unit.id)) return unresolved();
       active.add(source.unit.id);
@@ -459,6 +484,7 @@ export class SetupPublisherInventoryReviewAdapter {
           if (step['working-directory'] !== undefined || step.shell !== undefined && !['bash', 'sh'].includes(String(step.shell))) return unresolved();
           observe(source, current, job, index + 1, 'env', scope(step.env), 'step-env');
           observe(source, current, job, index + 1, 'with', scope(step.with), 'literal');
+          condition(step.if, current);
           if (typeof step.run === 'string') {
             if (step.run.includes('${{') && !/^\s*$/u.test(step.run.replace(/\$\{\{\s*github\.action_path\s*\}\}/gu, ''))) {
               // Shell interpolation may create executable syntax. General
@@ -475,7 +501,8 @@ export class SetupPublisherInventoryReviewAdapter {
             const action = this.yaml(called.content), defaults = scope(action.inputs), provided = scope(step.with), resolved: Data = {};
             for (const [name, raw] of Object.entries(defaults)) {
               const input = batchObject(raw); if (!input) return unresolved();
-              if (!(name in provided) && input.default !== undefined) resolved[name] = input.default;
+              if (!Object.keys(provided).some(key => key.toLowerCase() === name.toLowerCase())
+                && input.default !== undefined) resolved[name] = input.default;
             }
             observe(called, current, job, index + 1, 'with', resolved, 'default');
             await metadata(called, { ...current, inputs: { ...resolved, ...provided }, route: `${parent.route}/${source.unit.id}/${role}` }, depth + 1);
@@ -496,6 +523,7 @@ export class SetupPublisherInventoryReviewAdapter {
           if (job.strategy !== undefined) return unresolved();
           const local = { ...context, environment: environment(workflowEnvironment, scope(job.env)), workspace: [] };
           observe(source, local, name, 0, 'env', scope(job.env), 'job-env');
+          condition(job.if, local);
           if (typeof job.uses === 'string') {
             const role = `uses:${name}`, called = sourceFor(source, role, u => u.kind === 'reusable-workflow');
             this.assertUses(job.uses, source, called, local, true);
@@ -513,13 +541,23 @@ export class SetupPublisherInventoryReviewAdapter {
         }
         else if (runs.using === 'node20' || runs.using === 'node24') {
           if (source.unit.kind !== 'action') return unresolved();
+          // The Node action handler adds INPUT_* after the step environment.
+          // Composite shell steps do not receive this implicit projection.
+          // A declared input without a default is still projected as an empty
+          // string by the runner. Its absence is bound by this manifest and
+          // the complete caller with-map, rather than by an ambient value.
+          const declaredInputs = Object.fromEntries(Object.keys(scope(value.inputs)).map(name => [name, '']));
+          const inputEnvironment = Object.fromEntries(Object.entries({ ...declaredInputs, ...context.inputs })
+            .map(([name, value]) => [`INPUT_${name.replace(/ /gu, '_').toUpperCase()}`, value]));
+          const nodeContext = { ...context, environment: environment(context.environment, inputEnvironment) };
           for (const role of ['main', 'pre', 'post']) {
             if (role !== 'main' && runs[role] === undefined) continue;
+            if (role !== 'main') condition(runs[`${role}-if`], context);
             const file = runs[role]; if (typeof file !== 'string') return unresolved();
             const expected = sibling(source.unit.path, file.replace(/^\.\//u, ''));
             const program = sourceFor(source, role, u => u.kind === 'node-entrypoint' && u.repositoryId === source.unit.repositoryId
               && u.commit === source.unit.commit && u.path === expected);
-            this.verifyNode(program, document, sources, context, new Set());
+            this.verifyNode(program, document, sources, nodeContext, new Set());
           }
         } else return unresolved();
       }
@@ -644,7 +682,12 @@ export class SetupPublisherInventoryReviewAdapter {
     const content = program.content;
     // Human review supplies semantics. Parsed source also closes indirect
     // loading, constructors, reflection and CommonJS wrapper escapes.
-    const imports = nodeImports(content);
+    // Provider defaults and runtime/state channels cannot be replaced by a
+    // same-named YAML claim. GITHUB_TOKEN is an explicitly passed credential.
+    // The Node handler also removes NODE_ICU_DATA before starting the process.
+    const boundEnvironment = new Set(Object.keys(context.environment)
+      .filter(name => !/^(?:GITHUB_|RUNNER_|ACTIONS_|STATE_|NODE_ICU_DATA$)/iu.test(name) || name === 'GITHUB_TOKEN'));
+    const imports = nodeImports(content, boundEnvironment);
     let count = 0;
     for (const specifier of imports) {
       if (builtinModules.includes(specifier) || builtinModules.includes(specifier.replace(/^node:/u, ''))) {
@@ -667,11 +710,33 @@ export class SetupPublisherInventoryReviewAdapter {
 
   private verifyProducerMeaning(document: SetupPublisherInventoryDocument, sources: ReadonlyMap<string, UnitSource>): void {
     const incompatible = (): never => { throw new SetupPublisherInventoryError('incompatible-producer'); };
-    const lane = (value: unknown): boolean => {
+    const preserving = (value: unknown): boolean => {
       const concurrency = batchObject(value);
       return concurrency?.['cancel-in-progress'] === false && concurrency.queue === 'max'
+        && typeof concurrency.group === 'string' && concurrency.group.length > 0;
+    };
+    const lane = (value: unknown): boolean => {
+      const concurrency = batchObject(value);
+      return preserving(value)
         && ['copilot-bugbot-status-${{ github.repository_id }}-${{ inputs.pull_number }}',
-          'copilot-bugbot-status-${{ github.repository_id }}-${{ github.event.pull_request.number }}'].includes(String(concurrency.group));
+          'copilot-bugbot-status-${{ github.repository_id }}-${{ github.event.pull_request.number }}'].includes(String(concurrency?.group));
+    };
+    const metadata = (id: string, inheritedLane: boolean, active: ReadonlySet<string>): void => {
+      if (active.has(id) || active.size >= 16) return incompatible();
+      const current = sources.get(id); if (!current) return incompatible();
+      const value = this.yaml(current.content), jobs = scope(value.jobs), next = new Set([...active, id]);
+      if (value.concurrency !== undefined && !preserving(value.concurrency)) return incompatible();
+      const workflowLane = inheritedLane || lane(value.concurrency);
+      for (const [name, raw] of Object.entries(jobs)) {
+        const job = scope(raw);
+        if (job.concurrency !== undefined && !preserving(job.concurrency)) return incompatible();
+        const jobLane = workflowLane || lane(job.concurrency);
+        if (typeof job.uses === 'string') {
+          const edges = document.edges.filter(edge => edge.from === id && edge.role === `uses:${name}`);
+          if (edges.length !== 1) return incompatible();
+          metadata(edges[0].to, jobLane, next);
+        } else if (!jobLane) return incompatible();
+      }
     };
     for (const workflow of document.workflows) {
       const pending = [...workflow.entryUnits], reached = new Set<string>();
@@ -687,8 +752,7 @@ export class SetupPublisherInventoryReviewAdapter {
       // The independent review identifies semantic writer paths. Observable
       // serialization must also hold; a claimed compatible label cannot waive
       // missing queue preservation or cancel an older publication.
-      const root = this.yaml(sources.get(workflow.entryUnits[0])!.content), jobs = scope(root.jobs);
-      if (!lane(root.concurrency) && Object.values(jobs).some(job => !lane(batchObject(job)?.concurrency))) return incompatible();
+      metadata(workflow.entryUnits[0], false, new Set());
     }
   }
 

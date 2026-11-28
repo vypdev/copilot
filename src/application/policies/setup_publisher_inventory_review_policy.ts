@@ -60,6 +60,112 @@ export function canonicalPublisherInventoryJson(value: unknown): string {
 
 export const publisherInventorySha256 = (value: unknown): string => hash(canonicalPublisherInventoryJson(value));
 
+export interface PublisherInventoryConditionReference {
+  readonly context: 'env' | 'inputs' | 'vars' | 'github';
+  readonly name?: string;
+}
+
+/** Parse the finite condition profile for input closure; never evaluate it. */
+export function publisherInventoryConditionReferences(value: unknown): readonly PublisherInventoryConditionReference[] {
+  const unresolved = (): never => { throw new SetupPublisherInventoryError('unresolved-closure'); };
+  if (value === undefined || value === null || typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value)) return [];
+  if (typeof value !== 'string') return unresolved();
+  let source = value.trim();
+  if (source.startsWith('${{')) {
+    if (!source.endsWith('}}')) return unresolved();
+    source = source.slice(3, -2).trim();
+  }
+  type Token = { kind: 'word' | 'string' | 'number' | 'operator'; value: string };
+  const tokens: Token[] = [];
+  for (let offset = 0; offset < source.length;) {
+    if (/\s/u.test(source[offset])) { offset++; continue; }
+    if (tokens.length >= 10_000) return unresolved();
+    if (source[offset] === "'") {
+      let literal = '', closed = false; offset++;
+      while (offset < source.length) {
+        if (source[offset] !== "'") { literal += source[offset++]; continue; }
+        if (source[offset + 1] === "'") { literal += "'"; offset += 2; continue; }
+        offset++; closed = true; break;
+      }
+      if (!closed) return unresolved();
+      tokens.push({ kind: 'string', value: literal }); continue;
+    }
+    const remaining = source.slice(offset), word = /^[A-Za-z_][A-Za-z0-9_-]*/u.exec(remaining);
+    if (word) { tokens.push({ kind: 'word', value: word[0] }); offset += word[0].length; continue; }
+    const number = /^-?(?:0[xX][0-9a-fA-F]+|(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)/u.exec(remaining);
+    if (number) { tokens.push({ kind: 'number', value: number[0] }); offset += number[0].length; continue; }
+    const operator = ['&&', '||', '==', '!=', '<=', '>=', '!', '<', '>', '(', ')', '[', ']', '.', ','].find(v => remaining.startsWith(v));
+    if (!operator) return unresolved();
+    tokens.push({ kind: 'operator', value: operator }); offset += operator.length;
+  }
+  let cursor = 0;
+  const peek = () => tokens[cursor];
+  const operator = (value: string): boolean => peek()?.kind === 'operator' && peek().value === value;
+  const take = (expected: string): void => { if (!operator(expected)) return unresolved(); cursor++; };
+  const binary = new Map([['||', 1], ['&&', 2], ['==', 3], ['!=', 3], ['<', 4], ['<=', 4], ['>', 4], ['>=', 4]]);
+  const functions = new Map<string, readonly [number, number]>([
+    ['contains', [2, 2]], ['startswith', [2, 2]], ['endswith', [2, 2]], ['format', [1, 10_000]],
+    ['join', [1, 2]], ['tojson', [1, 1]], ['fromjson', [1, 1]],
+    ['always', [0, 0]], ['success', [0, 0]], ['failure', [0, 0]], ['cancelled', [0, 0]],
+  ]);
+  const references = new Map<string, PublisherInventoryConditionReference>();
+  function expression(minimum: number, depth: number): void {
+    if (depth > 64) return unresolved();
+    unary(depth);
+    while (true) {
+      const priority = peek()?.kind === 'operator' ? binary.get(peek().value) : undefined;
+      if (priority === undefined || priority < minimum) break;
+      cursor++; expression(priority + 1, depth + 1);
+    }
+  }
+  function unary(depth: number): void {
+    if (depth > 64) return unresolved();
+    if (operator('!')) { cursor++; unary(depth + 1); return; }
+    const data = primary(depth);
+    while (operator('.') || operator('[')) {
+      if (!data) return unresolved();
+      if (operator('.')) {
+        cursor++; if (peek()?.kind !== 'word') return unresolved(); cursor++;
+      } else { cursor++; expression(0, depth + 1); take(']'); }
+    }
+  }
+  function primary(depth: number): boolean {
+    const token = peek(); if (!token) return unresolved();
+    if (token.kind === 'operator' && token.value === '(') { cursor++; expression(0, depth + 1); take(')'); return true; }
+    if (token.kind === 'string' || token.kind === 'number') { cursor++; return true; }
+    if (token.kind !== 'word') return unresolved();
+    cursor++;
+    const name = token.value.toLowerCase();
+    if (['true', 'false', 'null'].includes(name)) return true;
+    if (operator('(')) {
+      const arity = functions.get(name); if (!arity) return unresolved();
+      cursor++; let count = 0;
+      if (!operator(')')) {
+        while (true) {
+          expression(0, depth + 1); count++;
+          if (!operator(',')) break;
+          cursor++;
+        }
+      }
+      take(')'); if (count < arity[0] || count > arity[1]) return unresolved();
+      return true;
+    }
+    if (!['env', 'inputs', 'vars', 'github'].includes(name)) return unresolved();
+    let key: string | undefined;
+    if (operator('.')) {
+      cursor++; if (peek()?.kind !== 'word') return unresolved(); key = peek().value; cursor++;
+    } else if (operator('[')) {
+      cursor++; if (peek()?.kind !== 'string') return unresolved(); key = peek().value; cursor++; take(']');
+    } else if (name !== 'vars') return unresolved();
+    const reference = { context: name as PublisherInventoryConditionReference['context'], ...(key !== undefined && { name: key }) };
+    references.set(`${name}:${key ?? ''}`, Object.freeze(reference));
+    return false;
+  }
+  expression(0, 0);
+  if (cursor !== tokens.length) return unresolved();
+  return Object.freeze([...references.values()]);
+}
+
 export function parseSetupPublisherInventoryLocator(value: unknown): SetupPublisherInventoryLocator {
   if (!exact(value, ['pullRequest', 'head', 'documentSha256']) || !positive(value.pullRequest)
     || !matches(value.head, sha) || !matches(value.documentSha256, digest)) return invalid();

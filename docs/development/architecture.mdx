@@ -723,6 +723,17 @@ reflection escapes, opaque dynamic property access and unsupported native module
 Local shadowed identifiers and inert code-like strings remain ordinary source.
 The finite profile is bounded at10,000 syntax nodes and depth64; it does not prove
 arbitrary JavaScript behavior. Shell callee edges similarly retain command order.
+Global `process.env` reads require literal source-bound keys; aliases and ambient
+provider/runtime/state values stay unresolved. Node Action inputs project to
+`INPUT_*` with provided/default precedence and a manifest-bound empty string for
+declared inputs lacking a default; composite shell children have no implicit
+projection. A pure bounded condition parser closes job/step/pre/post dependencies
+without evaluating branches or fetching Secret values. Secret-derived selectors
+stay blocked, including supported job-env-to-step conditions; inert strings and
+bound non-secret contexts remain valid. Serialized-producer validation follows
+each reachable job and reusable workflow even under a valid root lane. Every
+declared policy must preserve pending/running work; a preserving auxiliary group
+can retain an inherited shared barrier.
 Node and shell execution share the same runtime-environment override fence;
 source identity alone cannot authorize an unbound interpreter preload. Provider
 failures within inventory inspection become closed review-unavailable or

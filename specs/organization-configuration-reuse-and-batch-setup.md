@@ -2044,6 +2044,45 @@ condition/metadata text, and this separate record binds its mutable configuratio
 Existing per-`env`/`with` bindings remain required. No expression execution,
 additional provider scope or bypass configuration is introduced.
 
+Global Node `process.env` access MUST name one literal key bound to the effective
+source context. Reject whole-environment aliases/enumeration, computed nonliteral
+keys and unbound ambient inputs. Preserve lexical shadowing and inert strings.
+Node Actions project manifest defaults and provided inputs to `INPUT_*`, with
+case-insensitive supplied-input precedence; a declared input without a default
+projects the empty string. That absence is bound by the immutable manifest and
+complete caller input map. Composite shell children do not receive this implicit
+projection. Provider/runtime/state channels (`GITHUB_*`, `RUNNER_*`, `ACTIONS_*`,
+`STATE_*`) and removed `NODE_ICU_DATA` cannot be accredited by a same-named YAML
+claim; explicitly passed `GITHUB_TOKEN` remains a symbolic credential.
+
+Job/step and Node pre/post conditions MUST have a closed input profile. A pure
+parser extracts dependencies without evaluation, with fixed10,000-token/depth64
+bounds. Supported literals, comparisons/logical operators, pure string/JSON
+functions and status functions preserve all dependencies. Only source-bound
+`env`/`inputs`, the complete witnessed `vars` namespace and fixed destination
+`github.repository`/`github.repository_id` facts can qualify. Missing, dynamic,
+unknown or Secret-derived selectors remain unresolved; inert Secret-like text
+does not imply a Secret read. This includes the provider-supported pattern of a
+job env credential selecting a step. Direct `secrets` in `if` is unsupported by
+GitHub and is not claimed as a successful runtime reproduction. Symbolic
+credentials remain supported for independently reviewed value-independent use.
+
+A serialized producer MUST retain a shared lane along every reachable job and
+reusable-workflow writer path. Validate every explicit root/job concurrency
+policy even under an inherited valid shared lane: cancellation must be false and
+queue must be max. A separate preserving auxiliary group does not remove the
+inherited barrier. A shared job or callee lane can supply the barrier when its
+caller has none. Workflow-scoped producer claims conservatively treat each job
+as a potential writer. Legal single/default queues can discard older pending
+work; `queue: max` with cancellation true is invalid provider syntax, not a
+claimed live cancellation reproduction. The reader executes no workflow.
+
+Provider references: [Node input projection](https://github.com/actions/runner/blob/main/src/Runner.Worker/Handlers/Handler.cs),
+[default input loading](https://github.com/actions/runner/blob/main/src/Runner.Worker/ActionRunner.cs),
+[Node runtime environment](https://github.com/actions/runner/blob/main/src/Runner.Worker/Handlers/NodeScriptActionHandler.cs),
+[concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
+and [Secret conditions](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
+
 Node and shell inspection MUST reject runtime environment overrides that can
 load code outside the bound graph. Inventory read failures expose closed current
 review-unavailable or unresolved-source causes instead of losing their stage.
@@ -2109,7 +2148,7 @@ evaluated-pilot write attempts remain zero.
 ### Completed source-review corrections (#1007)
 
 The62 semantic inventory/recovery cases remain the acceptance floor; parameter
-variants do not create new case identities. The reviewed implementation adds159
+variants do not create new case identities. The reviewed implementation adds260
 risk controls:33 indirect Node escape programs,11 unsafe native modules,14 valid
 closed programs, one inert download/code-construction oracle, four syntax bounds,
 one two-import source-order case, two actual job-input bindings,11 pure job-scope
@@ -2120,7 +2159,15 @@ command-order variants; plus14 complete-context controls: missing job/step
 condition witnesses2, bound job/step conditions with changed values2, an empty
 namespace followed by Variable creation1, substituted digest/commit/content3,
 changed exact operation approval1, concurrency-only metadata1, preview drift1
-and post-tree/commit/branch drift3. These controls MUST
+and post-tree/commit/branch drift3. A further101 input/serialization controls cover
+60 pure closed-condition grammar/dependency boundaries, seven ambient Node escape
+shapes, five provider/runtime collisions, three bound environment freshness paths,
+one lexical/inert distinction, one absent declared input, one composite projection
+negative, two pre/post condition cases, eleven condition source/Secret/literal
+variants, five job-policy variants, four authenticated external reusable paths
+and one case-insensitive provided-input precedence case. The original three
+positive fixtures now explicitly bind their previously ambient MODE instead of
+weakening the input guard. These controls MUST
 traverse the complete reader where provider/source behavior is asserted. The
 source-order cases retain original failures before correction and preserve
 swapped-dependency rejection. Existing pure100% and reader95%lines/statements,
@@ -2130,6 +2177,8 @@ qualified by deterministic controls.
 
 Traceability: preparation and human operating boundary -> IR977-R02/C10-C21;
 Node/shell source closure -> IR977-R03/C27/C29; valid job scopes and actual Variable
-read disclosure -> IR977-R03/C30; package manifest/lockfile and generated CLI ->
+read disclosure, Node environment and condition bindings -> IR977-R03/C30;
+pre/post conditions -> C28; inherited/job/reusable lane preservation -> C34;
+package manifest/lockfile and generated CLI ->
 IR977-R08. Provisioning and architecture describe the same actual read/trust
 boundary. The selected Action-published companion remains byte-identical.

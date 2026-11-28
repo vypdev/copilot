@@ -223,6 +223,18 @@ settings, without evaluating those expressions. Missing bindings block review;
 changed Variables require updated evidence, independent review and a new exact
 installation approval. Creating a Variable after reviewing an empty namespace
 also invalidates that evidence. Existing `env`/`with` bindings remain required.
+Node programs must read literal, source-bound environment keys. Whole-environment
+aliases, dynamic keys and ambient provider/runtime/state channels cannot inherit
+approval from a YAML claim. Node Actions retain supplied/default `INPUT_*`
+precedence, including an empty string for declared inputs without defaults;
+composite shell children receive no automatic input projection.
+Job/step and Node pre/post conditions are inspected without running them. Bound
+non-secret inputs and status/pure data functions are supported; missing contexts
+or Secret-derived selectors block the review. For example, assigning a Secret to
+a job env value and using that value in a step condition remains unresolved.
+Serialization must hold through jobs and called reusable workflows: a valid root
+lane cannot excuse a job that cancels running work or drops older pending work.
+A preserving auxiliary group can coexist with an inherited shared lane.
 A symbolic credential is supported only where reviewed behavior is independent
 of its value; Secret-derived code or behavior selection remains unresolved.
 The maintainer supplies semantic assurance about the bound programs; source
