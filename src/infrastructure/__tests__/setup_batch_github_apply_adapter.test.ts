@@ -89,6 +89,44 @@ async function recoveryFixture(options: { active?: () => boolean; writer?: (writ
   return { ...f, journal, execute, review, receipt, posts, cleanup: () => rm(directory, { recursive: true, force: true }) };
 }
 describe('freshly reviewed legacy batch recovery through real Git delivery', () => {
+  it.each((['branch', 'pull-request'] as const).flatMap(phase => (['drift', 'cancelled'] as const).map(reason => ({ phase, reason }))))(
+    'publisher-inventory-C58: ordinary batch retains verified $phase after $reason and preserves its existing recovery policy without inventory authority', async ({ phase, reason }) => {
+      let active = true;
+      const f = await recoveryFixture({ active: () => active });
+      try {
+        const selected = `POST /repos/{owner}/{repo}/${phase === 'branch' ? 'git/refs' : 'pulls'}`;
+        const original = f.request.getMockImplementation()!; let changed = false;
+        f.request.mockImplementation(async (route, parameters) => {
+          const result = await original(route, parameters);
+          if (!changed && route === selected) {
+            changed = true;
+            if (reason === 'cancelled') active = false;
+            else jest.mocked(f.read.resolve).mockResolvedValue({ ...f.plan.target, baseSha: 'd'.repeat(40) });
+          }
+          return result;
+        });
+        const first = await f.execute();
+        expect(changed).toBe(true);
+        expect(first).toMatchObject({ schemaVersion: 1, targets: [{ status: reason === 'drift' ? 'blocked' : 'cancelled', reason, preparedCommit: prepared,
+          effects: ['access', 'variables', 'labels', 'issue-types', 'branch', ...(phase === 'pull-request' ? ['pull-request'] : [])],
+          ...(phase === 'pull-request' ? { pullRequestNumber: 31 } : {}) }] });
+        expect(await f.receipt()).toEqual(JSON.parse(JSON.stringify(first)));
+        expect(f.posts('pulls')).toHaveLength(phase === 'pull-request' ? 1 : 0);
+        active = true; jest.mocked(f.read.resolve).mockResolvedValue(f.plan.target);
+        const second = await f.execute();
+        if (reason === 'drift') expect(second).toEqual(first); // Legacy blocked records are terminal, even after a new review.
+        else expect(second.targets[0]).toMatchObject({ status: 'waiting-for-merge', pullRequestNumber: 31 });
+        expect(f.review).toHaveBeenCalledTimes(2); expect(f.resources.labels).toHaveBeenCalledTimes(1);
+        expect(f.resources.issueTypes).toHaveBeenCalledTimes(1);
+        expect(f.variableWriter.createMissing).not.toHaveBeenCalled(); expect(f.variableWriter.upsert).not.toHaveBeenCalled();
+        expect(f.variableWriter.upsertScopedVariables).not.toHaveBeenCalled();
+        for (const route of ['git/trees', 'git/commits', 'git/refs']) expect(f.posts(route)).toHaveLength(1);
+        expect(f.posts('pulls')).toHaveLength(reason === 'drift' && phase === 'branch' ? 0 : 1);
+        const retained = JSON.stringify(await f.receipt());
+        expect(retained).not.toContain('inventoryReview'); expect(retained).not.toContain('private-recovery-fixture');
+        expect(f.request.mock.calls.some(([route]) => /reviews|collaborators/.test(route))).toBe(false);
+      } finally { await f.cleanup(); }
+    });
   it('publisher977-C96: cancelled preparation intent resumes through the real v1 journal without repeating resources', async () => {
     let active = true, cancelled = false, preparedResourceSaves = 0;
     const f = await recoveryFixture({ active: () => active });

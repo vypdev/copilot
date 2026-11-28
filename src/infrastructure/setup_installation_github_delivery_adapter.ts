@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import type { SetupInstallationApprovedBlob, SetupInstallationDeliveryPlan, SetupInstallationSubtree,
   SetupInstallationTree, SetupInstallationTreeEntry } from '../application/contracts/setup_installation_delivery';
-import type { SetupInstallationObjectObserver } from '../application/ports/setup_installation_delivery_ports';
-import { SetupInstallationDeliveryCancelled, SetupInstallationSnapshotChanged } from '../application/ports/setup_installation_delivery_ports';
+import type { SetupInstallationObjectObserver, SetupInstallationObservedEffect } from '../application/ports/setup_installation_delivery_ports';
+import { SetupInstallationDeliveryCancelled, SetupInstallationObservedEffectError, SetupInstallationSnapshotChanged } from '../application/ports/setup_installation_delivery_ports';
 import { isSetupBatchInstallationReceipt, setupBatchBranch, setupBatchMarker,
   validSetupBatchAssetPath, validateSetupBatchTargets } from '../application/policies/setup_batch_policy';
 import { SETUP_INSTALLATION_MANIFEST_PATH } from '../application/policies/setup_installation_receipt_policy';
@@ -69,7 +69,7 @@ export class SetupInstallationGithubDeliveryAdapter {
     const current = await this.branchSha();
     if (current) {
       if (current !== commit) throw new SetupBatchProviderError('unknown');
-      await this.fresh(); return;
+      await this.confirmObservation({ effect: 'branch', commit }); return;
     }
     if (inspectOnly) throw new SetupBatchProviderError('unknown');
     await this.fresh();
@@ -79,7 +79,7 @@ export class SetupInstallationGithubDeliveryAdapter {
       /* Read the exact owned ref after an uncertain response; never repeat POST. */
     }
     if (await this.branchSha() !== commit) throw new SetupBatchProviderError('unknown');
-    await this.fresh();
+    await this.confirmObservation({ effect: 'branch', commit });
   }
   async pullRequest(commit: string, inspectOnly = false): Promise<number> {
     if (await this.branchSha() !== commit) throw new SetupBatchProviderError('unknown');
@@ -98,7 +98,7 @@ export class SetupInstallationGithubDeliveryAdapter {
       number = await this.inspectPullRequest(commit);
     }
     if (!number || await this.branchSha() !== commit) throw new SetupBatchProviderError('unknown');
-    await this.fresh();
+    await this.confirmObservation({ effect: 'pull-request', commit, pullRequestNumber: number });
     return number;
   }
   async assertPrepared(commit: string): Promise<void> {
@@ -143,6 +143,15 @@ export class SetupInstallationGithubDeliveryAdapter {
     if (!this.active()) throw new SetupInstallationDeliveryCancelled();
     dispatched?.();
     return this.call(route, parameters);
+  }
+  private async confirmObservation(observed: SetupInstallationObservedEffect): Promise<void> {
+    try {
+      if (!this.active()) throw new SetupInstallationDeliveryCancelled();
+      await this.fresh();
+      if (!this.active()) throw new SetupInstallationDeliveryCancelled();
+    }
+    catch (error) { throw new SetupInstallationObservedEffectError(error instanceof SetupInstallationDeliveryCancelled || !this.active()
+      ? 'cancelled' : 'drift', observed); }
   }
   private call(route: string, parameters: Record<string, unknown>): Promise<unknown> {
     return this.transport.call(this.#token, route, { owner: this.plan.target.owner, repo: this.plan.target.name, ...parameters });

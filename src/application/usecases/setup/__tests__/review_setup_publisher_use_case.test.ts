@@ -3,6 +3,8 @@ import { setupPublisherFixture } from '../../../policies/__tests__/fixtures/setu
 import type { SetupPublisherReadSnapshot, SetupPublisherReviewPorts } from '../../../ports/setup_publisher_review_ports';
 import type { SetupPublisherPlan } from '../../../../domain/setup_publisher_installation';
 import { SETUP_PUBLISHER_WORKFLOW_PATH } from '../../../../domain/setup_publisher_installation';
+import type { SetupPublisherOperation } from '../../../../domain/setup_publisher_installation';
+import * as planning from '../../../policies/setup_publisher_plan_policy';
 
 const id = '12345678-1234-4234-8234-123456789abc';
 function fixture() {
@@ -32,6 +34,21 @@ it('requires presentation, explicit approval and fresh identical facts before in
   expect(f.apply.mock.calls[0][0]).toBe(f.ports.present.mock.calls[0][0]);
   expect(f.apply.mock.calls[0][1]).toBe(f.session);
   expect(Object.keys(result.plan)).not.toContain('session'); expect(Object.keys(result.plan)).not.toContain('approved');
+});
+it('publisher-inventory-C47: an unexpected planning fault retains known results without exposing internal detail or approval', async () => {
+  const f = fixture(), plan = planning.planSetupPublisherInstallation(f.proposal, f.inspection, id);
+  const retained: SetupPublisherOperation = { schemaVersion: 2, purpose: plan.purpose, operationId: id, repositoryId: plan.target.id,
+    repository: `${plan.target.owner}/${plan.target.name}`, defaultBranch: plan.target.defaultBranch, baseSha: plan.target.baseSha,
+    sourceCommit: plan.sourceCommit, planDigest: plan.digest, approvalDigest: plan.approvalDigest!, actorId: plan.actorId,
+    status: 'waiting-for-merge', effects: ['tree', 'commit', 'branch', 'pull-request'], preparedTree: 'a'.repeat(40),
+    preparedCommit: 'b'.repeat(40), pullRequestNumber: 73 };
+  const fault = jest.spyOn(planning, 'planSetupPublisherInstallation').mockImplementationOnce(() => { throw new Error('private-policy-detail'); });
+  try {
+    await expect(new ReviewSetupPublisherUseCase(f.ports).execute({ ...f.input, reviewedOperation: retained }, f.apply))
+      .rejects.toEqual(new SetupPublisherReviewError('unavailable', undefined, retained));
+    expect(f.ports.present).not.toHaveBeenCalled(); expect(f.ports.confirm).not.toHaveBeenCalled(); expect(f.apply).not.toHaveBeenCalled();
+    expect(f.order).toEqual(['inspect']);
+  } finally { fault.mockRestore(); }
 });
 it('cancellation at the final approval admission boundary cannot open confirmation or Apply', async () => {
   const f = fixture(); let checks = 0;

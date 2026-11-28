@@ -128,6 +128,144 @@ markers cannot prove absence.
 Resolve that inventory before preparing a new preview; an older preview cannot
 authorize Apply after this result changes.
 
+### Independent producer inventory review
+
+Version1 proposals retain the conservative inventory behavior above. Version2
+adds a locator for separately prepared, independently reviewed evidence:
+
+```json
+{
+  "schemaVersion": 2,
+  "inventoryReview": {
+    "pullRequest": 81,
+    "head": "6666666666666666666666666666666666666666",
+    "documentSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}
+```
+
+This is an illustrative excerpt of the existing complete proposal. Replace its
+identities with the verified target values. The CLI reads the fixed document
+`.copilot/bugbot-publisher-inventory-review.json` from that exact open,
+same-repository PR head. Prepare it in a separate documentation issue/PR through
+the repository's managed workflow. Installation never creates the document,
+submits a review or migrates a producer.
+
+```text
+Bind workflow/code/input inventory -> independent maintainer review
+ -> authenticate current decision -> inspect exact two-file preview
+ -> approve installation separately -> create installation PR
+```
+
+The evidence PR's immutable base may differ from the destination default branch.
+Its complete base-to-head difference must change only the fixed document; the
+document separately binds the live destination commit/tree and the SDK publisher
+contract. The evidence PR's programs are never executed.
+
+The closed document records `schemaVersion`, `kind`, `destination`, `publisher`,
+`workflowSetSha256`, `workflows`, `units`, `edges` and `inputs`. It binds all
+workflows, declared pre/main/post entrypoints, called programs and effective
+input sources to exact Git identities and fingerprints. Canonical JSON uses
+sorted object keys, defined identity order for arrays, two-space indentation
+and one trailing newline. Extra fields and noncanonical bytes are rejected.
+Limits are 1MiB, 128 workflows, 2,048 units, 8,192 edges, 1,024 inputs, nesting
+depth16 and 2,048UTF-8 bytes per explanation. Existing Git limits and the128KiB
+proposal limit remain unchanged.
+
+A distinct maintainer with freshly verified repository write/admin permission
+reviews the actual programs. A qualifying GitHub approval is on the selected
+head and contains one closed statement between the HTML-comment markers
+`copilot:publisher-inventory-review:v1` and
+`/copilot:publisher-inventory-review:v1`. The statement has fields
+`kind=bugbot-publisher-inventory-review`, `decision=compatible`,
+`documentSha256`, `destinationRepositoryId`, `destinationHead` and
+`publisherContractSha256`. The PR author and every account recorded as preparing
+or publishing the evidence cannot approve it, including automation whose GitHub
+account type is `User`. Setup reads all PR commits (at most250) and up to ten
+100-event pages of authenticated branch activity; it must observe branch creation
+and publication of the selected head. Missing identities, unavailable history or
+exhausted pagination leave authority unverified. Git commit author declarations
+are insufficient publication evidence. A `User` account and write permission do
+not prove human deliberation: the operator must obtain an actual independent
+maintainer review. This preparing automation never submits that approval.
+A later generic approval cannot renew an earlier purpose-specific decision;
+a current independent request for changes blocks the preview. Incomplete review
+pages, unavailable permissions or missing source facts keep authority unverified.
+
+The supported source profile is finite: literal pinned Actions/reusable
+workflows, complete Node entrypoints/static imports, and supported literal shell
+programs/callees. GitHub's `$/` self references bind to the repository and commit
+of the workflow or action containing the reference, including `$/` for an action
+at that repository's root and references inside an external
+reusable workflow; they require no workspace checkout and cannot include an
+`@ref` suffix. They are unavailable on GitHub Enterprise Server. By contrast,
+`./` Action paths still require an independently bound immutable workspace.
+See [GitHub's source-reference syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsuses).
+Node inspection parses syntax and lexical scopes. It accepts source-bound
+literal imports and supported native utility modules, while indirect code
+creation, reflection escapes, opaque computed properties and native execution or
+loading facilities remain unresolved. Source traversal is bounded at10,000 syntax
+nodes and depth64; a larger or unsupported program needs a reviewed supported
+binding profile. Code-like strings alone do not represent execution.
+ESM imports/re-exports use their actual URL-resolved file, including percent
+decoding and query/fragment metadata. A same-named decoy cannot stand in for the
+executed file; invalid URLs and paths escaping the source repository remain
+unresolved. CommonJS require keeps literal filename spelling, and valid canonical
+URL imports are supported without running repository programs during inspection.
+Floating refs, mutable candidate checkouts, dynamic loading,
+unbound downloads, unsupported matrices and unresolved expressions stay blocked.
+Runtime environment overrides that can select other executable code, including
+`NODE_OPTIONS` preloads, also remain unresolved for Node and shell programs.
+Publisher review reads repository Variables and organization Variables shared
+with that exact repository through authenticated GETs. The
+[repository-shared list](https://docs.github.com/en/rest/actions/variables#list-repository-organization-variables)
+uses repository Variables-read permission; it does not require organization-wide
+Variable/admin access or other repositories' grant lists. GitHub applies the
+visibility/membership policy to this list, and repository values override shared
+ones. Complete pagination remains mandatory; denial or missing pages block the
+review. Values resolve effective inputs and aggregate `INPUT_VARS_JSON`; only
+fingerprints/provenance enter evidence, with no raw values logged or persisted.
+Secret values are never fetched. Ordinary batch resource/grant management keeps
+its separate permissions and behavior.
+If this read is required, the evidence document must include a workflow-scoped
+`vars-context` binding for every inventoried workflow, including an empty
+namespace. This also covers Variables used only by conditions or concurrency
+settings, without evaluating those expressions. Missing bindings block review;
+changed Variables require updated evidence, independent review and a new exact
+installation approval. Creating a Variable after reviewing an empty namespace
+also invalidates that evidence. Existing `env`/`with` bindings remain required.
+Node programs must read literal, source-bound environment keys. Whole-environment
+aliases, dynamic keys and ambient provider/runtime/state channels cannot inherit
+approval from a YAML claim. Node Actions retain supplied/default `INPUT_*`
+precedence, including an empty string for declared inputs without defaults;
+composite shell children receive no automatic input projection.
+Job/step and Node pre/post conditions are inspected without running them. Bound
+non-secret inputs and status/pure data functions are supported; missing contexts
+or Secret-derived selectors block the review. For example, assigning a Secret to
+a job env value and using that value in a step condition remains unresolved.
+Serialization must hold through jobs and called reusable workflows: a valid root
+lane cannot excuse a job that cancels running work or drops older pending work.
+A preserving auxiliary group can coexist with an inherited shared lane.
+With `queue: max`, cancellation may be explicitly false or omitted using GitHub's
+false default. Cancellation true or unresolved dynamic values remain blocked.
+A symbolic credential is supported only where reviewed behavior is independent
+of its value; Secret-derived code or behavior selection remains unresolved.
+The maintainer supplies semantic assurance about the bound programs; source
+inspection does not prove arbitrary program behavior.
+
+Dispositions distinguish non-producers, producers using the shared serialized
+lane, incompatible producers and unresolved execution. A known foreign/direct
+writer cannot be approved away. A producer migration needs a separate reviewed
+change preserving candidate Action regression coverage. This review mechanism
+does not itself prove the real repository inventory compatible.
+
+Before each Git effect and recovery, Setup rechecks the live target, relevant
+source/input facts, review and reviewer permissions. Drift invalidates the old
+operation approval. Exact installed bytes with compatible inventory stay
+unchanged and create no empty PR. Provider reads and writes are separate
+requests; exact ownership readback and current-session dispatch checks remain
+required, without a claim of atomic revocation between requests.
+
 An incomplete or malformed Git tree blocks Setup file preparation. Unreadable
 entries cannot establish that an existing manifest is absent or authorize a
 replacement with an empty baseline. Reinspect the immutable default revision
@@ -196,6 +334,17 @@ only after inspection confirms its exact owned identity is absent and current
 authority and snapshot still match. A completed operation only rechecks its
 recorded ref and PR; it never recreates either. See
 [publisher recovery](/security-operations/operations/troubleshooting#recover-a-publisher-proposal-operation).
+
+If review authority changes after a branch or PR was completely verified,
+Setup retains that historical result and stops later effects. A blocked review
+shows its current cause, the operation and any known installation PR separately
+from the selected inventory evidence. A POST response alone cannot establish
+ownership. If the subsequent journal save fails, the reported known result may
+be newer than the saved record; preserve both and inspect before recovery.
+No failure removes a created object or authorizes an automatic retry.
+An unsupported installed snapshot or an internal planning failure also retains
+the known operation and PR. A denied inventory read identifies the current
+review/source prerequisite; it does not erase prior success or offer approval.
 
 After merge into trusted default, separately verify the installed revision and
 explicitly authorized native canary. Source integration, a packed CLI pass or a

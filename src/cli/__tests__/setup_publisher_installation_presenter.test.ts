@@ -3,6 +3,7 @@ import { planSetupPublisherInstallation } from '../../application/policies/setup
 import { resolveStaticSetupPublisherCatalog } from '../../application/policies/setup_publisher_message_catalog';
 import { SetupPublisherInstallationPresenter, setupPublisherInertText } from '../setup_publisher_installation_presenter';
 import type { SetupPublisherOperation } from '../../domain/setup_publisher_installation';
+import type { SetupPublisherBlockedReview } from '../../application/ports/setup_publisher_review_ports';
 
 const id = '11111111-1111-4111-8111-111111111111';
 function fixture(locale = 'en-US') {
@@ -13,6 +14,12 @@ function fixture(locale = 'en-US') {
     planDigest: plan.digest, approvalDigest: plan.approvalDigest!, actorId: plan.actorId, status: 'partial',
     effects: ['tree', 'commit', 'branch'], preparedTree: 'a'.repeat(40), preparedCommit: 'b'.repeat(40), uncertain: 'pull-request' };
   return { ...f, plan, lines, catalog, presenter, operation };
+}
+function reviewedInventory() {
+  return { pullRequest: 81, head: '6'.repeat(40), base: '7'.repeat(40), documentSha256: 'a'.repeat(64),
+    workflowSetSha256: 'b'.repeat(64), closureSha256: 'c'.repeat(64), contractSha256: 'd'.repeat(64), decisionsSha256: 'e'.repeat(64),
+    approvals: [{ reviewId: 101, actorId: 17, actorLogin: 'reviewer' }],
+    workflows: [{ path: '.github/workflows/ci.yml', disposition: 'non-producer' as const }] };
 }
 it.each(['applying', 'partial', 'waiting-for-merge', 'verification-pending'] as const)(
   'publisher977-C109: %s output links the known saved operation without inventing a run', status => {
@@ -66,6 +73,75 @@ it.each(['en-US', 'es-ES', 'fr-FR', 'pt-BR'])('renders review, retained uncertai
   expect(f.lines.join('')).toContain(f.catalog.message('nativePending')); expect(f.lines.join('')).toContain(f.catalog.message('production'));
 });
 it('an unchanged view never promises new approved effects or an empty PR', () => {
-  const f = fixture(); f.presenter.preview({ ...f.plan, status: 'unchanged', files: [], approvalDigest: null });
+  const f = fixture(); f.presenter.preview({ ...f.plan, status: 'unchanged', files: [], approvalDigest: null, inventoryReview: reviewedInventory() });
   expect(f.lines.join('')).toContain(f.catalog.message('unchanged')); expect(f.lines.join('')).not.toContain(f.catalog.message('effects'));
+  expect(f.lines.join('')).toContain(f.catalog.message('inventoryUnchanged'));
+  expect(f.lines.join('')).not.toContain(f.catalog.message('inventorySeparate'));
 });
+it('publisher-inventory-C43: a missing review view shows retained facts and one current review action without a plan', () => {
+  const f = fixture(), view: SetupPublisherBlockedReview = { reason: 'review-required', operationId: id, repository: 'owner/project',
+    evidence: { pullRequest: 81, head: '6'.repeat(40), documentSha256: '7'.repeat(64) } };
+  f.presenter.inventoryBlocked(view, { ...f.operation, pullRequestNumber: 73 });
+  const text = f.lines.join(''), normalized = text.replace(/\s+/gu, ' ');
+  expect(normalized).toContain(f.catalog.message('inventoryRequired'));
+  expect(text).toContain('https://github.com/owner/project/pull/73');
+  expect(text).toContain('https://github.com/owner/project/pull/81');
+  expect(text).not.toContain(f.catalog.message('effects')); expect(text).not.toContain('Complete file:');
+  expect(text).not.toContain(f.catalog.message('recovery')); expect(text).not.toContain('APPROVE');
+});
+it('publisher-inventory-C44: incompatible and unresolved inventories have distinct causes and migration/review actions', () => {
+  const results: string[] = [];
+  for (const reason of ['incompatible-producer', 'unresolved-closure'] as const) {
+    const f = fixture(); f.presenter.inventoryBlocked({ reason, operationId: id, repository: 'owner/project',
+      evidence: { pullRequest: 81, head: '6'.repeat(40), documentSha256: '7'.repeat(64) } });
+    const text = f.lines.join('').replace(/\s+/gu, ' '); results.push(text);
+    expect(text).toContain(f.catalog.message(reason === 'incompatible-producer' ? 'inventoryIncompatible' : 'inventoryUnresolved'));
+    expect(text).not.toContain(f.catalog.message('preview')); expect(text).not.toContain(f.catalog.message('unchanged'));
+  }
+  expect(results[0]).not.toBe(results[1]);
+});
+it('publisher-inventory-C47: a partial view preserves known operation and PR links without claiming rollback', () => {
+  const f = fixture(), record = `file:///owned/${id}.json`;
+  f.presenter.inventoryBlocked({ reason: 'review-unavailable', operationId: id, repository: 'owner/project',
+    evidence: { pullRequest: 81, head: '6'.repeat(40), documentSha256: '7'.repeat(64) } },
+  { ...f.operation, pullRequestNumber: 73, uncertain: 'pull-request' }, record);
+  const text = f.lines.join('');
+  expect(text).toContain(record); expect(text).toContain('https://github.com/owner/project/pull/73');
+  expect(text).toContain(f.operation.preparedTree!); expect(text).toContain(f.operation.preparedCommit!);
+  expect(text).toContain(f.catalog.message('uncertain', { effect: f.catalog.message('effect.pull-request') }));
+  expect(text).not.toMatch(/rolled back|removed|installation complete/iu);
+});
+it.each(['en-US', 'es-ES', 'fr-FR', 'pt-BR', 'de-DE'])(
+  'publisher-inventory-C48: %s blocked output wraps narrow prose and rejects unsafe evidence coordinates', locale => {
+    const f = fixture(locale), presenter = new SetupPublisherInstallationPresenter(f.catalog, text => f.lines.push(text), 40);
+    const view: SetupPublisherBlockedReview = { reason: 'review-required', operationId: id, repository: 'owner/project',
+      evidence: { pullRequest: 81, head: '6'.repeat(40), documentSha256: '7'.repeat(64) } };
+    presenter.inventoryBlocked(view);
+    expect(f.lines.join('')).toContain('https://github.com/owner/project/pull/81');
+    expect(f.lines.join('').replace(/\s+/gu, ' ')).toContain(f.catalog.message('inventoryRequired'));
+    expect(f.lines.flatMap(line => line.trimEnd().split('\n')).every(line => Array.from(line).length <= 40 || line.includes('https://'))).toBe(true);
+    f.lines.length = 0;
+    presenter.inventoryBlocked({ ...view, repository: 'owner/project?token=private-credential@someone<!--marker-->',
+      operationId: '\u202eprivate-credential', evidence: { ...view.evidence, head: '\u001bprivate-credential' } });
+    const unsafe = f.lines.join(''); expect(unsafe).not.toContain('private-credential'); expect(unsafe).not.toContain('@someone');
+    expect(unsafe).not.toContain('<!--marker-->'); expect(unsafe).not.toContain('https://'); expect(unsafe).not.toContain('\u001b'); expect(unsafe).not.toContain('\u202e');
+    expect(f.catalog.message('inventoryNoAuthority')).toBeTruthy(); if (locale === 'de-DE') expect(f.catalog.locale).toBe('en-US');
+  },
+);
+it.each(['en-US', 'es-ES', 'fr-FR', 'pt-BR', 'de-DE'])(
+  'publisher-inventory-C45/C48: %s separates a verified inventory review from installation approval', locale => {
+    const f = fixture(locale);
+    const inventoryReview = reviewedInventory();
+    const plan = { ...f.plan, inventoryReview }, before = JSON.stringify(plan);
+    f.presenter.preview(plan);
+    const text = f.lines.join('');
+    expect(text).toContain(f.catalog.message('inventoryReview', { count: '1' }));
+    expect(text).toContain(f.catalog.message('inventoryEvidence', { url: 'https://github.com/owner/project/pull/81', head: inventoryReview.head }));
+    expect(text).toContain(f.catalog.message('inventorySeparate'));
+    expect(text.indexOf(f.catalog.message('inventorySeparate'))).toBeLessThan(text.indexOf(f.catalog.message('effects')));
+    expect(text).toContain(f.catalog.message('nativePending'));
+    expect(text).not.toContain('@reviewer'); expect(text).not.toContain('/actions/runs/');
+    expect(JSON.stringify(plan)).toBe(before);
+    if (locale === 'de-DE') expect(f.catalog.locale).toBe('en-US');
+  },
+);

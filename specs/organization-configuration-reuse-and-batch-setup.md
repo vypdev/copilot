@@ -1966,3 +1966,262 @@ qualification, installation, activation or permission change follows.
 
 Traceability: C125 -> G04/G07 -> shared store release -> real publisher finalizer
 and retained-state handling -> provisioning/orphan-lock recovery documentation.
+
+## Independent producer review and retained observations (#1006)
+
+This owner incorporates IR977-R01 through IR977-R10 from the officially selected
+publisher companion, including its complete retained baseline and recovery
+amendment. The version2 proposal is optional; version1 and ordinary batch retain
+their conservative inventory, resource and durable-schema contracts. Source
+implementation, reviewed producer compatibility, installation and native
+qualification remain separate acceptance claims.
+
+```text
+Authenticated source/input closure -> current independent inventory decision
+ -> exact installation preview -> separate approval -> shared delivery
+ -> retain verified effects -> stop on authority loss -> fresh recovery review
+```
+
+The existing publisher reader MUST authenticate the same-repository evidence PR,
+complete document-only difference against its own immutable base, separately
+bound live destination/workflow set, exact executable/input graph and complete
+current independent review/permission facts. The fixed canonical consumer
+document and version2 locator, supported finite source profile and numeric bounds
+are defined by the companion's inventory sections6.1-6.4. There is no arbitrary
+trust URL, skip-inventory flag, self-issued approval, Secret read or new installer.
+Known foreign/direct writers win over compatible claims. Missing facts remain
+unresolved and producer migrations require their own reviewed delivery.
+GitHub Cloud `$/` self references bind to the repository and immutable commit of
+the containing workflow or action, including root actions and when that source is external to the
+destination. They do not depend on a workspace checkout and cannot specify an
+`@ref` suffix. Ordinary `./` Action references retain their immutable-workspace
+requirement. Neither form permits substituting another repository or commit.
+Preparing identities MUST include the evidence-PR author, all associated commit
+authors/committers and every provider-recorded branch creator/publisher. Git
+commit declarations are not authenticated pusher evidence. Read the complete PR
+commit list (maximum250,100/page) and the same-repository/ref activity with at
+most ten100-event pages, requiring creation and exact-head publication. Extract
+only a validated next cursor; never follow a supplied URL. Denied, inconsistent,
+unassociated or incomplete facts leave review authority unverified. Exclude all
+these accounts even when a service account has provider type `User`; bind their
+sorted IDs into the decision digest so changed preparation invalidates approval.
+Actual independent human review remains the companion's operational prerequisite;
+account type/permission does not prove personhood. No new human registry or
+approval automation is introduced, and preparing automation never reviews itself.
+
+The finite Node profile MUST use syntax and lexical scope, retain literal import
+source order and reject indirect code construction, prototype/reflection escapes,
+opaque dynamic properties and unsupported native execution/loading facilities.
+Closed local bindings, literal data and supported utility imports remain valid.
+Acorn8.18.0 and eslint-scope9.1.2 are runtime dependencies pinned in the root
+package manifest/lockfile; syntax traversal has fixed10,000-node/depth64 bounds.
+Exhaustion remains unresolved, without clipping or claiming arbitrary program
+verification. Shell callee edges MUST retain command order too. Actual workflow
+job IDs allow a leading underscore; input bindings preserve valid job identity
+and source-route prefixes without relaxing other document IDs.
+
+Node dependency edges MUST preserve loader kind. Static imports, re-exports and
+dynamic imports use Node's file-URL resolution, with query/fragment metadata
+separate from the actual Git file and percent decoding before matching that
+file. Literal `require` retains CommonJS filesystem spelling. Bind the canonical
+in-repository file rather than an authenticated decoy named like the raw URL.
+Reject invalid file URLs, encoded separators and traversal outside the source
+repository, including escape/re-entry through a virtual root. Valid canonical
+URL imports and literal CommonJS names remain supported; this is not a blanket
+query/fragment refusal. Source text retains URL/cache distinctions for semantic
+review; the graph binds executed file bytes without evaluating any program.
+The resolver uses two distinct virtual POSIX file roots and Node's URL-to-path
+conversion so an untrusted specifier cannot spell a synthetic root back into
+an escaped path. It does not read a local repository checkout or follow links.
+See [Node24 ESM URLs](https://github.com/nodejs/node/blob/v24.20.0/doc/api/esm.md#urls)
+and [file URL conversion](https://github.com/nodejs/node/blob/v24.20.0/doc/api/url.md#urlfileurltopathurl-options).
+
+Version2 publisher inspection enumerates repository Variables and the complete
+organization Variables shared with that exact repository, using
+`GET /repos/{owner}/{repo}/actions/organization-variables`. The authenticated
+provider response attests target availability after organization visibility and
+membership policy; this reader MUST NOT require global organization enumeration
+or other repositories' grant lists. Repository Variables retain precedence;
+complete shared/local pagination, values and provenance resolve effective inputs
+and aggregate `INPUT_VARS_JSON`. Both collections retain30-item pages and the
+1,000-resource bound. Denied, malformed or incomplete reads remain unresolved,
+never absence. Only fingerprints/provenance enter evidence; raw values MUST NOT
+be logged or persisted, and Secret values are never fetched. Version1 and the
+ordinary batch provisioning/grant routes retain their separate read contracts.
+See the [repository-shared Variables API](https://docs.github.com/en/rest/actions/variables#list-repository-organization-variables):
+repository Variables-read permission suffices; no organization Variables/admin
+permission or new configurable bypass is introduced.
+
+When the authenticated closure reads the Variable namespace, each destination
+workflow MUST have a workflow-scoped `vars-context` input record, even when the
+namespace is empty or no `env`/`with` entry exists. Its anchor is the workflow
+path, empty job, step0, input `vars-context` and literal origin. Its source
+fingerprint binds kind `publisher-inventory-variable-context`, the immutable
+root workflow repository/commit/path/content SHA256 and the complete effective
+Variable fingerprint, including each value's repository/organization provenance.
+The literal origin identifies this fixed context record, not the provenance of
+the Variables it binds. The independently reviewed document MUST contain the
+exact record. Missing or substituted records fail with `binding-mismatch` before
+review authority can qualify; changed configuration needs refreshed evidence and
+a new independent decision and exact operation approval. This includes creation
+of a Variable after an independently reviewed empty namespace. Inspect all
+source branches without evaluating conditions: immutable source binds the
+condition/metadata text, and this separate record binds its mutable configuration.
+Existing per-`env`/`with` bindings remain required. No expression execution,
+additional provider scope or bypass configuration is introduced.
+
+Global Node `process.env` access MUST name one literal key bound to the effective
+source context. Reject whole-environment aliases/enumeration, computed nonliteral
+keys and unbound ambient inputs. Preserve lexical shadowing and inert strings.
+Node Actions project manifest defaults and provided inputs to `INPUT_*`, with
+case-insensitive supplied-input precedence; a declared input without a default
+projects the empty string. That absence is bound by the immutable manifest and
+complete caller input map. Composite shell children do not receive this implicit
+projection. Provider/runtime/state channels (`GITHUB_*`, `RUNNER_*`, `ACTIONS_*`,
+`STATE_*`) and removed `NODE_ICU_DATA` cannot be accredited by a same-named YAML
+claim; explicitly passed `GITHUB_TOKEN` remains a symbolic credential.
+
+Job/step and Node pre/post conditions MUST have a closed input profile. A pure
+parser extracts dependencies without evaluation, with fixed10,000-token/depth64
+bounds. Supported literals, comparisons/logical operators, pure string/JSON
+functions and status functions preserve all dependencies. Only source-bound
+`env`/`inputs`, the complete witnessed `vars` namespace and fixed destination
+`github.repository`/`github.repository_id` facts can qualify. Missing, dynamic,
+unknown or Secret-derived selectors remain unresolved; inert Secret-like text
+does not imply a Secret read. This includes the provider-supported pattern of a
+job env credential selecting a step. Direct `secrets` in `if` is unsupported by
+GitHub and is not claimed as a successful runtime reproduction. Symbolic
+credentials remain supported for independently reviewed value-independent use.
+
+A serialized producer MUST retain a shared lane along every reachable job and
+reusable-workflow writer path. Validate every explicit root/job concurrency
+policy even under an inherited valid shared lane: cancellation must be false or
+omitted (the provider's false default), and queue must be max. True and unresolved
+dynamic values remain incompatible. A separate preserving auxiliary group does not remove the
+inherited barrier. A shared job or callee lane can supply the barrier when its
+caller has none. Workflow-scoped producer claims conservatively treat each job
+as a potential writer. Legal single/default queues can discard older pending
+work; `queue: max` with cancellation true is invalid provider syntax, not a
+claimed live cancellation reproduction. The reader executes no workflow.
+
+Provider references: [Node input projection](https://github.com/actions/runner/blob/main/src/Runner.Worker/Handlers/Handler.cs),
+[default input loading](https://github.com/actions/runner/blob/main/src/Runner.Worker/ActionRunner.cs),
+[Node runtime environment](https://github.com/actions/runner/blob/main/src/Runner.Worker/Handlers/NodeScriptActionHandler.cs),
+[concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
+and [Secret conditions](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
+
+Node and shell inspection MUST reject runtime environment overrides that can
+load code outside the bound graph. Inventory read failures expose closed current
+review-unavailable or unresolved-source causes instead of losing their stage.
+
+The review/application path MUST bind stable evidence, source, decisions and
+permission facts into the existing exact operation digest. It rechecks mutable
+facts before each effect and recovery. Current-session cancellation is checked
+at dispatch and after awaited final confirmation. GitHub reads and writes are
+separate requests; no atomic revocation guarantee is asserted.
+
+The shared Git adapter MAY return a closed verified historical observation when
+complete owned ref/PR readback succeeded but later freshness/cancellation stops
+delivery. The common coordinator MUST validate the exact effect phase and
+prepared commit, safe PR number and absence of a conflicting known identity;
+retain the fact before reporting the stop; and start no subsequent effect.
+An uncertain POST or incomplete/foreign readback cannot manufacture confirmation.
+Failed persistence preserves newly known facts separately from the last durable
+record. No object is erased or uncertain mutation blindly retried. The same
+boundary protects ordinary batch without adding publisher-review authority to
+its v1 journal. Existing terminal blocked records remain terminal; freshly
+reviewed cancelled recovery preserves prior resource effects.
+
+The CLI MUST show the current blocked reason, retained operation and known
+installation PR separately from the selected evidence link. Its closed blocked
+view contains no ready plan, file bytes or approval capability. It offers the
+review action without an installation prompt. Pending, eligible, unchanged,
+partial and cancelled states use four bundled locales and English fallback,
+safe links and readable narrow-terminal prose. An exact supported installation
+with current compatible inventory remains unchanged without an empty PR.
+Initial planning rejection MUST retain any previously known operation and PR.
+Typed rejection preserves its concrete cause; an unexpected planning fault
+exposes a closed unavailable state without disclosing private internal detail.
+
+Testing retains the cumulative125-case baseline without reclassifying its
+historical package/native evidence. The inventory feature adds its **58 distinct
+cases plus four distinct recovery cases, minimum62**, with the distribution and
+reciprocal mapping in the companion. Pure inventory policy requires100% in all
+four coverage metrics; existing global/module/changed-path floors remain. Actual
+reader/planner/coordinator/Git/journal controls, complete pagination, producer
+conflicts, per-phase revocation, known-versus-durable failures, ordinary batch
+parity and actual packed CLI dry-run/decline are required. Typed fakes and case
+labels alone do not prove acceptance. All full/package/native source gates and
+final findings remain required before source acceptance.
+
+Traceability: IR977-R01/R02/R03/R04 -> inventory domain/policy/authenticated
+adapter -> C01-C34 and C49-C55; IR977-R05/R06 -> review/apply/shared delivery ->
+C35-C42/C53/C56-C58 and recovery-C01-C03; IR977-R07/R10 -> CLI/presenter ->
+C43-C48/C57 and recovery-C04; IR977-R08 -> composition/package/docs/catalog
+checks. The companion's per-requirement tables are authoritative for overlapping
+obligations and do not double-count these cases.
+
+Update the usage guide, provisioning, repository-guidance troubleshooting and
+architecture together. Catalog evidence includes the real new domain, pure
+policy, authenticated adapter and tests. Run catalog generation, specification
+and documentation validation, actual build/package checks and Graphify AST
+update. Rollback is a reviewed source change retaining old readable journals and
+already known effects; no source rollback removes a destination PR or installs
+the publisher. Actual independent producer review, an eligible separately
+authorized installation preview and verified default/native execution remain
+operational work under #977. Production verification remains disabled and
+evaluated-pilot write attempts remain zero.
+
+### Completed source-review corrections (#1007)
+
+The62 semantic inventory/recovery cases remain the acceptance floor; parameter
+variants do not create new case identities. The reviewed implementation adds295
+risk controls:33 indirect Node escape programs,11 unsafe native modules,14 valid
+closed programs, one inert download/code-construction oracle, four syntax bounds,
+one two-import source-order case, two actual job-input bindings,11 pure job-scope
+boundaries, one preparation-digest ordering case,57 preparation/commit/activity/
+pagination variants, one bracket-suffixed Bot preparation identity, one Bot-review
+compatibility case, six account-type/login policy boundaries and two shell
+command-order variants; plus14 complete-context controls: missing job/step
+condition witnesses2, bound job/step conditions with changed values2, an empty
+namespace followed by Variable creation1, substituted digest/commit/content3,
+changed exact operation approval1, concurrency-only metadata1, preview drift1
+and post-tree/commit/branch drift3. A further101 input/serialization controls cover
+60 pure closed-condition grammar/dependency boundaries, seven ambient Node escape
+shapes, five provider/runtime collisions, three bound environment freshness paths,
+one lexical/inert distinction, one absent declared input, one composite projection
+negative, two pre/post condition cases, eleven condition source/Secret/literal
+variants, five job-policy variants, four authenticated external reusable paths
+and one case-insensitive provided-input precedence case. The original three
+positive fixtures now explicitly bind their previously ambient MODE instead of
+weakening the input guard. The budget also includes12 repository-shared Variable controls: three complete-reader
+cases that succeed with global organization access denied (empty/shared/later
+pages with override), eight denied/malformed/incomplete shared-page boundaries,
+and same-valued override provenance drift. The former client-side global
+visibility/grant fixtures become authenticated shared-namespace pagination,
+addition/removal/value drift and shared-variable shape controls; they do not
+pretend to reimplement GitHub's access policy. Global403 and the successful
+repository-scoped real read are retained separately without raw values. No
+actual workflow classification or installation is inferred. Another23 module/default controls cover: five ESM decoy negatives across static,
+dynamic and re-export forms; seven valid canonical URL/encoded/parent-path
+bindings; two literal CommonJS cases with owned Node execution; four invalid URL
+or repository escape/re-entry cases; and five cancellation-default boundaries
+across workflow/job/auxiliary/callee policies, retaining dynamic refusal. The
+original immutable reader admits three decoys while owned Node24 loads the real
+unreviewed files, and rejects the default-only lane; retain these causal
+observations. Native module observations are owned POSIX controls, not Windows
+platform acceptance or real workflow execution. All controls MUST
+traverse the complete reader where provider/source behavior is asserted. The
+source-order cases retain original failures before correction and preserve
+swapped-dependency rejection. Existing pure100% and reader95%lines/statements,
+90%functions/branches floors remain unchanged. Complete-source and actual packed
+CLI gates still apply; no profile, native compatibility or installation is
+qualified by deterministic controls.
+
+Traceability: preparation and human operating boundary -> IR977-R02/C10-C21;
+Node/shell source closure -> IR977-R03/C27/C29; valid job scopes and actual Variable
+read disclosure, Node environment and condition bindings -> IR977-R03/C30;
+pre/post conditions -> C28; inherited/job/reusable lane preservation -> C34;
+package manifest/lockfile and generated CLI ->
+IR977-R08. Provisioning and architecture describe the same actual read/trust
+boundary. The selected Action-published companion remains byte-identical.

@@ -14,7 +14,8 @@ it.each(SETUP_PUBLISHER_CATALOG_DEFINITIONS)('provides a complete immutable stat
   for (const id of SETUP_PUBLISHER_MESSAGE_IDS) {
     const message = catalog.message(id, { repository: 'owner/project', url: 'https://github.com/owner/project/pull/7',
       effects: 'effect-list', effect: 'one-effect', id: 'operation', commit: 'a'.repeat(40), branch: 'main', head: 'b'.repeat(40),
-      digest: 'c'.repeat(64), path: '.copilot/setup-manifest.json', bytes: '100', hash: 'd'.repeat(64), sha: 'e'.repeat(40), approve: 'YES', decline: 'NO' });
+      digest: 'c'.repeat(64), path: '.copilot/setup-manifest.json', bytes: '100', hash: 'd'.repeat(64), sha: 'e'.repeat(40),
+      count: 2, disposition: 'non-producer', approve: 'YES', decline: 'NO' });
     expect(message).not.toMatch(/\{[A-Za-z][A-Za-z0-9]*\}/u); expect(message.length).toBeGreaterThan(0);
   }
 });
@@ -55,7 +56,7 @@ it.each(['fr-FR', 'fr-CA'])('an incomplete selected catalog falls back as a whol
     expect(catalog.locale).toBe('en-US'); expect(catalog.resolutionSource).toBe('fallback');
     const values = { repository: 'owner/project', url: 'https://github.com/owner/project/pull/7', effects: 'effect-list', effect: 'one-effect',
       id: 'operation', commit: 'a'.repeat(40), branch: 'main', head: 'b'.repeat(40), digest: 'c'.repeat(64), path: 'fixed.yml',
-      bytes: '100', hash: 'd'.repeat(64), sha: 'e'.repeat(40), approve: 'APPROVE', decline: 'DECLINE' };
+      bytes: '100', hash: 'd'.repeat(64), sha: 'e'.repeat(40), count: 2, disposition: 'non-producer', approve: 'APPROVE', decline: 'DECLINE' };
     for (const id of SETUP_PUBLISHER_MESSAGE_IDS) expect(catalog.message(id, values)).toBe(english.message(id, values));
     expect(observed).toHaveBeenCalled();
   } finally { observed.mockRestore(); }

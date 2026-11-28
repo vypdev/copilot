@@ -26,6 +26,14 @@ export class SetupBatchGithubTransport {
   async call(token: string, route: string, parameters: BatchRecord): Promise<unknown> {
     return (await this.response(token, route, parameters)).data;
   }
+  /** Keep cursor evidence for this fixed read route; callers never follow a supplied URL. */
+  async activityPage(token: string, coordinate: { readonly owner: string; readonly repo: string }, ref: string,
+    cursor?: { readonly name: 'after' | 'before'; readonly value: string }): Promise<{ readonly entries: unknown; readonly link: unknown }> {
+    const response = await this.response(token, 'GET /repos/{owner}/{repo}/activity', {
+      ...coordinate, ref, per_page: 100, direction: 'desc', ...(cursor ? { [cursor.name]: cursor.value } : {}),
+    });
+    return { entries: response.data, link: response.headers?.link };
+  }
   /** Granted OAuth scopes only. Endpoint-required permission headers are not grants. */
   async identity(token: string): Promise<{ readonly user: unknown; readonly oauthScopes: readonly string[] | null }> {
     const response = await this.response(token, 'GET /user', {});

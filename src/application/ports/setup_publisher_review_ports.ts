@@ -1,4 +1,13 @@
 import type { SetupPublisherInspection, SetupPublisherOperation, SetupPublisherPlan, SetupPublisherProposal } from '../../domain/setup_publisher_installation';
+import type { SetupPublisherInventoryFailure, SetupPublisherInventoryLocator } from '../../domain/setup_publisher_inventory_review';
+
+/** Display coordinates and retained-state context only; no approved bytes or authority. */
+export interface SetupPublisherBlockedReview {
+  readonly reason: SetupPublisherInventoryFailure;
+  readonly operationId: string;
+  readonly repository: string;
+  readonly evidence: SetupPublisherInventoryLocator;
+}
 
 /** The adapter pairs these facts with its private credential generation. */
 export interface SetupPublisherReadSnapshot {

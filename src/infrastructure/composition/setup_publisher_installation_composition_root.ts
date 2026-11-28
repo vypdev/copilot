@@ -17,7 +17,7 @@ export type SetupPublisherInstallationRuntime = Pick<InstallSetupPublisherUseCas
   readonly operationLocation?: (operationId: string) => Promise<string | undefined>;
 };
 
-/** No Variables, Secret/grant inventories, label/type writers, probes or broad Setup renderer. */
+/** Version2 reads required non-secret Variables; no resource writers, Secret reads, probes or broad Setup renderer. */
 export function createSetupPublisherInstallationCompositionRoot(token: unknown, presentation: Omit<SetupPublisherReviewPorts, 'inspect'>,
   locale: string = 'en-US'): SetupPublisherInstallationRuntime {
   const catalog = resolveStaticSetupPublisherCatalog(locale);

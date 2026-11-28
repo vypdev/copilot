@@ -30,6 +30,9 @@ importers:
       '@actions/github':
         specifier: ^8.0.1
         version: 8.0.1
+      acorn:
+        specifier: 8.18.0
+        version: 8.18.0
       boxen:
         specifier: ^8.0.1
         version: 8.0.1
@@ -42,6 +45,9 @@ importers:
       commonmark:
         specifier: 0.31.2
         version: 0.31.2
+      eslint-scope:
+        specifier: 9.1.2
+        version: 9.1.2
       js-yaml:
         specifier: ^5.4.1
         version: 5.4.1

@@ -1,7 +1,8 @@
 import { DeliverSetupInstallationUseCase, SetupInstallationDeliveryError } from '../deliver_setup_installation_use_case';
 import type { SetupInstallationDeliveryState } from '../../../contracts/setup_installation_delivery';
-import { SetupInstallationSnapshotChanged } from '../../../ports/setup_installation_delivery_ports';
+import { SetupInstallationObservedEffectError, SetupInstallationSnapshotChanged } from '../../../ports/setup_installation_delivery_ports';
 import type { SetupInstallationObjectObserver } from '../../../ports/setup_installation_delivery_ports';
+import type { SetupInstallationObservedEffect } from '../../../ports/setup_installation_delivery_ports';
 
 const commit = 'c'.repeat(40);
 const initial = (): SetupInstallationDeliveryState => ({ effects: [] });
@@ -20,6 +21,33 @@ function fixture() {
 }
 
 describe('shared approved-file delivery and retained effects', () => {
+  it('publisher-inventory-recovery-C01: malformed, unrelated and conflicting observations cannot replace retained facts', async () => {
+    const malformed: { effect: 'branch' | 'pull-request'; observation: unknown; initialNumber?: number; reason?: unknown }[] = [
+      { effect: 'branch', observation: { effect: 'branch', commit: 'd'.repeat(40) } },
+      { effect: 'branch', observation: { effect: 'branch', commit: 'HEAD' } },
+      { effect: 'branch', observation: { effect: 'pull-request', commit, pullRequestNumber: 73 } },
+      { effect: 'branch', observation: { effect: 'branch', commit, pullRequestNumber: 73 } },
+      { effect: 'branch', observation: { effect: 'tree', commit } },
+      { effect: 'branch', observation: { effect: 'branch', commit }, reason: 'continue' },
+      { effect: 'pull-request', observation: { effect: 'pull-request', commit, pullRequestNumber: 0 } },
+      { effect: 'pull-request', observation: { effect: 'pull-request', commit, pullRequestNumber: Number.MAX_SAFE_INTEGER + 1 } },
+      { effect: 'pull-request', observation: { effect: 'pull-request', commit, pullRequestNumber: '73' } },
+      { effect: 'pull-request', observation: { effect: 'pull-request', commit, pullRequestNumber: 73 }, initialNumber: 72 },
+    ];
+    for (const entry of malformed) {
+      const f = fixture(), error = new SetupInstallationObservedEffectError('drift', entry.observation as SetupInstallationObservedEffect);
+      if (entry.reason !== undefined) Object.assign(error, { reason: entry.reason });
+      expect(Object.isFrozen(error.observed)).toBe(true);
+      const initialState: SetupInstallationDeliveryState = { preparedCommit: commit,
+        effects: entry.effect === 'branch' ? [] : ['branch'], ...(entry.initialNumber ? { pullRequestNumber: entry.initialNumber } : {}) };
+      if (entry.effect === 'branch') f.commands.branch.mockRejectedValue(error);
+      else f.commands.pullRequest.mockRejectedValue(error);
+      await expect(f.execute(initialState)).rejects.toMatchObject({ reason: 'provider', retained: { ...initialState, uncertain: entry.effect } });
+      expect(f.states.at(-1)).toEqual({ ...initialState, uncertain: entry.effect });
+      if (entry.effect === 'branch') expect(f.commands.pullRequest).not.toHaveBeenCalled();
+      expect(f.commands.prepareCommit).not.toHaveBeenCalled();
+    }
+  });
   it('publisher977-C96: cancellation while retaining preparation intent permits a fresh reviewed no-write resume', async () => {
     const f = fixture(), retain = f.control.retain.getMockImplementation()!;
     f.control.retain.mockImplementation(async state => {

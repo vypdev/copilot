@@ -1,6 +1,6 @@
 import type { SetupInstallationDeliveryState, SetupInstallationRefEffect } from '../../contracts/setup_installation_delivery';
 import type { SetupInstallationDeliveryCommands, SetupInstallationDeliveryControl, SetupInstallationDeliveryCoordinator } from '../../ports/setup_installation_delivery_ports';
-import { SetupInstallationDeliveryCancelled, SetupInstallationSnapshotChanged } from '../../ports/setup_installation_delivery_ports';
+import { SetupInstallationDeliveryCancelled, SetupInstallationObservedEffectError, SetupInstallationSnapshotChanged } from '../../ports/setup_installation_delivery_ports';
 
 export class SetupInstallationDeliveryError extends Error {
   constructor(readonly reason: 'cancelled' | 'drift' | 'uncertain-preparation' | 'provider',
@@ -75,6 +75,21 @@ export class DeliverSetupInstallationUseCase implements SetupInstallationDeliver
       return state;
     } catch (error) {
       if (error instanceof SetupInstallationDeliveryError) throw error;
+      if (error instanceof SetupInstallationObservedEffectError) {
+        const observed = error.observed;
+        const number = observed.effect === 'pull-request' ? observed.pullRequestNumber : undefined;
+        const keys = observed.effect === 'branch' ? 'commit,effect' : 'commit,effect,pullRequestNumber';
+        if (!['branch', 'pull-request'].includes(observed.effect) || !['cancelled', 'drift'].includes(error.reason)
+          || Object.keys(observed).sort().join(',') !== keys || typeof observed.commit !== 'string' || !/^[a-f0-9]{40}$/u.test(observed.commit)
+          || observed.commit !== state.preparedCommit || state.uncertain !== observed.effect || state.effects.includes(observed.effect)
+          || observed.effect === 'pull-request' && (!state.effects.includes('branch') || !Number.isSafeInteger(number) || Number(number) <= 0
+            || state.pullRequestNumber !== undefined && state.pullRequestNumber !== number)) throw new SetupInstallationDeliveryError('provider', state);
+        // Knowledge of an owned object survives loss of authority. Persist that
+        // historical fact before stopping; it never authorizes the next phase.
+        await retain({ ...state, effects: [...state.effects, observed.effect], uncertain: undefined,
+          ...(observed.effect === 'pull-request' ? { pullRequestNumber: number } : {}) });
+        throw new SetupInstallationDeliveryError(error.reason, state);
+      }
       if (error instanceof SetupInstallationDeliveryCancelled) throw new SetupInstallationDeliveryError('cancelled', state);
       if (error instanceof SetupInstallationSnapshotChanged) throw new SetupInstallationDeliveryError('drift', state);
       throw new SetupInstallationDeliveryError('provider', state);

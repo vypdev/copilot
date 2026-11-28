@@ -73,6 +73,25 @@ it('cancellation during an authenticated read stops subsequent GETs and cannot c
   await expect(f.execute()).rejects.toMatchObject({ reason: 'cancelled' });
   expect(f.request).toHaveBeenCalledTimes(1); expect(f.present).not.toHaveBeenCalled(); expect(await readdir(mockJournalRoot)).toEqual([]);
 });
+it('publisher-inventory-C40: cancellation during evidence inspection stops the next actual transport dispatch', async () => {
+  const f = fixture(), original = f.request.getMockImplementation()!, head = '6'.repeat(40);
+  Object.assign(f.proposal, { schemaVersion: 2, inventoryReview: { pullRequest: 81, head, documentSha256: 'a'.repeat(64) } });
+  f.request.mockImplementation(async (route, p) => {
+    if (route === 'GET /repos/{owner}/{repo}/pulls/{pull_number}' && p.owner === 'owner' && p.pull_number === 81) {
+      f.active.mockReturnValue(false);
+      return { data: { number: 81, state: 'open', merged: false, user: { id: 9, type: 'User' },
+        head: { sha: head, repo: { id: 42, full_name: 'owner/project' } },
+        base: { sha: '7'.repeat(40), repo: { id: 42, full_name: 'owner/project' } } } };
+    }
+    return original(route, p);
+  });
+  await expect(f.execute(false)).rejects.toMatchObject({ reason: 'cancelled' });
+  const evidenceRead = f.request.mock.calls.findIndex(([r, p]) => r.endsWith('/pulls/{pull_number}') && p.pull_number === 81);
+  expect(evidenceRead).toBeGreaterThan(0); expect(f.request.mock.calls).toHaveLength(evidenceRead + 1);
+  expect(f.present).not.toHaveBeenCalled(); expect(f.confirm).not.toHaveBeenCalled();
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+  expect(await readdir(mockJournalRoot)).toEqual([]);
+});
 it.each(['en-US', 'es-ES', 'fr-FR', 'pt-BR'])('connects real approval and exact common delivery to one controlled PR with %s metadata', async locale => {
   const f = fixture(locale), original = f.request.getMockImplementation()!, commit = 'c'.repeat(40), catalog = resolveStaticSetupPublisherCatalog(locale);
   const prepared = new Map(f.baseFiles); let tree = setupInstallationTreeFixture(prepared, f.modes), branch: string | undefined;
@@ -120,7 +139,7 @@ it.each(['en-US', 'es-ES', 'fr-FR', 'pt-BR'])('connects real approval and exact 
 it('publisher977-C101: actual composition blocks an opaque script before preview, approval or provider writes', async () => {
   const f = fixture();
   f.replace('ci.yml', 'on: push\njobs:\n  status:\n    steps:\n      - run: node scripts/dispatch-status.js\n');
-  await expect(f.execute(false)).rejects.toMatchObject({ reason: 'installation-unsupported' });
+  await expect(f.execute(false)).rejects.toMatchObject({ reason: 'planning', planFailure: 'installation-unsupported' });
   expect(f.present).not.toHaveBeenCalled(); expect(f.confirm).not.toHaveBeenCalled();
   expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
   expect(await readdir(mockJournalRoot)).toEqual([]);
