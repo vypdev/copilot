@@ -687,3 +687,197 @@ Every requirement has the58-case reciprocal allocation and executable verificati
 ### 20. References and decisions
 
 Canonical sources are the immutable selected repository paths in section15, the issue/authorized five design answers and preserved #950 history. Provider primary references: https://docs.github.com/en/rest/pulls/reviews#list-reviews-for-a-pull-request and https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user . Provider records supply identity/state/current permission; purpose and producer semantics are additional product requirements. Decisions: one closed review input, one native GitHub review root, complete source-bound closure, explicit incompatible/unresolved results, separate installation approval and existing narrow delivery. Reject absence booleans, arbitrary trust URLs, a new signing service, generic approval-as-behavior, silent producer migration, limit relaxation and synthetic native/human acceptance. This draft does not assert which path was rejected in the discarded generated candidates.
+
+## Preserve verified publisher effects when review authority changes
+
+- Status: Draft amendment for the existing issue's official revision gate.
+- Date: 2026-11-28
+- Catalog capability ID: setup-and-doctor
+- Owners: Copilot maintainers
+- Scope: Complete the existing publisher inventory review's partial recovery and blocked CLI journey.
+- Related issue: https://github.com/vypdev/copilot/issues/1006 ; actual installation remains https://github.com/vypdev/copilot/issues/977 .
+- Selected immutable base: 67366365a20a1c590597179e3a06fbbe6be2043b.
+- Required gates: official selected SDD revision, architecture, security, recovery, UI, tests, documentation and packaging.
+- Open implementation-design decisions: none. Actual independent producer review and installation authorization remain separate prerequisites.
+- Publication mode: retain the complete selected owner verbatim and append this amendment through the Action on the same linked branch. Preserve its first publication. No manually edited selected artifact or replacement branch.
+
+### 1. Executive summary
+
+When a previously approved operation creates a branch or PR and then loses current review authority, Setup must stop subsequent changes while retaining the objects it has independently confirmed. The operator sees the known PR link and current blocking reason. Observing an existing object never grants permission to continue.
+
+```text
+Verify owned object -> retain its identity -> report review revocation
+ -> show known effects and next action -> fresh review before recovery
+```
+
+The existing inventory contract and its 58-case floor remain in force. This amendment adds four distinct adversarial cases, for a cumulative minimum of 62, and extends the prospective source inventory for the shared delivery boundary and existing CLI entrypoint.
+
+### 2. Problem, observed behavior and evidence
+
+At the selected base, the shared Git delivery adapter independently verifies the expected branch and PR, then awaits its freshness callback before returning the result. The coordinator only records a returned ref/PR result. A revocation in that interval therefore stops later writes but can discard the already verified effect and PR number from the operation report. Tree and commit observations already reach the journal before later freshness checks.
+
+A controlled reproduction uses the actual authenticated source/destination/review reader, review and apply use cases, common coordinator, Git delivery adapter and owned temporary filesystem journal. It uses complete Git-object fixtures without injecting an eligible verdict. All 33 focal cases execute: 31 pass and two fail, specifically the branch and PR confirmation-retention assertions; tree and commit cases pass. This is controlled source evidence, not a real GitHub installation or native qualification. Historical motivation for the result-return ordering is unknown.
+
+The intentional contract keeps every pre-mutation freshness and cancellation check, complete ownership inspection, narrow two-file delivery and conservative uncertainty. The proposed correction concerns retained observations and truthful presentation. No unsafe retry, relaxed review authority or retrospective acceptance is proposed. A full as-built reconstruction is not applicable to this prospective amendment.
+
+### 3. Actors, surfaces and terminology
+
+The operator needs the actual retained state and one recovery action. The independent inventory reviewer supplies only the purpose-bound semantic decision defined by the retained owner. The authenticated adapter establishes an observation of a specific owned ref/PR. The coordinator and journal own retained operation facts. The CLI renders a blocked-review view or partial operation; neither view is an approved installation plan.
+
+Confirmed means that complete authenticated ownership and identity checks succeeded at an observed time. Current authority means that fresh source, destination, review, permissions and session checks permit the next action. These are separate facts. Unavailable ownership is not confirmation.
+
+### 4. Goals, non-goals and fixed invariants
+
+| Requirement | Behavior |
+|---|---|
+| IR977-R09 | Retain a completely verified owned ref or PR observation before reporting later freshness or cancellation failure, without granting authority or starting another mutation. |
+| IR977-R10 | Preserve known facts and honest durability uncertainty on persistence or blocked-presentation failure; show retained operation and PR navigation separately from inventory or installation approval. |
+
+Retain every definition of IR977-R01 through IR977-R08. There is no new installer, journal schema, remote resource, review submission, native canary, producer migration, release, activation or runner privilege change. Preserve all existing bounds, ownership rules, private-read requirements, production-disabled state and zero evaluated-pilot writes.
+
+### 5. Current versus proposed journey
+
+| Stage | Current observed behavior | Required behavior |
+|---|---|---|
+| Pre-effect revocation | Stops without a write | Preserve this behavior |
+| Known ref/PR followed by revocation | May retain only uncertainty | Retain the validated historical effect and known number, then stop |
+| Unavailable or conflicting readback | Ownership remains unknown | Preserve uncertainty; never invent confirmation |
+| Missing initial inventory review during resume | Generic error may hide retained navigation | Display current reason and retained operation/PR without a plan |
+| Renewed review and resume | Existing ownership and complete-tree fences apply | Re-prove current authority; never infer it from recorded effects |
+
+```mermaid
+sequenceDiagram
+    participant A as Authenticated adapter
+    participant C as Delivery coordinator
+    participant J as Operation journal
+    participant V as CLI view
+    A->>A: Verify exact owned ref or PR
+    A-->>C: Verified observation with stopped reason
+    C->>J: Retain known identity and effect
+    C-->>V: Partial or journal-unconfirmed state
+    V-->>V: Show known link and require fresh review
+```
+
+The textual equivalent is: authenticate the owned object, retain the verified fact, stop on lost authority, render the known result, then require new review before recovery.
+
+### 6. Functional behavior and state model
+
+Extend the existing semantic delivery boundary with a closed typed stopped result/error that can carry a verified branch or PR observation. It binds the observation to the exact prepared commit and effect phase; a PR observation also has a positive safe integer number. It contains a closed drift/cancellation reason, not a provider DTO, credential, approval or arbitrary callback. The concrete adapter emits it only after the same complete branch/PR ownership checks that currently precede its final freshness check. Provider failures, foreign state, incomplete pagination and unconfirmed POST results cannot emit verified observations.
+
+The common coordinator accepts an observation only for its current uncertain ref/PR phase and exact prepared commit. It validates its closed kind and ID fields. It records the effect and known PR number before returning the stopped outcome. It does not call the next provider phase. Invalid, out-of-order or unrelated observations remain failures with the previous uncertainty intact. Duplicate effects cannot duplicate writes or change an existing conflicting identity.
+
+Retaining a verified historical effect does not certify present ownership or new authority. Recovery re-inspects live source, target, review decision, reviewer permission, session, complete tree and owned ref/PR exactly as required by the retained owner. The interval between GET and mutation is not atomic; no instantaneous revocation claim is made.
+
+If saving an observed effect fails, the application keeps the newly known identity in its returned error/report and separately exposes the last persisted record. It reports that the journal update is unconfirmed, stops later effects and never removes the PR/ref or silently retries the write. Old records remain readable.
+
+A missing, stale, unresolved, denied or incompatible inventory before planning produces a closed blocked-review view carrying only validated display coordinates, current cause, operation ID and optional retained record. It has no plan bytes, approval digest or ready status. The CLI entrypoint maps this semantic view to the existing presenter/catalog. An error or cancelled rendering cannot continue to confirm or apply. Retained PR links remain available even when a fresh inventory cannot be admitted.
+
+### 7. User-facing configuration
+
+No new option or flag is added. The recommended path remains inspect with the existing dry-run option, then separately approve the exact operation. The meaningful alternative is existing explicit resume after reviewing retained effects and renewed authority. Version1 and version2 proposals retain their current closed inputs and precedence. The typed observation and blocked view are internal semantic results, never user-supplied authority. No configurable switch disables freshness or uncertainty.
+
+### 8. Clean Architecture
+
+The delivery semantic port defines the closed stopped observation. The authenticated Git adapter validates provider ownership and maps the observation. The common application coordinator validates phase/commit binding and retains state. Publisher apply retains known versus persisted state. The review use case carries a blocked semantic view; CLI entrypoint and presenter render it. The existing journal and composition remain the only persistence and effect route.
+
+Application/domain code must not import a concrete provider or CLI renderer. Presentation must not construct an eligible plan, journal authority or delivery command. Existing executable architecture and package guards remain in force; add contracts for the closed observation/view, including malformed and unrelated values. No second provider writer or parallel installer is introduced.
+
+### 9. UI/UX and content
+
+The first view answers current state, retained facts, next action and impact. Pending says inspection is running. Missing review asks for independent review of the bound inventory. Unresolved closure asks to resolve the named prerequisite. Incompatible producers require a separate migration. A partial state lists confirmed effects and any known PR before asking for fresh review; journal failure explicitly separates observed facts from the older saved record. Cancelled remains stopped; unchanged creates no empty PR; successful delivery remains waiting for merge/native verification.
+
+Representative partial CLI content:
+
+```text
+Installation stopped: the reviewed inventory changed.
+Retained: Git tree, commit, installation branch and installation PR.
+Installation pull request: https://github.com/owner/project/pull/73
+Next: inspect this operation and obtain a fresh inventory review before resuming.
+The existing PR was not removed. Production verification remains disabled.
+```
+
+Representative initial blocked resume:
+
+```text
+Inventory review required. No new installation changes started.
+Retained installation pull request: https://github.com/owner/project/pull/73
+Next: obtain an independent purpose-bound review of the current inventory.
+The retained operation does not approve another change.
+```
+
+Use the existing catalog in English, Spanish, French and Portuguese plus English fallback. Preserve narrow-terminal wrapping, plain text in light/dark terminals, sanitized mentions/controls/Markdown markers and credential-free fixed-host links. Do not render a fabricated approved plan to reuse preview UI. No new web surface, accessibility campaign, GitHub progress comment or notification is added; actual packaged readability remains distinct from automated assertions and producer review.
+
+### 10. Failure, recovery and cleanup
+
+Pre-effect drift has zero writes. Confirmed-effect drift keeps its fact and stops. Unconfirmed provider outcome keeps uncertainty and no blind replay. Journal failure returns known identities with an explicit durability warning and the older saved record. Invalid observed effects cannot rewrite another phase. Blocked resume shows retained navigation and asks for current review, never new installation approval based only on history. Owned temporary test journals are removed after assertions; source, original negative evidence, rollback and operation records are preserved. No cleanup deletes a remote ref or PR.
+
+### 11. Security, permissions and privacy
+
+Keep existing credential/session/cancellation dispatch checks and all source/head/ownership fences. No API scope or privilege is added. Verified observations originate inside the adapter after authenticated complete reads, never from JSON proposals or evidence documents. Validate commit, phase and safe positive PR number again at application retention. Never serialize provider error bodies, credentials, secret values or private source into the view/journal. Safe links derive from validated repository coordinates and known IDs. A recorded effect grants no authority for a future mutation.
+
+### 12. Observability and operations
+
+Retain the original two failed assertions and before/after results with exact source/fixture identities. Distinguish observed, persisted, uncertain, stopped and currently approved facts. Use existing closed error categories and operation IDs, with no telemetry service or model call. No unchanged job retry is required to collect the result. Record actual provider-attempt counts and keep scientific/native qualification separate.
+
+### 13. Compatibility, rollout and rollback
+
+Preserve publisher-v2 journal schema and old readable records. Both proposal versions and ordinary batch delivery use the same coordinator and ownership checks. New stopped observations only disclose verified effects earlier; they do not bypass pre-effect admission or acquire authority for legacy records. Verify batch resources are unchanged and cancellation still stops dispatch. Keep rollback to the last reviewed source tuple and normal operation review, without force-push, remote deletion, a new remote branch or automatic effect reversal. The actual installation remains separately authorized after source acceptance and real inventory review.
+
+### 14. Testing strategy and numeric budget
+
+The retained 58 distinct publisher-inventory cases remain mandatory, including per-phase revocation, partial links and recovery. Add four distinct cases for the new semantic-result and blocked-view risks. The cumulative minimum is 62; the following table counts only this amendment's four additional cases, never the retained cases again. Keep every global/module/changed-path floor and 100-percent branch coverage for new pure policy. Use deterministic controlled transports, actual Git-object fixtures and owned temporary journals with no live service, wait or model invocation. A typed fixture alone cannot replace the complete reader/planner/composition/packed CLI checks.
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Observed-effect boundary | 3 | Phase/commit forgery, persistence failure and incomplete ownership |
+| Blocked CLI boundary | 1 | No approval authority, retained navigation and localized failure |
+| Total | 4 | Four new distinct cases, cumulative minimum62 |
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| publisher-inventory-recovery-C01 | Observed-effect boundary | IR977-R09 | A malformed, wrong-phase or wrong-commit typed observed effect cannot add confirmation, replace a known ID or authorize another write. |
+| publisher-inventory-recovery-C02 | Observed-effect boundary | IR977-R09, IR977-R10 | A journal failure while retaining a verified PR preserves its known number in the report and the distinct older durable record, with no later or repeated write. |
+| publisher-inventory-recovery-C03 | Observed-effect boundary | IR977-R09 | Incomplete or ownership-conflicting PR readback cannot emit confirmed observation; uncertainty remains and POST is not blindly repeated. |
+| publisher-inventory-recovery-C04 | Blocked CLI boundary | IR977-R10 | The actual CLI handles initial and resumed inventory rejection without an approved plan or confirmation, preserving the current cause and known PR navigation across four locales and fallback. |
+
+### 15. Documentation and extended source inventory
+
+Update the retained CLI reference, provisioning, guidance troubleshooting and architecture work with known-versus-persisted effects, blocked resume, safe navigation and renewed-review recovery. Keep owner/catalog evidence and its generated view coherent. The selected SDD and its existing 28-path prospective inventory remain retained. This table explicitly extends that inventory; every additional path is an existing file at the selected base and uses update.
+
+| Path | Change |
+|---|---|
+| specs/setup-bugbot-publisher-manifest-route.md | update |
+| src/application/ports/setup_installation_delivery_ports.ts | update |
+| src/application/usecases/setup/deliver_setup_installation_use_case.ts | update |
+| src/infrastructure/setup_installation_github_delivery_adapter.ts | update |
+| src/application/usecases/setup/__tests__/setup_publisher_installation.test.ts | update |
+| src/application/usecases/setup/__tests__/apply_setup_publisher_use_case.test.ts | update |
+| src/infrastructure/__tests__/setup_publisher_installation.test.ts | update |
+| src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts | update |
+| src/cli/setup_publisher_installation_adapter.ts | update |
+| src/cli/__tests__/setup_publisher_installation_adapter.test.ts | update |
+
+### 16. Acceptance
+
+The existing four-phase causal reproduction must preserve tree, commit, ref and verified PR facts after revocation and start no later mutation. A stopped observation unrelated to the current operation must not acquire authority or confirmation. A failed save must preserve a known PR link in the report without claiming the saved journal contains it. An incomplete owned-PR read must retain uncertainty. Initial blocked review and blocked resume must show the correct current cause, one next action and actual retained navigation without synthesizing approved files. Existing publisher and batch behavior, two-file scope and all retained acceptance criteria must still pass.
+
+### 17. Traceability
+
+| Requirement | Cases |
+|---|---|
+| IR977-R09 | publisher-inventory-recovery-C01, publisher-inventory-recovery-C02, publisher-inventory-recovery-C03 |
+| IR977-R10 | publisher-inventory-recovery-C02, publisher-inventory-recovery-C04 |
+
+IR977-R09 belongs to the semantic delivery port, authenticated Git adapter and common coordinator, with the extended source paths above and retained inventory/partial cases. IR977-R10 belongs to publisher apply/review, existing CLI entrypoint, presenter/catalog and documentation from the retained owner. The new cases supplement those existing mappings; no old requirement or scenario is redefined, removed or counted twice.
+
+### 18. Implementation sequence
+
+First validate and publish this revision through the existing issue and linked Action-owned branch, preserving the first publication. Retain the failing causal controls. Implement and validate the closed observed-effect result and shared retention before changing UI handling. Add blocked semantic views, actual CLI and failure/persistence/compatibility controls. Complete the retained inventory's remaining scenarios, documentation/catalog and all source-declared validation/package/native gates before source acceptance. Then resume the actual independent producer-review and installation journey.
+
+### 19. Definition of Done
+
+Both new requirements have the four additional distinct executable cases and reciprocal mapping; the original58-case allocation and its complete semantics remain satisfied. The causal before/after evidence proves known effects survive revocation without further writes. Persistence and UI preserve known versus saved state, four locales/fallback and safe links. No architecture boundary, old batch resource behavior, dispatch fence or coverage threshold regresses. Documentation, owner/catalog and generated view agree; actual declared type/lint/build/test/spec/documentation/package checks and current-head native review pass; Graphify is updated after code changes. No unreviewed scope decision remains. No actual independent human producer review, installation, native canary or qualified profile is claimed by this source revision.
+
+### 20. Decisions and references
+
+The existing issue, selected publisher SDD and repository source inventory are the primary references. Existing IR977-R01 through IR977-R08 and their cases retain their original meaning. Choose a closed semantic observed-effect result and blocked display model through the existing application/adapter boundary. Reject skipping the final freshness check, swallowing revocation as success, reading a journal as authority, a second installer, fabricated eligible previews, arbitrary provider error payloads, blind replay, remote rollback and manually replaced SDD publication. No new provider API behavior or permission is assumed. The original negative174 result, unstarted42 phase, disabled production and zero evaluated-pilot writes remain unchanged.
