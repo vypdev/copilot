@@ -1,0 +1,21 @@
+{
+  "purpose": "fixture-only complete human setup journeys; no observations claimed",
+  "sourceCommit": "ccefb27627cd627ccdb7d5666fd174c2ac1da07b",
+  "sourceArchiveSha256": "c8e82a9051b9c531d8f306134bafd9a5adf94f49a2980a6b76dc07e3383920d8",
+  "packageVersion": "3.10.13",
+  "package": "vypdev-copilot-3.10.13.tgz",
+  "packageSha256": "abeac2c108ed9b663bef80317f38eefbd14eed35502a32952f9d418f045f0d88",
+  "packScriptsExecuted": false,
+  "cliSha256": "35ef7d099c2c7b31faed2276ac535cd2c018ad61ad1a1be23b91370acaf6286e",
+  "fixtureScriptSha256": "203ef1cf80c70057f379586d9a8229e6a5a055a56f4e415c95bce16624229963",
+  "node": "v24.20.0",
+  "host": "Darwin",
+  "borrowedFixtureDependencies": "exact installed dependencies from isolated #979 worktree; not a measured qualification runtime",
+  "webAssets": {
+    "build/web/assets/index-CNXf8Vmj.js": "e839491cd0736213063845961a39557b4f1d5d0bd182cd0a69150d009c947c8f",
+    "build/web/assets/index-CfyclPC5.css": "a6eddae87eaeb35e0548caaa356ae94d231806b9605f6331b9ec77bf4dacb1e6",
+    "build/web/index.html": "6ed7b55e202c589061e558de8abe775cc119bb13853174781bf60fd4cea827e1"
+  },
+  "realProviderPorts": 0,
+  "observations": []
+}
