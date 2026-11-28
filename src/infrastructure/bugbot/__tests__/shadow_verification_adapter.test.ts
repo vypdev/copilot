@@ -243,9 +243,9 @@ describe('pinned Bugbot verifier adapter', () => {
                 missing: 'An accredited SQLite release for the reviewed execution.', premises: [], dependencies: [],
             } };
         });
-        await expect(adapter.verify({ candidate, configuration })).resolves.toMatchObject({
-            status: 'verdict', verdict: 'inconclusive',
-        });
+        const result = await adapter.verify({ candidate, configuration });
+        expectSourceVerdict(result);
+        expect(result).toMatchObject({ status: 'verdict', verdict: 'inconclusive' });
         expect(turn).toBe(2);
     });
 
