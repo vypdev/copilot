@@ -138220,6 +138220,7 @@ exports.SetupPublisherInventoryReviewAdapter = void 0;
 const node_crypto_1 = __nccwpck_require__(6005);
 const node_module_1 = __nccwpck_require__(82033);
 const node_path_1 = __nccwpck_require__(49411);
+const node_url_1 = __nccwpck_require__(41041);
 const shellQuote = __importStar(__nccwpck_require__(18108));
 const js_yaml_1 = __nccwpck_require__(783);
 const acorn_1 = __nccwpck_require__(78891);
@@ -138245,6 +138246,28 @@ const sibling = (file, relative) => {
     if (!safePath(path))
         return unresolved();
     return path;
+};
+const nodeImportPath = (file, dependency) => {
+    if (dependency.kind === 'require')
+        return sibling(file, dependency.specifier);
+    try {
+        // ESM uses URLs, including percent decoding and query/fragment metadata.
+        // Two distinct roots prevent an escape from being disguised by spelling
+        // one synthetic root back into the untrusted relative specifier.
+        const paths = ['/__copilot_inventory_left__/', '/__copilot_inventory_right__/'].map(root => {
+            const base = new URL(root + file.split('/').map(encodeURIComponent).join('/'), 'file:///');
+            const resolved = node_path_1.posix.normalize((0, node_url_1.fileURLToPath)(new URL(dependency.specifier, base), { windows: false }));
+            if (!resolved.startsWith(root))
+                return unresolved();
+            return resolved.slice(root.length);
+        });
+        if (paths[0] !== paths[1] || !safePath(paths[0]))
+            return unresolved();
+        return paths[0];
+    }
+    catch {
+        return unresolved();
+    }
 };
 const scope = (v) => {
     if (v === undefined)
@@ -138331,17 +138354,17 @@ function nodeImports(content, boundEnvironment) {
             return unresolved();
         if (node.type === 'ImportDeclaration' || node.type === 'ExportNamedDeclaration' && node.source
             || node.type === 'ExportAllDeclaration')
-            imports.set(Number(node.start), literal(node.source));
+            imports.set(Number(node.start), { specifier: literal(node.source), kind: 'import' });
         if (node.type === 'ImportExpression') {
             if (node.options !== undefined && node.options !== null)
                 return unresolved();
-            imports.set(Number(node.start), literal(node.source));
+            imports.set(Number(node.start), { specifier: literal(node.source), kind: 'import' });
         }
         if (node.type === 'CallExpression' && (0, setup_batch_github_read_adapter_1.batchObject)(node.callee)?.type === 'Identifier'
             && (0, setup_batch_github_read_adapter_1.batchObject)(node.callee)?.name === 'require' && globals.has(node.callee)) {
             if (!Array.isArray(node.arguments) || node.arguments.length !== 1)
                 return unresolved();
-            imports.set(Number(node.start), literal(node.arguments[0]));
+            imports.set(Number(node.start), { specifier: literal(node.arguments[0]), kind: 'require' });
         }
         if (node.type === 'MemberExpression') {
             const name = memberName(node), owner = (0, setup_batch_github_read_adapter_1.batchObject)(node.object);
@@ -139074,7 +139097,8 @@ class SetupPublisherInventoryReviewAdapter {
             .filter(name => !/^(?:GITHUB_|RUNNER_|ACTIONS_|STATE_|NODE_ICU_DATA$)/iu.test(name) || name === 'GITHUB_TOKEN'));
         const imports = nodeImports(content, boundEnvironment);
         let count = 0;
-        for (const specifier of imports) {
+        for (const dependency of imports) {
+            const { specifier } = dependency;
             if (node_module_1.builtinModules.includes(specifier) || node_module_1.builtinModules.includes(specifier.replace(/^node:/u, ''))) {
                 const name = specifier.replace(/^node:/u, '');
                 if (!['assert', 'assert/strict', 'buffer', 'crypto', 'events', 'os', 'path', 'path/posix', 'path/win32', 'punycode', 'querystring',
@@ -139084,7 +139108,7 @@ class SetupPublisherInventoryReviewAdapter {
             }
             if (!specifier.startsWith('./') && !specifier.startsWith('../'))
                 return unresolved();
-            const path = sibling(program.unit.path, specifier), role = `import:${++count}`;
+            const path = nodeImportPath(program.unit.path, dependency), role = `import:${++count}`;
             const edges = document.edges.filter(e => e.from === program.unit.id && e.role === role);
             const called = edges.length === 1 ? sources.get(edges[0].to) : undefined;
             if (!called || called.unit.path !== path || called.unit.repositoryId !== program.unit.repositoryId || called.unit.commit !== program.unit.commit
@@ -139101,7 +139125,8 @@ class SetupPublisherInventoryReviewAdapter {
         const incompatible = () => { throw new setup_publisher_inventory_review_1.SetupPublisherInventoryError('incompatible-producer'); };
         const preserving = (value) => {
             const concurrency = (0, setup_batch_github_read_adapter_1.batchObject)(value);
-            return concurrency?.['cancel-in-progress'] === false && concurrency.queue === 'max'
+            return concurrency !== undefined && (concurrency['cancel-in-progress'] === undefined || concurrency['cancel-in-progress'] === false)
+                && concurrency.queue === 'max'
                 && typeof concurrency.group === 'string' && concurrency.group.length > 0;
         };
         const lane = (value) => {

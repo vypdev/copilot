@@ -259,6 +259,67 @@ function nodeAction(main: string, helper?: string, concurrency = '') {
       ...(helper === undefined ? [] : [{ from: 'main', to: 'helper', role: 'import:1' }])] });
 }
 
+function nodeModuleFixture(specifier: string, helperPath: string, form: 'import' | 'dynamic' | 'export' | 'require' = 'import',
+  mainPath = 'action/main.mjs', unboundActualPath?: string) {
+  const main = form === 'require' ? `require(${JSON.stringify(specifier)});\n` : form === 'dynamic'
+    ? `await import(${JSON.stringify(specifier)});\n` : `${form === 'export' ? 'export * from' : 'import'} ${JSON.stringify(specifier)};\n`;
+  const f = fixture({ workflow: `on: push\njobs:\n  inspect:\n    steps:\n      - uses: owner/project/action@${'1'.repeat(40)}\n`,
+    programs: [{ id: 'action', path: 'action/action.yml', kind: 'action', content: `runs:\n  using: node24\n  main: ${JSON.stringify(mainPath.slice(7))}\n` },
+      { id: 'main', path: mainPath, kind: 'node-entrypoint', content: main },
+      { id: 'helper', path: helperPath, kind: 'node-entrypoint', content: 'console.log("BOUND_HELPER");\n' }],
+    edges: [{ from: 'workflow-ci', to: 'action', role: 'uses:inspect:1' }, { from: 'action', to: 'main', role: 'main' },
+      { from: 'main', to: 'helper', role: 'import:1' }] });
+  if (unboundActualPath) {
+    f.files.set(unboundActualPath, 'console.log("UNBOUND_REAL");\n');
+    const tree = f.retain(f.files); f.commits.set(f.proposal.destination.head, tree);
+    f.observed.tree = f.document.destination.tree = tree;
+    for (const unit of f.document.units) unit.tree = tree;
+    f.seal();
+  }
+  return f;
+}
+it.each([
+  { specifier: './helper.mjs?reviewed', form: 'import' },
+  { specifier: './helper.mjs#reviewed', form: 'import' },
+  { specifier: './helper%2Emjs', form: 'import' },
+  { specifier: './helper.mjs?reviewed', form: 'dynamic' },
+  { specifier: './helper.mjs?reviewed', form: 'export' },
+] as const)('publisher-inventory-C27: ESM $form cannot review a decoy instead of the actual URL target: $specifier', async row => {
+  const f = nodeModuleFixture(row.specifier, 'action/' + row.specifier.slice(2), row.form, undefined, 'action/helper.mjs');
+  await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+  expect(f.request.mock.calls.some(([r]) => r.endsWith('/reviews'))).toBe(false);
+});
+it.each([
+  { specifier: './helper.mjs?reviewed', helper: 'action/helper.mjs', form: 'import' },
+  { specifier: './helper.mjs#reviewed', helper: 'action/helper.mjs', form: 'import' },
+  { specifier: './helper%2Emjs', helper: 'action/helper.mjs', form: 'import' },
+  { specifier: './helper.mjs?reviewed', helper: 'action/helper.mjs', form: 'dynamic' },
+  { specifier: './helper.mjs#reviewed', helper: 'action/helper.mjs', form: 'export' },
+  { specifier: './helper%23literal.mjs', helper: 'action/helper#literal.mjs', form: 'import' },
+  { specifier: './helper.mjs?runtime', helper: 'action/dir?literal/helper.mjs', main: 'action/dir?literal/main.mjs', form: 'import' },
+] as const)('publisher-inventory-C27: ESM $form binds its canonical Git file without excluding valid URL metadata: $specifier', async row => {
+  const f = nodeModuleFixture(row.specifier, row.helper, row.form, 'main' in row ? row.main : undefined);
+  await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+});
+it.each(['./helper.cjs#reviewed', './helper%2Ecjs'])(
+  'publisher-inventory-C27: CommonJS retains a literal filesystem specifier: %s', async specifier => {
+    const f = nodeModuleFixture(specifier, 'action/' + specifier.slice(2), 'require', 'action/main.cjs');
+    await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+    const directory = await mkdtemp(join(tmpdir(), 'copilot-commonjs-literal-'));
+    try {
+      await writeFile(join(directory, 'main.cjs'), f.files.get('action/main.cjs')!);
+      await writeFile(join(directory, specifier.slice(2)), f.files.get('action/' + specifier.slice(2))!);
+      expect(execFileSync(process.execPath, [join(directory, 'main.cjs')], { cwd: directory, env: {}, encoding: 'utf8' })).toBe('BOUND_HELPER\n');
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  });
+it.each(['../../__copilot_inventory_left__/action/helper.mjs', '../../__copilot_inventory_right__/action/helper.mjs',
+  './helper%2fmjs', './helper%FF.mjs'])(
+  'publisher-inventory-C27: repository escapes and invalid file URLs remain unresolved: %s', async specifier => {
+    const helper = specifier.startsWith('./') ? 'action/' + specifier.slice(2) : 'action/helper.mjs';
+    const f = nodeModuleFixture(specifier, helper);
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+  });
+
 function bindRootEnvironment(f: ReturnType<typeof fixture>, values: Record<string, unknown>) {
   const unit = f.document.units.find(u => u.id === 'workflow-ci')!;
   for (const [name, definition] of Object.entries(values)) {
@@ -365,11 +426,20 @@ it.each([
 });
 
 const sharedLane = { group: 'copilot-bugbot-status-${{ github.repository_id }}-${{ inputs.pull_number }}', queue: 'max', 'cancel-in-progress': false };
+it.each(['workflow', 'job'] as const)('publisher-inventory-C34: a shared %s lane preserves the documented cancellation default', async scope => {
+  const policy = { group: sharedLane.group, queue: sharedLane.queue };
+  const workflow = 'on: pull_request\n' + (scope === 'workflow' ? `concurrency: ${JSON.stringify(policy)}\n` : '')
+    + 'jobs:\n  inspect:\n' + (scope === 'job' ? `    concurrency: ${JSON.stringify(policy)}\n` : '') + '    steps:\n      - run: printf reviewed\n';
+  const f = fixture({ workflow }); f.document.workflows[0].disposition = 'serialized-producer'; f.seal();
+  await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+});
 it.each([
   { name: 'pending job dropped', job: { group: 'auxiliary', queue: 'single', 'cancel-in-progress': false }, allowed: false },
   { name: 'running job cancelled', job: { group: 'auxiliary', 'cancel-in-progress': true }, allowed: false },
   { name: 'implicit single queue', job: { group: 'auxiliary', 'cancel-in-progress': false }, allowed: false },
   { name: 'preserved auxiliary group', job: { group: 'auxiliary', queue: 'max', 'cancel-in-progress': false }, allowed: true },
+  { name: 'preserved auxiliary default cancellation', job: { group: 'auxiliary', queue: 'max' }, allowed: true },
+  { name: 'unresolved dynamic cancellation', job: { group: 'auxiliary', queue: 'max', 'cancel-in-progress': '${{ false }}' }, allowed: false },
   { name: 'inherited root lane', job: undefined, allowed: true },
 ])('publisher-inventory-C34: root serialization also validates job preservation, $name', async row => {
   const workflow = `on: push\nconcurrency: ${JSON.stringify(sharedLane)}\njobs:\n  inspect:\n`
@@ -381,10 +451,12 @@ it.each([
 it.each([
   { name: 'job-only shared lane', root: false, job: true, called: false, unsafe: false },
   { name: 'callee-only shared lane', root: false, job: false, called: true, unsafe: false },
+  { name: 'callee-only shared lane with default cancellation', root: false, job: false, called: true, unsafe: false, omitCancellation: true },
   { name: 'caller root inherited by callee', root: true, job: false, called: false, unsafe: false },
   { name: 'callee drops pending writer despite caller lane', root: true, job: false, called: false, unsafe: true },
 ])('publisher-inventory-C34: reachable reusable workflow preservation, $name', async row => {
-  const concurrency = (enabled: boolean) => enabled ? `concurrency: ${JSON.stringify(sharedLane)}\n` : '';
+  const policy = row.omitCancellation ? { group: sharedLane.group, queue: sharedLane.queue } : sharedLane;
+  const concurrency = (enabled: boolean) => enabled ? `concurrency: ${JSON.stringify(policy)}\n` : '';
   const child = `on: { workflow_call: {} }\n${concurrency(row.called)}jobs:\n  publish:\n`
     + (row.unsafe ? '    concurrency: { group: auxiliary, queue: single, cancel-in-progress: false }\n' : '')
     + '    steps:\n      - run: printf reviewed\n';

@@ -2020,6 +2020,22 @@ verification. Shell callee edges MUST retain command order too. Actual workflow
 job IDs allow a leading underscore; input bindings preserve valid job identity
 and source-route prefixes without relaxing other document IDs.
 
+Node dependency edges MUST preserve loader kind. Static imports, re-exports and
+dynamic imports use Node's file-URL resolution, with query/fragment metadata
+separate from the actual Git file and percent decoding before matching that
+file. Literal `require` retains CommonJS filesystem spelling. Bind the canonical
+in-repository file rather than an authenticated decoy named like the raw URL.
+Reject invalid file URLs, encoded separators and traversal outside the source
+repository, including escape/re-entry through a virtual root. Valid canonical
+URL imports and literal CommonJS names remain supported; this is not a blanket
+query/fragment refusal. Source text retains URL/cache distinctions for semantic
+review; the graph binds executed file bytes without evaluating any program.
+The resolver uses two distinct virtual POSIX file roots and Node's URL-to-path
+conversion so an untrusted specifier cannot spell a synthetic root back into
+an escaped path. It does not read a local repository checkout or follow links.
+See [Node24 ESM URLs](https://github.com/nodejs/node/blob/v24.20.0/doc/api/esm.md#urls)
+and [file URL conversion](https://github.com/nodejs/node/blob/v24.20.0/doc/api/url.md#urlfileurltopathurl-options).
+
 Version2 publisher inspection enumerates repository Variables and the complete
 organization Variables shared with that exact repository, using
 `GET /repos/{owner}/{repo}/actions/organization-variables`. The authenticated
@@ -2079,8 +2095,9 @@ credentials remain supported for independently reviewed value-independent use.
 
 A serialized producer MUST retain a shared lane along every reachable job and
 reusable-workflow writer path. Validate every explicit root/job concurrency
-policy even under an inherited valid shared lane: cancellation must be false and
-queue must be max. A separate preserving auxiliary group does not remove the
+policy even under an inherited valid shared lane: cancellation must be false or
+omitted (the provider's false default), and queue must be max. True and unresolved
+dynamic values remain incompatible. A separate preserving auxiliary group does not remove the
 inherited barrier. A shared job or callee lane can supply the barrier when its
 caller has none. Workflow-scoped producer claims conservatively treat each job
 as a potential writer. Legal single/default queues can discard older pending
@@ -2158,7 +2175,7 @@ evaluated-pilot write attempts remain zero.
 ### Completed source-review corrections (#1007)
 
 The62 semantic inventory/recovery cases remain the acceptance floor; parameter
-variants do not create new case identities. The reviewed implementation adds272
+variants do not create new case identities. The reviewed implementation adds295
 risk controls:33 indirect Node escape programs,11 unsafe native modules,14 valid
 closed programs, one inert download/code-construction oracle, four syntax bounds,
 one two-import source-order case, two actual job-input bindings,11 pure job-scope
@@ -2177,8 +2194,7 @@ negative, two pre/post condition cases, eleven condition source/Secret/literal
 variants, five job-policy variants, four authenticated external reusable paths
 and one case-insensitive provided-input precedence case. The original three
 positive fixtures now explicitly bind their previously ambient MODE instead of
-weakening the input guard. These controls MUST
-include12 further repository-shared Variable controls: three complete-reader
+weakening the input guard. The budget also includes12 repository-shared Variable controls: three complete-reader
 cases that succeed with global organization access denied (empty/shared/later
 pages with override), eight denied/malformed/incomplete shared-page boundaries,
 and same-valued override provenance drift. The former client-side global
@@ -2186,7 +2202,15 @@ visibility/grant fixtures become authenticated shared-namespace pagination,
 addition/removal/value drift and shared-variable shape controls; they do not
 pretend to reimplement GitHub's access policy. Global403 and the successful
 repository-scoped real read are retained separately without raw values. No
-actual workflow classification or installation is inferred. All controls MUST
+actual workflow classification or installation is inferred. Another23 module/default controls cover: five ESM decoy negatives across static,
+dynamic and re-export forms; seven valid canonical URL/encoded/parent-path
+bindings; two literal CommonJS cases with owned Node execution; four invalid URL
+or repository escape/re-entry cases; and five cancellation-default boundaries
+across workflow/job/auxiliary/callee policies, retaining dynamic refusal. The
+original immutable reader admits three decoys while owned Node24 loads the real
+unreviewed files, and rejects the default-only lane; retain these causal
+observations. Native module observations are owned POSIX controls, not Windows
+platform acceptance or real workflow execution. All controls MUST
 traverse the complete reader where provider/source behavior is asserted. The
 source-order cases retain original failures before correction and preserve
 swapped-dependency rejection. Existing pure100% and reader95%lines/statements,

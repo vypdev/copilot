@@ -207,6 +207,11 @@ creation, reflection escapes, opaque computed properties and native execution or
 loading facilities remain unresolved. Source traversal is bounded at10,000 syntax
 nodes and depth64; a larger or unsupported program needs a reviewed supported
 binding profile. Code-like strings alone do not represent execution.
+ESM imports/re-exports use their actual URL-resolved file, including percent
+decoding and query/fragment metadata. A same-named decoy cannot stand in for the
+executed file; invalid URLs and paths escaping the source repository remain
+unresolved. CommonJS require keeps literal filename spelling, and valid canonical
+URL imports are supported without running repository programs during inspection.
 Floating refs, mutable candidate checkouts, dynamic loading,
 unbound downloads, unsupported matrices and unresolved expressions stay blocked.
 Runtime environment overrides that can select other executable code, including
@@ -241,6 +246,8 @@ a job env value and using that value in a step condition remains unresolved.
 Serialization must hold through jobs and called reusable workflows: a valid root
 lane cannot excuse a job that cancels running work or drops older pending work.
 A preserving auxiliary group can coexist with an inherited shared lane.
+With `queue: max`, cancellation may be explicitly false or omitted using GitHub's
+false default. Cancellation true or unresolved dynamic values remain blocked.
 A symbolic credential is supported only where reviewed behavior is independent
 of its value; Secret-derived code or behavior selection remains unresolved.
 The maintainer supplies semantic assurance about the bound programs; source

@@ -723,6 +723,13 @@ unresolved. The existing classifier keeps positive foreign-writer priority.
 Node closure uses pinned Acorn syntax parsing and ESLint lexical-scope analysis
 to bind literal runtime imports in source order and reject indirect code creation,
 reflection escapes, opaque dynamic property access and unsupported native modules.
+Dependency records distinguish ESM URL loading from literal CommonJS require.
+ESM query/fragment metadata and percent encoding resolve to the actual bound Git
+file; decoys and repository escapes cannot replace it. Two distinct virtual
+POSIX roots prevent synthetic-root escape/re-entry, with no local checkout read.
+CommonJS retains its literal filename and valid canonical URL imports remain
+supported. The source text still describes module/cache identity for human
+semantic review; this graph verifies file bindings, not arbitrary behavior.
 Local shadowed identifiers and inert code-like strings remain ordinary source.
 The finite profile is bounded at10,000 syntax nodes and depth64; it does not prove
 arbitrary JavaScript behavior. Shell callee edges similarly retain command order.
@@ -736,7 +743,8 @@ stay blocked, including supported job-env-to-step conditions; inert strings and
 bound non-secret contexts remain valid. Serialized-producer validation follows
 each reachable job and reusable workflow even under a valid root lane. Every
 declared policy must preserve pending/running work; a preserving auxiliary group
-can retain an inherited shared barrier.
+can retain an inherited shared barrier. Omitted cancellation uses the provider's
+false default; true and unresolved dynamic values remain incompatible.
 Node and shell execution share the same runtime-environment override fence;
 source identity alone cannot authorize an unbound interpreter preload. Provider
 failures within inventory inspection become closed review-unavailable or

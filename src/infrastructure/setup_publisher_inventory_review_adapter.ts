@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { builtinModules } from 'node:module';
 import { posix } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as shellQuote from 'shell-quote';
 import { JSON_SCHEMA, load } from 'js-yaml';
 import { parse as parseJavaScript } from 'acorn';
@@ -51,6 +52,23 @@ const sibling = (file: string, relative: string) => {
   const path = posix.normalize(posix.join(posix.dirname(file), relative));
   if (!safePath(path)) return unresolved(); return path;
 };
+type NodeImport = Readonly<{ specifier: string; kind: 'import' | 'require' }>;
+const nodeImportPath = (file: string, dependency: NodeImport): string => {
+  if (dependency.kind === 'require') return sibling(file, dependency.specifier);
+  try {
+    // ESM uses URLs, including percent decoding and query/fragment metadata.
+    // Two distinct roots prevent an escape from being disguised by spelling
+    // one synthetic root back into the untrusted relative specifier.
+    const paths = ['/__copilot_inventory_left__/', '/__copilot_inventory_right__/'].map(root => {
+      const base = new URL(root + file.split('/').map(encodeURIComponent).join('/'), 'file:///');
+      const resolved = posix.normalize(fileURLToPath(new URL(dependency.specifier, base), { windows: false }));
+      if (!resolved.startsWith(root)) return unresolved();
+      return resolved.slice(root.length);
+    });
+    if (paths[0] !== paths[1] || !safePath(paths[0])) return unresolved();
+    return paths[0];
+  } catch { return unresolved(); }
+};
 const scope = (v: unknown): Data => {
   if (v === undefined) return {};
   const result = batchObject(v); if (!result) return unresolved(); return result;
@@ -68,7 +86,7 @@ const hasRuntimeOverride = (values: Data): boolean => Object.keys(values)
   .some(key => /^(?:PATH|NODE_OPTIONS|NODE_PATH|BASH_ENV|ENV|SHELLOPTS|GITHUB_ACTION_PATH|LD_.*|DYLD_.*)$/iu.test(key));
 
 /** A finite source profile, not proof of arbitrary JavaScript behavior. */
-function nodeImports(content: string, boundEnvironment: ReadonlySet<string>): readonly string[] {
+function nodeImports(content: string, boundEnvironment: ReadonlySet<string>): readonly NodeImport[] {
   let root: Data, globals: ReadonlySet<unknown>;
   try { root = parseJavaScript(content, { ecmaVersion: 'latest', sourceType: 'module',
     ranges: true, allowHashBang: true, allowReturnOutsideFunction: true }) as unknown as Data;
@@ -109,7 +127,7 @@ function nodeImports(content: string, boundEnvironment: ReadonlySet<string>): re
     return false;
   };
   const module = Array.isArray(root.body) && root.body.some(value => /^(?:Import|Export)/u.test(String(batchObject(value)?.type)));
-  const imports = new Map<number, string>(), pending: { node: Data; parent?: Data; depth: number; strict: boolean; thisSafe: boolean }[] = [
+  const imports = new Map<number, NodeImport>(), pending: { node: Data; parent?: Data; depth: number; strict: boolean; thisSafe: boolean }[] = [
     { node: root, depth: 0, strict: module || strictBody(root), thisSafe: true },
   ];
   let count = 0;
@@ -117,15 +135,15 @@ function nodeImports(content: string, boundEnvironment: ReadonlySet<string>): re
     const { node, parent, depth, strict, thisSafe } = pending.pop()!;
     if (++count > 10_000 || depth > 64 || node.type === 'ThisExpression' && !thisSafe || node.type === 'WithStatement') return unresolved();
     if (node.type === 'ImportDeclaration' || node.type === 'ExportNamedDeclaration' && node.source
-      || node.type === 'ExportAllDeclaration') imports.set(Number(node.start), literal(node.source));
+      || node.type === 'ExportAllDeclaration') imports.set(Number(node.start), { specifier: literal(node.source), kind: 'import' });
     if (node.type === 'ImportExpression') {
       if (node.options !== undefined && node.options !== null) return unresolved();
-      imports.set(Number(node.start), literal(node.source));
+      imports.set(Number(node.start), { specifier: literal(node.source), kind: 'import' });
     }
     if (node.type === 'CallExpression' && batchObject(node.callee)?.type === 'Identifier'
       && batchObject(node.callee)?.name === 'require' && globals.has(node.callee)) {
       if (!Array.isArray(node.arguments) || node.arguments.length !== 1) return unresolved();
-      imports.set(Number(node.start), literal(node.arguments[0]));
+      imports.set(Number(node.start), { specifier: literal(node.arguments[0]), kind: 'require' });
     }
     if (node.type === 'MemberExpression') {
       const name = memberName(node), owner = batchObject(node.object);
@@ -689,7 +707,8 @@ export class SetupPublisherInventoryReviewAdapter {
       .filter(name => !/^(?:GITHUB_|RUNNER_|ACTIONS_|STATE_|NODE_ICU_DATA$)/iu.test(name) || name === 'GITHUB_TOKEN'));
     const imports = nodeImports(content, boundEnvironment);
     let count = 0;
-    for (const specifier of imports) {
+    for (const dependency of imports) {
+      const { specifier } = dependency;
       if (builtinModules.includes(specifier) || builtinModules.includes(specifier.replace(/^node:/u, ''))) {
         const name = specifier.replace(/^node:/u, '');
         if (!['assert', 'assert/strict', 'buffer', 'crypto', 'events', 'os', 'path', 'path/posix', 'path/win32', 'punycode', 'querystring',
@@ -697,7 +716,7 @@ export class SetupPublisherInventoryReviewAdapter {
         continue;
       }
       if (!specifier.startsWith('./') && !specifier.startsWith('../')) return unresolved();
-      const path = sibling(program.unit.path, specifier), role = `import:${++count}`;
+      const path = nodeImportPath(program.unit.path, dependency), role = `import:${++count}`;
       const edges = document.edges.filter(e => e.from === program.unit.id && e.role === role);
       const called = edges.length === 1 ? sources.get(edges[0].to) : undefined;
       if (!called || called.unit.path !== path || called.unit.repositoryId !== program.unit.repositoryId || called.unit.commit !== program.unit.commit
@@ -712,7 +731,8 @@ export class SetupPublisherInventoryReviewAdapter {
     const incompatible = (): never => { throw new SetupPublisherInventoryError('incompatible-producer'); };
     const preserving = (value: unknown): boolean => {
       const concurrency = batchObject(value);
-      return concurrency?.['cancel-in-progress'] === false && concurrency.queue === 'max'
+      return concurrency !== undefined && (concurrency['cancel-in-progress'] === undefined || concurrency['cancel-in-progress'] === false)
+        && concurrency.queue === 'max'
         && typeof concurrency.group === 'string' && concurrency.group.length > 0;
     };
     const lane = (value: unknown): boolean => {
