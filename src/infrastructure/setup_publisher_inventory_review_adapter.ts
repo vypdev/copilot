@@ -780,16 +780,12 @@ export class SetupPublisherInventoryReviewAdapter {
     if (!batchPositive(owner?.id) || owner.id !== target.ownerId || typeof owner.login !== 'string'
       || owner.login.toLowerCase() !== target.owner.toLowerCase()) return mismatch();
     if (owner?.type === 'Organization') {
-      const variables = await collect('GET /orgs/{org}/actions/variables', { org: target.owner }, 'variables');
+      // The provider authenticates which organization Variables are shared
+      // with this exact repository. Global organization enumeration/grants
+      // require broader privileges and are not an effective-input prerequisite.
+      const variables = await collect('GET /repos/{owner}/{repo}/actions/organization-variables', coordinate, 'variables');
       for (const raw of variables) {
-        const variable = batchObject(raw); if (!variable || typeof variable.name !== 'string'
-          || !['all', 'private', 'selected'].includes(String(variable.visibility))) return unresolved();
-        if (variable.visibility === 'selected') {
-          const repositories = await collect('GET /orgs/{org}/actions/variables/{name}/repositories', { org: target.owner, name: variable.name }, 'repositories');
-          const ids = repositories.map(r => batchObject(r)?.id);
-          if (ids.some(id => !batchPositive(id)) || new Set(ids).size !== ids.length) return unresolved();
-          if (!repositories.some(r => batchObject(r)?.id === target.id)) continue;
-        } else if (variable.visibility !== 'all' && !(variable.visibility === 'private' && target.private)) continue;
+        const variable = batchObject(raw); if (!variable) return unresolved();
         this.variable(effective, variable, 'organization-variable');
       }
     } else if (owner?.type !== 'User') return unresolved();

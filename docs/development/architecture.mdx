@@ -689,9 +689,12 @@ no concrete use case or default implementation. The publisher cannot adopt legac
 effects. Source reads pin a merged maintainer revision and verified Git blob bytes;
 the destination reader proves compatible installed metadata and complete relevant
 workflow inventory without Secret reads or resource writers. Version2 inventory
-review enumerates repository and organization Actions Variables, including their
-non-secret values, visibility and selected-repository membership, to resolve
-effective inputs and aggregate `INPUT_VARS_JSON` configuration. Only fingerprints
+review enumerates repository Variables and organization Variables shared with
+that exact repository. The repository-scoped authenticated list establishes
+availability after the provider's visibility/membership policy; the reader does
+not enumerate global organization Variables or other repository grants.
+Repository overrides and complete bounded pages resolve effective inputs and
+aggregate `INPUT_VARS_JSON` configuration. Only fingerprints
 and provenance enter evidence; raw values are not logged or persisted. Secret
 values are never fetched. Version1 retains its prior read scope.
 

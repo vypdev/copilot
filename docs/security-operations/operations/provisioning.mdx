@@ -211,11 +211,17 @@ Floating refs, mutable candidate checkouts, dynamic loading,
 unbound downloads, unsupported matrices and unresolved expressions stay blocked.
 Runtime environment overrides that can select other executable code, including
 `NODE_OPTIONS` preloads, also remain unresolved for Node and shell programs.
-Setup enumerates repository and organization Actions Variables through
-authenticated GETs, including their non-secret values, visibility and selected
-repository memberships. These values are needed to resolve effective inputs and
-aggregate `INPUT_VARS_JSON` settings. Only fingerprints and provenance enter
-evidence; raw values are not logged or persisted. Secret values are never fetched.
+Publisher review reads repository Variables and organization Variables shared
+with that exact repository through authenticated GETs. The
+[repository-shared list](https://docs.github.com/en/rest/actions/variables#list-repository-organization-variables)
+uses repository Variables-read permission; it does not require organization-wide
+Variable/admin access or other repositories' grant lists. GitHub applies the
+visibility/membership policy to this list, and repository values override shared
+ones. Complete pagination remains mandatory; denial or missing pages block the
+review. Values resolve effective inputs and aggregate `INPUT_VARS_JSON`; only
+fingerprints/provenance enter evidence, with no raw values logged or persisted.
+Secret values are never fetched. Ordinary batch resource/grant management keeps
+its separate permissions and behavior.
 If this read is required, the evidence document must include a workflow-scoped
 `vars-context` binding for every inventoried workflow, including an empty
 namespace. This also covers Variables used only by conditions or concurrency

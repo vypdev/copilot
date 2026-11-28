@@ -2020,11 +2020,21 @@ verification. Shell callee edges MUST retain command order too. Actual workflow
 job IDs allow a leading underscore; input bindings preserve valid job identity
 and source-route prefixes without relaxing other document IDs.
 
-Version2 inspection enumerates repository/organization Actions Variables,
-including non-secret values, visibility and selected-repository memberships, to
-resolve effective inputs and aggregate `INPUT_VARS_JSON`. Only fingerprints and
-provenance enter evidence; raw values MUST NOT be logged or persisted. Secret
-values are never fetched. Version1's read scope is unchanged.
+Version2 publisher inspection enumerates repository Variables and the complete
+organization Variables shared with that exact repository, using
+`GET /repos/{owner}/{repo}/actions/organization-variables`. The authenticated
+provider response attests target availability after organization visibility and
+membership policy; this reader MUST NOT require global organization enumeration
+or other repositories' grant lists. Repository Variables retain precedence;
+complete shared/local pagination, values and provenance resolve effective inputs
+and aggregate `INPUT_VARS_JSON`. Both collections retain30-item pages and the
+1,000-resource bound. Denied, malformed or incomplete reads remain unresolved,
+never absence. Only fingerprints/provenance enter evidence; raw values MUST NOT
+be logged or persisted, and Secret values are never fetched. Version1 and the
+ordinary batch provisioning/grant routes retain their separate read contracts.
+See the [repository-shared Variables API](https://docs.github.com/en/rest/actions/variables#list-repository-organization-variables):
+repository Variables-read permission suffices; no organization Variables/admin
+permission or new configurable bypass is introduced.
 
 When the authenticated closure reads the Variable namespace, each destination
 workflow MUST have a workflow-scoped `vars-context` input record, even when the
@@ -2148,7 +2158,7 @@ evaluated-pilot write attempts remain zero.
 ### Completed source-review corrections (#1007)
 
 The62 semantic inventory/recovery cases remain the acceptance floor; parameter
-variants do not create new case identities. The reviewed implementation adds260
+variants do not create new case identities. The reviewed implementation adds272
 risk controls:33 indirect Node escape programs,11 unsafe native modules,14 valid
 closed programs, one inert download/code-construction oracle, four syntax bounds,
 one two-import source-order case, two actual job-input bindings,11 pure job-scope
@@ -2168,6 +2178,15 @@ variants, five job-policy variants, four authenticated external reusable paths
 and one case-insensitive provided-input precedence case. The original three
 positive fixtures now explicitly bind their previously ambient MODE instead of
 weakening the input guard. These controls MUST
+include12 further repository-shared Variable controls: three complete-reader
+cases that succeed with global organization access denied (empty/shared/later
+pages with override), eight denied/malformed/incomplete shared-page boundaries,
+and same-valued override provenance drift. The former client-side global
+visibility/grant fixtures become authenticated shared-namespace pagination,
+addition/removal/value drift and shared-variable shape controls; they do not
+pretend to reimplement GitHub's access policy. Global403 and the successful
+repository-scoped real read are retained separately without raw values. No
+actual workflow classification or installation is inferred. All controls MUST
 traverse the complete reader where provider/source behavior is asserted. The
 source-order cases retain original failures before correction and preserve
 swapped-dependency rejection. Existing pure100% and reader95%lines/statements,

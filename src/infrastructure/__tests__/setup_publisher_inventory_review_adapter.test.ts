@@ -131,7 +131,7 @@ function fixture(options: { workflow?: string; workflowPath?: string; programs?:
     inspectComplete: (input: SetupPublisherProposal = proposal) => reader.inspect(input) };
 }
 
-function variableFixture(options: { organization?: unknown[]; repository?: unknown[]; memberships?: Record<string, unknown[]>;
+function variableFixture(options: { organization?: unknown[]; repository?: unknown[];
   expected?: Record<string, { origin: 'repository-variable' | 'organization-variable'; value: string }>;
   ownerType?: string; public?: boolean;
   response?: (route: string, parameters: Record<string, unknown>, data: unknown) => unknown } = {}) {
@@ -150,9 +150,8 @@ function variableFixture(options: { organization?: unknown[]; repository?: unkno
     let data: unknown;
     const page = (values: unknown[], key: string) => ({ total_count: values.length,
       [key]: values.slice((Number(parameters.page) - 1) * 30, Number(parameters.page) * 30) });
-    if (route === 'GET /orgs/{org}/actions/variables') data = page(options.organization ?? [], 'variables');
+    if (route === 'GET /repos/{owner}/{repo}/actions/organization-variables') data = page(options.organization ?? [], 'variables');
     else if (route === 'GET /repos/{owner}/{repo}/actions/variables') data = page(options.repository ?? [], 'variables');
-    else if (route === 'GET /orgs/{org}/actions/variables/{name}/repositories') data = page(options.memberships?.[String(parameters.name)] ?? [], 'repositories');
     else {
       const response = await original(route, parameters); data = response.data;
       if (route === 'GET /repos/{owner}/{repo}' && parameters.repo === 'project' && options.ownerType) {
@@ -186,7 +185,7 @@ function conditionalFixture(location: 'job' | 'step' | 'concurrency', bind = fal
   const f = fixture({ workflow }), original = f.request.getMockImplementation()!;
   let mode: string | undefined = 'observe';
   f.request.mockImplementation(async (route, parameters) => {
-    if (route === 'GET /orgs/{org}/actions/variables') return { data: { total_count: 0, variables: [] } };
+    if (route === 'GET /repos/{owner}/{repo}/actions/organization-variables') return { data: { total_count: 0, variables: [] } };
     if (route === 'GET /repos/{owner}/{repo}/actions/variables') return { data: { total_count: mode === undefined ? 0 : 1, variables: mode === undefined ? [] : [{ name: 'MODE', value: mode }] } };
     return original(route, parameters);
   });
@@ -1181,46 +1180,67 @@ it.each(['$/action@main', `$/action@${'1'.repeat(40)}`, '$/../action'])(
 it('publisher-inventory-C30: unavailable Variables stay unresolved before any independent approval is considered', async () => {
   const f = fixture({ workflow: 'on: push\nenv:\n  SELECTOR: ${{ vars.SELECTOR }}\njobs:\n  inspect:\n    steps: []\n' });
   await expect(f.inspect()).rejects.toMatchObject({ reason: 'unresolved-closure' });
-  expect(f.request.mock.calls.some(([r]) => r.endsWith('/actions/variables'))).toBe(true);
+  expect(f.request.mock.calls.some(([r]) => r.endsWith('/actions/organization-variables'))).toBe(true);
   expect(f.request.mock.calls.some(([r]) => r.endsWith('/reviews'))).toBe(false);
 });
-it('publisher-inventory-C30: complete later pages and selected-repository membership determine effective Variable provenance', async () => {
-  const organization = [{ name: 'MODE', value: 'controlled-organization', visibility: 'selected' },
-    { name: 'EXCLUDED', value: 'controlled-outside-selection', visibility: 'selected' }];
+it.each(['empty shared namespace', 'shared organization value', 'later pages and repository override'] as const)(
+  'publisher-inventory-C30: repository-scoped organization Variables need no global organization access: %s', async scenario => {
+    const organization = scenario === 'empty shared namespace' ? [] : scenario === 'shared organization value'
+      ? [{ name: 'MODE', value: 'controlled-organization' }]
+      : [{ name: 'MODE', value: 'controlled-organization' }, ...Array.from({ length: 30 }, (_, n) => ({ name: `ORG_${n}`, value: `controlled-${n}` }))];
+    const repository = scenario === 'later pages and repository override' ? [{ name: 'MODE', value: 'controlled-repository' }] : [];
+    const expected = { ...Object.fromEntries(organization.map(v => [v.name, { origin: 'organization-variable' as const, value: v.value }])),
+      ...Object.fromEntries(repository.map(v => [v.name, { origin: 'repository-variable' as const, value: v.value }])) };
+    const f = variableFixture({ repository, expected }), original = f.request.getMockImplementation()!;
+    f.request.mockImplementation(async (route, parameters) => {
+      if (route.startsWith('GET /orgs/')) throw { status: 403 };
+      if (route === 'GET /repos/{owner}/{repo}/actions/organization-variables') return { data: { total_count: organization.length,
+        variables: organization.slice((Number(parameters.page) - 1) * 30, Number(parameters.page) * 30) } };
+      return original(route, parameters);
+    });
+    await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+    expect(f.request.mock.calls.some(([r]) => r.startsWith('GET /orgs/'))).toBe(false);
+    expect(f.request.mock.calls.filter(([r]) => r.endsWith('/organization-variables')).map(([, p]) => p.page))
+      .toEqual(scenario === 'later pages and repository override' ? [1, 2] : [1]);
+    expect(JSON.stringify(f.document)).not.toContain('controlled-organization');
+    expect(JSON.stringify(f.document)).not.toContain('controlled-repository');
+  });
+it('publisher-inventory-C30: complete shared and local later pages determine effective Variable provenance', async () => {
+  const organization = Array.from({ length: 31 }, (_, n) => ({ name: `SHARED_${n}`, value: `controlled-organization-${n}` }));
   const repository = Array.from({ length: 31 }, (_, n) => ({ name: `LOCAL_${n}`, value: `controlled-local-${n}` }));
-  const expected: Record<string, { origin: 'repository-variable' | 'organization-variable'; value: string }> = {
-    MODE: { origin: 'organization-variable', value: 'controlled-organization' },
-    ...Object.fromEntries(repository.map(v => [v.name, { origin: 'repository-variable' as const, value: v.value }])),
-  };
-  const f = variableFixture({ organization, repository, expected, memberships: {
-    MODE: [...Array.from({ length: 30 }, (_, n) => ({ id: n + 100 })), { id: 42 }], EXCLUDED: [{ id: 999 }],
-  } });
-  await expect(f.inspectComplete()).resolves.toMatchObject({ inspection: { installation: { inventoryReview: { approvals: [{ actorId: 17 }] } } } });
-  expect(f.request.mock.calls.filter(([r]) => r === 'GET /repos/{owner}/{repo}/actions/variables').map(([, p]) => p.page)).toEqual([1, 2]);
-  expect(f.request.mock.calls.filter(([r, p]) => r.endsWith('/repositories') && p.name === 'MODE').map(([, p]) => p.page)).toEqual([1, 2]);
-  expect(JSON.stringify(f.document)).not.toContain('controlled-organization');
+  const expected = { ...Object.fromEntries(organization.map(v => [v.name, { origin: 'organization-variable' as const, value: v.value }])),
+    ...Object.fromEntries(repository.map(v => [v.name, { origin: 'repository-variable' as const, value: v.value }])) };
+  const f = variableFixture({ organization, repository, expected });
+  await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+  for (const route of ['GET /repos/{owner}/{repo}/actions/variables', 'GET /repos/{owner}/{repo}/actions/organization-variables']) {
+    expect(f.request.mock.calls.filter(([r]) => r === route).map(([, p]) => p.page)).toEqual([1, 2]);
+  }
+  expect(f.request.mock.calls.some(([r]) => r.startsWith('GET /orgs/'))).toBe(false);
+  expect(JSON.stringify(f.document)).not.toContain('controlled-organization-30');
   expect(JSON.stringify(f.document)).not.toContain('controlled-local-30');
-  expect(f.request.mock.calls.every(([r]) => r.startsWith('GET ') && !r.includes('/secrets'))).toBe(true);
 });
-it.each([
-  { name: 'all organization repositories', visibility: 'all', public: true, included: true },
-  { name: 'private repository', visibility: 'private', public: false, included: true },
-  { name: 'public repository excluded from private scope', visibility: 'private', public: true, included: false },
-])('publisher-inventory-C30: Variable visibility, $name', async row => {
-  const f = variableFixture({ public: row.public, organization: [{ name: 'MODE', value: 'controlled-visibility', visibility: row.visibility }],
-    expected: row.included ? { MODE: { origin: 'organization-variable', value: 'controlled-visibility' } } : {} });
-  await expect(f.inspectComplete()).resolves.toMatchObject({ inspection: { installation: { publisher: { kind: 'absent' } } } });
-});
+it.each(['newly shared', 'no longer shared', 'changed shared value'] as const)(
+  'publisher-inventory-C30: changed provider-shared namespace invalidates prior evidence: %s', async change => {
+    const organization = [{ name: 'MODE', value: 'controlled-original' }];
+    const f = variableFixture({ organization, expected: { MODE: { origin: 'organization-variable', value: 'controlled-original' } } });
+    await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+    if (change === 'newly shared') organization.push({ name: 'NEW_MODE', value: 'controlled-new' });
+    else if (change === 'no longer shared') organization.pop();
+    else organization[0].value = 'controlled-changed';
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'binding-mismatch' });
+    expect(f.request.mock.calls.some(([r]) => r.startsWith('GET /orgs/'))).toBe(false);
+  });
 it('publisher-inventory-C30: a user-owned repository reads its complete local Variables without organization authority', async () => {
   const f = variableFixture({ ownerType: 'User', repository: [{ name: 'mode', value: 'controlled-user' }],
     expected: { MODE: { origin: 'repository-variable', value: 'controlled-user' } } });
   await expect(f.inspectComplete()).resolves.toMatchObject({ inspection: { installation: { inventoryReview: { approvals: [{ actorId: 17 }] } } } });
   expect(f.request.mock.calls.some(([r]) => r.startsWith('GET /orgs/'))).toBe(false);
+  expect(f.request.mock.calls.some(([r]) => r.endsWith('/organization-variables'))).toBe(false);
 });
 it.each([
   { name: 'non-object Variable', organization: [null] },
   { name: 'missing Variable name', organization: [{ value: 'controlled', visibility: 'all' }] },
-  { name: 'unknown visibility', organization: [{ name: 'MODE', value: 'controlled', visibility: 'future' }] },
+  { name: 'missing shared Variable value', organization: [{ name: 'MODE' }] },
   { name: 'duplicate folded organization name', organization: [{ name: 'MODE', value: 'controlled', visibility: 'all' }, { name: 'mode', value: 'other', visibility: 'all' }] },
   { name: 'unsafe Variable name', repository: [{ name: 'invalid/name', value: 'controlled' }] },
   { name: 'non-string value', repository: [{ name: 'MODE', value: 7 }] },
@@ -1228,14 +1248,40 @@ it.each([
   { name: 'duplicate folded repository name', repository: [{ name: 'MODE', value: 'controlled' }, { name: 'mode', value: 'other' }] },
   { name: 'non-object repository Variable', repository: [null] },
   { name: 'unsupported owner category', ownerType: 'Enterprise' },
-  { name: 'malformed selected repository ID', organization: [{ name: 'MODE', value: 'controlled', visibility: 'selected' }], memberships: { MODE: [{ id: 0 }] } },
-  { name: 'duplicate selected repository IDs', organization: [{ name: 'MODE', value: 'controlled', visibility: 'selected' }], memberships: { MODE: [{ id: 42 }, { id: 42 }] } },
+  { name: 'unsafe shared Variable name', organization: [{ name: 'invalid/name', value: 'controlled' }] },
+  { name: 'non-string shared Variable value', organization: [{ name: 'MODE', value: 7 }] },
   { name: 'aggregate Variable value limit', repository: Array.from({ length: 9 }, (_, n) => ({ name: `MODE_${n}`, value: 'x'.repeat(30_000) })) },
 ])('publisher-inventory-C30: malformed Variable facts remain unresolved: $name', async row => {
   const f = variableFixture(row);
   await expect(f.inspect()).rejects.toMatchObject({ reason: 'unresolved-closure' });
   expect(f.request.mock.calls.some(([r]) => r.endsWith('/reviews'))).toBe(false);
   expect(f.request.mock.calls.every(([r]) => r.startsWith('GET '))).toBe(true);
+});
+it.each(['denied', 'missing total', 'over limit total', 'non-array', 'overfull page', 'short incomplete page', 'excess results', 'changed total'] as const)(
+  'publisher-inventory-C30: incomplete repository-shared organization pagination never becomes absence: %s', async fault => {
+    const organization = Array.from({ length: 31 }, (_, n) => ({ name: `SHARED_${n}`, value: `controlled-${n}` }));
+    const f = variableFixture({ organization, response: (route, p, data) => {
+      if (route !== 'GET /repos/{owner}/{repo}/actions/organization-variables') return data;
+      if (fault === 'denied') throw { status: 403 };
+      const page = data as { total_count: number; variables: unknown[] };
+      if (fault === 'missing total') return { variables: page.variables };
+      if (fault === 'over limit total') return { ...page, total_count: 1001 };
+      if (fault === 'non-array') return { total_count: 31, variables: {} };
+      if (fault === 'overfull page') return { total_count: 31, variables: organization };
+      if (fault === 'short incomplete page') return { total_count: 31, variables: page.variables.slice(0, 1) };
+      if (fault === 'excess results') return { ...page, total_count: 0 };
+      return p.page === 1 ? page : { ...page, total_count: 32 };
+    } });
+    await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'unresolved-closure' });
+    expect(f.request.mock.calls.some(([r]) => r.endsWith('/reviews') || r.startsWith('GET /orgs/'))).toBe(false);
+  });
+it('publisher-inventory-C30: same-valued repository override still changes organization provenance and approval', async () => {
+  const repository: { name: string; value: string }[] = [];
+  const f = variableFixture({ organization: [{ name: 'MODE', value: 'controlled-same' }], repository,
+    expected: { MODE: { origin: 'organization-variable', value: 'controlled-same' } } });
+  await expect(f.inspectComplete()).resolves.toHaveProperty('inspection.installation.inventoryReview.approvals');
+  repository.push({ name: 'MODE', value: 'controlled-same' });
+  await expect(f.inspectComplete()).rejects.toMatchObject({ reason: 'binding-mismatch' });
 });
 it.each(['denied', 'missing total', 'over limit total', 'non-array', 'overfull page', 'short incomplete page', 'excess results', 'changed total'] as const)(
   'publisher-inventory-C30: incomplete Variable pagination never becomes absence: %s', async fault => {
@@ -1268,7 +1314,7 @@ it.each(['repository-variable', 'organization-variable'] as const)(
     bindVariableContext(f, variables);
     const original = f.request.getMockImplementation()!;
     f.request.mockImplementation(async (route, parameters) => {
-      if (route === 'GET /orgs/{org}/actions/variables') return { data: { total_count: 1,
+      if (route === 'GET /repos/{owner}/{repo}/actions/organization-variables') return { data: { total_count: 1,
         variables: [{ name: 'mode', value: 'organization-mode', visibility: 'private' }] } };
       if (route === 'GET /repos/{owner}/{repo}/actions/variables') return { data: { total_count: origin === 'repository-variable' ? 1 : 0,
         variables: origin === 'repository-variable' ? [{ name: 'MODE', value: 'repository-mode' }] : [] } };
@@ -1322,7 +1368,7 @@ it.each([
   bindVariableContext(f, variables); const original = f.request.getMockImplementation()!;
   let repositoryValue = configuration.repository;
   f.request.mockImplementation(async (route, parameters) => {
-    if (route === 'GET /orgs/{org}/actions/variables') return { data: { total_count: configuration.organization ? 1 : 0,
+    if (route === 'GET /repos/{owner}/{repo}/actions/organization-variables') return { data: { total_count: configuration.organization ? 1 : 0,
       variables: configuration.organization ? [{ name: 'MODE', value: configuration.organization, visibility: 'private' }] : [] } };
     if (route === 'GET /repos/{owner}/{repo}/actions/variables') return { data: { total_count: repositoryValue ? 1 : 0,
       variables: repositoryValue ? [{ name: 'MODE', value: repositoryValue }] : [] } };

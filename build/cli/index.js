@@ -139188,22 +139188,14 @@ class SetupPublisherInventoryReviewAdapter {
             || owner.login.toLowerCase() !== target.owner.toLowerCase())
             return mismatch();
         if (owner?.type === 'Organization') {
-            const variables = await collect('GET /orgs/{org}/actions/variables', { org: target.owner }, 'variables');
+            // The provider authenticates which organization Variables are shared
+            // with this exact repository. Global organization enumeration/grants
+            // require broader privileges and are not an effective-input prerequisite.
+            const variables = await collect('GET /repos/{owner}/{repo}/actions/organization-variables', coordinate, 'variables');
             for (const raw of variables) {
                 const variable = (0, setup_batch_github_read_adapter_1.batchObject)(raw);
-                if (!variable || typeof variable.name !== 'string'
-                    || !['all', 'private', 'selected'].includes(String(variable.visibility)))
+                if (!variable)
                     return unresolved();
-                if (variable.visibility === 'selected') {
-                    const repositories = await collect('GET /orgs/{org}/actions/variables/{name}/repositories', { org: target.owner, name: variable.name }, 'repositories');
-                    const ids = repositories.map(r => (0, setup_batch_github_read_adapter_1.batchObject)(r)?.id);
-                    if (ids.some(id => !(0, setup_batch_github_read_adapter_1.batchPositive)(id)) || new Set(ids).size !== ids.length)
-                        return unresolved();
-                    if (!repositories.some(r => (0, setup_batch_github_read_adapter_1.batchObject)(r)?.id === target.id))
-                        continue;
-                }
-                else if (variable.visibility !== 'all' && !(variable.visibility === 'private' && target.private))
-                    continue;
                 this.variable(effective, variable, 'organization-variable');
             }
         }
